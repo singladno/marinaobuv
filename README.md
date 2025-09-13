@@ -59,15 +59,27 @@ marinaobuv/
 - `npm run start` - Start web production server
 - `npm run install` - Install dependencies
 - `npm run lint` - Lint web application
+- `npm run lint:fix` - Lint and fix web application
+- `npm run format` - Format code with Prettier
+- `npm run format:check` - Check code formatting
+
+## Features
+
+- **Homepage**: Clean MarinaObuv placeholder with health API link
+- **Health API**: `/api/health` endpoint returning JSON status
+- **Responsive Design**: Mobile-first Tailwind CSS styling
+- **TypeScript**: Full type safety throughout
+- **Code Quality**: ESLint + Prettier for consistent formatting
 
 ## Development
 
 The web application is built with:
-- **Next.js 15.5.3** - React framework
+- **Next.js 15.5.3** - React framework with App Router
 - **React 19.1.0** - UI library
 - **TypeScript** - Type safety
 - **Tailwind CSS 4** - Styling
 - **ESLint** - Code linting
+- **Prettier** - Code formatting
 
 ## Node.js Version
 

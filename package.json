@@ -8,7 +8,11 @@
     "build": "cd web && npm run build",
     "start": "cd web && npm run start",
     "install": "cd web && npm install",
-    "lint": "cd web && npm run lint"
+    "lint": "cd web && npm run lint",
+    "lint:fix": "cd web && npm run lint:fix",
+    "format": "cd web && npm run format",
+    "format:check": "cd web && npm run format:check",
+    "pre-commit": "cd web && npm run pre-commit"
   },
   "engines": {
     "node": ">=18.0.0",
