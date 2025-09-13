@@ -6,6 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init_catalog",
+    "prisma:seed": "tsx prisma/seed.ts",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "typecheck": "tsc --noEmit",
@@ -15,12 +18,15 @@
     "pre-commit": "lint-staged && npm run typecheck"
   },
   "dependencies": {
+    "@prisma/client": "^5.19.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "next": "15.5.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "prisma": "^5.19.1",
+    "tsx": "^4.19.2",
     "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  FEMALE
+  MALE
+  UNISEX
+}
+enum Season {
+  SPRING
+  SUMMER
+  AUTUMN
+  WINTER
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  parentId  String?
+  parent    Category?  @relation("CatToParent", fields: [parentId], references: [id])
+  children  Category[] @relation("CatToParent")
+  name      String
+  slug      String     @unique
+  path      String     @unique
+  sort      Int        @default(500)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  products  Product[]
+
+  @@index([parentId])
+}
+
+model Product {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  name      String
+  article   String?
+  categoryId String
+  category  Category  @relation(fields: [categoryId], references: [id])
+  pricePair Int       // kopecks
+  currency  String    @default("RUB")
+  packPairs Int?
+  priceBox  Int?
+  material  String?
+  gender    Gender?
+  season    Season?
+  description String?
+  availabilityCheckedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  images    ProductImage[]
+  sizes     ProductSize[]
+
+  @@index([categoryId])
+  @@index([season])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sort      Int      @default(0)
+  isPrimary Boolean  @default(false)
+
+  @@index([productId, sort])
+}
+
+model ProductSize {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String
+  perBox    Int?
+  stock     Int?
+  sku       String?
+
+  @@unique([productId, size])
+}

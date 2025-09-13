@@ -13,7 +13,8 @@
     "typecheck": "cd web && npm run typecheck",
     "format": "cd web && npm run format",
     "format:check": "cd web && npm run format:check",
-    "pre-commit": "cd web && npm run pre-commit"
+    "pre-commit": "cd web && npm run pre-commit",
+    "prisma": "cd web && npx prisma studio"
   },
   "engines": {
     "node": ">=18.0.0",
