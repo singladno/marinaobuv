@@ -1,3 +1,5 @@
+// MarinaObuv Project - Component Size Limit: 120 lines max
+// Decompose large components into hooks, sub-components, and utilities
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';

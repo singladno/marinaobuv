@@ -1,3 +1,5 @@
+// MarinaObuv Project - Component Size Limit: 120 lines max
+// Decompose large components into hooks, sub-components, and utilities
 import Link from 'next/link';
 
 export default function Home() {

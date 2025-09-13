@@ -64,6 +64,60 @@ marinaobuv/
 - `npm run format:check` - Check code formatting
 - `npm run pre-commit` - Run pre-commit checks (lint + format)
 
+## 🎯 CRITICAL RULE: Component Size Limit
+
+**Components must not exceed 120 lines of code.**
+
+### When to Decompose:
+- Component exceeds 120 lines
+- Multiple responsibilities in one component
+- Complex state management
+- Multiple useEffect hooks
+- Large render methods
+
+### Decomposition Strategies:
+1. **Extract Custom Hooks** - Move state logic to `hooks/` directory
+2. **Create Sub-components** - Break into smaller focused components
+3. **Extract Utilities** - Move pure functions to `utils/` directory
+4. **Split Files** - Separate complex logic into multiple files
+
+### Example:
+```tsx
+// ❌ Bad - Large component (200+ lines)
+const UserDashboard = () => {
+  // 200+ lines of mixed concerns
+  return <div>...</div>;
+};
+
+// ✅ Good - Decomposed component (50 lines)
+const UserDashboard = () => {
+  const { user, loading, error } = useUser();
+  const { orders } = useOrders(user?.id);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div>
+      <UserProfile user={user} />
+      <OrdersList orders={orders} />
+    </div>
+  );
+};
+```
+
+## Coding Standards
+
+This project enforces strict coding standards:
+
+- **Component Size**: Maximum 120 lines per component (ESLint enforced)
+- **Decomposition**: Extract custom hooks and utilities for complex logic
+- **Code Quality**: ESLint rules for complexity, depth, and parameters
+- **Import Organization**: Automatic import sorting and grouping
+- **TypeScript**: Strict type checking throughout
+
+See [CODING_STANDARDS.md](./CODING_STANDARDS.md) and [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) for detailed guidelines.
+
 ## Format on Save
 
 The project is configured for automatic formatting on save:
@@ -81,6 +135,8 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed setup instructions.
 - **Responsive Design**: Mobile-first Tailwind CSS styling
 - **TypeScript**: Full type safety throughout
 - **Code Quality**: ESLint + Prettier for consistent formatting
+- **Component Size Limit**: 120-line maximum enforced by ESLint
+- **Custom Hooks**: Encouraged for complex logic extraction
 
 ## Development
 
