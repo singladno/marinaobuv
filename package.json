@@ -10,6 +10,7 @@
     "install": "cd web && npm install",
     "lint": "cd web && npm run lint",
     "lint:fix": "cd web && npm run lint:fix",
+    "typecheck": "cd web && npm run typecheck",
     "format": "cd web && npm run format",
     "format:check": "cd web && npm run format:check",
     "pre-commit": "cd web && npm run pre-commit"

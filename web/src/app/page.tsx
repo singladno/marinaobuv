@@ -2,35 +2,29 @@
 // Decompose large components into hooks, sub-components, and utilities
 import Link from 'next/link';
 
+import { site } from '@/lib/site';
+
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="space-y-8 p-8 text-center">
-        <h1 className="mb-4 text-6xl font-bold text-gray-900 dark:text-white">
-          МаринаОбувь
-        </h1>
-        <p className="mb-8 text-2xl text-gray-600 dark:text-gray-300">
-          Hello World
-        </p>
-
-        <div className="space-y-4">
-          <Link
-            href="/api/health"
-            className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg transition-colors duration-200 hover:bg-blue-700 hover:shadow-xl"
-          >
-            Check API Health
-          </Link>
-
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            <p>
-              API Endpoint:{' '}
-              <code className="rounded bg-gray-100 px-2 py-1 dark:bg-gray-700">
-                /api/health
-              </code>
-            </p>
-          </div>
-        </div>
+    <section className="mx-auto max-w-4xl text-center">
+      <h1 className="mb-3 text-4xl font-bold sm:text-5xl">{site.brand} — Hello World</h1>
+      <p className="mx-auto mb-8 max-w-2xl text-gray-600 dark:text-gray-300">
+        Минимальная стартовая страница. Скоро здесь появится каталог с обувью и аксессуарами.
+      </p>
+      <div className="flex items-center justify-center gap-4">
+        <Link
+          href="/api/health"
+          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        >
+          Проверить API
+        </Link>
+        <Link
+          href="/about"
+          className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+        >
+          О нас
+        </Link>
       </div>
-    </div>
+    </section>
   );
 }
