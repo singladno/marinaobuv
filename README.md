@@ -62,6 +62,17 @@ marinaobuv/
 - `npm run lint:fix` - Lint and fix web application
 - `npm run format` - Format code with Prettier
 - `npm run format:check` - Check code formatting
+- `npm run pre-commit` - Run pre-commit checks (lint + format)
+
+## Format on Save
+
+The project is configured for automatic formatting on save:
+
+- **VS Code**: Install recommended extensions and settings are auto-configured
+- **Pre-commit hooks**: Automatically format and lint before commits
+- **Manual**: Use `npm run format` and `npm run lint:fix`
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed setup instructions.
 
 ## Features
 

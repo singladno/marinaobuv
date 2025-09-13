@@ -20,6 +20,14 @@ const eslintConfig = [
       'next-env.d.ts',
     ],
   },
+  {
+    rules: {
+      'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 0, maxBOF: 0 }],
+      'no-trailing-spaces': 'error',
+      'eol-last': ['error', 'always'],
+      'prettier/prettier': 'off', // Let Prettier handle formatting
+    },
+  },
 ];
 
 export default eslintConfig;
