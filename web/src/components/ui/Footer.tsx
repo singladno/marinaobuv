@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
-import { site } from '@/lib/site';
 import { Text } from '@/components/ui/Text';
+import { site } from '@/lib/site';
 
 export default function Footer() {
   const year = new Date().getFullYear();

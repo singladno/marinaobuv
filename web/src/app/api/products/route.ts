@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const categorySlug = searchParams.get("category");
 
-  let where: any = {};
+  const where: any = {};
   if (categorySlug) {
     const cat = await prisma.category.findUnique({
       where: { slug: categorySlug },

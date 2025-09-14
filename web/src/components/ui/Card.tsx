@@ -19,4 +19,3 @@ export function Card({ className, hover = false, ...rest }: Props) {
 }
 
 export default Card;
-

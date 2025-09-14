@@ -1,5 +1,6 @@
-import { Text } from '@/components/ui/Text';
 import Link from 'next/link';
+
+import { Text } from '@/components/ui/Text';
 
 export type CategoryTreeNode = {
   id: string;

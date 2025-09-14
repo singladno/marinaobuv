@@ -1,12 +1,12 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { Text } from '@/components/ui/Text';
+import { productAlt } from '@/lib/alt';
 import { prisma } from '@/lib/db';
 import { rub, genderRu, seasonRu } from '@/lib/format';
-import { productAlt } from '@/lib/alt';
-import { Text } from '@/components/ui/Text';
 import { buildMetadata } from '@/lib/seo';
 
 type PageProps = { params: { slug: string } };

@@ -22,4 +22,3 @@ export function Select({ className, fullWidth, children, ...rest }: Props) {
 }
 
 export default Select;
-

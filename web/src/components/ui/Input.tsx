@@ -20,4 +20,3 @@ export function Input({ className, fullWidth, ...rest }: Props) {
 }
 
 export default Input;
-

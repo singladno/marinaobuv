@@ -1,0 +1,44 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+
+export async function GET() {
+  try {
+    const messages = await prisma.whatsAppMessage.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        waMessageId: true,
+        remoteJid: true,
+        fromMe: true,
+        pushName: true,
+        messageType: true,
+        text: true,
+        mediaUrl: true,
+        createdAt: true,
+        productDraft: {
+          select: {
+            name: true,
+            article: true,
+            season: true,
+            pricePair: true,
+            material: true,
+            gender: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      count: messages.length,
+      messages,
+    });
+  } catch (error) {
+    console.error('Failed to fetch messages:', error);
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, { status: 500 });
+  }
+}

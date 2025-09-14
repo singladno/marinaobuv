@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { PrismaClient, Gender, Season } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -161,4 +160,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

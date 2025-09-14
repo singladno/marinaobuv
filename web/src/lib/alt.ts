@@ -3,4 +3,3 @@ export function productAlt(p: { name: string; article?: string | null }): string
   const brand = process.env.NEXT_PUBLIC_BRAND_NAME ?? '';
   return p.article ? `${base}, артикул ${p.article} — ${brand}` : `${base} — ${brand}`;
 }
-

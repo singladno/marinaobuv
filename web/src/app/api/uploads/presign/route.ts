@@ -37,4 +37,3 @@ export async function POST(req: NextRequest) {
 }
 
 // TODO: Secure this endpoint with admin authentication
-

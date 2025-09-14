@@ -89,3 +89,45 @@ model ProductSize {
   @@unique([productId, size])
   @@index([size])
 }
+
+model WhatsAppMessage {
+  id          String   @id @default(cuid()) // Auto-generated unique ID
+  waMessageId String   @unique // WhatsApp message ID for deduplication
+
+  // Basic message fields
+  from        String?  // Sender phone number
+  type        String?  // Message type (text, image, etc.)
+  source      String?  // Source (mobile, web, etc.)
+  chatId      String?  // Chat/group ID
+  fromMe      Boolean  @default(false)
+  fromName    String?  // Sender display name
+  timestamp   BigInt?  // Message timestamp
+
+  // Media fields (for image/video/audio messages)
+  mediaId     String?  // Media ID
+  mediaLink   String?  // Media URL
+  mediaWidth  Int?     // Media width
+  mediaHeight Int?     // Media height
+  mediaSha256 String?  // Media SHA256 hash
+  mediaPreview String? // Media preview (base64)
+  mediaFileSize Int?   // Media file size
+  mediaMimeType String? // Media MIME type
+
+  // Extracted/processed fields
+  text        String?  // Extracted text content
+  mediaS3Key  String?  // S3 key for media files
+  mediaUrl    String?  // Media URL
+  providerId  String?  // Provider identifier
+
+  // Raw data
+  rawPayload  Json     // Full API response
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([from])
+  @@index([type])
+  @@index([fromMe])
+  @@index([chatId])
+  @@index([timestamp])
+}

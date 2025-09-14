@@ -1,7 +1,7 @@
-import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Text } from '@/components/ui/Text';
 import { sortLabel } from '@/lib/format';
 import type { CatalogFilters } from '@/types/filters';
 

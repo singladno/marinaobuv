@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+
 import { Text } from '@/components/ui/Text';
 import { rub } from '@/lib/format';
 
