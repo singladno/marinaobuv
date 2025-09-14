@@ -14,15 +14,24 @@ async function fetchRecentMessages(chatId: string): Promise<WhatsAppMessage[]> {
   console.log(`Fetching messages from the last 24 hours for chat: ${chatId}`);
 
   // Calculate timestamp for 24 hours ago
-  const twentyFourHoursAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+  const twentyFourHoursAgo = Math.floor(
+    (Date.now() - 24 * 60 * 60 * 1000) / 1000
+  );
 
   // Fetch messages from the group
   const messages = await fetchGroupMessages(chatId, 1000); // Fetch more messages to ensure we get recent ones
 
-  // Filter messages from the last 24 hours
+  // Filter messages from the last 24 hours and exclude group_invite messages
   const recentMessages = messages.filter(message => {
     const rawPayload = message as any;
     const messageTimestamp = rawPayload.timestamp || 0;
+    const messageType = rawPayload.type;
+
+    // Skip group_invite messages
+    if (messageType === 'group_invite') {
+      return false;
+    }
+
     return messageTimestamp >= twentyFourHoursAgo;
   });
 
@@ -82,9 +91,12 @@ async function main() {
         const messageType = rawPayload.type || 'unknown';
         const fromName = rawPayload.from_name || 'Unknown';
         const hasText = rawPayload.text && rawPayload.text.body;
-        const hasMedia = rawPayload.image || rawPayload.video || rawPayload.document;
+        const hasMedia =
+          rawPayload.image || rawPayload.video || rawPayload.document;
 
-        console.log(`✓ ${messageType} from ${fromName}${hasText ? ' (with text)' : ''}${hasMedia ? ' (with media)' : ''}`);
+        console.log(
+          `✓ ${messageType} from ${fromName}${hasText ? ' (with text)' : ''}${hasMedia ? ' (with media)' : ''}`
+        );
       } catch (error) {
         console.error(`Error processing message ${message.id}:`, error);
         errorCount++;

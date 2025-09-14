@@ -105,7 +105,6 @@ model WhatsAppMessage {
 
   // Media fields (for image/video/audio messages)
   mediaId     String?  // Media ID
-  mediaLink   String?  // Media URL
   mediaWidth  Int?     // Media width
   mediaHeight Int?     // Media height
   mediaSha256 String?  // Media SHA256 hash

@@ -6,7 +6,10 @@ import './load-env';
 import { prisma } from '../lib/db';
 import { env } from '../lib/env';
 import { fetchGroupMessages, WhatsAppMessage } from '../lib/message-fetcher';
-import { processMediaUpload, saveWhatsAppMessage } from '../lib/message-processor-extended';
+import {
+  processMediaUpload,
+  saveWhatsAppMessage,
+} from '../lib/message-processor-extended';
 import { processProviderFromMessage } from '../lib/provider-utils';
 
 /**
@@ -18,7 +21,15 @@ async function processMessage(message: WhatsAppMessage): Promise<void> {
     const rawPayload = message as unknown as Record<string, unknown>;
     const pushName = (rawPayload.from_name as string) || null;
 
-    console.log(`Processing message ${message.id} from ${pushName || 'Unknown'}`);
+    // Skip group_invite messages
+    if (rawPayload.type === 'group_invite') {
+      console.log(`Skipping group_invite message ${message.id}`);
+      return;
+    }
+
+    console.log(
+      `Processing message ${message.id} from ${pushName || 'Unknown'}`
+    );
 
     // Extract text content from WHAPI response
     const text = extractTextFromMessage(rawPayload);
@@ -43,8 +54,14 @@ async function processMessage(message: WhatsAppMessage): Promise<void> {
 /**
  * Extract text content from message payload
  */
-function extractTextFromMessage(rawPayload: Record<string, unknown>): string | null {
-  if (rawPayload.text && typeof rawPayload.text === 'object' && rawPayload.text !== null) {
+function extractTextFromMessage(
+  rawPayload: Record<string, unknown>
+): string | null {
+  if (
+    rawPayload.text &&
+    typeof rawPayload.text === 'object' &&
+    rawPayload.text !== null
+  ) {
     const textObj = rawPayload.text as Record<string, unknown>;
     if (textObj.body && typeof textObj.body === 'string') {
       return textObj.body;
@@ -58,7 +75,9 @@ function extractTextFromMessage(rawPayload: Record<string, unknown>): string | n
 /**
  * Check which messages already exist in the database
  */
-async function getExistingMessageIds(messageIds: string[]): Promise<Set<string>> {
+async function getExistingMessageIds(
+  messageIds: string[]
+): Promise<Set<string>> {
   const existingMessages = await prisma.whatsAppMessage.findMany({
     where: {
       waMessageId: {
@@ -70,26 +89,34 @@ async function getExistingMessageIds(messageIds: string[]): Promise<Set<string>>
     },
   });
 
-  return new Set(existingMessages.map((msg: { waMessageId: string }) => msg.waMessageId));
+  return new Set(
+    existingMessages.map((msg: { waMessageId: string }) => msg.waMessageId)
+  );
 }
 
 /**
  * Fetch messages from the configured time range
  */
 async function fetchRecentMessages(chatId: string): Promise<WhatsAppMessage[]> {
-  console.log(`Fetching messages from the last ${env.MESSAGE_FETCH_HOURS} hours for chat: ${chatId}`);
+  console.log(
+    `Fetching messages from the last ${env.MESSAGE_FETCH_HOURS} hours for chat: ${chatId}`
+  );
 
   // Fetch messages from the group (message-fetcher now handles time filtering)
   const messages = await fetchGroupMessages(chatId, 10000); // High limit to get all recent messages
 
-  console.log(`Found ${messages.length} messages from the last ${env.MESSAGE_FETCH_HOURS} hours`);
+  console.log(
+    `Found ${messages.length} messages from the last ${env.MESSAGE_FETCH_HOURS} hours`
+  );
 
   // Check which messages already exist in the database
   const messageIds = messages.map(msg => msg.id);
   const existingMessageIds = await getExistingMessageIds(messageIds);
 
   // Filter out messages that already exist
-  const newMessages = messages.filter(message => !existingMessageIds.has(message.id));
+  const newMessages = messages.filter(
+    message => !existingMessageIds.has(message.id)
+  );
 
   console.log(`Found ${existingMessageIds.size} messages already in database`);
   console.log(`Processing ${newMessages.length} new messages`);
@@ -113,7 +140,9 @@ async function main() {
     const messages = await fetchRecentMessages(env.TARGET_GROUP_ID);
 
     if (messages.length === 0) {
-      console.log(`No new messages to process from the last ${env.MESSAGE_FETCH_HOURS} hours`);
+      console.log(
+        `No new messages to process from the last ${env.MESSAGE_FETCH_HOURS} hours`
+      );
       return;
     }
 
@@ -136,8 +165,9 @@ async function main() {
     console.log(`\nProcessing complete!`);
     console.log(`New messages processed: ${processedCount}`);
     console.log(`Errors: ${errorCount}`);
-    console.log(`Success rate: ${processedCount > 0 ? Math.round((processedCount / messages.length) * 100) : 0}%`);
-
+    console.log(
+      `Success rate: ${processedCount > 0 ? Math.round((processedCount / messages.length) * 100) : 0}%`
+    );
   } catch (error) {
     console.error('Fatal error:', error);
     process.exit(1);

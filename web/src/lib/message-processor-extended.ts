@@ -48,7 +48,7 @@ export async function processMediaUpload(message: WhatsAppMessage): Promise<{
     // For now, just store the original media URL without uploading to S3
     // This avoids S3 signature issues and we can upload later if needed
     console.log(`Media URL: ${media.url}`);
-    return { mediaS3Key: null, mediaUrl: media.url };
+    return { mediaS3Key: null, mediaUrl: media.url || null };
   } catch (error) {
     console.error(`Error processing media for message ${message.id}:`, error);
     return { mediaS3Key: null, mediaUrl: null };
@@ -79,7 +79,6 @@ export async function saveWhatsAppMessage(
 
   // Extract media fields (for image/video/audio messages)
   let mediaId = null;
-  let mediaLink = null;
   let mediaWidth = null;
   let mediaHeight = null;
   let mediaSha256 = null;
@@ -89,7 +88,6 @@ export async function saveWhatsAppMessage(
 
   if (rawPayload.image) {
     mediaId = rawPayload.image.id || null;
-    mediaLink = rawPayload.image.link || null;
     mediaWidth = rawPayload.image.width || null;
     mediaHeight = rawPayload.image.height || null;
     mediaSha256 = rawPayload.image.sha256 || null;
@@ -98,7 +96,6 @@ export async function saveWhatsAppMessage(
     mediaMimeType = rawPayload.image.mime_type || null;
   } else if (rawPayload.video) {
     mediaId = rawPayload.video.id || null;
-    mediaLink = rawPayload.video.link || null;
     mediaWidth = rawPayload.video.width || null;
     mediaHeight = rawPayload.video.height || null;
     mediaSha256 = rawPayload.video.sha256 || null;
@@ -107,12 +104,10 @@ export async function saveWhatsAppMessage(
     mediaMimeType = rawPayload.video.mime_type || null;
   } else if (rawPayload.audio) {
     mediaId = rawPayload.audio.id || null;
-    mediaLink = rawPayload.audio.link || null;
     mediaFileSize = rawPayload.audio.file_size || null;
     mediaMimeType = rawPayload.audio.mime_type || null;
   } else if (rawPayload.document) {
     mediaId = rawPayload.document.id || null;
-    mediaLink = rawPayload.document.link || null;
     mediaFileSize = rawPayload.document.file_size || null;
     mediaMimeType = rawPayload.document.mime_type || null;
   }
@@ -132,7 +127,6 @@ export async function saveWhatsAppMessage(
 
       // Media fields
       mediaId,
-      mediaLink,
       mediaWidth,
       mediaHeight,
       mediaSha256,
@@ -145,7 +139,7 @@ export async function saveWhatsAppMessage(
       mediaS3Key,
       mediaUrl,
       providerId,
-      rawPayload: message as Record<string, unknown>,
+      rawPayload: message as unknown as Record<string, unknown>,
     },
     create: {
       waMessageId: message.id, // Store WhatsApp message ID
@@ -161,7 +155,6 @@ export async function saveWhatsAppMessage(
 
       // Media fields
       mediaId,
-      mediaLink,
       mediaWidth,
       mediaHeight,
       mediaSha256,
@@ -174,7 +167,7 @@ export async function saveWhatsAppMessage(
       mediaS3Key,
       mediaUrl,
       providerId,
-      rawPayload: message as Record<string, unknown>,
+      rawPayload: message as unknown as Record<string, unknown>,
     },
   });
 

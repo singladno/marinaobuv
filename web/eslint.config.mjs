@@ -24,6 +24,7 @@ const eslintConfig = [
     ],
   },
   {
+    files: ['**/*.{js,jsx,ts,tsx}'],
     plugins: {
       'react-hooks': reactHooks,
       import: importPlugin,

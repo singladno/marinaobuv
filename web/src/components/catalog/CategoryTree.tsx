@@ -20,11 +20,17 @@ function isActive(path: string, activePath?: string) {
   return activePath === p || activePath.startsWith(p + '/');
 }
 
-export function CategoryTree({ tree, activePath }: { tree: CategoryTreeNode[]; activePath?: string }) {
+export function CategoryTree({
+  tree,
+  activePath,
+}: {
+  tree: CategoryTreeNode[];
+  activePath?: string;
+}) {
   return (
     <nav aria-label="Категории" className="text-sm">
       <ul className="space-y-2">
-        {tree.map((n) => (
+        {tree.map(n => (
           <li key={n.id}>
             <TreeNode node={n} activePath={activePath} />
           </li>
@@ -34,21 +40,30 @@ export function CategoryTree({ tree, activePath }: { tree: CategoryTreeNode[]; a
   );
 }
 
-function TreeNode({ node, activePath }: { node: CategoryTreeNode; activePath?: string }) {
+function TreeNode({
+  node,
+  activePath,
+}: {
+  node: CategoryTreeNode;
+  activePath?: string;
+}) {
   const p = stripPrefix(node.path);
   const expanded = isActive(node.path, activePath);
   const isLeaf = node.children.length === 0;
 
   return (
     <div>
-      <Link href={`/catalog/${p}`} className={`${expanded ? 'text-primary' : 'hover:underline'}`}>
+      <Link
+        href={`/catalog/${p}`}
+        className={`${expanded ? 'text-primary' : 'hover:underline'}`}
+      >
         <Text as="span" className={expanded ? 'font-semibold' : ''}>
           {node.name}
         </Text>
       </Link>
       {expanded && !isLeaf && (
-        <ul className="mt-2 ml-4 space-y-1 border-l pl-3">
-          {node.children.map((c) => (
+        <ul className="ml-4 mt-2 space-y-1 border-l pl-3">
+          {node.children.map(c => (
             <li key={c.id}>
               <Link
                 href={`/catalog/${stripPrefix(c.path)}`}

@@ -54,6 +54,12 @@ export async function POST(
       return NextResponse.json({ ok: true, message: 'Not a group message' });
     }
 
+    // Skip group_invite messages
+    const messageType = message ? Object.keys(message)[0] : null;
+    if (messageType === 'group_invite') {
+      return NextResponse.json({ ok: true, message: 'Skipped group_invite message' });
+    }
+
     // Extract text content
     const text = message ? extractMessageText(message) : null;
 
@@ -64,7 +70,7 @@ export async function POST(
         remoteJid: key.remoteJid,
         fromMe: key.fromMe,
         pushName: pushName || null,
-        messageType: message ? Object.keys(message)[0] : null,
+        messageType,
         text: text || null,
         rawPayload: body,
         updatedAt: new Date(),
@@ -74,7 +80,7 @@ export async function POST(
         remoteJid: key.remoteJid,
         fromMe: key.fromMe,
         pushName: pushName || null,
-        messageType: message ? Object.keys(message)[0] : null,
+        messageType,
         text: text || null,
         rawPayload: body,
       },
