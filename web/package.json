@@ -18,30 +18,34 @@
     "pre-commit": "lint-staged && npm run typecheck"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.676.0",
+    "@aws-sdk/s3-request-presigner": "^3.888.0",
     "@prisma/client": "^5.19.1",
+    "clsx": "^2.1.1",
+    "dotenv": "^17.2.2",
+    "next": "15.5.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "prisma": "^5.19.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
-    "@eslint/eslintrc": "^3",
-    "prettier": "^3.0.0",
-    "prettier-plugin-tailwindcss": "^0.5.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0",
-    "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-import": "^2.29.0"
+    "prettier": "^3.0.0",
+    "prettier-plugin-tailwindcss": "^0.5.0",
+    "prisma": "^5.19.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

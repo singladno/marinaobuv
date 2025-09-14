@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/db";
+import { prisma } from "@/lib/db";
 
 export async function GET() {
   const roots = await prisma.category.findMany({
@@ -24,4 +24,3 @@ export async function GET() {
 
   return NextResponse.json({ ok: true, items });
 }
-

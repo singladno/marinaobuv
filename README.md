@@ -185,3 +185,10 @@ chmod +x run.sh
 ## License
 
 Private project - All rights reserved.
+- Image storage (S3)
+  - Create a public-read S3-compatible bucket (Yandex Cloud, Selectel, VK Cloud) or place a CDN in front of a private bucket configured for public GET.
+  - Configure env in `web/.env` (see `web/.env.example`).
+  - For local/dev uploads, use the presign API:
+    1) POST `/api/uploads/presign` to obtain a presigned PUT URL
+    2) PUT the file to S3 with the returned `uploadUrl`
+    3) POST `/api/products/:id/images` to save the image record

@@ -59,6 +59,7 @@ model Product {
 
   @@index([categoryId])
   @@index([season])
+  @@index([pricePair])
 }
 
 model ProductImage {
@@ -66,9 +67,12 @@ model ProductImage {
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
+  key       String?  @unique
   alt       String?
   sort      Int      @default(0)
   isPrimary Boolean  @default(false)
+  width     Int?
+  height    Int?
 
   @@index([productId, sort])
 }
@@ -83,4 +87,5 @@ model ProductSize {
   sku       String?
 
   @@unique([productId, size])
+  @@index([size])
 }

@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
-export async function GET(_: Request, { params }: { params: { slug: string } }) {
-  const slug = params.slug;
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
+  // Here `id` is actually the slug segment value
   const product = await prisma.product.findUnique({
-    where: { slug },
+    where: { slug: id },
     include: {
       images: { orderBy: [{ isPrimary: "desc" }, { sort: "asc" }] },
       sizes: { orderBy: { size: "asc" } },
@@ -19,4 +20,3 @@ export async function GET(_: Request, { params }: { params: { slug: string } }) 
 
   return NextResponse.json({ ok: true, item: product });
 }
-
