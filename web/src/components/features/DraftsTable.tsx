@@ -1,11 +1,19 @@
-import { useMemo, useState } from 'react';
-import type { Draft } from '@/types/admin';
+import * as React from 'react';
+
 import {
   createColumnHelper,
+  flexRender,
   getCoreRowModel,
   useReactTable,
-  flexRender,
 } from '@tanstack/react-table';
+
+import type { Draft } from '@/types/admin';
+
+type DraftWithSelected = Draft & { selected?: boolean };
+
+const columnHelper = createColumnHelper<DraftWithSelected>();
+
+// Sticky header styles - using CSS classes instead of inline styles
 
 export function DraftsTable({
   data,
@@ -18,233 +26,183 @@ export function DraftsTable({
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
 }) {
-  const columnHelper = createColumnHelper<Draft & { selected?: boolean }>();
+  const [localData, setLocalData] = React.useState<DraftWithSelected[]>(() =>
+    data.map(d => ({ ...d, selected: !!selected[d.id] }))
+  );
 
-  const columns = useMemo(
+  React.useEffect(() => {
+    setLocalData(data.map(d => ({ ...d, selected: !!selected[d.id] })));
+  }, [data, selected]);
+
+  const columns = React.useMemo(
     () => [
       columnHelper.display({
         id: 'select',
         header: () => '',
         cell: info => (
           <input
-            aria-label="Выбрать черновик"
             type="checkbox"
-            checked={Boolean((info.row.original as any).selected)}
+            checked={Boolean(info.row.original.selected)}
             onChange={() => onToggle(info.row.original.id)}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            aria-label="Выбрать черновик"
           />
         ),
-        size: 32,
       }),
       columnHelper.accessor('name', {
         header: () => 'Название',
         cell: info => {
-          const row = info.row.original;
-          const [value, setValue] = useState(row.name);
+          const [value, setValue] = React.useState(info.row.original.name);
           return (
             <input
-              aria-label="Название"
               value={value}
               onChange={e => setValue(e.target.value)}
-              onBlur={() => onPatch(row.id, { name: value })}
-              className="w-full rounded border border-gray-300 px-3 py-1 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onBlur={() => onPatch(info.row.original.id, { name: value })}
+              aria-label="Название"
             />
           );
         },
-        size: 280,
       }),
       columnHelper.accessor('article', {
         header: () => 'Артикул',
         cell: info => {
-          const row = info.row.original;
-          const [value, setValue] = useState(row.article ?? '');
+          const [value, setValue] = React.useState(
+            info.row.original.article ?? ''
+          );
           return (
             <input
-              aria-label="Артикул"
               value={value}
               onChange={e => setValue(e.target.value)}
-              onBlur={() => onPatch(row.id, { article: value || null })}
-              className="w-full rounded border border-gray-300 px-3 py-1 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onBlur={() =>
+                onPatch(info.row.original.id, { article: value || null })
+              }
+              aria-label="Артикул"
             />
           );
         },
-        size: 160,
       }),
       columnHelper.display({
         id: 'provider',
         header: () => 'Поставщик',
         cell: info => {
           const p = info.row.original.provider;
-          return p ? (
-            <p
-              className="whitespace-no-wrap max-w-[220px] truncate text-gray-900"
-              title={`${p.name}${p.phone ? ` (${p.phone})` : ''}`}
-            >
-              {p.name}
-              {p.phone ? ` (${p.phone})` : ''}
-            </p>
-          ) : (
-            <p className="text-gray-500">—</p>
-          );
+          return p ? `${p.name}${p.phone ? ` (${p.phone})` : ''}` : '—';
         },
       }),
       columnHelper.display({
         id: 'pricePairRub',
         header: () => 'Цена/пара (₽)',
-        cell: info => (
-          <p className="whitespace-no-wrap text-gray-900">
-            {info.row.original.pricePair != null
-              ? (info.row.original.pricePair / 100).toLocaleString('ru-RU')
-              : '—'}
-          </p>
-        ),
+        cell: info =>
+          info.row.original.pricePair != null
+            ? (info.row.original.pricePair / 100).toLocaleString('ru-RU')
+            : '—',
       }),
       columnHelper.accessor('currency', {
         header: () => 'Валюта',
-        cell: info => (
-          <p className="whitespace-no-wrap text-gray-900">
-            {info.getValue() ?? '—'}
-          </p>
-        ),
+        cell: info => info.getValue() ?? '—',
       }),
       columnHelper.accessor('packPairs', {
         header: () => 'Пар в упаковке',
-        cell: info => (
-          <p className="whitespace-no-wrap text-gray-900">
-            {info.getValue() ?? '—'}
-          </p>
-        ),
+        cell: info => info.getValue() ?? '—',
       }),
       columnHelper.display({
         id: 'priceBoxRub',
         header: () => 'Цена коробки (₽)',
-        cell: info => (
-          <p className="whitespace-no-wrap text-gray-900">
-            {info.row.original.priceBox != null
-              ? (info.row.original.priceBox / 100).toLocaleString('ru-RU')
-              : '—'}
-          </p>
-        ),
+        cell: info =>
+          info.row.original.priceBox != null
+            ? (info.row.original.priceBox / 100).toLocaleString('ru-RU')
+            : '—',
       }),
       columnHelper.accessor('material', {
         header: () => 'Материал',
-        cell: info => (
-          <p className="whitespace-no-wrap text-gray-900">
-            {info.getValue() ?? '—'}
-          </p>
-        ),
+        cell: info => info.getValue() ?? '—',
       }),
       columnHelper.accessor('gender', {
         header: () => 'Пол',
-        cell: info => (
-          <p className="whitespace-no-wrap text-gray-900">
-            {info.getValue() ?? '—'}
-          </p>
-        ),
+        cell: info => info.getValue() ?? '—',
       }),
       columnHelper.accessor('season', {
         header: () => 'Сезон',
-        cell: info => (
-          <p className="whitespace-no-wrap text-gray-900">
-            {info.getValue() ?? '—'}
-          </p>
-        ),
+        cell: info => info.getValue() ?? '—',
       }),
       columnHelper.display({
         id: 'sizes',
         header: () => 'Размеры',
         cell: info => {
-          const s = info.row.original.sizes as any[] | null | undefined;
-          if (!Array.isArray(s) || !s.length)
-            return <p className="text-gray-500">—</p>;
-          const text = s
-            .map(
-              (x: any) =>
-                `${x.size}:${(x as any).stock ?? (x as any).count ?? 0}`
-            )
-            .join(', ');
-          return (
-            <p
-              className="whitespace-no-wrap max-w-[220px] truncate text-gray-900"
-              title={text}
-            >
-              {text}
-            </p>
-          );
+          const s = info.row.original.sizes as
+            | Array<{ size: string; stock?: number; count?: number }>
+            | null
+            | undefined;
+          if (!Array.isArray(s) || !s.length) return '—';
+          return s.map(x => `${x.size}:${x.stock ?? x.count ?? 0}`).join(', ');
         },
       }),
       columnHelper.display({
         id: 'images',
         header: () => 'Изображения',
         cell: info => (
-          <div className="flex gap-1 overflow-x-auto">
+          <div>
             {(info.row.original.images || []).slice(0, 4).map(img => (
-              <img
-                key={img.id}
-                src={img.url}
-                className="h-8 w-8 rounded object-cover"
-                alt=""
-              />
+              <img key={img.id} src={img.url} alt="" />
             ))}
           </div>
         ),
       }),
     ],
-    [onPatch, onToggle]
-  );
-
-  const tableData = useMemo(
-    () => data.map(d => ({ ...d, selected: !!selected[d.id] })),
-    [data, selected]
+    [onToggle, onPatch]
   );
 
   const table = useReactTable({
-    data: tableData,
+    data: localData,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
   return (
-    <div className="inline-block min-w-full overflow-hidden rounded-lg shadow">
-      <table className="min-w-full leading-normal">
-        <thead>
-          {table.getHeaderGroups().map(headerGroup => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map(header => (
-                <th
-                  key={header.id}
-                  className="border-b-2 border-gray-200 bg-gray-100 px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600"
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row, index) => (
-            <tr
-              key={row.id}
-              className={
-                index === table.getRowModel().rows.length - 1
-                  ? ''
-                  : 'border-b border-gray-200'
-              }
-            >
-              {row.getVisibleCells().map(cell => (
-                <td key={cell.id} className="bg-white px-5 py-5 text-sm">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="flex h-full flex-col">
+      <div className="flex-shrink-0">
+        <table className="w-full border-separate border-spacing-0">
+          <thead>
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <th
+                    key={header.id}
+                    className="border-b border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+        </table>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <table className="w-full border-separate border-spacing-0">
+          <tbody>
+            {table.getRowModel().rows.map(row => (
+              <tr
+                key={row.id}
+                className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
+              >
+                {row.getVisibleCells().map(cell => (
+                  <td
+                    key={cell.id}
+                    className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
