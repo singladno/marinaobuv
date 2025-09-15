@@ -90,6 +90,63 @@ model ProductSize {
   @@index([size])
 }
 
+model Provider {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  phone       String?  // Phone number from 'from' field
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // messages    WhatsAppMessage[]  // Will be added after data cleanup
+  draftProducts WaDraftProduct[]
+
+  @@index([name])
+  @@index([phone])
+}
+
+model WaDraftProduct {
+  id              String   @id @default(cuid())
+  messageId       String   @unique
+  message         WhatsAppMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  providerId      String
+  provider        Provider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  name            String
+  article         String?
+  pricePair       Int?     // kopecks
+  currency        String   @default("RUB")
+  packPairs       Int?
+  priceBox        Int?
+  material        String?
+  gender          Gender?
+  season          Season?
+  description     String?
+  sizes           Json?    // Array of size objects
+  rawGptResponse  Json?    // Full GPT response for debugging
+  status          String   @default("draft") // draft, processed, approved, rejected
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  images          WaDraftProductImage[]
+
+  @@index([providerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WaDraftProductImage {
+  id        String   @id @default(cuid())
+  draftProductId String
+  draftProduct WaDraftProduct @relation(fields: [draftProductId], references: [id], onDelete: Cascade)
+  url       String
+  key       String?  @unique
+  alt       String?
+  sort      Int      @default(0)
+  isPrimary Boolean  @default(false)
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  @@index([draftProductId, sort])
+}
+
 model WhatsAppMessage {
   id          String   @id @default(cuid()) // Auto-generated unique ID
   waMessageId String   @unique // WhatsApp message ID for deduplication
@@ -117,11 +174,13 @@ model WhatsAppMessage {
   mediaS3Key  String?  // S3 key for media files
   mediaUrl    String?  // Media URL
   providerId  String?  // Provider identifier
+  // provider    Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
 
   // Raw data
   rawPayload  Json     // Full API response
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  draftProduct WaDraftProduct?
 
   @@index([createdAt])
   @@index([from])
@@ -129,4 +188,5 @@ model WhatsAppMessage {
   @@index([fromMe])
   @@index([chatId])
   @@index([timestamp])
+  @@index([providerId])
 }

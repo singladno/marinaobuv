@@ -15,7 +15,10 @@
     "format:check": "cd web && npm run format:check",
     "pre-commit": "cd web && npm run pre-commit",
     "prisma": "cd web && npx prisma studio",
-    "fetch-messages": "cd web && npx tsx src/scripts/fetch-group-messages.ts"
+    "fetch-messages": "cd web && npx tsx src/scripts/fetch-group-messages.ts",
+    "draft:setup": "cd web && npx tsx src/scripts/setup-draft-products.ts",
+    "draft:process": "cd web && npx tsx src/scripts/process-draft-products.ts",
+    "draft:view": "cd web && npx tsx src/scripts/view-draft-products.ts"
   },
   "engines": {
     "node": ">=18.0.0",

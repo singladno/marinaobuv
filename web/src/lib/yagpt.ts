@@ -5,19 +5,64 @@ import { env } from './env';
 // Zod schema for the expected YandexGPT response
 const ProductDraftSchema = z.object({
   name: z.string(),
-  article: z.string().optional(),
-  season: z.enum(['spring', 'summer', 'autumn', 'winter']).optional(),
-  typeSlug: z.string().optional(),
-  pricePair: z.number().optional(), // kopecks
-  packPairs: z.number().optional(),
-  priceBox: z.number().optional(),
-  material: z.string().optional(),
-  gender: z.enum(['female', 'male', 'unisex']).optional(),
-  sizes: z.array(z.object({
-    size: z.string(),
-    count: z.number(),
-  })).optional(),
-  notes: z.string().optional(),
+  article: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  season: z
+    .enum(['spring', 'summer', 'autumn', 'winter'])
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  typeSlug: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  pricePair: z
+    .number()
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)), // kopecks
+  packPairs: z
+    .number()
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  priceBox: z
+    .number()
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  material: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  gender: z
+    .enum(['female', 'male', 'unisex'])
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  sizes: z
+    .array(
+      z.object({
+        size: z.string(),
+        count: z
+          .number()
+          .nullable()
+          .transform(val => (val === null ? 0 : val)),
+      })
+    )
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  notes: z
+    .string()
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
 });
 
 export type ProductDraft = z.infer<typeof ProductDraftSchema>;
@@ -32,7 +77,22 @@ function parseJsonContent(content: string): unknown {
     // Try to extract JSON from the response if it's wrapped in markdown or other text
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch {
+        // If still fails, try to clean up the JSON
+        const cleanedJson = jsonMatch[0]
+          .replace(/,\s*}/g, '}') // Remove trailing commas before }
+          .replace(/,\s*]/g, ']') // Remove trailing commas before ]
+          .replace(/(\w+):/g, '"$1":') // Add quotes around keys if missing
+          .replace(/:(\w+)/g, ':"$1"') // Add quotes around string values if missing
+          .replace(/:(\d+)/g, ':$1') // Keep numbers as numbers
+          .replace(/:true/g, ':true') // Keep booleans
+          .replace(/:false/g, ':false')
+          .replace(/:null/g, ':null');
+
+        return JSON.parse(cleanedJson);
+      }
     }
     throw new Error('Could not parse JSON from YandexGPT response');
   }
@@ -41,7 +101,9 @@ function parseJsonContent(content: string): unknown {
 /**
  * Normalize text to product draft using YandexGPT
  */
-export async function normalizeTextToDraft(text: string): Promise<ProductDraft | null> {
+export async function normalizeTextToDraft(
+  text: string
+): Promise<ProductDraft | null> {
   try {
     const authHeader = env.YC_IAM_TOKEN
       ? `Bearer ${env.YC_IAM_TOKEN}`
@@ -53,7 +115,8 @@ export async function normalizeTextToDraft(text: string): Promise<ProductDraft |
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': authHeader,
+          Authorization: authHeader,
+          'x-folder-id': env.YC_FOLDER_ID,
         },
         body: JSON.stringify({
           modelUri: `gpt://${env.YC_FOLDER_ID}/yandexgpt`,
@@ -64,7 +127,7 @@ export async function normalizeTextToDraft(text: string): Promise<ProductDraft |
           messages: [
             {
               role: 'system',
-              content: `You are a product data extraction assistant for a shoe store.
+              text: `You are a product data extraction assistant for a shoe store.
               Extract product information from the given text and return STRICT JSON matching this schema:
               {
                 "name": string,
@@ -81,16 +144,21 @@ export async function normalizeTextToDraft(text: string): Promise<ProductDraft |
               }
 
               Rules:
+              - The text may contain multiple messages from the same user about the same product
+              - Combine all information from all messages to create a complete product description
               - Extract only information explicitly mentioned in the text
               - Convert prices to kopecks (multiply by 100)
               - For sizes, extract both size and quantity if mentioned
               - Return only valid JSON, no additional text
-              - If information is not clear, omit the field
-              - Be conservative with assumptions`,
+              - If information is not clear, omit the field entirely (do not include null values)
+              - Be conservative with assumptions
+              - Only include fields that have actual values
+              - If there are multiple product names mentioned, use the most descriptive one
+              - Combine all price information from different messages`,
             },
             {
               role: 'user',
-              content: text,
+              text: text,
             },
           ],
         }),
@@ -109,6 +177,13 @@ export async function normalizeTextToDraft(text: string): Promise<ProductDraft |
     }
 
     const jsonContent = parseJsonContent(content);
+
+    // Log the raw response for debugging
+    console.log(
+      'YandexGPT raw response:',
+      JSON.stringify(jsonContent, null, 2)
+    );
+
     const validated = ProductDraftSchema.parse(jsonContent);
 
     return validated;
