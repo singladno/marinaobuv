@@ -40,7 +40,7 @@ export function DraftsTable({
         id: 'select',
         header: () => '',
         cell: info => (
-          <div className="flex items-center justify-center">
+          <div className="flex h-full items-center justify-center">
             <input
               type="checkbox"
               checked={Boolean(info.row.original.selected)}
@@ -116,7 +116,7 @@ export function DraftsTable({
         id: 'pricePairRub',
         header: () => 'Цена/пара (₽)',
         cell: info => (
-          <div className="text-right">
+          <div className="text-center">
             {info.row.original.pricePair != null ? (
               <span className="font-mono font-medium text-gray-900 dark:text-gray-100">
                 {(info.row.original.pricePair / 100).toLocaleString('ru-RU')}
@@ -159,7 +159,7 @@ export function DraftsTable({
         id: 'priceBoxRub',
         header: () => 'Цена коробки (₽)',
         cell: info => (
-          <div className="text-right">
+          <div className="text-center">
             {info.row.original.priceBox != null ? (
               <span className="font-mono font-medium text-gray-900 dark:text-gray-100">
                 {(info.row.original.priceBox / 100).toLocaleString('ru-RU')}
@@ -175,7 +175,7 @@ export function DraftsTable({
         cell: info => (
           <div className="text-center">
             {info.getValue() ? (
-              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {info.getValue()}
               </span>
             ) : (
@@ -186,31 +186,67 @@ export function DraftsTable({
       }),
       columnHelper.accessor('gender', {
         header: () => 'Пол',
-        cell: info => (
-          <div className="text-center">
-            {info.getValue() ? (
-              <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                {info.getValue()}
-              </span>
-            ) : (
-              <span className="text-gray-400 dark:text-gray-500">—</span>
-            )}
-          </div>
-        ),
+        cell: info => {
+          const getGenderLabel = (value: string) => {
+            const genderMap: Record<string, string> = {
+              male: 'Мужской',
+              female: 'Женский',
+              unisex: 'Унисекс',
+              men: 'Мужской',
+              women: 'Женский',
+              мужской: 'Мужской',
+              женский: 'Женский',
+              унисекс: 'Унисекс',
+            };
+            return genderMap[value.toLowerCase()] || value;
+          };
+
+          return (
+            <div className="text-center">
+              {info.getValue() ? (
+                <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                  {getGenderLabel(info.getValue())}
+                </span>
+              ) : (
+                <span className="text-gray-400 dark:text-gray-500">—</span>
+              )}
+            </div>
+          );
+        },
       }),
       columnHelper.accessor('season', {
         header: () => 'Сезон',
-        cell: info => (
-          <div className="text-center">
-            {info.getValue() ? (
-              <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                {info.getValue()}
-              </span>
-            ) : (
-              <span className="text-gray-400 dark:text-gray-500">—</span>
-            )}
-          </div>
-        ),
+        cell: info => {
+          const getSeasonLabel = (value: string) => {
+            const seasonMap: Record<string, string> = {
+              spring: 'Весна',
+              summer: 'Лето',
+              autumn: 'Осень',
+              fall: 'Осень',
+              winter: 'Зима',
+              'all-season': 'Всесезонный',
+              all_season: 'Всесезонный',
+              весна: 'Весна',
+              лето: 'Лето',
+              осень: 'Осень',
+              зима: 'Зима',
+              всесезонный: 'Всесезонный',
+            };
+            return seasonMap[value.toLowerCase()] || value;
+          };
+
+          return (
+            <div className="text-center">
+              {info.getValue() ? (
+                <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                  {getSeasonLabel(info.getValue())}
+                </span>
+              ) : (
+                <span className="text-gray-400 dark:text-gray-500">—</span>
+              )}
+            </div>
+          );
+        },
       }),
       columnHelper.display({
         id: 'sizes',
@@ -288,7 +324,12 @@ export function DraftsTable({
               {headerGroup.headers.map(header => (
                 <th
                   key={header.id}
-                  className="whitespace-nowrap border-b border-gray-200 bg-white px-4 py-3 text-left align-top text-sm font-medium text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  className={`whitespace-nowrap border-b border-gray-200 bg-white px-4 py-3 align-top text-sm font-medium text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 ${
+                    header.column.id === 'material' ||
+                    header.column.id === 'gender'
+                      ? 'text-center'
+                      : 'text-left'
+                  }`}
                 >
                   {header.isPlaceholder
                     ? null
@@ -310,7 +351,9 @@ export function DraftsTable({
               {row.getVisibleCells().map(cell => (
                 <td
                   key={cell.id}
-                  className="whitespace-nowrap px-4 py-3 align-top text-sm text-gray-900 dark:text-gray-100"
+                  className={`whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${
+                    cell.column.id === 'select' ? 'align-middle' : 'align-top'
+                  }`}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
