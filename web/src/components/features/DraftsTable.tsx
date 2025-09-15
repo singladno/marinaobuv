@@ -40,12 +40,15 @@ export function DraftsTable({
         id: 'select',
         header: () => '',
         cell: info => (
-          <input
-            type="checkbox"
-            checked={Boolean(info.row.original.selected)}
-            onChange={() => onToggle(info.row.original.id)}
-            aria-label="Выбрать черновик"
-          />
+          <div className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={Boolean(info.row.original.selected)}
+              onChange={() => onToggle(info.row.original.id)}
+              aria-label="Выбрать черновик"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
+            />
+          </div>
         ),
       }),
       columnHelper.accessor('name', {
@@ -58,6 +61,8 @@ export function DraftsTable({
               onChange={e => setValue(e.target.value)}
               onBlur={() => onPatch(info.row.original.id, { name: value })}
               aria-label="Название"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+              placeholder="Введите название"
             />
           );
         },
@@ -76,6 +81,8 @@ export function DraftsTable({
                 onPatch(info.row.original.id, { article: value || null })
               }
               aria-label="Артикул"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+              placeholder="Введите артикул"
             />
           );
         },
@@ -85,44 +92,125 @@ export function DraftsTable({
         header: () => 'Поставщик',
         cell: info => {
           const p = info.row.original.provider;
-          return p ? `${p.name}${p.phone ? ` (${p.phone})` : ''}` : '—';
+          return (
+            <div className="min-w-0">
+              {p ? (
+                <div className="truncate">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
+                    {p.name}
+                  </div>
+                  {p.phone && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {p.phone}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="text-gray-400 dark:text-gray-500">—</span>
+              )}
+            </div>
+          );
         },
       }),
       columnHelper.display({
         id: 'pricePairRub',
         header: () => 'Цена/пара (₽)',
-        cell: info =>
-          info.row.original.pricePair != null
-            ? (info.row.original.pricePair / 100).toLocaleString('ru-RU')
-            : '—',
+        cell: info => (
+          <div className="text-right">
+            {info.row.original.pricePair != null ? (
+              <span className="font-mono font-medium text-gray-900 dark:text-gray-100">
+                {(info.row.original.pricePair / 100).toLocaleString('ru-RU')}
+              </span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">—</span>
+            )}
+          </div>
+        ),
       }),
       columnHelper.accessor('currency', {
         header: () => 'Валюта',
-        cell: info => info.getValue() ?? '—',
+        cell: info => (
+          <div className="text-center">
+            {info.getValue() ? (
+              <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                {info.getValue()}
+              </span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">—</span>
+            )}
+          </div>
+        ),
       }),
       columnHelper.accessor('packPairs', {
         header: () => 'Пар в упаковке',
-        cell: info => info.getValue() ?? '—',
+        cell: info => (
+          <div className="text-center">
+            {info.getValue() ? (
+              <span className="font-medium text-gray-900 dark:text-gray-100">
+                {info.getValue()}
+              </span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">—</span>
+            )}
+          </div>
+        ),
       }),
       columnHelper.display({
         id: 'priceBoxRub',
         header: () => 'Цена коробки (₽)',
-        cell: info =>
-          info.row.original.priceBox != null
-            ? (info.row.original.priceBox / 100).toLocaleString('ru-RU')
-            : '—',
+        cell: info => (
+          <div className="text-right">
+            {info.row.original.priceBox != null ? (
+              <span className="font-mono font-medium text-gray-900 dark:text-gray-100">
+                {(info.row.original.priceBox / 100).toLocaleString('ru-RU')}
+              </span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">—</span>
+            )}
+          </div>
+        ),
       }),
       columnHelper.accessor('material', {
         header: () => 'Материал',
-        cell: info => info.getValue() ?? '—',
+        cell: info => (
+          <div className="text-center">
+            {info.getValue() ? (
+              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                {info.getValue()}
+              </span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">—</span>
+            )}
+          </div>
+        ),
       }),
       columnHelper.accessor('gender', {
         header: () => 'Пол',
-        cell: info => info.getValue() ?? '—',
+        cell: info => (
+          <div className="text-center">
+            {info.getValue() ? (
+              <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                {info.getValue()}
+              </span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">—</span>
+            )}
+          </div>
+        ),
       }),
       columnHelper.accessor('season', {
         header: () => 'Сезон',
-        cell: info => info.getValue() ?? '—',
+        cell: info => (
+          <div className="text-center">
+            {info.getValue() ? (
+              <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                {info.getValue()}
+              </span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">—</span>
+            )}
+          </div>
+        ),
       }),
       columnHelper.display({
         id: 'sizes',
@@ -132,20 +220,54 @@ export function DraftsTable({
             | Array<{ size: string; stock?: number; count?: number }>
             | null
             | undefined;
-          if (!Array.isArray(s) || !s.length) return '—';
-          return s.map(x => `${x.size}:${x.stock ?? x.count ?? 0}`).join(', ');
+          if (!Array.isArray(s) || !s.length) {
+            return <span className="text-gray-400 dark:text-gray-500">—</span>;
+          }
+          return (
+            <div className="flex flex-wrap gap-1">
+              {s.map((x, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  {x.size}:{x.stock ?? x.count ?? 0}
+                </span>
+              ))}
+            </div>
+          );
         },
       }),
       columnHelper.display({
         id: 'images',
         header: () => 'Изображения',
-        cell: info => (
-          <div>
-            {(info.row.original.images || []).slice(0, 4).map(img => (
-              <img key={img.id} src={img.url} alt="" />
-            ))}
-          </div>
-        ),
+        cell: info => {
+          const images = info.row.original.images || [];
+          if (!images.length) {
+            return <span className="text-gray-400 dark:text-gray-500">—</span>;
+          }
+          return (
+            <div className="flex gap-1">
+              {images.slice(0, 4).map(img => (
+                <div
+                  key={img.id}
+                  className="relative h-12 w-12 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700"
+                >
+                  <img
+                    src={img.url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+              {images.length > 4 && (
+                <div className="flex h-12 w-12 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                  +{images.length - 4}
+                </div>
+              )}
+            </div>
+          );
+        },
       }),
     ],
     [onToggle, onPatch]
@@ -158,51 +280,45 @@ export function DraftsTable({
   });
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-shrink-0">
-        <table className="w-full border-separate border-spacing-0">
-          <thead>
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <th
-                    key={header.id}
-                    className="border-b border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-        </table>
-      </div>
-      <div className="flex-1 overflow-auto">
-        <table className="w-full border-separate border-spacing-0">
-          <tbody>
-            {table.getRowModel().rows.map(row => (
-              <tr
-                key={row.id}
-                className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
-              >
-                {row.getVisibleCells().map(cell => (
-                  <td
-                    key={cell.id}
-                    className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="h-full overflow-auto">
+      <table className="w-full min-w-max border-separate border-spacing-0">
+        <thead className="sticky top-0 z-10">
+          {table.getHeaderGroups().map(headerGroup => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map(header => (
+                <th
+                  key={header.id}
+                  className="whitespace-nowrap border-b border-gray-200 bg-white px-4 py-3 text-left align-top text-sm font-medium text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                </th>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map(row => (
+            <tr
+              key={row.id}
+              className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
+            >
+              {row.getVisibleCells().map(cell => (
+                <td
+                  key={cell.id}
+                  className="whitespace-nowrap px-4 py-3 align-top text-sm text-gray-900 dark:text-gray-100"
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
