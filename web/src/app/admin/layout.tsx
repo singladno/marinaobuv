@@ -10,5 +10,9 @@ export default async function AdminLayout({
   const session = await getSession();
   if (!session || session.role !== 'ADMIN') redirect('/');
 
-  return <AdminSidebarLayout>{children}</AdminSidebarLayout>;
+  return (
+    <div className="bg-background text-foreground flex h-screen">
+      <AdminSidebarLayout>{children}</AdminSidebarLayout>
+    </div>
+  );
 }

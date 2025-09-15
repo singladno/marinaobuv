@@ -61,7 +61,7 @@ export default function AdminDraftsPage() {
       {loading ? (
         <div>Загрузка…</div>
       ) : (
-        <div className="overflow-auto">
+        <div className="h-full overflow-auto">
           <DraftsTable
             data={data}
             selected={selected}

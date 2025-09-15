@@ -28,7 +28,8 @@ export default function AdminSidebarLayout({
   }, [isCollapsed]);
 
   return (
-    <div className="flex h-full min-h-0 gap-6">
+    <>
+      {/* Sidebar - Left column */}
       <AdminSidebar
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
@@ -36,13 +37,15 @@ export default function AdminSidebarLayout({
         setIsMobileOpen={setIsMobileOpen}
       />
 
-      <section className="min-w-0 flex-1 overflow-auto p-2 sm:p-4">
-        <div className="mb-2 flex items-center gap-2 md:hidden">
+      {/* Main content area - Right column */}
+      <div className="flex flex-1 flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
+        {/* Mobile header */}
+        <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 md:hidden dark:border-gray-700 dark:bg-gray-900">
           <button
             type="button"
             aria-label="Open sidebar"
             onClick={() => setIsMobileOpen(true)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md transition hover:bg-[color-mix(in_oklab,var(--color-background),#000_6%)] focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:hover:bg-gray-800"
           >
             <span className="sr-only">Open sidebar</span>
             <svg
@@ -54,11 +57,15 @@ export default function AdminSidebarLayout({
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="text-foreground/70 text-sm">Меню</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Меню
+          </span>
         </div>
-        {children}
-      </section>
-    </div>
+
+        {/* Main content - No scroll here */}
+        <main className="flex-1 overflow-hidden p-4 sm:p-6">{children}</main>
+      </div>
+    </>
   );
 }
 // Sidebar links and chrome are handled in AdminSidebar.

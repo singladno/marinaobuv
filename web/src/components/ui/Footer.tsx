@@ -6,7 +6,7 @@ import { site } from '@/lib/site';
 export default function Footer() {
   const year = new Date().getFullYear();
   return (
-    <footer className="border-border/80 bg-surface/80 supports-[backdrop-filter]:bg-surface/70 mt-8 border-t backdrop-blur">
+    <footer className="border-border/80 bg-surface/80 supports-[backdrop-filter]:bg-surface/70 border-t backdrop-blur">
       <div className="container mx-auto flex flex-col gap-3 px-4 py-6 text-sm sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
         <Text tone="muted">
           © {year} {site.brand}
