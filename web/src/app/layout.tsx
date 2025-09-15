@@ -42,10 +42,13 @@ export default function RootLayout({
         >
           Пропустить к содержимому
         </a>
-        <div className="bg-background text-foreground flex min-h-dvh flex-col">
+        <div className="bg-background text-foreground flex h-dvh min-h-0 flex-col">
           <Header />
-          <main className="flex-1">
-            <div id="main-content" className="container mx-auto px-4 py-6">
+          <main className="min-h-0 flex-1 overflow-hidden">
+            <div
+              id="main-content"
+              className="container mx-auto h-full min-h-0 px-4 py-6"
+            >
               {children}
             </div>
           </main>
