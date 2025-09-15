@@ -130,6 +130,8 @@ model WaDraftProduct {
   description    String?
   sizes          Json? // Array of size objects
   rawGptResponse Json? // Full GPT response for debugging
+  gptRequest     String? // Raw text sent to GPT for processing
+  source         Json? // Array of message IDs used for this draft product
   status         String                @default("draft") // draft, processed, approved, rejected
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
@@ -189,7 +191,8 @@ model WhatsAppMessage {
   rawPayload   Json // Full API response
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
-  draftProduct WaDraftProduct?
+  draftProductId String?
+  draftProduct   WaDraftProduct?
 
   @@index([createdAt])
   @@index([from])

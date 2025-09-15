@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireRole } from '@/lib/auth';
-import { slugify } from '@/src/utils/slugify';
+import { slugify } from '@/utils/slugify';
 import type { Role } from '@prisma/client';
 
 export async function POST(req: NextRequest) {

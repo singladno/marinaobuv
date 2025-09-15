@@ -36,8 +36,17 @@ export async function GET(req: NextRequest) {
         createdAt: true,
         updatedAt: true,
         images: {
-          select: { id: true, url: true, isPrimary: true, sort: true },
+          select: {
+            id: true,
+            url: true,
+            isPrimary: true,
+            sort: true,
+            alt: true,
+          },
         },
+        gptRequest: true,
+        rawGptResponse: true,
+        source: true,
       },
     });
 

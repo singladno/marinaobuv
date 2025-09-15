@@ -8,20 +8,23 @@ import { env } from '../lib/env';
 import { fetchGroupMessages, WhatsAppMessage } from '../lib/message-fetcher';
 
 /**
- * Fetch messages from the last 24 hours
+ * Fetch messages from the last N hours (configurable via MESSAGE_FETCH_HOURS)
  */
 async function fetchRecentMessages(chatId: string): Promise<WhatsAppMessage[]> {
-  console.log(`Fetching messages from the last 24 hours for chat: ${chatId}`);
+  const fetchHours = env.MESSAGE_FETCH_HOURS || 24;
+  console.log(
+    `Fetching messages from the last ${fetchHours} hours for chat: ${chatId}`
+  );
 
-  // Calculate timestamp for 24 hours ago
-  const twentyFourHoursAgo = Math.floor(
-    (Date.now() - 24 * 60 * 60 * 1000) / 1000
+  // Calculate timestamp for N hours ago
+  const hoursAgo = Math.floor(
+    (Date.now() - fetchHours * 60 * 60 * 1000) / 1000
   );
 
   // Fetch messages from the group
   const messages = await fetchGroupMessages(chatId, 1000); // Fetch more messages to ensure we get recent ones
 
-  // Filter messages from the last 24 hours and exclude group_invite messages
+  // Filter messages from the last N hours and exclude group_invite messages
   const recentMessages = messages.filter(message => {
     const rawPayload = message as any;
     const messageTimestamp = rawPayload.timestamp || 0;
@@ -32,10 +35,12 @@ async function fetchRecentMessages(chatId: string): Promise<WhatsAppMessage[]> {
       return false;
     }
 
-    return messageTimestamp >= twentyFourHoursAgo;
+    return messageTimestamp >= hoursAgo;
   });
 
-  console.log(`Found ${recentMessages.length} messages from the last 24 hours`);
+  console.log(
+    `Found ${recentMessages.length} messages from the last ${fetchHours} hours`
+  );
   return recentMessages;
 }
 
@@ -144,7 +149,9 @@ async function main() {
     const messages = await fetchRecentMessages(env.TARGET_GROUP_ID);
 
     if (messages.length === 0) {
-      console.log('No messages found from the last 24 hours');
+      console.log(
+        `No messages found from the last ${env.MESSAGE_FETCH_HOURS || 24} hours`
+      );
       return;
     }
 
