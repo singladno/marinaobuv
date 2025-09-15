@@ -38,8 +38,8 @@ export default function AdminDraftsPage() {
   };
 
   return (
-    <div className="space-y-3 p-4">
-      <div className="flex items-center gap-3">
+    <div className="flex h-full flex-col p-4">
+      <div className="flex items-center gap-3 pb-4">
         <h1 className="text-xl font-semibold">Черновики товаров</h1>
         <Select
           value={status ?? 'draft'}
@@ -61,7 +61,7 @@ export default function AdminDraftsPage() {
       {loading ? (
         <div>Загрузка…</div>
       ) : (
-        <div className="h-full overflow-auto">
+        <div className="flex-1 overflow-auto">
           <DraftsTable
             data={data}
             selected={selected}
