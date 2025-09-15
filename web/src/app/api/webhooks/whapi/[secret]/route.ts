@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/server/db';
 import { env } from '@/lib/env';
-import { isGroupJid, extractMessageText, mediaInfo, fetchMediaBuffer } from '@/lib/whapi';
+import {
+  isGroupJid,
+  extractMessageText,
+  mediaInfo,
+  fetchMediaBuffer,
+} from '@/lib/whapi';
 import { buildKey, putBuffer, publicUrl, computeSha256 } from '@/lib/s3u';
 import { normalizeTextToDraft } from '@/lib/yagpt';
 import { WebhookPayloadSchema, isMessagesUpsert } from '@/types/whapi';
@@ -24,7 +29,10 @@ export async function POST(
     const parseResult = WebhookPayloadSchema.safeParse(body);
     if (!parseResult.success) {
       console.error('Invalid webhook payload:', parseResult.error);
-      return NextResponse.json({ ok: false, error: 'Invalid payload' }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: 'Invalid payload' },
+        { status: 400 }
+      );
     }
 
     const payload = parseResult.data;
@@ -57,7 +65,10 @@ export async function POST(
     // Skip group_invite messages
     const messageType = message ? Object.keys(message)[0] : null;
     if (messageType === 'group_invite') {
-      return NextResponse.json({ ok: true, message: 'Skipped group_invite message' });
+      return NextResponse.json({
+        ok: true,
+        message: 'Skipped group_invite message',
+      });
     }
 
     // Extract text content
@@ -145,13 +156,13 @@ export async function POST(
               update: {
                 name: draft.name,
                 article: draft.article || null,
-                season: draft.season?.toUpperCase() as any || null,
+                season: (draft.season?.toUpperCase() as any) || null,
                 typeSlug: draft.typeSlug || null,
                 pricePair: draft.pricePair || null,
                 packPairs: draft.packPairs || null,
                 priceBox: draft.priceBox || null,
                 material: draft.material || null,
-                gender: draft.gender?.toUpperCase() as any || null,
+                gender: (draft.gender?.toUpperCase() as any) || null,
                 sizes: draft.sizes || null,
                 rawGptResponse: draft,
                 updatedAt: new Date(),
@@ -160,20 +171,22 @@ export async function POST(
                 messageId: waMessage.id,
                 name: draft.name,
                 article: draft.article || null,
-                season: draft.season?.toUpperCase() as any || null,
+                season: (draft.season?.toUpperCase() as any) || null,
                 typeSlug: draft.typeSlug || null,
                 pricePair: draft.pricePair || null,
                 packPairs: draft.packPairs || null,
                 priceBox: draft.priceBox || null,
                 material: draft.material || null,
-                gender: draft.gender?.toUpperCase() as any || null,
+                gender: (draft.gender?.toUpperCase() as any) || null,
                 sizes: draft.sizes || null,
                 rawGptResponse: draft,
               },
             });
           }
         } else {
-          console.log('Yandex Cloud credentials not configured, skipping AI processing');
+          console.log(
+            'Yandex Cloud credentials not configured, skipping AI processing'
+          );
         }
       } catch (error) {
         console.error('Failed to process text with YandexGPT:', error);
@@ -183,12 +196,11 @@ export async function POST(
     // Log successful processing
     console.log(`Processed message ${key.id} from group ${key.remoteJid}:`, {
       hasText: !!text,
-      hasMedia: !!(mediaS3Key),
+      hasMedia: !!mediaS3Key,
       sender: pushName,
     });
 
     return NextResponse.json({ ok: true });
-
   } catch (error) {
     console.error('Webhook processing error:', error);
     // Return 200 to avoid webhook retries

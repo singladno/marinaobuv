@@ -1,4 +1,9 @@
-# Marina Obuv
+# MarinaObuv
+
+## Project Rules
+
+- Do not use hardcoded strings for domain values (roles, statuses, types). Always use enums exported from a single source of truth (e.g., Prisma enums or TypeScript enums in `src/types`).
+- Keep React components under 120 lines. Extract hooks/components/utils as needed.
 
 A modern Next.js web application.
 
@@ -23,6 +28,7 @@ marinaobuv/
 ### Option 1: Using the shell script (Recommended)
 
 1. **Run the web application:**
+
    ```bash
    ./run.sh
    ```
@@ -35,6 +41,7 @@ marinaobuv/
 ### Option 2: Using npm scripts
 
 1. **Install dependencies:**
+
    ```bash
    npm run install
    ```
@@ -69,6 +76,7 @@ marinaobuv/
 **Components must not exceed 120 lines of code.**
 
 ### When to Decompose:
+
 - Component exceeds 120 lines
 - Multiple responsibilities in one component
 - Complex state management
@@ -76,12 +84,14 @@ marinaobuv/
 - Large render methods
 
 ### Decomposition Strategies:
+
 1. **Extract Custom Hooks** - Move state logic to `hooks/` directory
 2. **Create Sub-components** - Break into smaller focused components
 3. **Extract Utilities** - Move pure functions to `utils/` directory
 4. **Split Files** - Separate complex logic into multiple files
 
 ### Example:
+
 ```tsx
 // ❌ Bad - Large component (200+ lines)
 const UserDashboard = () => {
@@ -141,6 +151,7 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed setup instructions.
 ## Development
 
 The web application is built with:
+
 - **Next.js 15.5.3** - React framework with App Router
 - **React 19.1.0** - UI library
 - **TypeScript** - Type safety
@@ -159,17 +170,22 @@ nvm use
 ## Troubleshooting
 
 ### Dependencies Issues
+
 If you encounter dependency issues:
+
 ```bash
 rm -rf web/node_modules
 npm run install
 ```
 
 ### Port Conflicts
+
 The web application runs on port 3000 by default. If you need to change this, modify the `dev` script in `web/package.json`.
 
 ### Permission Issues (macOS/Linux)
+
 If the shell script is not executable:
+
 ```bash
 chmod +x run.sh
 ```
@@ -185,10 +201,11 @@ chmod +x run.sh
 ## License
 
 Private project - All rights reserved.
+
 - Image storage (S3)
   - Create a public-read S3-compatible bucket (Yandex Cloud, Selectel, VK Cloud) or place a CDN in front of a private bucket configured for public GET.
   - Configure env in `web/.env` (see `web/.env.example`).
   - For local/dev uploads, use the presign API:
-    1) POST `/api/uploads/presign` to obtain a presigned PUT URL
-    2) PUT the file to S3 with the returned `uploadUrl`
-    3) POST `/api/products/:id/images` to save the image record
+    1. POST `/api/uploads/presign` to obtain a presigned PUT URL
+    2. PUT the file to S3 with the returned `uploadUrl`
+    3. POST `/api/products/:id/images` to save the image record

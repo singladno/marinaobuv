@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/server/db';
 import type { CatalogFilters } from '@/types/filters';
 
 export type CategoryNode = {
@@ -34,12 +34,12 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
     },
   });
 
-  return roots.map((r) => ({
+  return roots.map(r => ({
     id: r.id,
     name: r.name,
     slug: r.slug,
     path: r.path,
-    children: r.children.map((c) => ({
+    children: r.children.map(c => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
@@ -70,7 +70,12 @@ export type ProductCardDTO = {
 export async function listProductsByCategoryPath(opts: {
   path?: string;
   filters?: CatalogFilters;
-}): Promise<{ items: ProductCardDTO[]; total: number; page: number; pageSize: number }> {
+}): Promise<{
+  items: ProductCardDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
   const page = Math.max(1, opts.filters?.page ?? 1);
   const pageSize = Math.min(60, Math.max(1, opts.filters?.pageSize ?? 24));
 
@@ -88,8 +93,10 @@ export async function listProductsByCategoryPath(opts: {
   }
 
   // Price filter (RUB -> kopecks)
-  const pf = opts.filters?.priceFrom != null ? opts.filters.priceFrom * 100 : undefined;
-  const pt = opts.filters?.priceTo != null ? opts.filters.priceTo * 100 : undefined;
+  const pf =
+    opts.filters?.priceFrom != null ? opts.filters.priceFrom * 100 : undefined;
+  const pt =
+    opts.filters?.priceTo != null ? opts.filters.priceTo * 100 : undefined;
   if (pf != null || pt != null) {
     const priceFilter: Prisma.IntFilter = {};
     if (pf != null) priceFilter.gte = pf;
@@ -129,7 +136,7 @@ export async function listProductsByCategoryPath(opts: {
     prisma.product.count({ where }),
   ]);
 
-  const items: ProductCardDTO[] = rows.map((p) => ({
+  const items: ProductCardDTO[] = rows.map(p => ({
     id: p.id,
     slug: p.slug,
     name: p.name,
@@ -141,14 +148,17 @@ export async function listProductsByCategoryPath(opts: {
   return { items, total, page, pageSize };
 }
 
-export async function getSizeFacetsForPath(path?: string): Promise<Array<{ size: string; count: number }>> {
+export async function getSizeFacetsForPath(
+  path?: string
+): Promise<Array<{ size: string; count: number }>> {
   const input = normalizeInputPath(path);
   const full = dbPathFromInput(input);
 
   let where: Prisma.ProductSizeWhereInput = {};
   if (full) {
     const isSeason = !input?.includes('/');
-    if (isSeason) where = { product: { category: { path: { startsWith: full } } } };
+    if (isSeason)
+      where = { product: { category: { path: { startsWith: full } } } };
     else where = { product: { category: { path: full } } };
   }
 
@@ -158,7 +168,7 @@ export async function getSizeFacetsForPath(path?: string): Promise<Array<{ size:
     _count: { _all: true },
   });
 
-  const facets = rows.map((r) => ({ size: r.size, count: r._count._all }));
+  const facets = rows.map(r => ({ size: r.size, count: r._count._all }));
   // Sort numerically if possible
   facets.sort((a, b) => {
     const na = Number(a.size);
@@ -169,7 +179,9 @@ export async function getSizeFacetsForPath(path?: string): Promise<Array<{ size:
   return facets;
 }
 
-export async function getPriceBoundsForPath(path?: string): Promise<{ min: number; max: number }> {
+export async function getPriceBoundsForPath(
+  path?: string
+): Promise<{ min: number; max: number }> {
   const input = normalizeInputPath(path);
   const full = dbPathFromInput(input);
 

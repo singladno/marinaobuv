@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/server/db';
 
 export async function GET() {
   try {
@@ -18,23 +18,27 @@ export async function GET() {
     });
 
     // Group by remoteJid to get unique groups
-    const groups = recentMessages.reduce((acc, message) => {
-      const groupId = message.remoteJid;
-      if (!acc[groupId]) {
-        acc[groupId] = {
-          groupId,
-          latestMessage: message.text?.substring(0, 100) || 'No text',
-          latestSender: message.pushName || 'Unknown',
-          latestTime: message.createdAt,
-          messageCount: 0,
-        };
-      }
-      acc[groupId].messageCount++;
-      return acc;
-    }, {} as Record<string, any>);
+    const groups = recentMessages.reduce(
+      (acc, message) => {
+        const groupId = message.remoteJid;
+        if (!acc[groupId]) {
+          acc[groupId] = {
+            groupId,
+            latestMessage: message.text?.substring(0, 100) || 'No text',
+            latestSender: message.pushName || 'Unknown',
+            latestTime: message.createdAt,
+            messageCount: 0,
+          };
+        }
+        acc[groupId].messageCount++;
+        return acc;
+      },
+      {} as Record<string, any>
+    );
 
-    const groupList = Object.values(groups).sort((a: any, b: any) =>
-      new Date(b.latestTime).getTime() - new Date(a.latestTime).getTime()
+    const groupList = Object.values(groups).sort(
+      (a: any, b: any) =>
+        new Date(b.latestTime).getTime() - new Date(a.latestTime).getTime()
     );
 
     return NextResponse.json({
@@ -44,9 +48,12 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to fetch recent groups:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }

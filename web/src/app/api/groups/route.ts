@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/server/db';
 
 export async function GET() {
   try {
@@ -24,7 +24,7 @@ export async function GET() {
 
     // Get unique group names (pushName) for each group
     const groupDetails = await Promise.all(
-      groups.map(async (group) => {
+      groups.map(async group => {
         // Get the most recent message to extract group name
         const latestMessage = await prisma.whatsAppMessage.findFirst({
           where: {
@@ -45,7 +45,8 @@ export async function GET() {
           firstMessageAt: group._min.createdAt,
           lastMessageAt: group._max.createdAt,
           latestSender: latestMessage?.pushName || 'Unknown',
-          latestMessagePreview: latestMessage?.text?.substring(0, 100) || 'No text content',
+          latestMessagePreview:
+            latestMessage?.text?.substring(0, 100) || 'No text content',
         };
       })
     );
@@ -57,9 +58,12 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to fetch groups:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }

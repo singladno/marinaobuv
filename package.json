@@ -18,7 +18,9 @@
     "fetch-messages": "cd web && npx tsx src/scripts/fetch-group-messages.ts",
     "draft:setup": "cd web && npx tsx src/scripts/setup-draft-products.ts",
     "draft:process": "cd web && npx tsx src/scripts/process-draft-products.ts",
-    "draft:view": "cd web && npx tsx src/scripts/view-draft-products.ts"
+    "draft:view": "cd web && npx tsx src/scripts/view-draft-products.ts",
+    "prisma:seed": "cd web && npm run prisma:seed",
+    "make-hash": "node web/scripts/make-hash.js"
   },
   "engines": {
     "node": ">=18.0.0",

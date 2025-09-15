@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/server/db';
 
 export async function GET() {
   try {
@@ -26,9 +26,10 @@ export async function GET() {
 
     // Categorize messages as real vs test
     const categorizedMessages = messages.map(msg => {
-      const isTestMessage = msg.waMessageId.startsWith('test-') ||
-                           msg.waMessageId.startsWith('group-test-') ||
-                           msg.waMessageId.startsWith('user-message-');
+      const isTestMessage =
+        msg.waMessageId.startsWith('test-') ||
+        msg.waMessageId.startsWith('group-test-') ||
+        msg.waMessageId.startsWith('user-message-');
 
       return {
         ...msg,
@@ -53,9 +54,12 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to fetch real messages:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }

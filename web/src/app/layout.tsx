@@ -7,6 +7,7 @@ import './globals.css';
 import Footer from '@/components/ui/Footer';
 import Header from '@/components/ui/Header';
 import { defaultMetadata } from '@/lib/seo';
+import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -37,16 +38,22 @@ export default function RootLayout({
       >
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:rounded focus:bg-blue-600 focus:px-3 focus:py-2 focus:text-white"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:rounded focus:bg-blue-600 focus:px-3 focus:py-2 focus:text-white"
         >
           Пропустить к содержимому
         </a>
-        <div className="min-h-dvh flex flex-col bg-background text-foreground">
+        <div className="bg-background text-foreground flex min-h-dvh flex-col">
           <Header />
           <main className="flex-1">
-            <div id="main-content" className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">{children}</div>
+            <div
+              id="main-content"
+              className="container mx-auto px-4 py-6 sm:px-6 lg:px-8"
+            >
+              {children}
+            </div>
           </main>
           <Footer />
+          <AdminSwitcher />
         </div>
       </body>
     </html>

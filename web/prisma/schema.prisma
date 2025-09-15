@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  PROVIDER
+  GRUZCHIK
+  CLIENT
+}
+
 enum Gender {
   FEMALE
   MALE
@@ -98,6 +105,7 @@ model Provider {
   updatedAt   DateTime @updatedAt
   // messages    WhatsAppMessage[]  // Will be added after data cleanup
   draftProducts WaDraftProduct[]
+  users       User[]
 
   @@index([name])
   @@index([phone])
@@ -188,5 +196,20 @@ model WhatsAppMessage {
   @@index([fromMe])
   @@index([chatId])
   @@index([timestamp])
+  @@index([providerId])
+}
+
+model User {
+  id          String   @id @default(cuid())
+  phone       String   @unique
+  name        String?
+  role        Role
+  providerId  String?
+  provider    Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  passwordHash String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([role])
   @@index([providerId])
 }

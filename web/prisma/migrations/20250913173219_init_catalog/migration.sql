@@ -1,8 +1,4 @@
--- CreateEnum
-CREATE TYPE "Gender" AS ENUM ('FEMALE', 'MALE', 'UNISEX');
-
--- CreateEnum
-CREATE TYPE "Season" AS ENUM ('SPRING', 'SUMMER', 'AUTUMN', 'WINTER');
+-- Enums are created in earlier migration
 
 -- CreateTable
 CREATE TABLE "Category" (

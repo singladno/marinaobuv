@@ -1,4 +1,4 @@
-import { PrismaClient, Gender, Season } from "@prisma/client";
+import { PrismaClient, Gender, Season, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -22,13 +22,30 @@ async function upsertCategory({ name, slug, parentSlug }: CatInput) {
   });
 }
 
+async function ensureAdmin() {
+  const phone = '+79999999999';
+  const name = 'Admin';
+  const passwordHash = process.env.ADMIN_PASSWORD_HASH;
+  if (!passwordHash) {
+    console.warn('ADMIN_PASSWORD_HASH is not set; skipping admin user seed.');
+    return;
+  }
+  const existing = await prisma.user.findUnique({ where: { phone } });
+  if (existing) return;
+  await prisma.user.create({
+    data: { phone, name, role: Role.ADMIN, passwordHash },
+  });
+  console.log('Admin user created:', { phone });
+}
+
 async function main() {
+  await ensureAdmin();
   // Seasons
   const seasons: CatInput[] = [
-    { name: "Весна", slug: "vesna" },
-    { name: "Лето", slug: "leto" },
-    { name: "Осень", slug: "osen" },
-    { name: "Зима", slug: "zima" },
+    { name: 'Весна', slug: 'vesna' },
+    { name: 'Лето', slug: 'leto' },
+    { name: 'Осень', slug: 'osen' },
+    { name: 'Зима', slug: 'zima' },
   ];
 
   for (const s of seasons) {
@@ -38,20 +55,24 @@ async function main() {
   // Leaf categories, unique slugs distributed across seasons
   const leaves: CatInput[] = [
     // Весна
-    { name: "Мокасины/Лоферы", slug: "mokasiny-lofery", parentSlug: "vesna" },
-    { name: "Балетки", slug: "baletki", parentSlug: "vesna" },
-    { name: "Сандалии", slug: "sandalii", parentSlug: "vesna" },
+    { name: 'Мокасины/Лоферы', slug: 'mokasiny-lofery', parentSlug: 'vesna' },
+    { name: 'Балетки', slug: 'baletki', parentSlug: 'vesna' },
+    { name: 'Сандалии', slug: 'sandalii', parentSlug: 'vesna' },
     // Лето
-    { name: "Босоножки", slug: "bosonozhki", parentSlug: "leto" },
-    { name: "Шлепанцы", slug: "shlepancy", parentSlug: "leto" },
-    { name: "Домашние тапочки", slug: "domashnie-tapochki", parentSlug: "leto" },
+    { name: 'Босоножки', slug: 'bosonozhki', parentSlug: 'leto' },
+    { name: 'Шлепанцы', slug: 'shlepancy', parentSlug: 'leto' },
+    {
+      name: 'Домашние тапочки',
+      slug: 'domashnie-tapochki',
+      parentSlug: 'leto',
+    },
     // Осень
-    { name: "Кроссовки", slug: "krossovki", parentSlug: "osen" },
-    { name: "Ботинки", slug: "botinki", parentSlug: "osen" },
-    { name: "Кеды", slug: "kedy", parentSlug: "osen" },
+    { name: 'Кроссовки', slug: 'krossovki', parentSlug: 'osen' },
+    { name: 'Ботинки', slug: 'botinki', parentSlug: 'osen' },
+    { name: 'Кеды', slug: 'kedy', parentSlug: 'osen' },
     // Зима
-    { name: "Резиновые сапоги", slug: "rezinovye-sapogi", parentSlug: "zima" },
-    { name: "Туфли", slug: "tufli", parentSlug: "zima" },
+    { name: 'Резиновые сапоги', slug: 'rezinovye-sapogi', parentSlug: 'zima' },
+    { name: 'Туфли', slug: 'tufli', parentSlug: 'zima' },
   ];
 
   for (const c of leaves) {
@@ -60,32 +81,44 @@ async function main() {
 
   // Demo product under Осень/Кроссовки
   const demo = {
-    slug: "zimnie-zhenskie-krossovki-745646",
-    name: "Зимние женские кроссовки",
-    article: "745646",
+    slug: 'zimnie-zhenskie-krossovki-745646',
+    name: 'Зимние женские кроссовки',
+    article: '745646',
     pricePair: 85000,
-    currency: "RUB",
+    currency: 'RUB',
     packPairs: 8,
     priceBox: 680000,
-    material: "искусственные материалы",
+    material: 'искусственные материалы',
     gender: Gender.FEMALE,
     season: Season.WINTER,
-    description: "Тёплые кроссовки для зимы. Удобная посадка и лёгкий уход.",
+    description: 'Тёплые кроссовки для зимы. Удобная посадка и лёгкий уход.',
     sizes: [
-      { size: "36", perBox: 1 },
-      { size: "37", perBox: 1 },
-      { size: "38", perBox: 2 },
-      { size: "39", perBox: 2 },
-      { size: "40", perBox: 1 },
-      { size: "41", perBox: 1 },
+      { size: '36', perBox: 1 },
+      { size: '37', perBox: 1 },
+      { size: '38', perBox: 2 },
+      { size: '39', perBox: 2 },
+      { size: '40', perBox: 1 },
+      { size: '41', perBox: 1 },
     ],
     images: [
-      { url: "/images/demo/1.jpg", alt: "Вид спереди", sort: 0, isPrimary: true },
-      { url: "/images/demo/2.jpg", alt: "Вид сбоку", sort: 1, isPrimary: false },
+      {
+        url: '/images/demo/1.jpg',
+        alt: 'Вид спереди',
+        sort: 0,
+        isPrimary: true,
+      },
+      {
+        url: '/images/demo/2.jpg',
+        alt: 'Вид сбоку',
+        sort: 1,
+        isPrimary: false,
+      },
     ],
   };
 
-  const krossovki = await prisma.category.findUnique({ where: { slug: "krossovki" } });
+  const krossovki = await prisma.category.findUnique({
+    where: { slug: 'krossovki' },
+  });
   if (!krossovki) throw new Error("Category 'krossovki' not found");
 
   const product = await prisma.product.upsert({
@@ -126,7 +159,11 @@ async function main() {
   await prisma.productImage.deleteMany({ where: { productId: product.id } });
 
   await prisma.productSize.createMany({
-    data: demo.sizes.map((s) => ({ productId: product.id, size: s.size, perBox: s.perBox })),
+    data: demo.sizes.map(s => ({
+      productId: product.id,
+      size: s.size,
+      perBox: s.perBox,
+    })),
     skipDuplicates: true,
   });
 
@@ -149,11 +186,11 @@ async function main() {
     sizes: await prisma.productSize.count(),
   };
 
-  console.log("Seed complete:", counts);
+  console.log('Seed complete:', counts);
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error(e);
     process.exit(1);
   })

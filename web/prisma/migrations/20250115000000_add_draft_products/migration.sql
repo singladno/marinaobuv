@@ -1,3 +1,7 @@
+-- Ensure required enums exist before using them in other tables
+CREATE TYPE "Gender" AS ENUM ('FEMALE', 'MALE', 'UNISEX');
+CREATE TYPE "Season" AS ENUM ('SPRING', 'SUMMER', 'AUTUMN', 'WINTER');
+
 -- CreateTable
 CREATE TABLE "Provider" (
     "id" TEXT NOT NULL,

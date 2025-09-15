@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/server/db';
 
 export async function GET() {
   try {
@@ -26,9 +26,10 @@ export async function GET() {
 
     // Categorize and format the messages
     const formattedMessages = recentMessages.map(msg => {
-      const isTestMessage = msg.waMessageId.startsWith('test-') ||
-                           msg.waMessageId.startsWith('group-test-') ||
-                           msg.waMessageId.startsWith('user-message-');
+      const isTestMessage =
+        msg.waMessageId.startsWith('test-') ||
+        msg.waMessageId.startsWith('group-test-') ||
+        msg.waMessageId.startsWith('user-message-');
 
       return {
         id: msg.id,
@@ -46,26 +47,34 @@ export async function GET() {
     });
 
     // Group by chat
-    const groupedByChat = formattedMessages.reduce((acc, msg) => {
-      const chatId = msg.groupId;
-      if (!acc[chatId]) {
-        acc[chatId] = {
-          chatId,
-          messageCount: 0,
-          messages: [],
-          latestMessage: null,
-        };
-      }
-      acc[chatId].messageCount++;
-      acc[chatId].messages.push(msg);
-      if (!acc[chatId].latestMessage || msg.timestamp > acc[chatId].latestMessage.timestamp) {
-        acc[chatId].latestMessage = msg;
-      }
-      return acc;
-    }, {} as Record<string, any>);
+    const groupedByChat = formattedMessages.reduce(
+      (acc, msg) => {
+        const chatId = msg.groupId;
+        if (!acc[chatId]) {
+          acc[chatId] = {
+            chatId,
+            messageCount: 0,
+            messages: [],
+            latestMessage: null,
+          };
+        }
+        acc[chatId].messageCount++;
+        acc[chatId].messages.push(msg);
+        if (
+          !acc[chatId].latestMessage ||
+          msg.timestamp > acc[chatId].latestMessage.timestamp
+        ) {
+          acc[chatId].latestMessage = msg;
+        }
+        return acc;
+      },
+      {} as Record<string, any>
+    );
 
-    const chatList = Object.values(groupedByChat).sort((a: any, b: any) =>
-      new Date(b.latestMessage.timestamp).getTime() - new Date(a.latestMessage.timestamp).getTime()
+    const chatList = Object.values(groupedByChat).sort(
+      (a: any, b: any) =>
+        new Date(b.latestMessage.timestamp).getTime() -
+        new Date(a.latestMessage.timestamp).getTime()
     );
 
     return NextResponse.json({
@@ -82,9 +91,16 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to process recent messages:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
+}
+
+export async function POST() {
+  return NextResponse.json({ ok: true });
 }
