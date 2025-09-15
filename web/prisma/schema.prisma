@@ -19,6 +19,7 @@ enum Gender {
   MALE
   UNISEX
 }
+
 enum Season {
   SPRING
   SUMMER
@@ -44,25 +45,25 @@ model Category {
 }
 
 model Product {
-  id        String    @id @default(cuid())
-  slug      String    @unique
-  name      String
-  article   String?
-  categoryId String
-  category  Category  @relation(fields: [categoryId], references: [id])
-  pricePair Int       // kopecks
-  currency  String    @default("RUB")
-  packPairs Int?
-  priceBox  Int?
-  material  String?
-  gender    Gender?
-  season    Season?
-  description String?
+  id                    String         @id @default(cuid())
+  slug                  String         @unique
+  name                  String
+  article               String?
+  categoryId            String
+  category              Category       @relation(fields: [categoryId], references: [id])
+  pricePair             Int // kopecks
+  currency              String         @default("RUB")
+  packPairs             Int?
+  priceBox              Int?
+  material              String?
+  gender                Gender?
+  season                Season?
+  description           String?
   availabilityCheckedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  images    ProductImage[]
-  sizes     ProductSize[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  images                ProductImage[]
+  sizes                 ProductSize[]
 
   @@index([categoryId])
   @@index([season])
@@ -70,14 +71,14 @@ model Product {
 }
 
 model ProductImage {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
-  key       String?  @unique
+  key       String? @unique
   alt       String?
-  sort      Int      @default(0)
-  isPrimary Boolean  @default(false)
+  sort      Int     @default(0)
+  isPrimary Boolean @default(false)
   width     Int?
   height    Int?
 
@@ -85,9 +86,9 @@ model ProductImage {
 }
 
 model ProductSize {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   size      String
   perBox    Int?
   stock     Int?
@@ -98,41 +99,41 @@ model ProductSize {
 }
 
 model Provider {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  phone       String?  // Phone number from 'from' field
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  // messages    WhatsAppMessage[]  // Will be added after data cleanup
+  id            String            @id @default(cuid())
+  name          String            @unique
+  phone         String? // Phone number from 'from' field
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  messages      WhatsAppMessage[]
   draftProducts WaDraftProduct[]
-  users       User[]
+  users         User[]
 
   @@index([name])
   @@index([phone])
 }
 
 model WaDraftProduct {
-  id              String   @id @default(cuid())
-  messageId       String   @unique
-  message         WhatsAppMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  providerId      String
-  provider        Provider @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  name            String
-  article         String?
-  pricePair       Int?     // kopecks
-  currency        String   @default("RUB")
-  packPairs       Int?
-  priceBox        Int?
-  material        String?
-  gender          Gender?
-  season          Season?
-  description     String?
-  sizes           Json?    // Array of size objects
-  rawGptResponse  Json?    // Full GPT response for debugging
-  status          String   @default("draft") // draft, processed, approved, rejected
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  images          WaDraftProductImage[]
+  id             String                @id @default(cuid())
+  messageId      String                @unique
+  message        WhatsAppMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  providerId     String
+  provider       Provider              @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  name           String
+  article        String?
+  pricePair      Int? // kopecks
+  currency       String                @default("RUB")
+  packPairs      Int?
+  priceBox       Int?
+  material       String?
+  gender         Gender?
+  season         Season?
+  description    String?
+  sizes          Json? // Array of size objects
+  rawGptResponse Json? // Full GPT response for debugging
+  status         String                @default("draft") // draft, processed, approved, rejected
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  images         WaDraftProductImage[]
 
   @@index([providerId])
   @@index([status])
@@ -140,54 +141,54 @@ model WaDraftProduct {
 }
 
 model WaDraftProductImage {
-  id        String   @id @default(cuid())
+  id             String         @id @default(cuid())
   draftProductId String
-  draftProduct WaDraftProduct @relation(fields: [draftProductId], references: [id], onDelete: Cascade)
-  url       String
-  key       String?  @unique
-  alt       String?
-  sort      Int      @default(0)
-  isPrimary Boolean  @default(false)
-  width     Int?
-  height    Int?
-  createdAt DateTime @default(now())
+  draftProduct   WaDraftProduct @relation(fields: [draftProductId], references: [id], onDelete: Cascade)
+  url            String
+  key            String?        @unique
+  alt            String?
+  sort           Int            @default(0)
+  isPrimary      Boolean        @default(false)
+  width          Int?
+  height         Int?
+  createdAt      DateTime       @default(now())
 
   @@index([draftProductId, sort])
 }
 
 model WhatsAppMessage {
-  id          String   @id @default(cuid()) // Auto-generated unique ID
-  waMessageId String   @unique // WhatsApp message ID for deduplication
+  id          String @id @default(cuid()) // Auto-generated unique ID
+  waMessageId String @unique // WhatsApp message ID for deduplication
 
   // Basic message fields
-  from        String?  // Sender phone number
-  type        String?  // Message type (text, image, etc.)
-  source      String?  // Source (mobile, web, etc.)
-  chatId      String?  // Chat/group ID
-  fromMe      Boolean  @default(false)
-  fromName    String?  // Sender display name
-  timestamp   BigInt?  // Message timestamp
+  from      String? // Sender phone number
+  type      String? // Message type (text, image, etc.)
+  source    String? // Source (mobile, web, etc.)
+  chatId    String? // Chat/group ID
+  fromMe    Boolean @default(false)
+  fromName  String? // Sender display name
+  timestamp BigInt? // Message timestamp
 
   // Media fields (for image/video/audio messages)
-  mediaId     String?  // Media ID
-  mediaWidth  Int?     // Media width
-  mediaHeight Int?     // Media height
-  mediaSha256 String?  // Media SHA256 hash
-  mediaPreview String? // Media preview (base64)
-  mediaFileSize Int?   // Media file size
+  mediaId       String? // Media ID
+  mediaWidth    Int? // Media width
+  mediaHeight   Int? // Media height
+  mediaSha256   String? // Media SHA256 hash
+  mediaPreview  String? // Media preview (base64)
+  mediaFileSize Int? // Media file size
   mediaMimeType String? // Media MIME type
 
   // Extracted/processed fields
-  text        String?  // Extracted text content
-  mediaS3Key  String?  // S3 key for media files
-  mediaUrl    String?  // Media URL
-  providerId  String?  // Provider identifier
-  // provider    Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  text       String? // Extracted text content
+  mediaS3Key String? // S3 key for media files
+  mediaUrl   String? // Media URL
+  providerId String? // Provider identifier
+  provider   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
 
   // Raw data
-  rawPayload  Json     // Full API response
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  rawPayload   Json // Full API response
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
   draftProduct WaDraftProduct?
 
   @@index([createdAt])
@@ -200,15 +201,15 @@ model WhatsAppMessage {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  phone       String   @unique
-  name        String?
-  role        Role
-  providerId  String?
-  provider    Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  id           String    @id @default(cuid())
+  phone        String    @unique
+  name         String?
+  role         Role
+  providerId   String?
+  provider     Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
   passwordHash String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([role])
   @@index([providerId])

@@ -3,8 +3,12 @@
 // Load environment variables from .env.local BEFORE any other imports
 import './load-env';
 
-import { prisma } from '../lib/db';
+import { prisma } from '../lib/db-node';
 import { env } from '../lib/env';
+import {
+  getExistingMessageIds,
+  getRecentKnownIds,
+} from '../lib/message-fetch-helpers';
 import { fetchGroupMessages, WhatsAppMessage } from '../lib/message-fetcher';
 import {
   processMediaUpload,
@@ -72,27 +76,7 @@ function extractTextFromMessage(
   return null;
 }
 
-/**
- * Check which messages already exist in the database
- */
-async function getExistingMessageIds(
-  messageIds: string[]
-): Promise<Set<string>> {
-  const existingMessages = await prisma.whatsAppMessage.findMany({
-    where: {
-      waMessageId: {
-        in: messageIds,
-      },
-    },
-    select: {
-      waMessageId: true,
-    },
-  });
-
-  return new Set(
-    existingMessages.map((msg: { waMessageId: string }) => msg.waMessageId)
-  );
-}
+// helpers moved to lib/message-fetch-helpers.ts
 
 /**
  * Fetch messages from the configured time range
@@ -102,8 +86,11 @@ async function fetchRecentMessages(chatId: string): Promise<WhatsAppMessage[]> {
     `Fetching messages from the last ${env.MESSAGE_FETCH_HOURS} hours for chat: ${chatId}`
   );
 
-  // Fetch messages from the group (message-fetcher now handles time filtering)
-  const messages = await fetchGroupMessages(chatId, 10000); // High limit to get all recent messages
+  // Fetch messages from the group (stop early if we hit an existing one)
+  const recentKnownIds = await getRecentKnownIds(2000);
+  const messages = await fetchGroupMessages(chatId, 10000, {
+    existingIds: recentKnownIds,
+  });
 
   console.log(
     `Found ${messages.length} messages from the last ${env.MESSAGE_FETCH_HOURS} hours`
@@ -118,8 +105,10 @@ async function fetchRecentMessages(chatId: string): Promise<WhatsAppMessage[]> {
     message => !existingMessageIds.has(message.id)
   );
 
-  console.log(`Found ${existingMessageIds.size} messages already in database`);
-  console.log(`Processing ${newMessages.length} new messages`);
+  console.log(
+    `Already in DB: ${existingMessageIds.size} of ${messages.length} fetched`
+  );
+  console.log(`New messages to process: ${newMessages.length}`);
 
   return newMessages;
 }

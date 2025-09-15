@@ -3,7 +3,7 @@
 // Load environment variables from .env.local BEFORE any other imports
 import './load-env';
 
-import { prisma } from '../lib/db';
+import { prisma } from '../lib/db-node';
 import { normalizeTextToDraft } from '../lib/yagpt';
 import {
   DRAFT_PRODUCT_PROMPT,
@@ -179,10 +179,32 @@ async function processMessageGroupToDraft(
 
     // Create draft product for the first message in the group
     const firstMessage = messages[0];
+    // Ensure we have a providerId; derive if missing
+    let providerId: string | null = firstMessage.providerId ?? null;
+    if (!providerId) {
+      try {
+        providerId = await getOrCreateProvider(
+          firstMessage.from || '',
+          firstMessage.fromName || 'unknown'
+        );
+      } catch (e) {
+        console.error(
+          'Failed to resolve provider for message',
+          firstMessage.id,
+          e
+        );
+      }
+    }
+
+    if (!providerId) {
+      console.log(`No providerId for group ${groupKey} - skipping`);
+      return;
+    }
+
     const draftProduct = await prisma.waDraftProduct.create({
       data: {
-        messageId: firstMessage.id,
-        providerId: firstMessage.providerId!,
+        message: { connect: { id: firstMessage.id } },
+        provider: { connect: { id: providerId } },
         name: productData.name,
         article: productData.article,
         pricePair: productData.pricePair,
@@ -194,8 +216,8 @@ async function processMessageGroupToDraft(
         season: productData.season,
         description: productData.description,
         sizes: productData.sizes,
-        rawGptResponse: JSON.stringify(productDraft),
-        status: 'DRAFT',
+        rawGptResponse: productDraft as unknown as Record<string, unknown>,
+        status: 'draft',
       },
     });
 
@@ -295,6 +317,27 @@ async function processMessageToDraft(messageId: string): Promise<void> {
       return;
     }
 
+    // Ensure providerId exists or derive it from message
+    let providerId: string | null = message.providerId;
+    if (!providerId && message.from && message.fromName) {
+      try {
+        providerId = await getOrCreateProvider(message.from, message.fromName);
+        await prisma.whatsAppMessage.update({
+          where: { id: message.id },
+          data: { providerId },
+        });
+        console.log(
+          `Backfilled provider ${providerId} for message ${message.id}`
+        );
+      } catch (e) {
+        console.error('Failed to resolve provider for message', message.id, e);
+      }
+    }
+    if (!providerId) {
+      console.log(`Message ${messageId} has no provider - skipping`);
+      return;
+    }
+
     // Process media if present
     let mediaS3Key: string | null = null;
     let mediaUrl: string | null = null;
@@ -322,11 +365,11 @@ async function processMessageToDraft(messageId: string): Promise<void> {
       }
     }
 
-    // Create draft product
+    // Create draft product and connect relations
     const draftProduct = await prisma.waDraftProduct.create({
       data: {
-        messageId,
-        providerId: message.providerId,
+        message: { connect: { id: message.id } },
+        provider: { connect: { id: providerId } },
         name: productData.name,
         article: productData.article,
         pricePair: productData.pricePair,
@@ -341,7 +384,7 @@ async function processMessageToDraft(messageId: string): Promise<void> {
         rawGptResponse: {
           original: productDraft,
           parsed: productData,
-        },
+        } as unknown as Record<string, unknown>,
         status: 'draft',
       },
     });
@@ -474,10 +517,12 @@ async function updateMessageProviders(): Promise<void> {
 async function getMessagesForProcessing(limit: number = 50): Promise<string[]> {
   const messages = await prisma.whatsAppMessage.findMany({
     where: {
-      providerId: { not: null },
-      text: { not: null },
       fromMe: false,
-      draftProduct: null, // No draft product exists yet
+      draftProduct: null, // strictly messages without a draft
+      OR: [
+        { text: { not: null } },
+        { type: { in: ['image', 'video', 'document'] } },
+      ],
     },
     select: { id: true },
     orderBy: { createdAt: 'desc' },
@@ -494,11 +539,11 @@ async function main() {
   try {
     console.log('Starting draft product processing with message grouping...');
 
-    // First, update provider information for messages that don't have it
+    // Update provider information for messages that don't have it (optional, non-blocking)
     await updateMessageProviders();
 
-    // Get messages that need processing
-    const messageIds = await getMessagesForProcessing(50);
+    // Get messages that need processing (increase limit to process more per run)
+    const messageIds = await getMessagesForProcessing(300);
     console.log(`Found ${messageIds.length} messages to process`);
 
     if (messageIds.length === 0) {
@@ -515,27 +560,26 @@ async function main() {
       console.log(`  ${groupKey}: ${groupMessageIds.length} messages`);
     }
 
-    // Process each group
-    let processedGroups = 0;
-    let errorCount = 0;
-    let totalMessagesProcessed = 0;
+    // Process each message individually to maximize draft creation coverage
+    let processed = 0;
+    let skipped = 0;
+    let errors = 0;
 
-    for (const [groupKey, groupMessageIds] of Object.entries(messageGroups)) {
+    for (const id of messageIds.reverse()) {
       try {
-        await processMessageGroupToDraft(groupMessageIds, groupKey);
-        processedGroups++;
-        totalMessagesProcessed += groupMessageIds.length;
-      } catch (error) {
-        console.error(`Error processing group ${groupKey}:`, error);
-        errorCount++;
+        await processMessageToDraft(id);
+        processed++;
+      } catch (e) {
+        console.error('Error processing message to draft', id, e);
+        errors++;
       }
     }
 
     console.log('\nProcessing complete!');
-    console.log(`Total message groups: ${Object.keys(messageGroups).length}`);
-    console.log(`Successfully processed groups: ${processedGroups}`);
-    console.log(`Total messages processed: ${totalMessagesProcessed}`);
-    console.log(`Errors: ${errorCount}`);
+    console.log(`Messages considered: ${messageIds.length}`);
+    console.log(`Processed successfully: ${processed}`);
+    console.log(`Skipped: ${skipped}`);
+    console.log(`Errors: ${errors}`);
   } catch (error) {
     console.error('Fatal error during draft product processing:', error);
     process.exit(1);

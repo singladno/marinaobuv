@@ -1,71 +1,8 @@
-import { z } from 'zod';
+import { ProductDraftSchema, type ProductDraft } from '@/types/draft';
 
 import { env } from './env';
 
-// Zod schema for the expected YandexGPT response
-const ProductDraftSchema = z.object({
-  name: z.string(),
-  article: z
-    .string()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  season: z
-    .enum(['spring', 'summer', 'autumn', 'winter'])
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  typeSlug: z
-    .string()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  pricePair: z
-    .number()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)), // kopecks
-  packPairs: z
-    .number()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  priceBox: z
-    .number()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  material: z
-    .string()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  gender: z
-    .enum(['female', 'male', 'unisex'])
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  sizes: z
-    .array(
-      z.object({
-        size: z.string(),
-        count: z
-          .number()
-          .nullable()
-          .transform(val => (val === null ? 0 : val)),
-      })
-    )
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  notes: z
-    .string()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-});
-
-export type ProductDraft = z.infer<typeof ProductDraftSchema>;
+// Moved schema and types to @/types/draft to keep this file small
 
 /**
  * Parse JSON content from YandexGPT response

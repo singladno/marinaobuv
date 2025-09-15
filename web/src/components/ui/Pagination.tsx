@@ -9,7 +9,13 @@ type Props = {
   filters?: CatalogFilters;
 };
 
-export default function Pagination({ basePath, total, page, pageSize, filters }: Props) {
+export default function Pagination({
+  basePath,
+  total,
+  page,
+  pageSize,
+  filters,
+}: Props) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   if (totalPages <= 1) return null;
 
@@ -23,7 +29,11 @@ export default function Pagination({ basePath, total, page, pageSize, filters }:
           <a
             key={n}
             href={href}
-            className={`rounded border border-border px-3 py-1 ${isActive ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-background'}`}
+            className={`border-border shadow-xs rounded-md border px-3 py-1.5 transition ${
+              isActive
+                ? 'bg-primary border-transparent text-white'
+                : 'bg-surface text-foreground hover:bg-[color-mix(in_oklab,var(--color-background),#000_3%)]'
+            }`}
           >
             {n}
           </a>

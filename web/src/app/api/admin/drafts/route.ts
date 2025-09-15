@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
         id: true,
         messageId: true,
         providerId: true,
+        provider: { select: { id: true, name: true, phone: true } },
         name: true,
         article: true,
         pricePair: true,

@@ -20,7 +20,9 @@
     "draft:process": "cd web && npx tsx src/scripts/process-draft-products.ts",
     "draft:view": "cd web && npx tsx src/scripts/view-draft-products.ts",
     "prisma:seed": "cd web && npm run prisma:seed",
-    "make-hash": "node web/scripts/make-hash.js"
+    "make-hash": "node web/scripts/make-hash.js",
+    "cron:hourly": "cd web && npm run cron:hourly",
+    "messages:clear": "cd web && npm run messages:clear"
   },
   "engines": {
     "node": ">=18.0.0",

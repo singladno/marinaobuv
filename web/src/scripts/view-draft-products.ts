@@ -3,7 +3,7 @@
 // Load environment variables from .env.local BEFORE any other imports
 import './load-env';
 
-import { prisma } from '../lib/db';
+import { prisma } from '../lib/db-node';
 
 /**
  * View draft products and their details

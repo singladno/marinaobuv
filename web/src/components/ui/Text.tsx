@@ -22,15 +22,28 @@ const variantMap: Record<Variant, string> = {
 };
 
 const toneMap: Record<Tone, string> = {
-  default: 'text-foreground',
+  // default tone does not force a color, allowing parent to control text color (better for buttons)
+  default: '',
   muted: 'text-muted',
   inverted: 'text-white',
   primary: 'text-primary',
 };
 
-export function Text({ as, variant = 'body', tone = 'default', className, children, ...rest }: Props) {
-  const Tag: React.ElementType = as ?? (variant.startsWith('h') ? (variant as 'h1' | 'h2' | 'h3') : 'p');
-  return React.createElement(Tag, { className: clsx(variantMap[variant], toneMap[tone], className), ...rest }, children);
+export function Text({
+  as,
+  variant = 'body',
+  tone = 'default',
+  className,
+  children,
+  ...rest
+}: Props) {
+  const Tag: React.ElementType =
+    as ?? (variant.startsWith('h') ? (variant as 'h1' | 'h2' | 'h3') : 'p');
+  return React.createElement(
+    Tag,
+    { className: clsx(variantMap[variant], toneMap[tone], className), ...rest },
+    children
+  );
 }
 
 export default Text;

@@ -1,9 +1,19 @@
-import { prisma } from './db';
-import { normalizeTextToDraft, mapSeasonToPrisma, mapGenderToPrisma } from './yagpt';
+import { prisma } from './db-node';
+import {
+  normalizeTextToDraft,
+  mapSeasonToPrisma,
+  mapGenderToPrisma,
+} from './yagpt';
 
-export async function processTextWithAI(text: string, messageId: string): Promise<void> {
+export async function processTextWithAI(
+  text: string,
+  messageId: string
+): Promise<void> {
   try {
-    console.log('Processing text with YandexGPT:', text.substring(0, 100) + '...');
+    console.log(
+      'Processing text with YandexGPT:',
+      text.substring(0, 100) + '...'
+    );
 
     const gptResult = await normalizeTextToDraft(text);
 

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 
 import { processTextWithAI } from './ai-processor';
-import { prisma } from './db';
+import { prisma } from './db-node';
 import { isGroupJid, extractMessageText, mediaInfo } from './whapi';
 import { processMediaUpload } from './media-processor';
 

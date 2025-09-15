@@ -31,7 +31,8 @@ export function clearSession() {
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const token = cookies().get(cookieName)?.value;
+  const jar = await Promise.resolve(cookies());
+  const token = jar.get(cookieName)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);

@@ -45,10 +45,7 @@ export default function RootLayout({
         <div className="bg-background text-foreground flex min-h-dvh flex-col">
           <Header />
           <main className="flex-1">
-            <div
-              id="main-content"
-              className="container mx-auto px-4 py-6 sm:px-6 lg:px-8"
-            >
+            <div id="main-content" className="container mx-auto px-4 py-6">
               {children}
             </div>
           </main>

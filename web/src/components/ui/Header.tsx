@@ -10,8 +10,8 @@ export default async function Header() {
   const isAdmin = session?.role === 'ADMIN';
 
   return (
-    <header className="border-border bg-surface/80 border-b backdrop-blur">
-      <div className="container mx-auto flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+    <header className="border-border/80 bg-surface/80 supports-[backdrop-filter]:bg-surface/70 border-b backdrop-blur">
+      <div className="container mx-auto flex items-center justify-between px-4 py-4">
         <Link href={site.links.home} className="hover:opacity-90">
           <Text as="span" className="text-xl font-semibold tracking-tight">
             {site.brand}
@@ -28,7 +28,7 @@ export default async function Header() {
           {!isAuthed && (
             <Link
               href="/login"
-              className="text-primary hover:bg-primary/10 rounded px-3 py-1.5"
+              className="text-primary rounded-md px-3 py-1.5 hover:bg-[color-mix(in_oklab,var(--color-primary),transparent_85%)]"
             >
               <Text as="span" className="font-medium">
                 Войти
@@ -38,7 +38,7 @@ export default async function Header() {
           {isAdmin && (
             <Link
               href="/admin"
-              className="bg-primary/10 text-primary hover:bg-primary/20 rounded px-3 py-1.5"
+              className="rounded-md bg-[color-mix(in_oklab,var(--color-primary),transparent_85%)] px-3 py-1.5 text-[color-mix(in_oklab,var(--color-primary),#000_20%)] hover:bg-[color-mix(in_oklab,var(--color-primary),transparent_78%)]"
             >
               <Text as="span" className="font-medium">
                 Админ

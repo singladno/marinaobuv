@@ -9,10 +9,10 @@ export function Select({ className, fullWidth, children, ...rest }: Props) {
   return (
     <select
       className={clsx(
-        'rounded border border-border bg-background px-3 py-2 text-sm outline-none',
-        'focus:ring-2 focus:ring-primary/30',
+        'border-border bg-background shadow-xs rounded-md border px-3 py-2 text-sm outline-none',
+        'focus-visible:ring-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]',
         fullWidth && 'w-full',
-        className,
+        className
       )}
       {...rest}
     >

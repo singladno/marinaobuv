@@ -1,4 +1,4 @@
-import { prisma } from './db';
+import { prisma } from './db-node';
 import { extractMessageText, mediaInfo, fetchMediaBuffer } from './whapi';
 import { normalizeTextToDraft } from './yagpt';
 import { processProviderFromMessage } from './provider-utils';
@@ -22,19 +22,19 @@ export async function processMediaUpload(message: WhatsAppMessage): Promise<{
     media = {
       id: rawPayload.image.id,
       url: rawPayload.image.link,
-      mimeType: rawPayload.image.mime_type
+      mimeType: rawPayload.image.mime_type,
     };
   } else if (rawPayload.video) {
     media = {
       id: rawPayload.video.id,
       url: rawPayload.video.link,
-      mimeType: rawPayload.video.mime_type
+      mimeType: rawPayload.video.mime_type,
     };
   } else if (rawPayload.document) {
     media = {
       id: rawPayload.document.id,
       url: rawPayload.document.link,
-      mimeType: rawPayload.document.mime_type
+      mimeType: rawPayload.document.mime_type,
     };
   }
 
@@ -115,7 +115,6 @@ export async function saveWhatsAppMessage(
   const waMessage = await prisma.whatsAppMessage.upsert({
     where: { waMessageId: message.id }, // Use waMessageId for deduplication
     update: {
-
       // Basic message fields
       from,
       type,
@@ -177,7 +176,10 @@ export async function saveWhatsAppMessage(
 /**
  * Process text with YandexGPT and create product draft
  */
-export async function processTextWithAI(text: string, messageId: string): Promise<void> {
+export async function processTextWithAI(
+  text: string,
+  messageId: string
+): Promise<void> {
   try {
     console.log(`Processing text with YandexGPT for message ${messageId}`);
 
@@ -193,13 +195,21 @@ export async function processTextWithAI(text: string, messageId: string): Promis
       update: {
         name: productDraft.name,
         article: productDraft.article || null,
-        season: productDraft.season ? productDraft.season.toUpperCase() as 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' : null,
+        season: productDraft.season
+          ? (productDraft.season.toUpperCase() as
+              | 'SPRING'
+              | 'SUMMER'
+              | 'AUTUMN'
+              | 'WINTER')
+          : null,
         typeSlug: productDraft.typeSlug || null,
         pricePair: productDraft.pricePair || null,
         packPairs: productDraft.packPairs || null,
         priceBox: productDraft.priceBox || null,
         material: productDraft.material || null,
-        gender: productDraft.gender ? productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX' : null,
+        gender: productDraft.gender
+          ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
+          : null,
         sizes: productDraft.sizes || null,
         rawGptResponse: productDraft as Record<string, unknown>,
       },
@@ -207,13 +217,21 @@ export async function processTextWithAI(text: string, messageId: string): Promis
         messageId,
         name: productDraft.name,
         article: productDraft.article || null,
-        season: productDraft.season ? productDraft.season.toUpperCase() as 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' : null,
+        season: productDraft.season
+          ? (productDraft.season.toUpperCase() as
+              | 'SPRING'
+              | 'SUMMER'
+              | 'AUTUMN'
+              | 'WINTER')
+          : null,
         typeSlug: productDraft.typeSlug || null,
         pricePair: productDraft.pricePair || null,
         packPairs: productDraft.packPairs || null,
         priceBox: productDraft.priceBox || null,
         material: productDraft.material || null,
-        gender: productDraft.gender ? productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX' : null,
+        gender: productDraft.gender
+          ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
+          : null,
         sizes: productDraft.sizes || null,
         rawGptResponse: productDraft as Record<string, unknown>,
       },
@@ -221,6 +239,9 @@ export async function processTextWithAI(text: string, messageId: string): Promis
 
     console.log(`Product draft created for message ${messageId}`);
   } catch (error) {
-    console.error(`Error processing text with YandexGPT for message ${messageId}:`, error);
+    console.error(
+      `Error processing text with YandexGPT for message ${messageId}:`,
+      error
+    );
   }
 }

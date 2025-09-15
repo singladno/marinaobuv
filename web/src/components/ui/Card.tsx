@@ -9,9 +9,9 @@ export function Card({ className, hover = false, ...rest }: Props) {
   return (
     <div
       className={clsx(
-        'rounded border border-border bg-surface shadow-sm',
-        hover && 'transition hover:shadow-md',
-        className,
+        'border-border bg-surface rounded-xl border shadow-sm',
+        hover && 'transition hover:-translate-y-[1px] hover:shadow-md',
+        className
       )}
       {...rest}
     />
