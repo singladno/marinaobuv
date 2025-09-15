@@ -316,52 +316,52 @@ export function DraftsTable({
   });
 
   return (
-    <div className="h-full overflow-auto">
-      <table className="w-full min-w-max border-separate border-spacing-0">
-        <thead className="sticky top-0 z-10">
-          {table.getHeaderGroups().map(headerGroup => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map(header => (
-                <th
-                  key={header.id}
-                  className={`whitespace-nowrap border-b border-gray-200 bg-white px-4 py-3 align-top text-sm font-medium text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 ${
-                    header.column.id === 'material' ||
-                    header.column.id === 'gender'
-                      ? 'text-center'
-                      : 'text-left'
-                  }`}
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map(row => (
-            <tr
-              key={row.id}
-              className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
-            >
-              {row.getVisibleCells().map(cell => (
-                <td
-                  key={cell.id}
-                  className={`whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${
-                    cell.column.id === 'select' ? 'align-middle' : 'align-top'
-                  }`}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="h-full overflow-hidden rounded-lg bg-gray-50 dark:bg-gray-800">
+      <div className="h-full overflow-auto">
+        <table className="w-full min-w-max border-separate border-spacing-0">
+          <thead className="sticky top-0 z-10">
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <th
+                    key={header.id}
+                    className={`whitespace-nowrap border-b border-gray-200 bg-white px-4 py-4 align-top text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 ${
+                      header.column.id === 'material' ||
+                      header.column.id === 'gender'
+                        ? 'text-center'
+                        : 'text-left'
+                    }`}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="bg-white dark:bg-gray-900">
+            {table.getRowModel().rows.map(row => (
+              <tr
+                key={row.id}
+                className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
+              >
+                {row.getVisibleCells().map(cell => (
+                  <td
+                    key={cell.id}
+                    className="whitespace-nowrap px-4 py-3 align-middle text-sm text-gray-900 dark:text-gray-100"
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
