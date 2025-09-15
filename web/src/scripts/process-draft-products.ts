@@ -35,8 +35,8 @@ async function main() {
   try {
     console.log('Starting draft product processing with message grouping...');
 
-    // Get messages that need processing (all unprocessed messages)
-    const messageIds = await getMessagesForProcessing(1000);
+    // Get messages that need processing (limit to 50 for testing)
+    const messageIds = await getMessagesForProcessing(50);
     console.log(`Found ${messageIds.length} messages to process`);
 
     if (messageIds.length === 0) {

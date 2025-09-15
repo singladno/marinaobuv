@@ -53,34 +53,16 @@ export async function processImagesFromMessages(
         continue;
       }
 
-      // Upload to S3 if not already done
-      if (env.S3_ACCESS_KEY && env.S3_SECRET_KEY) {
-        console.log(`  📤 Fetching image from WhatsApp...`);
-        const { buf, mime, ext } = await fetchMediaBuffer({
-          url: message.mediaUrl,
-          id: message.id,
-          token: env.WHAPI_TOKEN,
-        });
-
-        const key = buildKey(ext);
-        console.log(`  📤 Uploading to S3: ${key}`);
-        const uploadResult = await putBuffer(key, buf, mime);
-
-        if (uploadResult.success) {
-          const sha256 = computeSha256(buf);
-          console.log(`  ✓ Image uploaded successfully: ${key}`);
-          imageData.push({
-            url: uploadResult.url || message.mediaUrl,
-            s3Key: key,
-            mime,
-            sha256,
-          });
-        } else {
-          console.log(`  ❌ Failed to upload image: ${uploadResult.error}`);
-        }
-      } else {
-        console.log(`  ⚠️ S3 credentials not configured, skipping upload`);
-      }
+      // Skip S3 upload for testing - use original WhatsApp URLs
+      console.log(
+        `  ⚡ Using original WhatsApp URL (skipping S3 upload for testing)`
+      );
+      imageData.push({
+        url: message.mediaUrl,
+        s3Key: `original-${message.id}`, // Use message ID as key for reference
+        mime: 'image/jpeg', // Assume JPEG for now
+        sha256: '', // Skip SHA256 calculation for testing
+      });
     } catch (error) {
       console.error(
         `  ❌ Failed to process image for message ${message.id}:`,

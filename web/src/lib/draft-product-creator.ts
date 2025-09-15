@@ -46,7 +46,6 @@ export async function getOrCreateProvider(
     data: {
       name: fromName,
       phone: from,
-      isActive: true,
     },
   });
 

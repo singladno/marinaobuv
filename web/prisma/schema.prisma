@@ -148,6 +148,8 @@ model WaDraftProductImage {
   draftProduct   WaDraftProduct @relation(fields: [draftProductId], references: [id], onDelete: Cascade)
   url            String
   key            String?        @unique
+  mimeType       String?
+  sha256         String?
   alt            String?
   sort           Int            @default(0)
   isPrimary      Boolean        @default(false)

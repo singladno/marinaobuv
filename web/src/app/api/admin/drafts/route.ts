@@ -50,7 +50,60 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ drafts });
+    // Fetch message data for all source message IDs
+    const allSourceIds = drafts
+      .filter(draft => draft.source && Array.isArray(draft.source))
+      .flatMap(draft => draft.source as string[]);
+
+    const messages = await prisma.whatsAppMessage.findMany({
+      where: { id: { in: allSourceIds } },
+      select: {
+        id: true,
+        waMessageId: true,
+        from: true,
+        fromName: true,
+        type: true,
+        text: true,
+        timestamp: true,
+        mediaUrl: true,
+        mediaMimeType: true,
+        mediaWidth: true,
+        mediaHeight: true,
+        createdAt: true,
+        provider: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Create a map of message ID to message data
+    const messageMap = new Map(messages.map(msg => [msg.id, msg]));
+
+    // Transform drafts to include message data in source
+    const draftsWithMessages = drafts.map(draft => ({
+      ...draft,
+      source:
+        draft.source && Array.isArray(draft.source)
+          ? (draft.source as string[])
+              .map(id => {
+                const message = messageMap.get(id);
+                if (!message) return null;
+                return {
+                  ...message,
+                  timestamp: message.timestamp
+                    ? Number(message.timestamp)
+                    : null,
+                  createdAt: message.createdAt.toISOString(),
+                };
+              })
+              .filter(Boolean)
+          : null,
+    }));
+
+    return NextResponse.json({ drafts: draftsWithMessages });
   } catch (e: any) {
     const status = e?.status ?? 500;
     return NextResponse.json(

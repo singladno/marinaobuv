@@ -24,7 +24,23 @@ export type Draft = {
   sizes?: Array<{ size: string; stock?: number; count?: number }> | null;
   gptRequest?: string | null;
   rawGptResponse?: any;
-  source?: string[] | null;
+  source?: Array<{
+    id: string;
+    waMessageId: string;
+    from: string | null;
+    fromName: string | null;
+    type: string | null;
+    text: string | null;
+    timestamp: number | null;
+    mediaUrl: string | null;
+    mediaMimeType: string | null;
+    mediaWidth: number | null;
+    mediaHeight: number | null;
+    createdAt: string;
+    provider: {
+      name: string;
+    } | null;
+  }> | null;
   createdAt?: string;
   updatedAt?: string;
 };

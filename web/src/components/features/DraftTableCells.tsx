@@ -167,7 +167,26 @@ export function EditableCell({
 }
 
 interface SourceCellProps {
-  source: string[] | null | undefined;
+  source:
+    | Array<{
+        id: string;
+        waMessageId: string;
+        from: string | null;
+        fromName: string | null;
+        type: string | null;
+        text: string | null;
+        timestamp: number | null;
+        mediaUrl: string | null;
+        mediaMimeType: string | null;
+        mediaWidth: number | null;
+        mediaHeight: number | null;
+        createdAt: string;
+        provider: {
+          name: string;
+        } | null;
+      }>
+    | null
+    | undefined;
 }
 
 export function SourceCell({ source }: SourceCellProps) {
@@ -176,6 +195,16 @@ export function SourceCell({ source }: SourceCellProps) {
   if (!source || source.length === 0) {
     return <span className="text-gray-400 dark:text-gray-500">—</span>;
   }
+
+  const formatTimestamp = (timestamp: number | null) => {
+    if (!timestamp) return 'Неизвестно';
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString('ru-RU');
+  };
+
+  const formatCreatedAt = (createdAt: string) => {
+    return new Date(createdAt).toLocaleString('ru-RU');
+  };
 
   return (
     <>
@@ -188,7 +217,7 @@ export function SourceCell({ source }: SourceCellProps) {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg bg-white p-6 dark:bg-gray-800">
+          <div className="max-h-[80vh] w-full max-w-4xl overflow-auto rounded-lg bg-white p-6 dark:bg-gray-800">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Источник сообщений</h3>
               <button
@@ -198,12 +227,68 @@ export function SourceCell({ source }: SourceCellProps) {
                 ✕
               </button>
             </div>
-            <div className="space-y-2">
-              {source.map((messageId, index) => (
-                <div key={messageId} className="rounded border p-2 text-sm">
-                  <span className="font-mono text-gray-600 dark:text-gray-400">
-                    {index + 1}. {messageId}
-                  </span>
+
+            <div className="space-y-4">
+              {source.map((message, index) => (
+                <div
+                  key={message.id}
+                  className="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+                >
+                  <div className="mb-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                    <span className="font-medium">
+                      {message.fromName ||
+                        message.from ||
+                        'Неизвестный отправитель'}
+                    </span>
+                    <span>
+                      {formatTimestamp(message.timestamp) ||
+                        formatCreatedAt(message.createdAt)}
+                    </span>
+                  </div>
+
+                  {message.provider && (
+                    <div className="mb-2 text-xs text-blue-600 dark:text-blue-400">
+                      Поставщик: {message.provider.name}
+                    </div>
+                  )}
+
+                  {message.text && (
+                    <div className="mb-2 whitespace-pre-wrap text-sm">
+                      {message.text}
+                    </div>
+                  )}
+
+                  {message.type === 'image' && message.mediaUrl && (
+                    <div className="mt-2">
+                      <img
+                        src={message.mediaUrl}
+                        alt="Изображение из сообщения"
+                        className="max-h-48 max-w-full rounded border object-contain"
+                        loading="lazy"
+                      />
+                      {message.mediaMimeType && (
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          {message.mediaMimeType}
+                          {message.mediaWidth && message.mediaHeight && (
+                            <span>
+                              {' '}
+                              ({message.mediaWidth}×{message.mediaHeight})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {message.type && message.type !== 'image' && (
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Тип: {message.type}
+                    </div>
+                  )}
+
+                  <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                    ID: {message.id}
+                  </div>
                 </div>
               ))}
             </div>
