@@ -235,7 +235,6 @@ async function processMessageGroupToDraft(
     // Convert to our DraftProductData format
     const productData: DraftProductData = {
       name: productDraft.name || null,
-      article: productDraft.article || null,
       pricePair: productDraft.pricePair || null,
       currency: 'RUB',
       packPairs: productDraft.packPairs || null,
@@ -296,7 +295,6 @@ async function processMessageGroupToDraft(
         message: { connect: { id: firstMessage.id } },
         provider: { connect: { id: providerId } },
         name: productData.name,
-        article: productData.article,
         pricePair: productData.pricePair,
         currency: productData.currency,
         packPairs: productData.packPairs,
@@ -429,7 +427,6 @@ async function processMessageToDraft(messageId: string): Promise<void> {
     // Convert to our DraftProductData format
     const productData: DraftProductData = {
       name: productDraft.name || null,
-      article: productDraft.article || null,
       pricePair: productDraft.pricePair || null,
       currency: 'RUB',
       packPairs: productDraft.packPairs || null,
@@ -537,7 +534,6 @@ async function processMessageToDraft(messageId: string): Promise<void> {
         message: { connect: { id: message.id } },
         provider: { connect: { id: providerId } },
         name: productData.name,
-        article: productData.article,
         pricePair: productData.pricePair,
         currency: productData.currency || 'RUB',
         packPairs: productData.packPairs,

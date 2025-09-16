@@ -4,7 +4,6 @@ import { ImageData } from './draft-image-processor';
 
 export interface DraftProductData {
   name: string | null;
-  article: string | null;
   pricePair: number | null;
   currency: string;
   packPairs: number | null;
@@ -59,7 +58,6 @@ export async function createDraftProduct(
       messageId,
       providerId,
       name: productData.name!,
-      article: productData.article,
       pricePair: productData.pricePair,
       currency: productData.currency,
       packPairs: productData.packPairs,

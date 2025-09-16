@@ -9,11 +9,6 @@ export const ProductDraftSchema = z.object({
     .nullable()
     .optional()
     .transform(val => (val == null || val === '' ? undefined : val)),
-  article: z
-    .string()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
   season: z
     .string()
     .nullable()

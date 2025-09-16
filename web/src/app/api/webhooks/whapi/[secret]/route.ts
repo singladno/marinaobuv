@@ -155,7 +155,6 @@ export async function POST(
               where: { messageId: waMessage.id },
               update: {
                 name: draft.name,
-                article: draft.article || null,
                 season: (draft.season?.toUpperCase() as any) || null,
                 typeSlug: draft.typeSlug || null,
                 pricePair: draft.pricePair || null,
@@ -170,7 +169,6 @@ export async function POST(
               create: {
                 messageId: waMessage.id,
                 name: draft.name,
-                article: draft.article || null,
                 season: (draft.season?.toUpperCase() as any) || null,
                 typeSlug: draft.typeSlug || null,
                 pricePair: draft.pricePair || null,

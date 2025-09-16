@@ -53,17 +53,6 @@ export function createDraftTableColumns(
         />
       ),
     }),
-    columnHelper.accessor('article', {
-      header: () => 'Артикул',
-      cell: info => (
-        <EditableCell
-          value={info.row.original.article}
-          onBlur={value => onPatch(info.row.original.id, { article: value })}
-          placeholder="Введите артикул"
-          aria-label="Артикул"
-        />
-      ),
-    }),
     columnHelper.display({
       id: 'category',
       header: () => 'Категория',

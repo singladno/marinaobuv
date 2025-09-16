@@ -29,7 +29,6 @@ export async function processTextWithAI(
         where: { messageId },
         update: {
           name: draft.name,
-          article: draft.article,
           season,
           typeSlug: draft.typeSlug,
           pricePair: draft.pricePair,
@@ -43,7 +42,6 @@ export async function processTextWithAI(
         create: {
           messageId,
           name: draft.name,
-          article: draft.article,
           season,
           typeSlug: draft.typeSlug,
           pricePair: draft.pricePair,
@@ -58,7 +56,6 @@ export async function processTextWithAI(
 
       console.log('Product draft created:', {
         name: draft.name,
-        article: draft.article,
         season,
         gender,
         pricePair: draft.pricePair,

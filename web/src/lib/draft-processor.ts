@@ -36,7 +36,6 @@ export function extractTextContent(messages: any[]): {
 export function convertToProductData(productDraft: any): DraftProductData {
   return {
     name: productDraft.name || null,
-    article: productDraft.article || null,
     pricePair: productDraft.pricePair || null,
     currency: 'RUB',
     packPairs: productDraft.packPairs || null,

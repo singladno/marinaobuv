@@ -7,7 +7,6 @@ export function createColumnConfigs(
   return [
     { id: 'select', label: 'Выбор', visible: true, required: true },
     { id: 'name', label: 'Название', visible: true, required: true },
-    { id: 'article', label: 'Артикул', visible: true, required: true },
     { id: 'category', label: 'Категория', visible: true, required: true },
     { id: 'provider', label: 'Поставщик', visible: true, required: true },
     {

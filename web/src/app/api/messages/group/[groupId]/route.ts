@@ -43,7 +43,6 @@ export async function GET(
       selectObject.productDraft = {
         select: {
           name: true,
-          article: true,
           season: true,
           typeSlug: true,
           pricePair: true,

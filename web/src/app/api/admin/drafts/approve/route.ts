@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     for (const d of drafts) {
       try {
-        const baseSlug = slugify(`${d.name}-${d.article ?? d.id.slice(0, 6)}`);
+        const baseSlug = slugify(`${d.name}-${d.id.slice(0, 6)}`);
         let slug = baseSlug;
         for (let i = 1; i < 50; i++) {
           const exists = await prisma.product.findUnique({ where: { slug } });
@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
             data: {
               slug,
               name: d.name,
-              article: d.article ?? undefined,
               categoryId,
               pricePair: d.pricePair ?? 0,
               currency: d.currency ?? 'RUB',

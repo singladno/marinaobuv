@@ -19,7 +19,6 @@ export async function GET() {
         productDraft: {
           select: {
             name: true,
-            article: true,
             season: true,
             pricePair: true,
             material: true,

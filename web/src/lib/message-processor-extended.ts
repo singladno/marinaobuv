@@ -194,7 +194,6 @@ export async function processTextWithAI(
       where: { messageId },
       update: {
         name: productDraft.name,
-        article: productDraft.article || null,
         season: productDraft.season
           ? (productDraft.season.toUpperCase() as
               | 'SPRING'
@@ -216,7 +215,6 @@ export async function processTextWithAI(
       create: {
         messageId,
         name: productDraft.name,
-        article: productDraft.article || null,
         season: productDraft.season
           ? (productDraft.season.toUpperCase() as
               | 'SPRING'

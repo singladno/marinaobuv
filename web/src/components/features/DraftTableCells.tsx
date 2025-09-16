@@ -9,6 +9,8 @@ import {
 import { ImageModal } from '@/components/ui/ImageModal';
 import { CategorySelector } from '@/components/ui/CategorySelector';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
+import { SourceModal } from './SourceModal';
+import { TextModal } from './TextModal';
 
 interface ImagesCellProps {
   images: Draft['images'];
@@ -269,35 +271,6 @@ export function SourceCell({ source }: SourceCellProps) {
     return <span className="text-gray-400 dark:text-gray-500">—</span>;
   }
 
-  const formatTimestamp = (timestamp: number | null) => {
-    if (!timestamp) return 'Неизвестно';
-    const date = new Date(timestamp * 1000);
-    return (
-      <div className="text-sm">
-        <div className="font-medium text-gray-900 dark:text-gray-100">
-          {date.toLocaleDateString('ru-RU')}
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          {date.toLocaleTimeString('ru-RU')}
-        </div>
-      </div>
-    );
-  };
-
-  const formatCreatedAt = (createdAt: string) => {
-    const date = new Date(createdAt);
-    return (
-      <div className="text-sm">
-        <div className="font-medium text-gray-900 dark:text-gray-100">
-          {date.toLocaleDateString('ru-RU')}
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          {date.toLocaleTimeString('ru-RU')}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <>
       <button
@@ -307,86 +280,11 @@ export function SourceCell({ source }: SourceCellProps) {
         {source.length} сообщений
       </button>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="max-h-[80vh] w-full max-w-4xl overflow-auto rounded-lg bg-white p-6 dark:bg-gray-800">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Источник сообщений</h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {source.map((message, index) => (
-                <div
-                  key={message.id}
-                  className="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
-                >
-                  <div className="mb-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                    <span className="font-medium">
-                      {message.fromName ||
-                        message.from ||
-                        'Неизвестный отправитель'}
-                    </span>
-                    <span>
-                      {formatTimestamp(message.timestamp) ||
-                        formatCreatedAt(message.createdAt)}
-                    </span>
-                  </div>
-
-                  {message.provider && (
-                    <div className="mb-2 text-xs text-blue-600 dark:text-blue-400">
-                      Поставщик: {message.provider.name}
-                    </div>
-                  )}
-
-                  {message.text && (
-                    <div className="mb-2 whitespace-pre-wrap text-sm">
-                      {message.text}
-                    </div>
-                  )}
-
-                  {message.type === 'image' && message.mediaUrl && (
-                    <div className="mt-2">
-                      <img
-                        src={message.mediaUrl}
-                        alt="Изображение из сообщения"
-                        className="max-h-48 max-w-full rounded border object-contain"
-                        loading="lazy"
-                      />
-                      {message.mediaMimeType && (
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          {message.mediaMimeType}
-                          {message.mediaWidth && message.mediaHeight && (
-                            <span>
-                              {' '}
-                              ({message.mediaWidth}×{message.mediaHeight})
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {message.type && message.type !== 'image' && (
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Тип: {message.type}
-                    </div>
-                  )}
-
-                  <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                    ID: {message.id}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <SourceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        source={source}
+      />
     </>
   );
 }
@@ -415,24 +313,12 @@ export function GptRequestCell({ gptRequest }: GptRequestCellProps) {
         {truncated}
       </button>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="max-h-[80vh] w-full max-w-4xl overflow-auto rounded-lg bg-white p-6 dark:bg-gray-800">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">GPT Запрос</h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-            <pre className="whitespace-pre-wrap rounded border p-4 text-sm">
-              {gptRequest}
-            </pre>
-          </div>
-        </div>
-      )}
+      <TextModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="GPT Запрос"
+        content={gptRequest}
+      />
     </>
   );
 }
@@ -464,24 +350,12 @@ export function GptResponseCell({ rawGptResponse }: GptResponseCellProps) {
         {truncated}
       </button>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="max-h-[80vh] w-full max-w-4xl overflow-auto rounded-lg bg-white p-6 dark:bg-gray-800">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">GPT Ответ</h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-            <pre className="whitespace-pre-wrap rounded border p-4 text-sm">
-              {responseText}
-            </pre>
-          </div>
-        </div>
-      )}
+      <TextModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="GPT Ответ"
+        content={responseText}
+      />
     </>
   );
 }

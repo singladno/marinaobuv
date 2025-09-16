@@ -124,7 +124,6 @@ async function processMessageGroupToDraft(
     // Convert to our DraftProductData format
     const productData: DraftProductData = {
       name: productDraft.name || null,
-      article: productDraft.article || null,
       pricePair: productDraft.pricePair || null,
       currency: 'RUB',
       packPairs: productDraft.packPairs || null,
