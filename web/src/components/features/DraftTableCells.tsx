@@ -49,17 +49,27 @@ export function ImagesCell({ images }: ImagesCellProps) {
           const sanitizedUrl = sanitizeImageUrl(img.url);
           const thumbnailUrl = getThumbnailUrl(sanitizedUrl, 48); // 48px for 12x12 container
 
+          const borderClasses = img.isFalseImage
+            ? 'border-red-500 dark:border-red-600'
+            : 'border-gray-200 dark:border-gray-700';
+          const imageOpacity = img.isFalseImage ? 'opacity-50' : '';
+          const badge = img.color ? (
+            <span className="absolute bottom-0 right-0 m-0.5 rounded bg-black/60 px-1 text-[10px] text-white">
+              {img.color}
+            </span>
+          ) : null;
+
           return (
             <button
               key={img.id}
               onClick={() => handleImageClick(sortedImages.indexOf(img))}
-              className="relative h-12 w-12 overflow-hidden rounded-md border border-gray-200 transition-colors hover:border-blue-300 dark:border-gray-700 dark:hover:border-blue-600"
+              className={`relative h-12 w-12 overflow-hidden rounded-md border transition-colors hover:border-blue-300 dark:hover:border-blue-600 ${borderClasses}`}
               title="Нажмите для просмотра в полном размере"
             >
               <img
                 src={thumbnailUrl}
                 alt={img.alt || `Изображение ${(img.sort || 0) + 1}`}
-                className="h-full w-full object-cover"
+                className={`h-full w-full object-cover ${imageOpacity}`}
                 loading="lazy"
                 onError={e => {
                   const target = e.target as HTMLImageElement;
@@ -70,6 +80,7 @@ export function ImagesCell({ images }: ImagesCellProps) {
                   );
                 }}
               />
+              {badge}
             </button>
           );
         })}
@@ -89,6 +100,7 @@ export function ImagesCell({ images }: ImagesCellProps) {
           id: img.id,
           url: sanitizeImageUrl(img.url),
           alt: img.alt,
+          color: img.color || null,
         }))}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -108,11 +120,11 @@ export function SizesCell({ sizes }: SizesCellProps) {
   }
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex gap-1 overflow-x-auto">
       {sizes.map((x, index) => (
         <span
           key={index}
-          className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+          className="inline-flex flex-shrink-0 items-center whitespace-nowrap rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200"
         >
           {x.size}:{x.stock ?? x.count ?? 0}
         </span>

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const drafts = await prisma.waDraftProduct.findMany({
       take,
       skip,
-      where: { status: status as string | undefined },
+      where: { status: status as string | undefined, isDeleted: false },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
         providerDiscount: true,
         sizes: true,
         status: true,
+        isDeleted: true,
         createdAt: true,
         updatedAt: true,
         images: {
@@ -45,10 +46,14 @@ export async function GET(req: NextRequest) {
             isPrimary: true,
             sort: true,
             alt: true,
+            isFalseImage: true,
+            color: true,
           },
         },
         gptRequest: true,
         rawGptResponse: true,
+        gptRequest2: true,
+        rawGptResponse2: true,
         source: true,
       },
     });

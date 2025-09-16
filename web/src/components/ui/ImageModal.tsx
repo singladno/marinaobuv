@@ -1,7 +1,12 @@
 import * as React from 'react';
 
 interface ImageModalProps {
-  images: Array<{ id: string; url: string; alt?: string | null }>;
+  images: Array<{
+    id: string;
+    url: string;
+    alt?: string | null;
+    color?: string | null;
+  }>;
   isOpen: boolean;
   onClose: () => void;
   initialIndex?: number;
@@ -128,6 +133,13 @@ export function ImageModal({
           }}
         />
 
+        {/* Color badge */}
+        {currentImage.color && (
+          <div className="absolute left-4 top-4 rounded bg-black bg-opacity-60 px-2 py-1 text-sm text-white">
+            {currentImage.color}
+          </div>
+        )}
+
         {/* Image counter */}
         {images.length > 1 && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black bg-opacity-50 px-3 py-1 text-white">
@@ -151,6 +163,11 @@ export function ImageModal({
                   alt={img.alt || `Миниатюра ${index + 1}`}
                   className="h-full w-full object-cover"
                 />
+                {img.color && (
+                  <span className="absolute bottom-0 right-0 m-0.5 rounded bg-black/60 px-1 text-[10px] text-white">
+                    {img.color}
+                  </span>
+                )}
               </button>
             ))}
           </div>

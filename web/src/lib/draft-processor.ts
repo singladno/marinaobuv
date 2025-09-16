@@ -5,7 +5,7 @@ import {
   getOrCreateProvider,
   DraftProductData,
 } from './draft-product-creator';
-import { normalizeTextToDraft } from './yagpt';
+import { normalizeTextToDraft, validateDraftWithImages } from './yagpt';
 
 /**
  * Extract text content from messages
@@ -163,7 +163,7 @@ export async function processMessageGroupToDraft(
     }
 
     // Create the draft product
-    await createDraftProduct(
+    const created = await createDraftProduct(
       firstMessage.id,
       providerId,
       productData,
@@ -172,6 +172,8 @@ export async function processMessageGroupToDraft(
       messageIds,
       imageData
     );
+
+    // Second pass disabled for now
 
     // Mark all messages in the group as processed
     await prisma.whatsAppMessage.updateMany({

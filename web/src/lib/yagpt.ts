@@ -1,7 +1,8 @@
 import { ProductDraftSchema, type ProductDraft } from '@/types/draft';
 
 import { env } from './env';
-import { getSystemPrompt } from './gpt-prompt';
+import { getSystemPrompt, getValidationPrompt } from './gpt-prompt';
+import { getCategoryTree } from './catalog';
 
 // Moved schema and types to @/types/draft to keep this file small
 
@@ -109,6 +110,13 @@ export async function normalizeTextToDraft(
       ? `Bearer ${env.YC_IAM_TOKEN}`
       : `Api-Key ${env.YC_API_KEY}`;
 
+    // fetch category tree to pass into the system prompt
+    let categoryTreeJson = '[]';
+    try {
+      const tree = await getCategoryTree();
+      categoryTreeJson = JSON.stringify(tree);
+    } catch {}
+
     const response = await fetch(
       `https://llm.api.cloud.yandex.net/foundationModels/v1/completion`,
       {
@@ -127,7 +135,7 @@ export async function normalizeTextToDraft(
           messages: [
             {
               role: 'system',
-              text: getSystemPrompt(),
+              text: getSystemPrompt(categoryTreeJson),
             },
             {
               role: 'user',
@@ -165,6 +173,110 @@ export async function normalizeTextToDraft(
       'Input text that caused error:',
       text.substring(0, 200) + '...'
     );
+    return null;
+  }
+}
+
+/**
+ * Validate and enrich a parsed draft against its images.
+ * Returns normalizedName, productColor, and per-image flags/colors.
+ */
+export async function validateDraftWithImages(
+  draft: ProductDraft,
+  imageUrls: string[]
+): Promise<{
+  normalizedName: string;
+  productColor: string | null;
+  images: Array<{ url: string; isFalseImage: boolean; color?: string | null }>;
+  requestPayload: unknown;
+  rawResponse: unknown;
+} | null> {
+  try {
+    console.log(`🔍 Starting second-pass validation for draft: ${draft.name}`);
+    console.log(`📸 Examining ${imageUrls.length} images:`, imageUrls);
+
+    const authHeader = env.YC_IAM_TOKEN
+      ? `Bearer ${env.YC_IAM_TOKEN}`
+      : `Api-Key ${env.YC_API_KEY}`;
+
+    const requestPayload = JSON.stringify({ draft, imageUrls });
+    console.log(`📤 Second-pass request payload:`, requestPayload);
+
+    const response = await fetch(
+      `https://llm.api.cloud.yandex.net/foundationModels/v1/completion`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: authHeader,
+          'x-folder-id': env.YC_FOLDER_ID,
+        },
+        body: JSON.stringify({
+          modelUri: `gpt://${env.YC_FOLDER_ID}/yandexgpt`,
+          completionOptions: { temperature: 0.1, stream: false },
+          messages: [
+            { role: 'system', text: getValidationPrompt() },
+            { role: 'user', text: requestPayload },
+          ],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`YandexGPT API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const content = data.result?.alternatives?.[0]?.message?.text;
+    if (!content) {
+      throw new Error('No content in YandexGPT validation response');
+    }
+
+    console.log(`📥 Second-pass raw response:`, content);
+
+    const jsonContent = parseJsonContent(content) as any;
+    console.log(
+      `📋 Parsed second-pass response:`,
+      JSON.stringify(jsonContent, null, 2)
+    );
+
+    // Basic shape enforcement
+    const normalizedName: string =
+      typeof jsonContent?.normalizedName === 'string' &&
+      jsonContent.normalizedName.trim()
+        ? jsonContent.normalizedName.trim()
+        : draft.name || 'Не указано';
+
+    const productColor: string | null =
+      typeof jsonContent?.productColor === 'string' &&
+      jsonContent.productColor.trim()
+        ? jsonContent.productColor.trim()
+        : null;
+
+    const images: Array<{
+      url: string;
+      isFalseImage: boolean;
+      color?: string | null;
+    }> = Array.isArray(jsonContent?.images)
+      ? jsonContent.images.map((img: any, idx: number) => ({
+          url: typeof img?.url === 'string' ? img.url : imageUrls[idx] || '',
+          isFalseImage: Boolean(img?.isFalseImage),
+          color:
+            typeof img?.color === 'string' && img.color.trim()
+              ? img.color.trim()
+              : undefined,
+        }))
+      : imageUrls.map(u => ({ url: u, isFalseImage: false }));
+
+    return {
+      normalizedName,
+      productColor,
+      images,
+      requestPayload,
+      rawResponse: jsonContent,
+    };
+  } catch (error) {
+    console.error('Failed second-pass validation with YandexGPT:', error);
     return null;
   }
 }

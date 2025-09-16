@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const ProductDraftSchema = z.object({
   name: z.string().min(1).optional(),
+  categoryId: z.string().uuid().optional().or(z.string().min(1).optional()),
   article: z
     .string()
     .nullable()

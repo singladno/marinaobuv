@@ -52,7 +52,7 @@ export async function createDraftProduct(
   rawGptResponse: any,
   sourceMessageIds: string[],
   imageData: ImageData[]
-): Promise<void> {
+): Promise<{ id: string }> {
   // Create the draft product
   const draftProduct = await prisma.waDraftProduct.create({
     data: {
@@ -114,4 +114,6 @@ export async function createDraftProduct(
   console.log(
     `Created draft product ${draftProduct.id} for message ${messageId}`
   );
+
+  return { id: draftProduct.id };
 }

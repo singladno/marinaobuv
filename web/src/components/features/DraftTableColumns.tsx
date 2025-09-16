@@ -20,7 +20,8 @@ const columnHelper = createColumnHelper<DraftWithSelected>();
 
 export function createDraftTableColumns(
   onToggle: (id: string) => void,
-  onPatch: (id: string, patch: Partial<Draft>) => Promise<void>
+  onPatch: (id: string, patch: Partial<Draft>) => Promise<void>,
+  onDelete: (id: string) => Promise<void>
 ) {
   return [
     columnHelper.display({
@@ -221,6 +222,7 @@ export function createDraftTableColumns(
         <GptResponseCell rawGptResponse={info.row.original.rawGptResponse} />
       ),
     }),
+    // GPT2 columns hidden for now
     columnHelper.display({
       id: 'createdAt',
       header: () => 'Создано',
@@ -262,6 +264,20 @@ export function createDraftTableColumns(
           </div>
         );
       },
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: () => 'Действия',
+      cell: info => (
+        <button
+          onClick={() => onDelete(info.row.original.id)}
+          className="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+          title="Удалить черновик"
+          aria-label="Удалить"
+        >
+          🗑️
+        </button>
+      ),
     }),
   ];
 }

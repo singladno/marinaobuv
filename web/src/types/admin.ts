@@ -18,6 +18,8 @@ export type Draft = {
     isPrimary: boolean;
     sort: number;
     alt?: string | null;
+    isFalseImage?: boolean;
+    color?: string | null;
   }[];
   messageId?: string;
   providerId?: string;
@@ -30,6 +32,8 @@ export type Draft = {
   sizes?: Array<{ size: string; stock?: number; count?: number }> | null;
   gptRequest?: string | null;
   rawGptResponse?: any;
+  gptRequest2?: string | null;
+  rawGptResponse2?: any;
   source?: Array<{
     id: string;
     waMessageId: string;

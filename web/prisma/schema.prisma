@@ -40,6 +40,7 @@ model Category {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   products  Product[]
+  draftProducts WaDraftProduct[]
 
   @@index([parentId])
 }
@@ -79,6 +80,7 @@ model ProductImage {
   alt       String?
   sort      Int     @default(0)
   isPrimary Boolean @default(false)
+  color     String?
   width     Int?
   height    Int?
 
@@ -134,8 +136,14 @@ model WaDraftProduct {
   providerDiscount Int? // Provider's discount in kopecks (e.g., 50000 = 500 rubles discount)
   rawGptResponse Json? // Full GPT response for debugging
   gptRequest     String? // Raw text sent to GPT for processing
+  rawGptResponse2 Json? // Full second-pass GPT response for debugging
+  gptRequest2     String? // Raw text sent to GPT for second-pass validation
   source         Json? // Array of message IDs used for this draft product
+  color          String? // Dominant/selected color for this draft product
+  categoryId     String?
+  category       Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   status         String                @default("draft") // draft, processed, approved, rejected
+  isDeleted      Boolean               @default(false)
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
   images         WaDraftProductImage[]
@@ -143,6 +151,8 @@ model WaDraftProduct {
   @@index([providerId])
   @@index([status])
   @@index([createdAt])
+  @@index([categoryId])
+  @@index([isDeleted])
 }
 
 model WaDraftProductImage {
@@ -156,6 +166,8 @@ model WaDraftProductImage {
   alt            String?
   sort           Int            @default(0)
   isPrimary      Boolean        @default(false)
+  isFalseImage   Boolean        @default(false) // Mark if this image is not of the product
+  color          String? // Detected color for this image (used for color variants)
   width          Int?
   height         Int?
   createdAt      DateTime       @default(now())

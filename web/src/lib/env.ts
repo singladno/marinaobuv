@@ -34,6 +34,20 @@ const schema = z
     YC_IAM_TOKEN: z.string().optional(),
     YC_API_KEY: z.string().optional(),
 
+    // OpenAI Vision
+    OPENAI_API_KEY: z.string().optional(),
+    OPENAI_VISION_MODEL: z.string().optional(),
+    OPENAI_PROXY: z.string().optional(),
+    OPENAI_REQUEST_DELAY_MS: z
+      .string()
+      .optional()
+      .transform(val => {
+        if (!val) return 0;
+        const ms = parseInt(val, 10);
+        if (Number.isNaN(ms) || ms < 0) return 0;
+        return ms;
+      }),
+
     // Target Group Chat ID for Processing
     TARGET_GROUP_ID: z.string().optional(),
 
@@ -84,6 +98,12 @@ const raw = {
   YC_FOLDER_ID: process.env.YC_FOLDER_ID,
   YC_IAM_TOKEN: process.env.YC_IAM_TOKEN,
   YC_API_KEY: process.env.YC_API_KEY,
+
+  // OpenAI Vision
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL,
+  OPENAI_PROXY: process.env.OPENAI_PROXY,
+  OPENAI_REQUEST_DELAY_MS: process.env.OPENAI_REQUEST_DELAY_MS,
 
   // Target Group Chat ID for Processing
   TARGET_GROUP_ID: process.env.TARGET_GROUP_ID,
