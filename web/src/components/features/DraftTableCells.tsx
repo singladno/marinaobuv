@@ -1,12 +1,21 @@
 import * as React from 'react';
 
 import type { Draft } from '@/types/admin';
+import {
+  getThumbnailUrl,
+  isWAParserImage,
+  sanitizeImageUrl,
+} from '@/lib/image-security';
+import { ImageModal } from '@/components/ui/ImageModal';
 
 interface ImagesCellProps {
   images: Draft['images'];
 }
 
 export function ImagesCell({ images }: ImagesCellProps) {
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
+
   const sortedImages = (images || []).sort(
     (a, b) => (a.sort || 0) - (b.sort || 0)
   );
@@ -15,32 +24,77 @@ export function ImagesCell({ images }: ImagesCellProps) {
     return <span className="text-gray-400 dark:text-gray-500">—</span>;
   }
 
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsModalOpen(true);
+  };
+
   return (
-    <div className="flex gap-1">
-      {sortedImages.slice(0, 4).map(img => (
-        <div
-          key={img.id}
-          className="relative h-12 w-12 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700"
-        >
-          <img
-            src={img.url}
-            alt={img.alt || `Изображение ${(img.sort || 0) + 1}`}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            onError={e => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              console.error('Failed to load image:', img.url);
-            }}
-          />
-        </div>
-      ))}
-      {sortedImages.length > 4 && (
-        <div className="flex h-12 w-12 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-          +{sortedImages.length - 4}
-        </div>
-      )}
-    </div>
+    <>
+      <div className="flex gap-1">
+        {sortedImages.slice(0, 4).map(img => {
+          // Check if it's a WA parser image
+          if (!isWAParserImage(img.url)) {
+            return (
+              <div
+                key={img.id}
+                className="flex h-12 w-12 items-center justify-center rounded-md border border-yellow-200 bg-yellow-50 text-xs font-medium text-yellow-600 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-400"
+                title="Неизвестный источник изображения"
+              >
+                ?
+              </div>
+            );
+          }
+
+          const sanitizedUrl = sanitizeImageUrl(img.url);
+          const thumbnailUrl = getThumbnailUrl(sanitizedUrl, 48); // 48px for 12x12 container
+
+          return (
+            <button
+              key={img.id}
+              onClick={() => handleImageClick(sortedImages.indexOf(img))}
+              className="relative h-12 w-12 overflow-hidden rounded-md border border-gray-200 transition-colors hover:border-blue-300 dark:border-gray-700 dark:hover:border-blue-600"
+              title="Нажмите для просмотра в полном размере"
+            >
+              <img
+                src={thumbnailUrl}
+                alt={img.alt || `Изображение ${(img.sort || 0) + 1}`}
+                className="h-full w-full object-cover"
+                loading="lazy"
+                onError={e => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  console.error(
+                    'Failed to load WA parser image:',
+                    thumbnailUrl
+                  );
+                }}
+              />
+            </button>
+          );
+        })}
+        {sortedImages.length > 4 && (
+          <button
+            onClick={() => handleImageClick(0)}
+            className="flex h-12 w-12 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+            title="Показать все изображения"
+          >
+            +{sortedImages.length - 4}
+          </button>
+        )}
+      </div>
+
+      <ImageModal
+        images={sortedImages.map(img => ({
+          id: img.id,
+          url: sanitizeImageUrl(img.url),
+          alt: img.alt,
+        }))}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialIndex={selectedImageIndex}
+      />
+    </>
   );
 }
 
