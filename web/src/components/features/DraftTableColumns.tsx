@@ -1,6 +1,7 @@
 import { createColumnHelper } from '@tanstack/react-table';
 
 import type { Draft } from '@/types/admin';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 import {
   ImagesCell,
@@ -12,6 +13,7 @@ import {
   SourceCell,
   GptRequestCell,
   GptResponseCell,
+  CategoryCell,
 } from './DraftTableCells';
 
 type DraftWithSelected = Draft & { selected?: boolean };
@@ -21,7 +23,8 @@ const columnHelper = createColumnHelper<DraftWithSelected>();
 export function createDraftTableColumns(
   onToggle: (id: string) => void,
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>,
-  onDelete: (id: string) => Promise<void>
+  onDelete: (id: string) => Promise<void>,
+  categories: CategoryNode[]
 ) {
   return [
     columnHelper.display({
@@ -58,6 +61,20 @@ export function createDraftTableColumns(
           onBlur={value => onPatch(info.row.original.id, { article: value })}
           placeholder="Введите артикул"
           aria-label="Артикул"
+        />
+      ),
+    }),
+    columnHelper.display({
+      id: 'category',
+      header: () => 'Категория',
+      cell: info => (
+        <CategoryCell
+          category={info.row.original.category}
+          categoryId={info.row.original.categoryId}
+          onCategoryChange={value =>
+            onPatch(info.row.original.id, { categoryId: value })
+          }
+          categories={categories}
         />
       ),
     }),

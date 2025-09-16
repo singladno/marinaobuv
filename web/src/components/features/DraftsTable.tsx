@@ -4,6 +4,7 @@ import { Tabs, Tab } from '@/components/ui/Tabs';
 import { useDraftsTable } from '@/hooks/useDraftsTable';
 import type { Draft } from '@/types/admin';
 import { createColumnConfigs } from '@/utils/columnConfigs';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 import { ColumnSettingsModal } from './ColumnSettingsModal';
 import { DraftTableActions } from './DraftTableActions';
@@ -22,6 +23,7 @@ export function DraftsTable({
   selectedCount,
   loading = false,
   error,
+  categories,
 }: {
   data: Draft[];
   selected: Record<string, boolean>;
@@ -35,6 +37,7 @@ export function DraftsTable({
   selectedCount?: number;
   loading?: boolean;
   error?: string | null;
+  categories: CategoryNode[];
 }) {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
@@ -56,6 +59,7 @@ export function DraftsTable({
       onToggle,
       onPatch,
       onDelete: handleDelete,
+      categories,
     });
 
   const columnConfigs = createColumnConfigs(columnVisibility);
@@ -68,7 +72,6 @@ export function DraftsTable({
         <Tabs
           value={status ?? 'draft'}
           onChange={value => onStatusChange?.(value)}
-          className="px-6"
         >
           <Tab value="draft">Черновики</Tab>
           <Tab value="approved">Одобрено</Tab>

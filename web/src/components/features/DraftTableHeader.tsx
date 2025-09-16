@@ -19,16 +19,16 @@ export function DraftTableHeader({ table }: DraftTableHeaderProps) {
             return (
               <th
                 key={header.id}
-                className={`whitespace-nowrap border-b border-gray-200 bg-white px-4 py-4 align-top text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 ${
+                className={`whitespace-nowrap border-b border-gray-200 bg-gray-50 px-4 py-4 align-top text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 ${
                   header.column.id === 'material' ||
                   header.column.id === 'gender'
                     ? 'text-center'
                     : 'text-left'
                 } ${
                   isFrozenLeft
-                    ? 'sticky left-0 z-30 border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                    ? 'sticky left-0 z-30 border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
                     : isFrozenRight
-                      ? 'sticky right-0 z-30 border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                      ? 'sticky right-0 z-30 border-l border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
                       : 'relative z-20'
                 }`}
                 style={

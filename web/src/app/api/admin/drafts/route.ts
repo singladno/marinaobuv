@@ -25,6 +25,15 @@ export async function GET(req: NextRequest) {
         },
         name: true,
         article: true,
+        categoryId: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            path: true,
+          },
+        },
         pricePair: true,
         currency: true,
         packPairs: true,

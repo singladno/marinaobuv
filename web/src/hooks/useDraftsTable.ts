@@ -5,8 +5,9 @@ import {
 } from '@tanstack/react-table';
 import * as React from 'react';
 
-import type { Draft } from '@/types/admin';
 import { createDraftTableColumns } from '@/components/features/DraftTableColumns';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
+import type { Draft } from '@/types/admin';
 
 type DraftWithSelected = Draft & { selected?: boolean };
 
@@ -16,12 +17,14 @@ export function useDraftsTable({
   onToggle,
   onPatch,
   onDelete,
+  categories,
 }: {
   data: Draft[];
   selected: Record<string, boolean>;
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  categories: CategoryNode[];
 }) {
   const [localData, setLocalData] = React.useState<DraftWithSelected[]>(() =>
     data.map(d => ({ ...d, selected: !!selected[d.id] }))
@@ -55,8 +58,8 @@ export function useDraftsTable({
   );
 
   const columns = React.useMemo(
-    () => createDraftTableColumns(onToggle, onPatch, handleDelete),
-    [onToggle, onPatch, handleDelete]
+    () => createDraftTableColumns(onToggle, onPatch, handleDelete, categories),
+    [onToggle, onPatch, handleDelete, categories]
   );
 
   const table = useReactTable({

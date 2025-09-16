@@ -3,10 +3,12 @@
 import { DraftsTable } from '@/components/features/DraftsTable';
 import type { Draft } from '@/types/admin';
 import { useDrafts } from '@/hooks/useDrafts';
+import { useCategories } from '@/hooks/useCategories';
 import { useMemo, useState } from 'react';
 
 export default function AdminDraftsPage() {
   const { data, loading, error, reload, status, setStatus } = useDrafts();
+  const { categories, loading: categoriesLoading } = useCategories();
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const selectedIds = useMemo(
     () => Object.keys(selected).filter(k => selected[k]),
@@ -60,8 +62,9 @@ export default function AdminDraftsPage() {
           onApprove={approve}
           onConvertToCatalog={convertToCatalog}
           selectedCount={selectedIds.length}
-          loading={loading}
+          loading={loading || categoriesLoading}
           error={error}
+          categories={categories}
         />
       </div>
     </div>

@@ -1,7 +1,14 @@
 export type Draft = {
   id: string;
-  name: string;
+  name: string | null;
   article: string | null;
+  categoryId: string | null;
+  category?: {
+    id: string;
+    name: string;
+    slug: string;
+    path: string;
+  } | null;
   pricePair: number | null; // kopecks
   currency: string;
   packPairs: number | null;

@@ -21,7 +21,7 @@ export function DraftTableActions({
 }: DraftTableActionsProps) {
   return (
     <div
-      className={`flex items-center justify-between px-6 py-4 ${
+      className={`flex items-center justify-between bg-white px-6 py-4 dark:bg-gray-900 ${
         showBottomBorder ? 'border-b border-gray-200 dark:border-gray-700' : ''
       }`}
     >

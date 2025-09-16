@@ -7,6 +7,8 @@ import {
   sanitizeImageUrl,
 } from '@/lib/image-security';
 import { ImageModal } from '@/components/ui/ImageModal';
+import { CategorySelector } from '@/components/ui/CategorySelector';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 interface ImagesCellProps {
   images: Draft['images'];
@@ -481,5 +483,30 @@ export function GptResponseCell({ rawGptResponse }: GptResponseCellProps) {
         </div>
       )}
     </>
+  );
+}
+
+interface CategoryCellProps {
+  category: Draft['category'];
+  categoryId: string | null;
+  onCategoryChange: (categoryId: string | null) => void;
+  categories: CategoryNode[];
+}
+
+export function CategoryCell({
+  category,
+  categoryId,
+  onCategoryChange,
+  categories,
+}: CategoryCellProps) {
+  return (
+    <div className="min-w-[200px]">
+      <CategorySelector
+        value={categoryId}
+        onChange={onCategoryChange}
+        categories={categories}
+        placeholder="Выберите категорию"
+      />
+    </div>
   );
 }
