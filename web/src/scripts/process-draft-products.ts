@@ -14,7 +14,7 @@ async function getMessagesForProcessing(limit: number = 50): Promise<string[]> {
   const messages = await prisma.whatsAppMessage.findMany({
     where: {
       fromMe: false,
-      draftProduct: null, // strictly messages without a draft
+      processed: false, // Only unprocessed messages
       OR: [
         { text: { not: null } },
         { type: { in: ['image', 'video', 'document'] } },
@@ -35,8 +35,8 @@ async function main() {
   try {
     console.log('Starting draft product processing with message grouping...');
 
-    // Get messages that need processing (limit to 50 for testing)
-    const messageIds = await getMessagesForProcessing(50);
+    // Get messages that need processing (process all available messages)
+    const messageIds = await getMessagesForProcessing(1000);
     console.log(`Found ${messageIds.length} messages to process`);
 
     if (messageIds.length === 0) {

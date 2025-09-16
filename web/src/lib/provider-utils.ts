@@ -1,13 +1,14 @@
 import { prisma } from './db-node';
 
 /**
- * Extract provider name from WhatsApp sender name
+ * Extract provider name and place from WhatsApp sender name
  * This function tries to identify the provider from the sender's name
  */
-export function extractProviderFromSenderName(
-  pushName: string | null
-): string | null {
-  if (!pushName) return null;
+export function extractProviderFromSenderName(pushName: string | null): {
+  name: string | null;
+  place: string | null;
+} {
+  if (!pushName) return { name: null, place: null };
 
   // Clean the name - remove common prefixes/suffixes
   let cleanName = pushName.trim();
@@ -18,10 +19,28 @@ export function extractProviderFromSenderName(
 
   // If the name is too short or contains only numbers, skip
   if (cleanName.length < 2 || /^\d+$/.test(cleanName)) {
-    return null;
+    return { name: null, place: null };
   }
 
-  return cleanName;
+  // Look for market address pattern like "3/4/17" near the name
+  const placeMatch = cleanName.match(/(\d+\/\d+\/\d+)/);
+  let place: string | null = null;
+  let name = cleanName;
+
+  if (placeMatch) {
+    place = placeMatch[1];
+    // Remove the place from the name
+    name = cleanName.replace(placeMatch[0], '').trim();
+    // Clean up any extra spaces or punctuation
+    name = name.replace(/[,\s]+$/, '').replace(/^[,\s]+/, '');
+  }
+
+  // If name becomes empty after removing place, use original
+  if (!name || name.length < 2) {
+    name = cleanName;
+  }
+
+  return { name, place };
 }
 
 /**
@@ -29,14 +48,24 @@ export function extractProviderFromSenderName(
  */
 export async function getOrCreateProvider(
   phone: string | null,
-  name: string | null
+  name: string | null,
+  place: string | null = null
 ): Promise<string | null> {
   if (!phone && !name) return null;
 
   // Try by phone first if available
   if (phone) {
     const byPhone = await prisma.provider.findFirst({ where: { phone } });
-    if (byPhone) return byPhone.id;
+    if (byPhone) {
+      // Update place if provided and not already set
+      if (place && !byPhone.place) {
+        await prisma.provider.update({
+          where: { id: byPhone.id },
+          data: { place },
+        });
+      }
+      return byPhone.id;
+    }
   }
 
   // Try by name
@@ -50,13 +79,24 @@ export async function getOrCreateProvider(
           data: { phone },
         });
       }
+      // Update place if provided and not already set
+      if (place && !byName.place) {
+        await prisma.provider.update({
+          where: { id: byName.id },
+          data: { place },
+        });
+      }
       return byName.id;
     }
   }
 
   // Create new provider
   const created = await prisma.provider.create({
-    data: { name: name ?? (phone as string), phone: phone ?? null },
+    data: {
+      name: name ?? (phone as string),
+      phone: phone ?? null,
+      place: place,
+    },
   });
   return created.id;
 }
@@ -73,6 +113,6 @@ export async function processProviderFromMessage(
     (data.fromName as string | null) ??
     (data.pushName as string | null) ??
     null;
-  const name = extractProviderFromSenderName(pushName);
-  return await getOrCreateProvider(from, name);
+  const { name, place } = extractProviderFromSenderName(pushName);
+  return await getOrCreateProvider(from, name, place);
 }

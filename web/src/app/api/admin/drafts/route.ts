@@ -20,7 +20,9 @@ export async function GET(req: NextRequest) {
         id: true,
         messageId: true,
         providerId: true,
-        provider: { select: { id: true, name: true, phone: true } },
+        provider: {
+          select: { id: true, name: true, phone: true, place: true },
+        },
         name: true,
         article: true,
         pricePair: true,
@@ -31,6 +33,7 @@ export async function GET(req: NextRequest) {
         gender: true,
         season: true,
         description: true,
+        providerDiscount: true,
         sizes: true,
         status: true,
         createdAt: true,

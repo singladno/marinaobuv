@@ -102,6 +102,7 @@ model Provider {
   id            String            @id @default(cuid())
   name          String            @unique
   phone         String? // Phone number from 'from' field
+  place         String? // Market address/place (e.g., "3/4/17")
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   messages      WhatsAppMessage[]
@@ -110,6 +111,7 @@ model Provider {
 
   @@index([name])
   @@index([phone])
+  @@index([place])
 }
 
 model WaDraftProduct {
@@ -129,6 +131,7 @@ model WaDraftProduct {
   season         Season?
   description    String?
   sizes          Json? // Array of size objects
+  providerDiscount Int? // Provider's discount in kopecks (e.g., 50000 = 500 rubles discount)
   rawGptResponse Json? // Full GPT response for debugging
   gptRequest     String? // Raw text sent to GPT for processing
   source         Json? // Array of message IDs used for this draft product
@@ -188,6 +191,7 @@ model WhatsAppMessage {
   mediaUrl   String? // Media URL
   providerId String? // Provider identifier
   provider   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  processed  Boolean @default(false) // Whether message has been processed by draft parser
 
   // Raw data
   rawPayload   Json // Full API response

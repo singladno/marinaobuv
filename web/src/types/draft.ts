@@ -8,10 +8,26 @@ export const ProductDraftSchema = z.object({
     .optional()
     .transform(val => (val === null ? undefined : val)),
   season: z
-    .enum(['spring', 'summer', 'autumn', 'winter'])
+    .string()
     .nullable()
     .optional()
-    .transform(val => (val === null ? undefined : val)),
+    .transform(val => {
+      if (val === null || val === undefined) return undefined;
+
+      // Handle multiple seasons separated by | or ,
+      const seasons = val.split(/[|,]/).map(s => s.trim().toLowerCase());
+      const validSeasons = ['spring', 'summer', 'autumn', 'winter'];
+
+      // If multiple seasons, return the first valid one
+      for (const season of seasons) {
+        if (validSeasons.includes(season)) {
+          return season;
+        }
+      }
+
+      // If no valid season found, return null
+      return null;
+    }),
   typeSlug: z
     .string()
     .nullable()
@@ -57,6 +73,11 @@ export const ProductDraftSchema = z.object({
     .transform(val => (val === null ? undefined : val)),
   notes: z
     .string()
+    .nullable()
+    .optional()
+    .transform(val => (val === null ? undefined : val)),
+  providerDiscount: z.coerce
+    .number()
     .nullable()
     .optional()
     .transform(val => (val === null ? undefined : val)),

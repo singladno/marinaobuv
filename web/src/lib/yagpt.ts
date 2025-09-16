@@ -17,8 +17,8 @@ function parseJsonContent(content: string): unknown {
       try {
         return JSON.parse(jsonMatch[0]);
       } catch {
-        // If still fails, try to clean up the JSON
-        const cleanedJson = jsonMatch[0]
+        // If still fails, try to clean up the JSON more aggressively
+        let cleanedJson = jsonMatch[0]
           .replace(/,\s*}/g, '}') // Remove trailing commas before }
           .replace(/,\s*]/g, ']') // Remove trailing commas before ]
           .replace(/(\w+):/g, '"$1":') // Add quotes around keys if missing
@@ -26,9 +26,23 @@ function parseJsonContent(content: string): unknown {
           .replace(/:(\d+)/g, ':$1') // Keep numbers as numbers
           .replace(/:true/g, ':true') // Keep booleans
           .replace(/:false/g, ':false')
-          .replace(/:null/g, ':null');
+          .replace(/:null/g, ':null')
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
 
-        return JSON.parse(cleanedJson);
+        // Try to fix common issues
+        try {
+          return JSON.parse(cleanedJson);
+        } catch {
+          // Last resort: try to extract just the first valid JSON object
+          const firstBrace = cleanedJson.indexOf('{');
+          const lastBrace = cleanedJson.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            const extracted = cleanedJson.substring(firstBrace, lastBrace + 1);
+            return JSON.parse(extracted);
+          }
+          throw new Error('Could not parse JSON from YandexGPT response');
+        }
       }
     }
     throw new Error('Could not parse JSON from YandexGPT response');
@@ -77,7 +91,8 @@ export async function normalizeTextToDraft(
                 "material": string (optional),
                 "gender": "female"|"male"|"unisex" (optional),
                 "sizes": Array<{size: string, count: number}> (optional),
-                "notes": string (optional)
+                "notes": string (optional),
+                "providerDiscount": number (in kopecks, optional)
               }
 
               Rules:
@@ -86,12 +101,23 @@ export async function normalizeTextToDraft(
               - Extract only information explicitly mentioned in the text
               - Convert prices to kopecks (multiply by 100)
               - For sizes, extract both size and quantity if mentioned
+              - Size patterns: "36/37/38/39/40/41" means 1 pair of each size (36:1, 37:1, 38:1, etc.)
+              - Size patterns: "36:2/37:1/38:3" means 2 pairs of 36, 1 pair of 37, 3 pairs of 38
+              - If no quantity is specified for a size, assume 1 pair
+              - Always include count field, never use 0
               - Return only valid JSON, no additional text
               - If information is not clear, omit the field entirely (do not include null values)
               - Be conservative with assumptions
               - Only include fields that have actual values
               - If there are multiple product names mentioned, use the most descriptive one
-              - Combine all price information from different messages`,
+              - Combine all price information from different messages
+              
+              Discount Extraction:
+              - Look for discount patterns like "С КОРОБКИ 500Р СКИДКА", "скидка 500", "скидка 400"
+              - Also look for simple negative numbers like "-500", "-400" (these are discount amounts)
+              - Convert discount amounts to kopecks (multiply by 100)
+              - Only extract if discount is explicitly mentioned
+              - Examples: "500Р СКИДКА" = 50000 kopecks, "-500" = 50000 kopecks`,
             },
             {
               role: 'user',

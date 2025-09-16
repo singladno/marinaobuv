@@ -110,6 +110,16 @@ export function createDraftTableColumns(
         />
       ),
     }),
+    columnHelper.display({
+      id: 'providerDiscountRub',
+      header: () => 'Скидка поставщика (₽)',
+      cell: info => (
+        <PriceCell
+          value={info.row.original.providerDiscount}
+          formatter={value => (value / 100).toLocaleString('ru-RU')}
+        />
+      ),
+    }),
     columnHelper.accessor('material', {
       header: () => 'Материал',
       cell: info => (
@@ -210,6 +220,48 @@ export function createDraftTableColumns(
       cell: info => (
         <GptResponseCell rawGptResponse={info.row.original.rawGptResponse} />
       ),
+    }),
+    columnHelper.display({
+      id: 'createdAt',
+      header: () => 'Создано',
+      cell: info => {
+        const value = info.row.original.createdAt;
+        if (!value)
+          return <span className="text-gray-400 dark:text-gray-500">—</span>;
+
+        const date = new Date(value);
+        return (
+          <div className="text-sm">
+            <div className="font-medium text-gray-900 dark:text-gray-100">
+              {date.toLocaleDateString('ru-RU')}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {date.toLocaleTimeString('ru-RU')}
+            </div>
+          </div>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: 'updatedAt',
+      header: () => 'Обновлено',
+      cell: info => {
+        const value = info.row.original.updatedAt;
+        if (!value)
+          return <span className="text-gray-400 dark:text-gray-500">—</span>;
+
+        const date = new Date(value);
+        return (
+          <div className="text-sm">
+            <div className="font-medium text-gray-900 dark:text-gray-100">
+              {date.toLocaleDateString('ru-RU')}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {date.toLocaleTimeString('ru-RU')}
+            </div>
+          </div>
+        );
+      },
     }),
   ];
 }

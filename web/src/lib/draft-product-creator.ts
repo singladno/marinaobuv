@@ -14,6 +14,7 @@ export interface DraftProductData {
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description: string | null;
   sizes: Array<{ size: string; stock: number }> | null;
+  providerDiscount: number | null;
 }
 
 /**
@@ -23,33 +24,21 @@ export async function getOrCreateProvider(
   from: string,
   fromName: string
 ): Promise<string> {
-  // Try to find by phone first
-  let provider = await prisma.provider.findFirst({
-    where: { phone: from },
-  });
+  // Import the provider utils function
+  const { getOrCreateProvider: getOrCreateProviderUtil } = await import(
+    './provider-utils'
+  );
 
-  if (provider) {
-    return provider.id;
+  // Extract name and place from the sender name
+  const { extractProviderFromSenderName } = await import('./provider-utils');
+  const { name, place } = extractProviderFromSenderName(fromName);
+
+  const providerId = await getOrCreateProviderUtil(from, name, place);
+  if (!providerId) {
+    throw new Error('Failed to create or find provider');
   }
 
-  // Try to find by name
-  provider = await prisma.provider.findFirst({
-    where: { name: fromName },
-  });
-
-  if (provider) {
-    return provider.id;
-  }
-
-  // Create new provider
-  const newProvider = await prisma.provider.create({
-    data: {
-      name: fromName,
-      phone: from,
-    },
-  });
-
-  return newProvider.id;
+  return providerId;
 }
 
 /**
@@ -80,6 +69,7 @@ export async function createDraftProduct(
       season: productData.season,
       description: productData.description,
       sizes: productData.sizes as any,
+      providerDiscount: productData.providerDiscount,
       rawGptResponse: rawGptResponse as any,
       gptRequest,
       source: sourceMessageIds as any,

@@ -87,6 +87,11 @@ export function ProviderCell({ provider }: ProviderCellProps) {
             {provider.phone}
           </div>
         )}
+        {provider.place && (
+          <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
+            📍 {provider.place}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -199,11 +204,30 @@ export function SourceCell({ source }: SourceCellProps) {
   const formatTimestamp = (timestamp: number | null) => {
     if (!timestamp) return 'Неизвестно';
     const date = new Date(timestamp * 1000);
-    return date.toLocaleString('ru-RU');
+    return (
+      <div className="text-sm">
+        <div className="font-medium text-gray-900 dark:text-gray-100">
+          {date.toLocaleDateString('ru-RU')}
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          {date.toLocaleTimeString('ru-RU')}
+        </div>
+      </div>
+    );
   };
 
   const formatCreatedAt = (createdAt: string) => {
-    return new Date(createdAt).toLocaleString('ru-RU');
+    const date = new Date(createdAt);
+    return (
+      <div className="text-sm">
+        <div className="font-medium text-gray-900 dark:text-gray-100">
+          {date.toLocaleDateString('ru-RU')}
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          {date.toLocaleTimeString('ru-RU')}
+        </div>
+      </div>
+    );
   };
 
   return (

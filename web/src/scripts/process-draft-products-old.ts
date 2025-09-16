@@ -113,10 +113,7 @@ async function groupMessagesForProductContext(
     const messageProviderId = message.providerId || message.from;
 
     // If this is the first message or from the same provider as current group
-    if (
-      currentProviderId === null ||
-      messageProviderId === currentProviderId
-    ) {
+    if (currentProviderId === null || messageProviderId === currentProviderId) {
       currentGroup.push(message.id);
       currentProviderId = messageProviderId;
     } else {
@@ -703,7 +700,7 @@ async function getMessagesForProcessing(limit: number = 50): Promise<string[]> {
   const messages = await prisma.whatsAppMessage.findMany({
     where: {
       fromMe: false,
-      draftProduct: null, // strictly messages without a draft
+      processed: false, // Only unprocessed messages
       OR: [
         { text: { not: null } },
         { type: { in: ['image', 'video', 'document'] } },

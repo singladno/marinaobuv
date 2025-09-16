@@ -15,7 +15,7 @@ async function getMessagesForProcessing(limit: number = 50): Promise<string[]> {
   const messages = await prisma.whatsAppMessage.findMany({
     where: {
       fromMe: false,
-      draftProduct: null, // strictly messages without a draft
+      processed: false, // Only unprocessed messages
       OR: [
         { text: { not: null } },
         { type: { in: ['image', 'video', 'document'] } },

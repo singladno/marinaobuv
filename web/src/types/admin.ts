@@ -10,6 +10,7 @@ export type Draft = {
   gender: string | null;
   season: string | null;
   description: string | null;
+  providerDiscount: number | null; // kopecks
   status: string;
   images: {
     id: string;
@@ -20,7 +21,12 @@ export type Draft = {
   }[];
   messageId?: string;
   providerId?: string;
-  provider?: { id: string; name: string; phone: string | null } | null;
+  provider?: {
+    id: string;
+    name: string;
+    phone: string | null;
+    place: string | null;
+  } | null;
   sizes?: Array<{ size: string; stock?: number; count?: number }> | null;
   gptRequest?: string | null;
   rawGptResponse?: any;

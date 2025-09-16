@@ -56,6 +56,7 @@ export function convertToProductData(productDraft: any): DraftProductData {
     sizes: productDraft.sizes
       ? productDraft.sizes.map((s: any) => ({ size: s.size, stock: s.count }))
       : null,
+    providerDiscount: productDraft.providerDiscount || null,
   };
 }
 
@@ -179,6 +180,12 @@ export async function processMessageGroupToDraft(
       messageIds,
       imageData
     );
+
+    // Mark all messages in the group as processed
+    await prisma.whatsAppMessage.updateMany({
+      where: { id: { in: messageIds } },
+      data: { processed: true },
+    });
 
     console.log(`Successfully processed group ${groupKey}`);
   } catch (error) {
