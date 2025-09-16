@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 
-import { prisma } from '@/lib/server/db';
+import { prisma } from './db-node';
 import type { CatalogFilters } from '@/types/filters';
 
 export type CategoryNode = {

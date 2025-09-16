@@ -49,26 +49,11 @@ Special Case (compact range with total pairs):
  - If packPairs is explicitly mentioned in text, use that value instead
  - If no sizes are available, packPairs should be null
  
- Image Analysis for Gender and Season:
- - If gender or season cannot be determined from text messages, analyze the images
- - Look for visual cues in images to determine gender:
-   * Men's shoes: typically darker colors, wider toe box, more formal styles
-   * Women's shoes: typically lighter colors, narrower toe box, more decorative styles
-   * Unisex shoes: neutral colors, simple designs, could be worn by anyone
- - Look for visual cues in images to determine season:
-   * Spring: light colors, breathable materials, open designs
-   * Summer: sandals, flip-flops, very light materials, bright colors
-   * Autumn: medium colors, closed designs, transitional styles
-   * Winter: dark colors, warm materials, boots, closed designs
- - Only make gender/season determinations from images if you're confident
- - If still uncertain after analyzing both text and images, omit the field
- 
  General Rules:
  - Return only valid JSON, no additional text
  - The object MUST always include a non-empty name. If you cannot infer, set name to "Не указано".
  - If information is not clear, omit the field entirely (do not include null values)
  - Be conservative with assumptions
- - Only include fields that have actual values
  - If there are multiple product names mentioned, use the most descriptive one
  - Combine all price information from different messages
 
@@ -86,13 +71,6 @@ ${categoryTreeJson ?? '[]'}
  ❌ WRONG: "3/4/17" (provider place) → omit sizes field entirely, packPairs: null
  ❌ WRONG: "8-800-555-35-35" (phone) → omit sizes field entirely, packPairs: null
  ❌ WRONG: "ул. Ленина 15/7" (address) → omit sizes field entirely, packPairs: null
- 
- Image Analysis Examples:
- ✅ Text: "Кроссовки Nike" + Image: dark blue athletic shoes → gender: "male", season: "all-season"
- ✅ Text: "Туфли" + Image: pink high heels → gender: "female", season: "spring"
- ✅ Text: "Ботинки" + Image: black leather boots → gender: "unisex", season: "winter"
- ✅ Text: "Сандалии" + Image: open-toe sandals → gender: "female", season: "summer"
- ✅ Text: "Кеды" + Image: white canvas sneakers → gender: "unisex", season: "spring"
  
  Discount Extraction:
  - Look for discount patterns like "С КОРОБКИ 500Р СКИДКА", "скидка 500", "скидка 400"

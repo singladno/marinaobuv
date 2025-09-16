@@ -1,7 +1,5 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { DraftsTable } from '@/components/features/DraftsTable';
 import type { Draft } from '@/types/admin';
 import { useDrafts } from '@/hooks/useDrafts';
@@ -37,39 +35,35 @@ export default function AdminDraftsPage() {
     setSelected({});
   };
 
+  const convertToCatalog = async () => {
+    const res = await fetch(`/api/admin/drafts/convert-to-catalog`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
+      body: JSON.stringify({ ids: selectedIds }),
+    });
+    if (!res.ok) alert(await res.text());
+    await reload();
+    setSelected({});
+  };
+
   return (
     <div className="flex h-full flex-col p-4">
-      <div className="flex items-center gap-3 pb-4">
-        <h1 className="text-xl font-semibold">Черновики товаров</h1>
-        <Select
-          value={status ?? 'draft'}
-          onChange={e => setStatus(e.target.value || undefined)}
-        >
-          <option value="">Все</option>
-          <option value="draft">Черновик</option>
-          <option value="approved">Одобрено</option>
-          <option value="processed">Обработано</option>
-        </Select>
-        <Button onClick={reload} variant="secondary">
-          Обновить
-        </Button>
-        <Button onClick={approve} disabled={!selectedIds.length}>
-          Одобрить выбранные ({selectedIds.length})
-        </Button>
+      <div className="flex-1 overflow-auto">
+        <DraftsTable
+          data={data}
+          selected={selected}
+          onToggle={toggle}
+          onPatch={inlinePatch}
+          status={status}
+          onStatusChange={setStatus}
+          onReload={reload}
+          onApprove={approve}
+          onConvertToCatalog={convertToCatalog}
+          selectedCount={selectedIds.length}
+          loading={loading}
+          error={error}
+        />
       </div>
-      {error && <div className="text-red-600">{error}</div>}
-      {loading ? (
-        <div>Загрузка…</div>
-      ) : (
-        <div className="flex-1 overflow-auto">
-          <DraftsTable
-            data={data}
-            selected={selected}
-            onToggle={toggle}
-            onPatch={inlinePatch}
-          />
-        </div>
-      )}
     </div>
   );
 }

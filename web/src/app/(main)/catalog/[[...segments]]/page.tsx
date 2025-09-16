@@ -7,7 +7,12 @@ import ProductCard from '@/components/product/ProductCard';
 import { Card } from '@/components/ui/Card';
 import Pagination from '@/components/ui/Pagination';
 import { Text } from '@/components/ui/Text';
-import { getCategoryByPath, getCategoryTree, getPriceBoundsForPath, listProductsByCategoryPath } from '@/lib/catalog';
+import {
+  getCategoryByPath,
+  getCategoryTree,
+  getPriceBoundsForPath,
+  listProductsByCategoryPath,
+} from '@/lib/catalog';
 import { parseFilters } from '@/lib/filters';
 import { buildMetadata } from '@/lib/seo';
 
@@ -18,11 +23,15 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const path = (params.segments ?? []).join('/');
-  if (!path) return buildMetadata({ title: 'Каталог обуви', canonical: `/catalog` });
+  if (!path)
+    return buildMetadata({ title: 'Каталог обуви', canonical: `/catalog` });
   const cat = await getCategoryByPath(path);
-  if (!cat) return buildMetadata({ title: 'Каталог обуви', canonical: `/catalog` });
+  if (!cat)
+    return buildMetadata({ title: 'Каталог обуви', canonical: `/catalog` });
   let title = cat.name;
   if (cat.parent) title = `${cat.parent.name} — ${cat.name}`;
   return buildMetadata({ title, canonical: `/catalog/${path}` });
@@ -55,33 +64,39 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
 
   const { items, total, page, pageSize } = list;
 
-  const heading = category?.parent ? `${category.parent.name} — ${category.name}` : category?.name ?? 'Каталог обуви';
+  const heading = category?.parent
+    ? `${category.parent.name} — ${category.name}`
+    : (category?.name ?? 'Каталог обуви');
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
       <aside className="md:col-span-3 lg:col-span-3">
         <Card className="p-3">
-          <Text variant="overline" className="mb-2">Категории</Text>
+          <Text variant="overline" className="mb-2">
+            Категории
+          </Text>
           <CategoryTree tree={tree} activePath={path} />
         </Card>
       </aside>
       <section className="md:col-span-9 lg:col-span-9">
-        <Text variant="h2" as="h1" className="mb-4">{heading}</Text>
+        <Text variant="h2" as="h1" className="mb-4">
+          {heading}
+        </Text>
 
         {/* Filters bar */}
         <div className="hidden md:block">
           <FilterBar path={path} filters={filters} bounds={bounds} />
         </div>
 
-        <div className="mb-3 text-sm text-muted">Найдено: {total}</div>
+        <div className="text-muted mb-3 text-sm">Найдено: {total}</div>
 
         {items.length === 0 ? (
-          <div className="rounded border border-border bg-surface p-6 text-center">
+          <div className="border-border bg-surface rounded border p-6 text-center">
             <Text tone="muted">Нет товаров в этом разделе</Text>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {items.map((p) => (
+            {items.map(p => (
               <ProductCard
                 key={p.id}
                 slug={p.slug}
@@ -89,8 +104,8 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
                 pricePair={p.pricePair}
                 currency={p.currency}
                 imageUrl={p.primaryImageUrl}
-              />)
-            )}
+              />
+            ))}
           </div>
         )}
 

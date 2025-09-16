@@ -267,16 +267,19 @@ export function createDraftTableColumns(
     }),
     columnHelper.display({
       id: 'actions',
-      header: () => 'Действия',
+      header: () => '',
+      size: 60,
       cell: info => (
-        <button
-          onClick={() => onDelete(info.row.original.id)}
-          className="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-          title="Удалить черновик"
-          aria-label="Удалить"
-        >
-          🗑️
-        </button>
+        <div className="flex justify-center">
+          <button
+            onClick={() => onDelete(info.row.original.id)}
+            className="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+            title="Удалить черновик"
+            aria-label="Удалить"
+          >
+            🗑️
+          </button>
+        </div>
       ),
     }),
   ];
