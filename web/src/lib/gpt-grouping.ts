@@ -121,6 +121,7 @@ CRITICAL RULES:
 6. If multiple images followed by one text with details, create separate groups for each image but include the shared text in each group
 7. Look for price changes, different product names, or different visual content to separate products
 8. When provider sends many messages quickly, analyze image content to determine product boundaries
+9. Provider greetings (like "‼️САЛЮТ 3/4/17,С КОРОБКИ 500Р СКИДКА") should be grouped with the NEXT product messages, not as separate groups
 
 GROUPING STRATEGY:
 - Start with timeAgo analysis - group messages that are close in time (within 5-10 minutes)
@@ -129,6 +130,10 @@ GROUPING STRATEGY:
 - If text mentions different prices/products, split accordingly
 - Maximum 11-12 messages per group - if more, split into multiple products
 - Pay special attention to timeAgo gaps - large gaps often indicate different products
+- CRITICAL: If you see sequential image messages (each message contains one image) followed by one description text message, group them together as one product group
+- The description text message should be included with all the preceding image messages in the same group
+- This ensures no data is lost when providers send multiple individual image messages with shared descriptions
+- Example: Message1[Image] + Message2[Image] + Message3[Image] + Message4[Text] = One product group
 
 RESPONSE (JSON only):
 {

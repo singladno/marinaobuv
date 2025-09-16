@@ -95,7 +95,16 @@ export async function processMessageGroupToDraft(
 
     // Process images from messages and upload to S3
     console.log(`Processing images for group ${groupKey}...`);
-    const imageData = await processImagesFromMessages(messages);
+    const imageData = await processImagesFromMessages(
+      messages.map(msg => ({
+        id: msg.id,
+        type: msg.type,
+        mediaUrl: msg.mediaUrl,
+        mediaS3Key: msg.mediaS3Key,
+        mediaMime: msg.mediaMimeType,
+        mediaSha256: msg.mediaSha256,
+      }))
+    );
 
     // Extract text content
     const { textContents, mediaInfo } = extractTextContent(messages);
@@ -112,26 +121,10 @@ export async function processMessageGroupToDraft(
     // Process with YandexGPT
     let productDraft = await normalizeTextToDraft(combinedText);
 
-    // Create fallback product data if GPT fails
     if (!productDraft) {
-      if (imageData.length > 0) {
-        productDraft = {
-          name: `Товар от ${messages[0].fromName || 'Поставщика'}`,
-          notes: `Товар с ${imageData.length} изображениями`,
-        };
-      } else if (textContents.length > 0) {
-        productDraft = {
-          name: `Товар от ${messages[0].fromName || 'Поставщика'}`,
-          notes: `Извлечено из текста: ${textContents[0].substring(0, 100)}...`,
-        };
-      }
-    }
-
-    if (!productDraft) {
-      console.log(
-        `No product data extracted from group ${groupKey} - skipping`
+      throw new Error(
+        `GPT failed to extract product data from group ${groupKey}. Text: ${combinedText.substring(0, 200)}...`
       );
-      return;
     }
 
     console.log(`GPT Response for group ${groupKey}:`, productDraft);
@@ -141,10 +134,9 @@ export async function processMessageGroupToDraft(
 
     // Validate that we have at least a name
     if (!productData.name) {
-      console.log(
-        `No product name extracted from group ${groupKey} - skipping`
+      throw new Error(
+        `No product name extracted from group ${groupKey}. GPT Response: ${JSON.stringify(productDraft)}`
       );
-      return;
     }
 
     // Get or create provider
@@ -184,7 +176,7 @@ export async function processMessageGroupToDraft(
     // Mark all messages in the group as processed
     await prisma.whatsAppMessage.updateMany({
       where: { id: { in: messageIds } },
-      data: { processed: true },
+      data: { processed: true } as any,
     });
 
     console.log(`Successfully processed group ${groupKey}`);

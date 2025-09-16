@@ -26,13 +26,33 @@ function cleanJsonString(jsonStr: string): string {
  * Extract JSON from cleaned string
  */
 function extractJsonFromString(cleanedJson: string): unknown {
+  // Find the first complete JSON object by counting braces
   const firstBrace = cleanedJson.indexOf('{');
-  const lastBrace = cleanedJson.lastIndexOf('}');
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    const extracted = cleanedJson.substring(firstBrace, lastBrace + 1);
-    return JSON.parse(extracted);
+  if (firstBrace === -1) {
+    throw new Error('No JSON object found');
   }
-  throw new Error('Could not extract valid JSON');
+
+  let braceCount = 0;
+  let endPos = firstBrace;
+
+  for (let i = firstBrace; i < cleanedJson.length; i++) {
+    if (cleanedJson[i] === '{') {
+      braceCount++;
+    } else if (cleanedJson[i] === '}') {
+      braceCount--;
+      if (braceCount === 0) {
+        endPos = i;
+        break;
+      }
+    }
+  }
+
+  if (braceCount !== 0) {
+    throw new Error('Incomplete JSON object');
+  }
+
+  const extracted = cleanedJson.substring(firstBrace, endPos + 1);
+  return JSON.parse(extracted);
 }
 
 /**
@@ -41,23 +61,40 @@ function extractJsonFromString(cleanedJson: string): unknown {
 function parseJsonContent(content: string): unknown {
   try {
     return JSON.parse(content);
-  } catch {
+  } catch (error) {
+    console.log('Initial JSON parse failed, trying extraction methods...');
+
     // Try to extract JSON from the response if it's wrapped in markdown or other text
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
         return JSON.parse(jsonMatch[0]);
       } catch {
+        console.log('Direct JSON match failed, trying cleaned extraction...');
         // If still fails, try to clean up the JSON more aggressively
         const cleanedJson = cleanJsonString(jsonMatch[0]);
         try {
           return JSON.parse(cleanedJson);
         } catch {
+          console.log('Cleaned JSON parse failed, trying brace counting...');
           return extractJsonFromString(cleanedJson);
         }
       }
     }
-    throw new Error('Could not parse JSON from YandexGPT response');
+
+    // If no JSON object found with regex, try to find it manually
+    const firstBrace = content.indexOf('{');
+    if (firstBrace !== -1) {
+      try {
+        return extractJsonFromString(content.substring(firstBrace));
+      } catch (error4) {
+        console.log('Manual extraction failed:', error4);
+      }
+    }
+
+    throw new Error(
+      `Could not parse JSON from YandexGPT response. Original error: ${error}`
+    );
   }
 }
 
@@ -112,19 +149,22 @@ export async function normalizeTextToDraft(
       throw new Error('No content in YandexGPT response');
     }
 
+    // Log the raw response for debugging
+    console.log('YandexGPT raw response:', content);
+
     const jsonContent = parseJsonContent(content);
 
-    // Log the raw response for debugging
-    console.log(
-      'YandexGPT raw response:',
-      JSON.stringify(jsonContent, null, 2)
-    );
+    console.log('Parsed JSON content:', JSON.stringify(jsonContent, null, 2));
 
     const validated = ProductDraftSchema.parse(jsonContent);
 
     return validated;
   } catch (error) {
     console.error('Failed to normalize text with YandexGPT:', error);
+    console.error(
+      'Input text that caused error:',
+      text.substring(0, 200) + '...'
+    );
     return null;
   }
 }

@@ -24,6 +24,7 @@ Rules:
 - Combine all information from all messages to create a complete product description
 - Extract only information explicitly mentioned in the text
 - Convert prices to kopecks (multiply by 100)
+- NEVER skip any data - every image and text message must be accounted for in the final product entries
 
 Size Extraction Rules (CRITICAL):
 - ONLY extract sizes that are clearly shoe sizes (typically 35-45 for adults, 20-35 for children)
