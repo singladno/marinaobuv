@@ -52,15 +52,20 @@ export function DraftsTable({
     });
   }, []);
 
-  const { table, columnVisibility, handleToggleColumn, handleResetColumns } =
-    useDraftsTable({
-      data,
-      selected,
-      onToggle,
-      onPatch,
-      onDelete: handleDelete,
-      categories,
-    });
+  const {
+    table,
+    columnVisibility,
+    handleToggleColumn,
+    handleResetColumns,
+    savingStatus,
+  } = useDraftsTable({
+    data,
+    selected,
+    onToggle,
+    onPatch,
+    onDelete: handleDelete,
+    categories,
+  });
 
   const columnConfigs = createColumnConfigs(columnVisibility);
   const hasData = !loading && !error && table.getRowModel().rows.length > 0;
@@ -87,6 +92,7 @@ export function DraftsTable({
         onReload={onReload}
         onOpenSettings={() => setIsSettingsOpen(true)}
         showBottomBorder={hasData}
+        savingStatus={savingStatus}
       />
 
       {/* Table content - This should be the scrollable area */}
@@ -97,6 +103,7 @@ export function DraftsTable({
           error={error}
           status={status}
           hasData={hasData}
+          savingStatus={savingStatus}
         />
       </div>
 

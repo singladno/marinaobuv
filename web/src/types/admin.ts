@@ -25,6 +25,7 @@ export type Draft = {
     sort: number;
     alt?: string | null;
     isFalseImage?: boolean;
+    isActive?: boolean;
     color?: string | null;
   }[];
   messageId?: string;

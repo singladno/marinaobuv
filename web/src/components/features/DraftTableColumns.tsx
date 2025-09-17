@@ -3,18 +3,16 @@ import { createColumnHelper } from '@tanstack/react-table';
 import type { Draft } from '@/types/admin';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 
-import {
-  ImagesCell,
-  SizesCell,
-  ProviderCell,
-  PriceCell,
-  BadgeCell,
-  EditableCell,
-  SourceCell,
-  GptRequestCell,
-  GptResponseCell,
-  CategoryCell,
-} from './DraftTableCells';
+import { ImagesCell } from './DraftTableCells';
+import { SizesCell } from './SizesCell';
+import { ProviderCell } from './ProviderCell';
+import { PriceCell } from './PriceCell';
+import { BadgeCell } from './BadgeCell';
+import { EditableCell } from './EditableCell';
+import { SourceCell } from './SourceCell';
+import { GptRequestCell } from './GptRequestCell';
+import { GptResponseCell } from './GptResponseCell';
+import { CategoryCell } from './CategoryCell';
 
 type DraftWithSelected = Draft & { selected?: boolean };
 
@@ -24,6 +22,7 @@ export function createDraftTableColumns(
   onToggle: (id: string) => void,
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>,
   onDelete: (id: string) => Promise<void>,
+  onImageToggle: (imageId: string, isActive: boolean) => Promise<void>,
   categories: CategoryNode[]
 ) {
   return [
@@ -207,7 +206,12 @@ export function createDraftTableColumns(
     columnHelper.display({
       id: 'images',
       header: () => 'Изображения',
-      cell: info => <ImagesCell images={info.row.original.images} />,
+      cell: info => (
+        <ImagesCell
+          images={info.row.original.images}
+          onImageToggle={onImageToggle}
+        />
+      ),
     }),
     columnHelper.display({
       id: 'source',

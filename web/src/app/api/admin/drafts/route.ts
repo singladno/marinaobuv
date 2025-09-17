@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
             sort: true,
             alt: true,
             isFalseImage: true,
+            isActive: true,
             color: true,
           },
         },

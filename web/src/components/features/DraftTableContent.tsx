@@ -13,6 +13,10 @@ interface DraftTableContentProps {
   error?: string | null;
   status?: string;
   hasData: boolean;
+  savingStatus?: {
+    isSaving: boolean;
+    message: string;
+  };
 }
 
 export function DraftTableContent({
@@ -21,6 +25,7 @@ export function DraftTableContent({
   error,
   status,
   hasData,
+  savingStatus,
 }: DraftTableContentProps) {
   if (loading) {
     return (
@@ -102,6 +107,8 @@ export function DraftTableContent({
                   <td
                     key={cell.id}
                     className={`whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${
+                      cell.column.id === 'images' ? 'overflow-visible' : ''
+                    } ${
                       isFrozenLeft
                         ? 'sticky left-0 z-10 border-r border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900'
                         : isFrozenRight

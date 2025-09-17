@@ -166,6 +166,7 @@ model WaDraftProductImage {
   sort           Int            @default(0)
   isPrimary      Boolean        @default(false)
   isFalseImage   Boolean        @default(false) // Mark if this image is not of the product
+  isActive       Boolean        @default(true) // Mark if this image is active/visible
   color          String? // Detected color for this image (used for color variants)
   width          Int?
   height         Int?

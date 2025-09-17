@@ -1,28 +1,35 @@
 import * as React from 'react';
 
-import type { Draft } from '@/types/admin';
-import {
-  getThumbnailUrl,
-  isWAParserImage,
-  sanitizeImageUrl,
-} from '@/lib/image-security';
 import { ImageModal } from '@/components/ui/ImageModal';
-import { CategorySelector } from '@/components/ui/CategorySelector';
-import type { CategoryNode } from '@/components/ui/CategorySelector';
-import { SourceModal } from './SourceModal';
-import { TextModal } from './TextModal';
+import { isWAParserImage, sanitizeImageUrl } from '@/lib/image-security';
+import type { Draft } from '@/types/admin';
+
+import { ImageActionButton } from './ImageActionButton';
+import { ImageThumbnail } from './ImageThumbnail';
 
 interface ImagesCellProps {
   images: Draft['images'];
+  onImageToggle?: (imageId: string, isActive: boolean) => Promise<void>;
 }
 
-export function ImagesCell({ images }: ImagesCellProps) {
+export function ImagesCell({ images, onImageToggle }: ImagesCellProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
+  const [isUpdating, setIsUpdating] = React.useState<string | null>(null);
+  const [hoveredImageId, setHoveredImageId] = React.useState<string | null>(
+    null
+  );
+  const imageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
   const sortedImages = (images || []).sort(
     (a, b) => (a.sort || 0) - (b.sort || 0)
   );
+
+  const setImageRef = React.useCallback((imageId: string) => {
+    return (el: HTMLDivElement | null) => {
+      imageRefs.current[imageId] = el;
+    };
+  }, []);
 
   if (!sortedImages.length) {
     return <span className="text-gray-400 dark:text-gray-500">—</span>;
@@ -33,16 +40,33 @@ export function ImagesCell({ images }: ImagesCellProps) {
     setIsModalOpen(true);
   };
 
+  const handleImageToggle = async (
+    imageId: string,
+    isActive: boolean,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (!onImageToggle || isUpdating) return;
+    setIsUpdating(imageId);
+    try {
+      await onImageToggle(imageId, isActive);
+    } catch (error) {
+      console.error('Failed to toggle image status:', error);
+    } finally {
+      setIsUpdating(null);
+    }
+  };
+
   return (
     <>
-      <div className="flex gap-1">
-        {sortedImages.slice(0, 4).map(img => {
+      <div className="flex gap-1 overflow-x-auto overflow-y-visible py-2">
+        {sortedImages.map((img, index) => {
           // Check if it's a WA parser image
           if (!isWAParserImage(img.url)) {
             return (
               <div
                 key={img.id}
-                className="flex h-12 w-12 items-center justify-center rounded-md border border-yellow-200 bg-yellow-50 text-xs font-medium text-yellow-600 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-400"
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md border border-yellow-200 bg-yellow-50 text-xs font-medium text-yellow-600 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-400"
                 title="Неизвестный источник изображения"
               >
                 ?
@@ -50,337 +74,55 @@ export function ImagesCell({ images }: ImagesCellProps) {
             );
           }
 
-          const sanitizedUrl = sanitizeImageUrl(img.url);
-          const thumbnailUrl = getThumbnailUrl(sanitizedUrl, 48); // 48px for 12x12 container
-
-          const borderClasses = img.isFalseImage
-            ? 'border-red-500 dark:border-red-600'
-            : 'border-gray-200 dark:border-gray-700';
-          const imageOpacity = img.isFalseImage ? 'opacity-50' : '';
-          const badge = img.color ? (
-            <span className="absolute bottom-0 right-0 m-0.5 rounded bg-black/60 px-1 text-[10px] text-white">
-              {img.color}
-            </span>
-          ) : null;
-
           return (
-            <button
+            <div
               key={img.id}
-              onClick={() => handleImageClick(sortedImages.indexOf(img))}
-              className={`relative h-12 w-12 overflow-hidden rounded-md border transition-colors hover:border-blue-300 dark:hover:border-blue-600 ${borderClasses}`}
-              title="Нажмите для просмотра в полном размере"
+              ref={setImageRef(img.id)}
+              onMouseEnter={() => setHoveredImageId(img.id)}
+              onMouseLeave={() => setHoveredImageId(null)}
             >
-              <img
-                src={thumbnailUrl}
-                alt={img.alt || `Изображение ${(img.sort || 0) + 1}`}
-                className={`h-full w-full object-cover ${imageOpacity}`}
-                loading="lazy"
-                onError={e => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  console.error(
-                    'Failed to load WA parser image:',
-                    thumbnailUrl
-                  );
-                }}
+              <ImageThumbnail
+                image={img}
+                onImageClick={handleImageClick}
+                onImageToggle={handleImageToggle}
+                isUpdating={isUpdating === img.id}
+                index={index}
               />
-              {badge}
-            </button>
+            </div>
           );
         })}
-        {sortedImages.length > 4 && (
-          <button
-            onClick={() => handleImageClick(0)}
-            className="flex h-12 w-12 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-            title="Показать все изображения"
-          >
-            +{sortedImages.length - 4}
-          </button>
-        )}
       </div>
 
       <ImageModal
-        images={sortedImages.map(img => ({
-          id: img.id,
-          url: sanitizeImageUrl(img.url),
-          alt: img.alt,
-          color: img.color || null,
-        }))}
+        images={sortedImages
+          .filter(img => img.isActive !== false)
+          .map(img => ({
+            id: img.id,
+            url: sanitizeImageUrl(img.url),
+            alt: img.alt,
+            color: img.color || null,
+          }))}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         initialIndex={selectedImageIndex}
+        onImageToggle={handleImageToggle}
+        isUpdating={isUpdating}
       />
-    </>
-  );
-}
 
-interface SizesCellProps {
-  sizes: Draft['sizes'];
-}
-
-export function SizesCell({ sizes }: SizesCellProps) {
-  if (!Array.isArray(sizes) || !sizes.length) {
-    return <span className="text-gray-400 dark:text-gray-500">—</span>;
-  }
-
-  return (
-    <div className="flex gap-1 overflow-x-auto">
-      {sizes.map((x, index) => (
-        <span
-          key={index}
-          className="inline-flex flex-shrink-0 items-center whitespace-nowrap rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-        >
-          {x.size}:{x.stock ?? x.count ?? 0}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-interface ProviderCellProps {
-  provider: Draft['provider'];
-}
-
-export function ProviderCell({ provider }: ProviderCellProps) {
-  if (!provider) {
-    return <span className="text-gray-400 dark:text-gray-500">—</span>;
-  }
-
-  return (
-    <div className="min-w-0">
-      <div className="truncate">
-        <div className="font-medium text-gray-900 dark:text-gray-100">
-          {provider.name}
-        </div>
-        {provider.phone && (
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {provider.phone}
-          </div>
-        )}
-        {provider.place && (
-          <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
-            📍 {provider.place}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface PriceCellProps {
-  value: number | null;
-  formatter: (value: number) => string;
-}
-
-export function PriceCell({ value, formatter }: PriceCellProps) {
-  return (
-    <div className="text-center">
-      {value != null ? (
-        <span className="font-mono font-medium text-gray-900 dark:text-gray-100">
-          {formatter(value)}
-        </span>
-      ) : (
-        <span className="text-gray-400 dark:text-gray-500">—</span>
+      {hoveredImageId && imageRefs.current[hoveredImageId] && (
+        <ImageActionButton
+          imageId={hoveredImageId}
+          isActive={
+            sortedImages.find(img => img.id === hoveredImageId)?.isActive !==
+            false
+          }
+          isUpdating={isUpdating === hoveredImageId}
+          onToggle={handleImageToggle}
+          onMouseEnter={() => setHoveredImageId(hoveredImageId)}
+          onMouseLeave={() => setHoveredImageId(null)}
+          imageRef={imageRefs.current[hoveredImageId]}
+        />
       )}
-    </div>
-  );
-}
-
-interface BadgeCellProps {
-  value: string | null;
-  getLabel: (value: string) => string;
-  bgColor: string;
-  textColor: string;
-}
-
-export function BadgeCell({
-  value,
-  getLabel,
-  bgColor,
-  textColor,
-}: BadgeCellProps) {
-  return (
-    <div className="text-center">
-      {value ? (
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${bgColor} ${textColor}`}
-        >
-          {getLabel(value)}
-        </span>
-      ) : (
-        <span className="text-gray-400 dark:text-gray-500">—</span>
-      )}
-    </div>
-  );
-}
-
-interface EditableCellProps {
-  value: string | null;
-  onBlur: (value: string | null) => void;
-  placeholder: string;
-  'aria-label': string;
-}
-
-export function EditableCell({
-  value,
-  onBlur,
-  placeholder,
-  'aria-label': ariaLabel,
-}: EditableCellProps) {
-  const [localValue, setLocalValue] = React.useState(value ?? '');
-
-  return (
-    <input
-      value={localValue}
-      onChange={e => setLocalValue(e.target.value)}
-      onBlur={() => onBlur(localValue || null)}
-      aria-label={ariaLabel}
-      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
-      placeholder={placeholder}
-    />
-  );
-}
-
-interface SourceCellProps {
-  source:
-    | Array<{
-        id: string;
-        waMessageId: string;
-        from: string | null;
-        fromName: string | null;
-        type: string | null;
-        text: string | null;
-        timestamp: number | null;
-        mediaUrl: string | null;
-        mediaMimeType: string | null;
-        mediaWidth: number | null;
-        mediaHeight: number | null;
-        createdAt: string;
-        provider: {
-          name: string;
-        } | null;
-      }>
-    | null
-    | undefined;
-}
-
-export function SourceCell({ source }: SourceCellProps) {
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-
-  if (!source || source.length === 0) {
-    return <span className="text-gray-400 dark:text-gray-500">—</span>;
-  }
-
-  return (
-    <>
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-      >
-        {source.length} сообщений
-      </button>
-
-      <SourceModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        source={source}
-      />
     </>
-  );
-}
-
-interface GptRequestCellProps {
-  gptRequest: string | null | undefined;
-}
-
-export function GptRequestCell({ gptRequest }: GptRequestCellProps) {
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-
-  if (!gptRequest) {
-    return <span className="text-gray-400 dark:text-gray-500">—</span>;
-  }
-
-  const truncated =
-    gptRequest.length > 50 ? gptRequest.substring(0, 50) + '...' : gptRequest;
-
-  return (
-    <>
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="text-left text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-        title={gptRequest}
-      >
-        {truncated}
-      </button>
-
-      <TextModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="GPT Запрос"
-        content={gptRequest}
-      />
-    </>
-  );
-}
-
-interface GptResponseCellProps {
-  rawGptResponse: any;
-}
-
-export function GptResponseCell({ rawGptResponse }: GptResponseCellProps) {
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-
-  if (!rawGptResponse) {
-    return <span className="text-gray-400 dark:text-gray-500">—</span>;
-  }
-
-  const responseText = JSON.stringify(rawGptResponse, null, 2);
-  const truncated =
-    responseText.length > 50
-      ? responseText.substring(0, 50) + '...'
-      : responseText;
-
-  return (
-    <>
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="text-left text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
-        title={responseText}
-      >
-        {truncated}
-      </button>
-
-      <TextModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="GPT Ответ"
-        content={responseText}
-      />
-    </>
-  );
-}
-
-interface CategoryCellProps {
-  category: Draft['category'];
-  categoryId: string | null;
-  onCategoryChange: (categoryId: string | null) => void;
-  categories: CategoryNode[];
-}
-
-export function CategoryCell({
-  category,
-  categoryId,
-  onCategoryChange,
-  categories,
-}: CategoryCellProps) {
-  return (
-    <div className="min-w-[200px]">
-      <CategorySelector
-        value={categoryId}
-        onChange={onCategoryChange}
-        categories={categories}
-        placeholder="Выберите категорию"
-      />
-    </div>
   );
 }

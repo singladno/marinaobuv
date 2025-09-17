@@ -12,6 +12,12 @@ interface ImageModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialIndex?: number;
+  onImageToggle?: (
+    imageId: string,
+    isActive: boolean,
+    event: React.MouseEvent
+  ) => void;
+  isUpdating?: string | null;
 }
 
 export function ImageModal({
@@ -19,6 +25,8 @@ export function ImageModal({
   isOpen,
   onClose,
   initialIndex = 0,
+  onImageToggle,
+  isUpdating,
 }: ImageModalProps) {
   const [currentIndex, setCurrentIndex] = React.useState(initialIndex);
 
@@ -27,23 +35,42 @@ export function ImageModal({
   }, [initialIndex]);
 
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || images.length === 0) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         setCurrentIndex(prev => (prev > 0 ? prev - 1 : images.length - 1));
       } else if (e.key === 'ArrowRight') {
         setCurrentIndex(prev => (prev < images.length - 1 ? prev + 1 : 0));
+      } else if (
+        (e.key === 'Delete' || e.key === 'Backspace') &&
+        onImageToggle &&
+        images.length > 0
+      ) {
+        e.preventDefault();
+        const safeIndex = Math.min(currentIndex, images.length - 1);
+        const currentImage = images[safeIndex];
+        if (currentImage) {
+          onImageToggle(currentImage.id, false, e as any);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, images.length]);
+  }, [isOpen, images.length, onImageToggle, currentIndex, images]);
 
   if (!isOpen || images.length === 0) return null;
 
-  const currentImage = images[currentIndex];
+  // Ensure currentIndex is within bounds
+  const safeCurrentIndex = Math.min(currentIndex, images.length - 1);
+  const currentImage = images[safeCurrentIndex];
+
+  // If currentImage is undefined, close the modal
+  if (!currentImage) {
+    onClose();
+    return null;
+  }
 
   return (
     <Modal
@@ -108,19 +135,50 @@ export function ImageModal({
 
         {/* Main image */}
         <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-          <img
-            src={currentImage.url}
-            alt={currentImage.alt || `Изображение ${currentIndex + 1}`}
-            className="max-h-[70vh] max-w-full object-contain"
-            onError={e => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              console.error(
-                'Failed to load full-size image:',
-                currentImage.url
-              );
-            }}
-          />
+          <div className="relative flex items-center">
+            <img
+              src={currentImage.url}
+              alt={currentImage.alt || `Изображение ${safeCurrentIndex + 1}`}
+              className="max-h-[70vh] max-w-full object-contain"
+              onError={e => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                console.error(
+                  'Failed to load full-size image:',
+                  currentImage.url
+                );
+              }}
+            />
+            {/* Delete button */}
+            {onImageToggle && (
+              <div className="absolute -right-12 top-1/2 -translate-y-1/2">
+                <button
+                  onClick={e => onImageToggle(currentImage.id, false, e)}
+                  disabled={isUpdating === currentImage.id}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-colors hover:bg-red-600 disabled:opacity-50"
+                  title="Удалить изображение"
+                >
+                  {isUpdating === currentImage.id ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Color badge */}
@@ -133,7 +191,7 @@ export function ImageModal({
         {/* Image counter */}
         {images.length > 1 && (
           <div className="absolute right-4 top-4 rounded-lg bg-white/90 px-3 py-1.5 text-sm font-medium text-gray-900 shadow-lg dark:bg-gray-800/90 dark:text-white">
-            {currentIndex + 1} / {images.length}
+            {safeCurrentIndex + 1} / {images.length}
           </div>
         )}
 
@@ -145,7 +203,7 @@ export function ImageModal({
                 key={img.id}
                 onClick={() => setCurrentIndex(index)}
                 className={`h-12 w-12 overflow-hidden rounded-lg border-2 shadow-lg transition-all ${
-                  index === currentIndex
+                  index === safeCurrentIndex
                     ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800'
                     : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
