@@ -1,10 +1,10 @@
 import * as React from 'react';
 
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 import { Tabs, Tab } from '@/components/ui/Tabs';
 import { useDraftsTable } from '@/hooks/useDraftsTable';
 import type { Draft } from '@/types/admin';
 import { createColumnConfigs } from '@/utils/columnConfigs';
-import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 import { ColumnSettingsModal } from './ColumnSettingsModal';
 import { DraftTableActions } from './DraftTableActions';
@@ -66,9 +66,9 @@ export function DraftsTable({
   const hasData = !loading && !error && table.getRowModel().rows.length > 0;
 
   return (
-    <div className="h-full overflow-hidden rounded-lg bg-gray-50 dark:bg-gray-800">
+    <div className="flex h-full flex-col rounded-lg bg-gray-50 dark:bg-gray-800">
       {/* Tabs - Always visible at top */}
-      <div className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+      <div className="flex-shrink-0 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
         <Tabs
           value={status ?? 'draft'}
           onChange={value => onStatusChange?.(value)}
@@ -89,7 +89,8 @@ export function DraftsTable({
         showBottomBorder={hasData}
       />
 
-      <div className="relative h-full overflow-auto">
+      {/* Table content - This should be the scrollable area */}
+      <div className="min-h-0 flex-1">
         <DraftTableContent
           table={table}
           loading={loading}

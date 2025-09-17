@@ -123,6 +123,14 @@ CRITICAL RULES:
 8. When provider sends many messages quickly, analyze image content to determine product boundaries
 9. Provider greetings (like "‼️САЛЮТ 3/4/17,С КОРОБКИ 500Р СКИДКА") should be grouped with the NEXT product messages, not as separate groups
 
+VALID GROUP REQUIREMENTS (MANDATORY):
+- Each group MUST contain BOTH images AND text messages
+- Text messages MUST include: price, sizes, or amount of pairs in the box
+- Groups with ONLY images (no text) are INVALID - SKIP them
+- Groups with ONLY text (no images) are INVALID - SKIP them
+- Groups without essential product information (price/sizes/amount) are INVALID - SKIP them
+- Only create groups that have both visual content (images) and essential product details (text)
+
 GROUPING STRATEGY:
 - Start with timeAgo analysis - group messages that are close in time (within 5-10 minutes)
 - For each time cluster, analyze if images show the same product (check imageUrl field)
@@ -134,6 +142,7 @@ GROUPING STRATEGY:
 - The description text message should be included with all the preceding image messages in the same group
 - This ensures no data is lost when providers send multiple individual image messages with shared descriptions
 - Example: Message1[Image] + Message2[Image] + Message3[Image] + Message4[Text] = One product group
+- VALIDATION: Before creating any group, verify it has both images AND text with product information
 
 RESPONSE (JSON only):
 {
@@ -230,7 +239,8 @@ RESPONSE (JSON only):
           confidence: group.confidence,
         };
       })
-      .flat(); // Flatten in case splitLargeGroup returns multiple groups
+      .flat() // Flatten in case splitLargeGroup returns multiple groups
+      .filter(group => validateGroup(group, messages)); // Filter out invalid groups
 
     console.log(`   📊 Groups created:`);
     groups.forEach((group, index) => {
@@ -250,6 +260,54 @@ RESPONSE (JSON only):
     // Fallback to simple grouping by sender for this batch
     return fallbackToSimpleGrouping(messages, startGroupCounter);
   }
+}
+
+/**
+ * Validate that a group contains both images and text with essential product information
+ */
+function validateGroup(group: MessageGroup, messages: any[]): boolean {
+  const groupMessages = messages.filter(msg =>
+    group.messageIds.includes(msg.id)
+  );
+
+  // Check if group has both images and text
+  const hasImages = groupMessages.some(
+    msg => msg.type === 'image' && msg.mediaUrl
+  );
+  const hasText = groupMessages.some(
+    msg => msg.type === 'text' && msg.text && msg.text.trim()
+  );
+
+  if (!hasImages || !hasText) {
+    console.log(
+      `   ❌ Skipping group ${group.groupId}: Missing ${!hasImages ? 'images' : 'text'}`
+    );
+    return false;
+  }
+
+  // Check if text contains essential product information (price, sizes, or amount)
+  const allText = groupMessages
+    .filter(msg => msg.type === 'text' && msg.text)
+    .map(msg => msg.text.toLowerCase())
+    .join(' ');
+
+  const hasPrice = /\d+[рр]|\d+\s*руб|цена|стоимость|price/i.test(allText);
+  const hasSizes = /размер|size|\d{2,3}[\/\-]\d{2,3}|\d{2,3}[,\s]\d{2,3}/i.test(
+    allText
+  );
+  const hasAmount = /пара|пар|шт|штук|количество|amount|count/i.test(allText);
+
+  if (!hasPrice && !hasSizes && !hasAmount) {
+    console.log(
+      `   ❌ Skipping group ${group.groupId}: No essential product information (price/sizes/amount)`
+    );
+    return false;
+  }
+
+  console.log(
+    `   ✅ Valid group ${group.groupId}: Has images + text with product info`
+  );
+  return true;
 }
 
 /**
@@ -299,13 +357,21 @@ function fallbackToSimpleGrouping(
   let groupCounter = startGroupCounter;
   Object.entries(bySender).forEach(([sender, msgs]) => {
     const groupId = `fallback_${sender}_${groupCounter++}`;
-    groups.push({
+    const group: MessageGroup = {
       groupId,
       messageIds: msgs.map(m => m.id),
       productContext: `Messages from ${msgs[0].fromName || sender}`,
       confidence: 0.5,
-    });
+    };
+
+    // Apply validation to fallback groups as well
+    if (validateGroup(group, messages)) {
+      groups.push(group);
+    } else {
+      console.log(`   ❌ Skipping fallback group ${groupId}: Invalid content`);
+    }
   });
 
+  console.log(`   📊 Fallback created ${groups.length} valid groups`);
   return groups;
 }

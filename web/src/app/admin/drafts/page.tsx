@@ -49,24 +49,22 @@ export default function AdminDraftsPage() {
   };
 
   return (
-    <div className="flex h-full flex-col p-4">
-      <div className="flex-1 overflow-auto">
-        <DraftsTable
-          data={data}
-          selected={selected}
-          onToggle={toggle}
-          onPatch={inlinePatch}
-          status={status}
-          onStatusChange={setStatus}
-          onReload={reload}
-          onApprove={approve}
-          onConvertToCatalog={convertToCatalog}
-          selectedCount={selectedIds.length}
-          loading={loading || categoriesLoading}
-          error={error}
-          categories={categories}
-        />
-      </div>
+    <div className="flex h-full flex-col">
+      <DraftsTable
+        data={data}
+        selected={selected}
+        onToggle={toggle}
+        onPatch={inlinePatch}
+        status={status}
+        onStatusChange={setStatus}
+        onReload={reload}
+        onApprove={approve}
+        onConvertToCatalog={convertToCatalog}
+        selectedCount={selectedIds.length}
+        loading={loading || categoriesLoading}
+        error={error}
+        categories={categories}
+      />
     </div>
   );
 }

@@ -132,7 +132,7 @@ export function createDraftTableColumns(
       cell: info => (
         <div className="text-center">
           {info.getValue() ? (
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <span className="break-words text-sm font-medium text-gray-900 dark:text-gray-100">
               {info.getValue()}
             </span>
           ) : (
@@ -274,9 +274,8 @@ export function createDraftTableColumns(
     columnHelper.display({
       id: 'actions',
       header: () => '',
-      size: 60,
       cell: info => (
-        <div className="flex justify-center">
+        <div className="flex items-center justify-center">
           <button
             onClick={() => onDelete(info.row.original.id)}
             className="rounded p-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
