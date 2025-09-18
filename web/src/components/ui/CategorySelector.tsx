@@ -171,11 +171,13 @@ function CategoryTree({
   selectedId,
   onSelect,
   searchTerm,
+  level = 0,
 }: {
   categories: CategoryNode[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   searchTerm: string;
+  level?: number;
 }) {
   return (
     <div className="space-y-1">
@@ -186,6 +188,7 @@ function CategoryTree({
           selectedId={selectedId}
           onSelect={onSelect}
           searchTerm={searchTerm}
+          level={level}
         />
       ))}
     </div>
@@ -248,15 +251,9 @@ function CategoryNode({
         )}
 
         <div
-          className={`group flex-1 rounded-lg transition-all duration-200 ${
-            level === 0
-              ? 'pl-3'
-              : level === 1
-                ? 'pl-6'
-                : level === 2
-                  ? 'pl-9'
-                  : 'pl-12'
-          } ${
+          className={`group flex-1 rounded-lg transition-all duration-200 ${getIndentationClass(
+            level
+          )} ${
             isSelected
               ? 'border border-blue-200 bg-blue-50 text-blue-700 shadow-sm'
               : isHighlighted
@@ -312,6 +309,7 @@ function CategoryNode({
                 selectedId={selectedId}
                 onSelect={onSelect}
                 searchTerm={searchTerm}
+                level={level + 1}
               />
             </div>
           </div>
@@ -356,4 +354,23 @@ function filterCategoriesBySearch(
       return null;
     })
     .filter((category): category is CategoryNode => category !== null);
+}
+
+function getIndentationClass(level: number): string {
+  // Support up to 10 levels of nesting with proper Tailwind classes
+  const indentationClasses = [
+    'pl-3', // level 0
+    'pl-6', // level 1
+    'pl-9', // level 2
+    'pl-12', // level 3
+    'pl-16', // level 4
+    'pl-20', // level 5
+    'pl-24', // level 6
+    'pl-28', // level 7
+    'pl-32', // level 8
+    'pl-36', // level 9
+    'pl-40', // level 10+
+  ];
+
+  return indentationClasses[Math.min(level, indentationClasses.length - 1)];
 }

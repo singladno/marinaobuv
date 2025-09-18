@@ -69,5 +69,8 @@
     "*.{json,md,css}": [
       "prettier --write"
     ]
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

@@ -10,6 +10,13 @@ export async function GET() {
       children: {
         where: { isActive: true },
         orderBy: { sort: 'asc' },
+        include: {
+          children: {
+            where: { isActive: true },
+            orderBy: { sort: 'asc' },
+            select: { id: true, name: true, slug: true, path: true },
+          },
+        },
         select: { id: true, name: true, slug: true, path: true },
       },
     },
@@ -25,6 +32,12 @@ export async function GET() {
       name: c.name,
       slug: c.slug,
       path: c.path,
+      children: c.children.map(gc => ({
+        id: gc.id,
+        name: gc.name,
+        slug: gc.slug,
+        path: gc.path,
+      })),
     })),
   }));
 
