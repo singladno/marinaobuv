@@ -78,17 +78,38 @@ export function useDraftsTable({
     [handleImageToggle]
   );
 
-  const columns = React.useMemo(
-    () =>
-      createDraftTableColumns(
-        onToggle,
-        onPatch,
-        handleDelete,
-        handleImageToggleWithUpdate,
-        categories
-      ),
-    [onToggle, onPatch, handleDelete, handleImageToggleWithUpdate, categories]
-  );
+  const columns = React.useMemo(() => {
+    const handlePatch = async (id: string, patch: Partial<Draft>) => {
+      let previous: DraftWithSelected[] = [];
+      setLocalData(prev => {
+        previous = prev;
+        return prev.map(item =>
+          item.id === id ? { ...item, ...patch } : item
+        );
+      });
+      try {
+        await onPatch(id, patch);
+      } catch (e) {
+        console.error('Failed to patch draft', e);
+        setLocalData(previous);
+        throw e;
+      }
+    };
+
+    return createDraftTableColumns(
+      onToggle,
+      handlePatch,
+      handleDelete,
+      handleImageToggleWithUpdate,
+      categories
+    );
+  }, [
+    onToggle,
+    onPatch,
+    handleDelete,
+    handleImageToggleWithUpdate,
+    categories,
+  ]);
 
   const table = useReactTable({
     data: localData,

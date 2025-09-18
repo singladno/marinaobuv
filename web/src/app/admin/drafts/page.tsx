@@ -7,7 +7,8 @@ import { useCategories } from '@/hooks/useCategories';
 import { useMemo, useState } from 'react';
 
 export default function AdminDraftsPage() {
-  const { data, loading, error, reload, status, setStatus } = useDrafts();
+  const { data, loading, error, reload, reloadSilent, status, setStatus } =
+    useDrafts();
   const { categories, loading: categoriesLoading } = useCategories();
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const selectedIds = useMemo(
@@ -22,7 +23,8 @@ export default function AdminDraftsPage() {
       headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
       body: JSON.stringify({ id, data: patch }),
     });
-    await reload();
+    // Avoid global loader; refresh in background
+    await reloadSilent();
   };
   const approve = async () => {
     const categoryId = prompt('Category ID to place products into:');

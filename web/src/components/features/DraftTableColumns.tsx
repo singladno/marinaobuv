@@ -201,7 +201,12 @@ export function createDraftTableColumns(
     columnHelper.display({
       id: 'sizes',
       header: () => 'Размеры',
-      cell: info => <SizesCell sizes={info.row.original.sizes} />,
+      cell: info => (
+        <SizesCell
+          sizes={info.row.original.sizes}
+          onChange={next => onPatch(info.row.original.id, { sizes: next })}
+        />
+      ),
     }),
     columnHelper.display({
       id: 'images',

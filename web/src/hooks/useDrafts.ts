@@ -24,10 +24,32 @@ export function useDrafts() {
     }
   };
 
+  const loadSilent = async () => {
+    try {
+      const res = await fetch(`/api/admin/drafts?status=${status ?? ''}`, {
+        headers: { 'x-role': 'ADMIN' },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      setData(json.drafts ?? []);
+    } catch (e) {
+      // swallow errors silently for background refresh
+      console.error('Silent reload drafts failed', e);
+    }
+  };
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  return { data, loading, error, reload: load, status, setStatus };
+  return {
+    data,
+    loading,
+    error,
+    reload: load,
+    reloadSilent: loadSilent,
+    status,
+    setStatus,
+  };
 }
