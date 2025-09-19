@@ -17,7 +17,7 @@ function usePersistentColumnVisibility(
   storageKey: string,
   defaultVisibility: VisibilityState
 ) {
-  const STORAGE_VERSION = '1.0';
+  const STORAGE_VERSION = '1.2';
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>(() => {
@@ -34,7 +34,6 @@ function usePersistentColumnVisibility(
           if (parsed && typeof parsed === 'object') {
             // If it's the old format (direct VisibilityState), migrate it
             if (!parsed.version) {
-              console.log('Migrating column visibility from old format');
               return { ...defaultVisibility, ...parsed };
             }
 
@@ -133,7 +132,7 @@ export function useDraftsTable({
   } = useDraftSelection(data, selected, onToggle, onSelectAll);
 
   const defaultColumnVisibility: VisibilityState = {
-    category: false, // Hide category column
+    category: status === 'approved', // Show category column only for approved status
     gptRequest: false,
     gptResponse: false,
     gptRequest2: false,
@@ -147,6 +146,14 @@ export function useDraftsTable({
       `marinaobuv-drafts-table-columns-${status || 'draft'}`,
       defaultColumnVisibility
     );
+
+  // Force category visibility for approved status
+  const finalColumnVisibility = React.useMemo(() => {
+    if (status === 'approved') {
+      return { ...columnVisibility, category: true };
+    }
+    return columnVisibility;
+  }, [columnVisibility, status]);
 
   const { handleImageToggleWithUpdate, savingStatus } =
     useImageToggleWithUpdate({
@@ -219,7 +226,7 @@ export function useDraftsTable({
     columns,
     getCoreRowModel: getCoreRowModel(),
     state: {
-      columnVisibility,
+      columnVisibility: finalColumnVisibility,
     },
     onColumnVisibilityChange: setColumnVisibility,
   });
@@ -237,7 +244,7 @@ export function useDraftsTable({
 
   return {
     table,
-    columnVisibility,
+    columnVisibility: finalColumnVisibility,
     handleToggleColumn,
     handleResetColumns,
     savingStatus,

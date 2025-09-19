@@ -16,7 +16,12 @@ export function createColumnConfigs(
       visible: isApproved, // Only show in approved table
       required: isApproved,
     },
-    { id: 'category', label: 'Категория', visible: true, required: true },
+    {
+      id: 'category',
+      label: 'Категория',
+      visible: isApproved,
+      required: isApproved,
+    },
     { id: 'provider', label: 'Поставщик', visible: true, required: true },
     {
       id: 'pricePairRub',

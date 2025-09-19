@@ -137,23 +137,30 @@ export function createDraftTableColumns(
     );
   }
 
-  // Add category column
-  columns.push(
-    columnHelper.display({
-      id: 'category',
-      header: () => 'Категория',
-      cell: info => (
-        <MemoizedCategoryCell
-          category={info.row.original.category}
-          categoryId={info.row.original.categoryId}
-          onCategoryChange={value =>
-            onPatch(info.row.original.id, { categoryId: value })
-          }
-          categories={categories}
-        />
-      ),
-    })
-  );
+  // Add category column only for approved status
+  if (isApproved) {
+    columns.push(
+      columnHelper.display({
+        id: 'category',
+        header: () => 'Категория',
+        cell: info => (
+          <MemoizedCategoryCell
+            category={info.row.original.category}
+            categoryId={info.row.original.categoryId}
+            onCategoryChange={value =>
+              onPatch(info.row.original.id, { categoryId: value })
+            }
+            categories={categories}
+          />
+        ),
+      })
+    );
+  } else {
+    console.log(
+      'Not creating category column - status is not approved:',
+      status
+    );
+  }
 
   // Add provider column
   columns.push(
@@ -498,5 +505,9 @@ export function createDraftTableColumns(
     })
   );
 
+  console.log(
+    'Final columns array:',
+    columns.map(col => col.id)
+  );
   return columns;
 }

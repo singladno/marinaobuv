@@ -66,6 +66,8 @@ export async function GET(req: NextRequest) {
           rawGptResponse: true,
           gptRequest2: true,
           rawGptResponse2: true,
+          aiStatus: true,
+          aiProcessedAt: true,
           source: true,
         },
       }),

@@ -193,9 +193,20 @@ export default function AdminDraftsPage() {
     setIsRunningAI(true);
 
     try {
-      // Get all approved draft IDs
-      const approvedDrafts = data.filter(draft => draft.status === 'approved');
-      const draftIds = approvedDrafts.map(draft => draft.id);
+      // Fetch all approved drafts from the API (not just current page)
+      const approvedResponse = await fetch(
+        '/api/admin/drafts?status=approved&take=1000',
+        {
+          headers: { 'x-role': 'ADMIN' },
+        }
+      );
+
+      if (!approvedResponse.ok) {
+        throw new Error('Failed to fetch approved drafts');
+      }
+
+      const approvedData = await approvedResponse.json();
+      const draftIds = approvedData.drafts.map((draft: Draft) => draft.id);
 
       if (draftIds.length === 0) {
         addNotification({
