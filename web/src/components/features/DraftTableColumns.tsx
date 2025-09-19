@@ -14,6 +14,8 @@ import { SourceCell } from './SourceCell';
 import { GptRequestCell } from './GptRequestCell';
 import { GptResponseCell } from './GptResponseCell';
 import { CategoryCell } from './CategoryCell';
+import { GenderSelectCell } from './GenderSelectCell';
+import { SeasonSelectCell } from './SeasonSelectCell';
 
 type DraftWithSelected = Draft & { selected?: boolean };
 
@@ -68,6 +70,8 @@ const MemoizedBadgeCell = React.memo(BadgeCell);
 const MemoizedSourceCell = React.memo(SourceCell);
 const MemoizedGptRequestCell = React.memo(GptRequestCell);
 const MemoizedGptResponseCell = React.memo(GptResponseCell);
+const MemoizedGenderSelectCell = React.memo(GenderSelectCell);
+const MemoizedSeasonSelectCell = React.memo(SeasonSelectCell);
 
 // Memoized formatters to avoid recreation on every render
 const priceFormatter = (value: number) => (value / 100).toLocaleString('ru-RU');
@@ -270,11 +274,11 @@ export function createDraftTableColumns(
         header: () => 'Пол',
         cell: info => {
           return (
-            <MemoizedEditableCell
+            <MemoizedGenderSelectCell
               value={info.row.original.gender}
-              onBlur={value => onPatch(info.row.original.id, { gender: value })}
-              placeholder="Введите пол"
-              aria-label="Пол"
+              onChange={value =>
+                onPatch(info.row.original.id, { gender: value })
+              }
             />
           );
         },
@@ -287,11 +291,11 @@ export function createDraftTableColumns(
         header: () => 'Сезон',
         cell: info => {
           return (
-            <MemoizedEditableCell
+            <MemoizedSeasonSelectCell
               value={info.row.original.season}
-              onBlur={value => onPatch(info.row.original.id, { season: value })}
-              placeholder="Введите сезон"
-              aria-label="Сезон"
+              onChange={value =>
+                onPatch(info.row.original.id, { season: value })
+              }
             />
           );
         },

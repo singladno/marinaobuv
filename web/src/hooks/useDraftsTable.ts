@@ -231,12 +231,24 @@ export function useDraftsTable({
     onColumnVisibilityChange: setColumnVisibility,
   });
 
-  const handleToggleColumn = React.useCallback((columnId: string) => {
-    setColumnVisibility(prev => ({
-      ...prev,
-      [columnId]: !prev[columnId],
-    }));
-  }, []);
+  const handleToggleColumn = React.useCallback(
+    (columnId: string) => {
+      setColumnVisibility(prev => {
+        const newVisibility = {
+          ...prev,
+          [columnId]: !prev[columnId],
+        };
+
+        // For approved status, always keep category visible
+        if (status === 'approved' && columnId === 'category') {
+          newVisibility.category = true;
+        }
+
+        return newVisibility;
+      });
+    },
+    [status]
+  );
 
   const handleResetColumns = React.useCallback(() => {
     resetColumnVisibility();

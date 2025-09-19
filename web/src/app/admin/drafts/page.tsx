@@ -193,26 +193,14 @@ export default function AdminDraftsPage() {
     setIsRunningAI(true);
 
     try {
-      // Fetch all approved drafts from the API (not just current page)
-      const approvedResponse = await fetch(
-        '/api/admin/drafts?status=approved&take=1000',
-        {
-          headers: { 'x-role': 'ADMIN' },
-        }
-      );
-
-      if (!approvedResponse.ok) {
-        throw new Error('Failed to fetch approved drafts');
-      }
-
-      const approvedData = await approvedResponse.json();
-      const draftIds = approvedData.drafts.map((draft: Draft) => draft.id);
+      // Use only selected drafts for AI analysis
+      const draftIds = selectedIds;
 
       if (draftIds.length === 0) {
         addNotification({
           type: 'warning',
-          title: 'Нет одобренных товаров',
-          message: 'Для запуска AI анализа нужны одобренные товары',
+          title: 'Нет выбранных товаров',
+          message: 'Выберите товары для запуска AI анализа',
         });
         return;
       }

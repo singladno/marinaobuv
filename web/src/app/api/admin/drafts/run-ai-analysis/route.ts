@@ -2,26 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getCategoryTree } from '@/lib/catalog';
 import { prisma } from '@/lib/db-node';
-import { env } from '@/lib/env';
 import {
-  SECOND_ANALYSIS_PROMPT,
-  type SecondAnalysisData,
-} from '@/lib/second-prompt';
-
-// Helper function to map Russian gender values to enum values
-function mapGenderToEnum(
-  gender: string | null
-): 'FEMALE' | 'MALE' | 'UNISEX' | null {
-  if (!gender) return null;
-
-  const genderMap: Record<string, 'FEMALE' | 'MALE' | 'UNISEX'> = {
-    женская: 'FEMALE',
-    мужская: 'MALE',
-    унисекс: 'UNISEX',
-  };
-
-  return genderMap[gender.toLowerCase()] || null;
-}
+  analyzeDraft,
+  markDraftsAsProcessing,
+  type AnalysisResult,
+} from '@/lib/second-analysis-helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,20 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get approved drafts with their images
-    const drafts = await prisma.waDraftProduct.findMany({
-      where: {
-        id: { in: draftIds },
-        status: 'approved',
-      },
-      include: {
-        images: {
-          where: { isActive: true },
-          orderBy: { sort: 'asc' },
-        },
-      },
-    });
-
+    const drafts = await getApprovedDrafts(draftIds);
     if (drafts.length === 0) {
       return NextResponse.json(
         { error: 'No approved drafts found' },
@@ -55,166 +27,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get category tree for the prompt
-    const categoryTree = await getCategoryTree();
-    const categoryTreeJson = JSON.stringify(categoryTree);
+    const categoryTreeJson = await getCategoryTreeJson();
+    await markDraftsAsProcessing(draftIds);
 
-    const results = [];
-
-    // Mark all drafts as processing
-    await prisma.waDraftProduct.updateMany({
-      where: { id: { in: drafts.map(d => d.id) } },
-      data: {
-        aiStatus: 'ai_processing',
-        aiProcessedAt: null,
-      } as any,
-    });
-
-    for (const draft of drafts) {
-      try {
-        // Prepare images for analysis
-        const imageUrls = draft.images.map(img => img.url);
-
-        if (imageUrls.length === 0) {
-          console.log(`No images found for draft ${draft.id}`);
-          // Mark as failed if no images
-          await prisma.waDraftProduct.update({
-            where: { id: draft.id },
-            data: {
-              aiStatus: 'ai_failed',
-              aiProcessedAt: new Date(),
-            } as any,
-          });
-          continue;
-        }
-
-        // Create the prompt with images
-        const prompt = `${SECOND_ANALYSIS_PROMPT}
-
-ДОСТУПНЫЕ КАТЕГОРИИ:
-${categoryTreeJson}
-
-ИЗОБРАЖЕНИЯ ДЛЯ АНАЛИЗА:
-${imageUrls.map((url, index) => `Изображение ${index + 1}: ${url}`).join('\n')}
-
-Проанализируй эти изображения и верни результат в формате JSON.`;
-
-        // Call OpenAI API
-        const response = await fetch(
-          'https://api.openai.com/v1/chat/completions',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o',
-              messages: [
-                {
-                  role: 'user',
-                  content: [
-                    {
-                      type: 'text',
-                      text: prompt,
-                    },
-                    ...imageUrls.map(url => ({
-                      type: 'image_url',
-                      image_url: {
-                        url: url,
-                        detail: 'high',
-                      },
-                    })),
-                  ],
-                },
-              ],
-              max_tokens: 1000,
-              temperature: 0.1,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`OpenAI API error: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-
-        if (!content) {
-          throw new Error('No content in OpenAI response');
-        }
-
-        // Parse the JSON response
-        let analysisData: SecondAnalysisData;
-        try {
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
-          if (!jsonMatch) {
-            throw new Error('No JSON found in response');
-          }
-          analysisData = JSON.parse(jsonMatch[0]);
-        } catch (parseError) {
-          console.error('Failed to parse OpenAI response:', parseError);
-          console.error('Response content:', content);
-          continue;
-        }
-
-        // Update the draft with the analysis results
-        await prisma.waDraftProduct.update({
-          where: { id: draft.id },
-          data: {
-            name: analysisData.name,
-            material: analysisData.material,
-            gender: mapGenderToEnum(analysisData.gender),
-            season: analysisData.season,
-            categoryId: analysisData.categoryId,
-            rawGptResponse2: data,
-            gptRequest2: prompt,
-            aiStatus: 'ai_completed',
-            aiProcessedAt: new Date(),
-          } as any,
-        });
-
-        // Update image colors
-        if (analysisData.imageColors && analysisData.imageColors.length > 0) {
-          for (
-            let i = 0;
-            i < Math.min(analysisData.imageColors.length, draft.images.length);
-            i++
-          ) {
-            await prisma.waDraftProductImage.update({
-              where: { id: draft.images[i].id },
-              data: { color: analysisData.imageColors[i] },
-            });
-          }
-        }
-
-        results.push({
-          id: draft.id,
-          success: true,
-          analysis: analysisData,
-        });
-
-        console.log(`Successfully analyzed draft ${draft.id}`);
-      } catch (error) {
-        console.error(`Failed to analyze draft ${draft.id}:`, error);
-
-        // Mark as failed
-        await prisma.waDraftProduct.update({
-          where: { id: draft.id },
-          data: {
-            aiStatus: 'ai_failed',
-            aiProcessedAt: new Date(),
-          } as any,
-        });
-
-        results.push({
-          id: draft.id,
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
+    const results = await processDrafts(drafts, categoryTreeJson);
 
     return NextResponse.json({
       success: true,
@@ -228,4 +44,41 @@ ${imageUrls.map((url, index) => `Изображение ${index + 1}: ${url}`).j
       { status: 500 }
     );
   }
+}
+
+async function getApprovedDrafts(draftIds: string[]) {
+  return await prisma.waDraftProduct.findMany({
+    where: {
+      id: { in: draftIds },
+      status: 'approved',
+    },
+    include: {
+      images: {
+        where: { isActive: true },
+        orderBy: { sort: 'asc' },
+      },
+    },
+  });
+}
+
+async function getCategoryTreeJson(): Promise<string> {
+  const categoryTree = await getCategoryTree();
+  return JSON.stringify(categoryTree);
+}
+
+async function processDrafts(
+  drafts: Array<{
+    id: string;
+    images: Array<{ url: string; id: string; sort: number }>;
+  }>,
+  categoryTreeJson: string
+): Promise<AnalysisResult[]> {
+  const results: AnalysisResult[] = [];
+
+  for (const draft of drafts) {
+    const result = await analyzeDraft(draft, categoryTreeJson);
+    results.push(result);
+  }
+
+  return results;
 }

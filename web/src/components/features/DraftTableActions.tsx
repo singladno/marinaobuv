@@ -120,9 +120,10 @@ export function DraftTableActions({
             ) : (
               <button
                 onClick={onRunAIScript}
-                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600"
+                disabled={!selectedCount}
+                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-purple-500 dark:hover:bg-purple-600"
               >
-                🤖 Запустить AI анализ
+                🤖 Запустить AI анализ ({selectedCount ?? 0})
               </button>
             )}
 
