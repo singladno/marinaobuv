@@ -23,7 +23,8 @@ export function createDraftTableColumns(
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>,
   onDelete: (id: string) => Promise<void>,
   onImageToggle: (imageId: string, isActive: boolean) => Promise<void>,
-  categories: CategoryNode[]
+  categories: CategoryNode[],
+  onReload?: () => void
 ) {
   return [
     columnHelper.display({
@@ -78,17 +79,6 @@ export function createDraftTableColumns(
         <PriceCell
           value={info.row.original.pricePair}
           formatter={value => (value / 100).toLocaleString('ru-RU')}
-        />
-      ),
-    }),
-    columnHelper.accessor('currency', {
-      header: () => 'Валюта',
-      cell: info => (
-        <BadgeCell
-          value={info.getValue()}
-          getLabel={value => value}
-          bgColor="bg-blue-100 dark:bg-blue-900"
-          textColor="text-blue-800 dark:text-blue-200"
         />
       ),
     }),
@@ -213,8 +203,10 @@ export function createDraftTableColumns(
       header: () => 'Изображения',
       cell: info => (
         <ImagesCell
+          draftId={info.row.original.id}
           images={info.row.original.images}
           onImageToggle={onImageToggle}
+          onReload={onReload}
         />
       ),
     }),

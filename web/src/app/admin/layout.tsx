@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
+
 import { getSession } from '@/lib/server/session';
 import AdminSidebarLayout from '@/components/ui/AdminSidebarLayout';
+import { ClientProviders } from '@/components/ClientProviders';
 
 export default async function AdminLayout({
   children,
@@ -11,8 +13,10 @@ export default async function AdminLayout({
   if (!session || session.role !== 'ADMIN') redirect('/');
 
   return (
-    <div className="bg-background text-foreground flex h-screen">
-      <AdminSidebarLayout>{children}</AdminSidebarLayout>
-    </div>
+    <ClientProviders>
+      <div className="bg-background text-foreground flex h-screen">
+        <AdminSidebarLayout>{children}</AdminSidebarLayout>
+      </div>
+    </ClientProviders>
   );
 }

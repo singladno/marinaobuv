@@ -20,6 +20,7 @@ export function useDraftsTable({
   onPatch,
   onDelete,
   categories,
+  onReload,
 }: {
   data: Draft[];
   selected: Record<string, boolean>;
@@ -27,6 +28,7 @@ export function useDraftsTable({
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   categories: CategoryNode[];
+  onReload?: () => void;
 }) {
   const [localData, setLocalData] = React.useState<DraftWithSelected[]>(() =>
     data.map(d => ({ ...d, selected: !!selected[d.id] }))
@@ -101,7 +103,8 @@ export function useDraftsTable({
       handlePatch,
       handleDelete,
       handleImageToggleWithUpdate,
-      categories
+      categories,
+      onReload
     );
   }, [
     onToggle,
@@ -109,6 +112,7 @@ export function useDraftsTable({
     handleDelete,
     handleImageToggleWithUpdate,
     categories,
+    onReload,
   ]);
 
   const table = useReactTable({

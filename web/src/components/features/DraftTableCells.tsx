@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { ImageModal } from '@/components/ui/ImageModal';
+import { useImageHandling } from '@/hooks/useImageHandling';
 import { isWAParserImage, sanitizeImageUrl } from '@/lib/image-security';
 import type { Draft } from '@/types/admin';
 
@@ -8,18 +9,31 @@ import { ImageActionButton } from './ImageActionButton';
 import { ImageThumbnail } from './ImageThumbnail';
 
 interface ImagesCellProps {
+  draftId: string;
   images: Draft['images'];
   onImageToggle?: (imageId: string, isActive: boolean) => Promise<void>;
+  onReload?: () => void;
 }
 
-export function ImagesCell({ images, onImageToggle }: ImagesCellProps) {
+export function ImagesCell({
+  draftId,
+  images,
+  onImageToggle,
+  onReload,
+}: ImagesCellProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
-  const [isUpdating, setIsUpdating] = React.useState<string | null>(null);
   const [hoveredImageId, setHoveredImageId] = React.useState<string | null>(
     null
   );
   const imageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+
+  const { isUpdating, handleImageToggle, handleBulkDelete, handleBulkSplit } =
+    useImageHandling({
+      draftId,
+      onImageToggle,
+      onReload,
+    });
 
   const sortedImages = (images || []).sort(
     (a, b) => (a.sort || 0) - (b.sort || 0)
@@ -38,23 +52,6 @@ export function ImagesCell({ images, onImageToggle }: ImagesCellProps) {
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
     setIsModalOpen(true);
-  };
-
-  const handleImageToggle = async (
-    imageId: string,
-    isActive: boolean,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    if (!onImageToggle || isUpdating) return;
-    setIsUpdating(imageId);
-    try {
-      await onImageToggle(imageId, isActive);
-    } catch (error) {
-      console.error('Failed to toggle image status:', error);
-    } finally {
-      setIsUpdating(null);
-    }
   };
 
   return (
@@ -106,6 +103,8 @@ export function ImagesCell({ images, onImageToggle }: ImagesCellProps) {
         onClose={() => setIsModalOpen(false)}
         initialIndex={selectedImageIndex}
         onImageToggle={handleImageToggle}
+        onBulkDelete={handleBulkDelete}
+        onBulkSplit={handleBulkSplit}
         isUpdating={isUpdating}
       />
 

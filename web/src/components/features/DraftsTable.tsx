@@ -65,6 +65,7 @@ export function DraftsTable({
     onPatch,
     onDelete: handleDelete,
     categories,
+    onReload,
   });
 
   const columnConfigs = createColumnConfigs(columnVisibility);
