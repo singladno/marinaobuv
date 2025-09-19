@@ -20,6 +20,7 @@ export function DraftsTable({
   onReload,
   onApprove,
   onConvertToCatalog,
+  onBulkDelete,
   selectedCount,
   loading = false,
   error,
@@ -34,6 +35,7 @@ export function DraftsTable({
   onReload?: () => void;
   onApprove?: () => void;
   onConvertToCatalog?: () => void;
+  onBulkDelete?: () => void;
   selectedCount?: number;
   loading?: boolean;
   error?: string | null;
@@ -90,6 +92,7 @@ export function DraftsTable({
         selectedCount={selectedCount}
         onApprove={onApprove}
         onConvertToCatalog={onConvertToCatalog}
+        onBulkDelete={onBulkDelete}
         onReload={onReload}
         onOpenSettings={() => setIsSettingsOpen(true)}
         showBottomBorder={hasData}
