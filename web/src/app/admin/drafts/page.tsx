@@ -64,8 +64,10 @@ export default function AdminDraftsPage() {
         headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
         body: JSON.stringify({ id, data: patch }),
       });
-      // Avoid global loader; refresh in background
-      await reloadSilent();
+      // Only reload for non-size updates to avoid race conditions with optimistic updates
+      if (!('sizes' in patch)) {
+        await reloadSilent();
+      }
     },
     [reloadSilent]
   );

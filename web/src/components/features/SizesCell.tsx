@@ -141,11 +141,16 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
         {onChange && (
           <button
             type="button"
-            className="ml-1 flex-shrink-0 rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-200"
+            className="ml-1 flex-shrink-0 rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-blue-900/30 dark:text-blue-200"
             onClick={addNew}
+            disabled={savingIndex !== null}
             aria-label="Добавить размер"
           >
-            +
+            {savingIndex !== null ? (
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-blue-700" />
+            ) : (
+              '+'
+            )}
           </button>
         )}
       </div>

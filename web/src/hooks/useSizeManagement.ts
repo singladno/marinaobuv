@@ -75,15 +75,20 @@ export function useSizeManagement(
     [onChange, sizes, editingIndex]
   );
 
-  const addNew = React.useCallback(() => {
+  const addNew = React.useCallback(async () => {
     if (!onChange) return;
     const next = (sizes ? [...sizes] : []) as NonNullable<Draft['sizes']>;
     const newItem = { size: '', stock: 0 };
     next.push(newItem);
-    onChange(next);
-    setDraftSize('');
-    setDraftPairs('0');
-    setEditingIndex(next.length);
+    try {
+      setSavingIndex(next.length - 1);
+      await Promise.resolve(onChange(next));
+      setDraftSize('');
+      setDraftPairs('0');
+      setEditingIndex(next.length - 1);
+    } finally {
+      setSavingIndex(null);
+    }
   }, [onChange, sizes]);
 
   const handleKeyDown = React.useCallback(

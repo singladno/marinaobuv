@@ -53,7 +53,8 @@ export const MemoizedTableRow = React.memo(
       prevRow.id === nextRow.id &&
       prevRow.selected === nextRow.selected &&
       prevProps.onToggle === nextProps.onToggle &&
-      JSON.stringify(prevRow.images) === JSON.stringify(nextRow.images)
+      JSON.stringify(prevRow.images) === JSON.stringify(nextRow.images) &&
+      JSON.stringify(prevRow.sizes) === JSON.stringify(nextRow.sizes)
     );
   }
 );
