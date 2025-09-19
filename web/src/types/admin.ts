@@ -41,6 +41,8 @@ export type Draft = {
   rawGptResponse?: any;
   gptRequest2?: string | null;
   rawGptResponse2?: any;
+  aiStatus?: string | null;
+  aiProcessedAt?: string | null;
   source?: Array<{
     id: string;
     waMessageId: string;

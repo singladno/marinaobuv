@@ -2,11 +2,20 @@ import type { ColumnConfig } from '@/components/features/ColumnSettingsModal';
 import type { VisibilityState } from '@tanstack/react-table';
 
 export function createColumnConfigs(
-  columnVisibility: VisibilityState
+  columnVisibility: VisibilityState,
+  status?: string
 ): ColumnConfig[] {
+  const isDraft = status === 'draft' || !status;
+  const isApproved = status === 'approved';
+
   return [
     { id: 'select', label: 'Выбор', visible: true, required: true },
-    { id: 'name', label: 'Название', visible: true, required: true },
+    {
+      id: 'name',
+      label: 'Название',
+      visible: isApproved, // Only show in approved table
+      required: isApproved,
+    },
     { id: 'category', label: 'Категория', visible: true, required: true },
     { id: 'provider', label: 'Поставщик', visible: true, required: true },
     {
@@ -34,11 +43,32 @@ export function createColumnConfigs(
       visible: true,
       required: true,
     },
-    { id: 'material', label: 'Материал', visible: true, required: true },
-    { id: 'gender', label: 'Пол', visible: true, required: true },
-    { id: 'season', label: 'Сезон', visible: true, required: true },
+    {
+      id: 'material',
+      label: 'Материал',
+      visible: isApproved, // Only show in approved table
+      required: isApproved,
+    },
+    {
+      id: 'gender',
+      label: 'Пол',
+      visible: isApproved, // Only show in approved table
+      required: isApproved,
+    },
+    {
+      id: 'season',
+      label: 'Сезон',
+      visible: isApproved, // Only show in approved table
+      required: isApproved,
+    },
     { id: 'sizes', label: 'Размеры', visible: true, required: true },
     { id: 'images', label: 'Изображения', visible: true, required: true },
+    {
+      id: 'aiStatus',
+      label: 'AI Статус',
+      visible: isApproved, // Only show in approved table
+      required: false,
+    },
     { id: 'source', label: 'Источник', visible: true, required: true },
     {
       id: 'gptRequest',
@@ -50,6 +80,18 @@ export function createColumnConfigs(
       id: 'gptResponse',
       label: 'GPT Ответ',
       visible: columnVisibility.gptResponse ?? false,
+      required: false,
+    },
+    {
+      id: 'gptRequest2',
+      label: 'GPT Запрос 2',
+      visible: columnVisibility.gptRequest2 ?? false,
+      required: false,
+    },
+    {
+      id: 'gptResponse2',
+      label: 'GPT Ответ 2',
+      visible: columnVisibility.gptResponse2 ?? false,
       required: false,
     },
     {

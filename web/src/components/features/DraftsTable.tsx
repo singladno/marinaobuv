@@ -22,10 +22,13 @@ export function DraftsTable({
   onApprove,
   onConvertToCatalog,
   onBulkDelete,
+  onRunAIScript,
   selectedCount,
   loading = false,
   error,
   categories,
+  isRunningAI = false,
+  currentProcessingDraft,
 }: {
   data: Draft[];
   selected: Record<string, boolean>;
@@ -38,10 +41,19 @@ export function DraftsTable({
   onApprove?: () => void;
   onConvertToCatalog?: () => void;
   onBulkDelete?: () => void;
+  onRunAIScript?: () => void;
   selectedCount?: number;
   loading?: boolean;
   error?: string | null;
   categories: CategoryNode[];
+  isRunningAI?: boolean;
+  currentProcessingDraft?: {
+    id: string;
+    name: string | null;
+    aiStatus: string | null;
+    aiProcessedAt: string | null;
+    updatedAt: string;
+  } | null;
 }) {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
@@ -74,9 +86,10 @@ export function DraftsTable({
     onDelete: handleDelete,
     categories,
     onReload,
+    status,
   });
 
-  const columnConfigs = createColumnConfigs(columnVisibility);
+  const columnConfigs = createColumnConfigs(columnVisibility, status);
   const hasData = !loading && !error && table.getRowModel().rows.length > 0;
 
   return (
@@ -100,9 +113,12 @@ export function DraftsTable({
         onConvertToCatalog={onConvertToCatalog}
         onBulkDelete={onBulkDelete}
         onReload={onReload}
+        onRunAIScript={onRunAIScript}
         onOpenSettings={() => setIsSettingsOpen(true)}
         showBottomBorder={hasData}
         savingStatus={savingStatus}
+        isRunningAI={isRunningAI}
+        currentProcessingDraft={currentProcessingDraft}
       />
 
       {/* Table content - This should be the scrollable area */}

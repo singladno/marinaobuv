@@ -81,9 +81,13 @@ export function createDraftTableColumns(
   onReload?: () => void,
   onSelectAll?: (selectAll: boolean) => void,
   allSelected?: boolean,
-  someSelected?: boolean
+  someSelected?: boolean,
+  status?: string
 ) {
-  return [
+  const isDraft = status === 'draft' || !status;
+  const isApproved = status === 'approved';
+
+  const columns = [
     columnHelper.display({
       id: 'select',
       header: () =>
@@ -113,17 +117,28 @@ export function createDraftTableColumns(
         />
       ),
     }),
-    columnHelper.accessor('name', {
-      header: () => 'Название',
-      cell: info => (
-        <MemoizedEditableCell
-          value={info.row.original.name}
-          onBlur={value => onPatch(info.row.original.id, { name: value })}
-          placeholder="Введите название"
-          aria-label="Название"
-        />
-      ),
-    }),
+  ];
+
+  // Only add name column for approved status
+  if (isApproved) {
+    columns.push(
+      columnHelper.display({
+        id: 'name',
+        header: () => 'Название',
+        cell: info => (
+          <MemoizedEditableCell
+            value={info.row.original.name}
+            onBlur={value => onPatch(info.row.original.id, { name: value })}
+            placeholder="Введите название"
+            aria-label="Название"
+          />
+        ),
+      })
+    );
+  }
+
+  // Add category column
+  columns.push(
     columnHelper.display({
       id: 'category',
       header: () => 'Категория',
@@ -137,14 +152,22 @@ export function createDraftTableColumns(
           categories={categories}
         />
       ),
-    }),
+    })
+  );
+
+  // Add provider column
+  columns.push(
     columnHelper.display({
       id: 'provider',
       header: () => 'Поставщик',
       cell: info => (
         <MemoizedProviderCell provider={info.row.original.provider} />
       ),
-    }),
+    })
+  );
+
+  // Add price columns
+  columns.push(
     columnHelper.display({
       id: 'pricePairRub',
       header: () => 'Цена/пара (₽)',
@@ -154,21 +177,28 @@ export function createDraftTableColumns(
           formatter={priceFormatter}
         />
       ),
-    }),
-    columnHelper.accessor('packPairs', {
+    })
+  );
+
+  columns.push(
+    columnHelper.display({
+      id: 'packPairs',
       header: () => 'Пар в упаковке',
       cell: info => (
         <div className="text-center">
-          {info.getValue() ? (
+          {info.row.original.packPairs ? (
             <span className="font-medium text-gray-900 dark:text-gray-100">
-              {info.getValue()}
+              {info.row.original.packPairs}
             </span>
           ) : (
             <span className="text-gray-400 dark:text-gray-500">—</span>
           )}
         </div>
       ),
-    }),
+    })
+  );
+
+  columns.push(
     columnHelper.display({
       id: 'priceBoxRub',
       header: () => 'Цена коробки (₽)',
@@ -194,7 +224,10 @@ export function createDraftTableColumns(
           />
         );
       },
-    }),
+    })
+  );
+
+  columns.push(
     columnHelper.display({
       id: 'providerDiscountRub',
       header: () => 'Скидка поставщика (₽)',
@@ -204,79 +237,63 @@ export function createDraftTableColumns(
           formatter={value => (value / 100).toLocaleString('ru-RU')}
         />
       ),
-    }),
-    columnHelper.accessor('material', {
-      header: () => 'Материал',
-      cell: info => (
-        <div className="text-center">
-          {info.getValue() ? (
-            <span className="break-words text-sm font-medium text-gray-900 dark:text-gray-100">
-              {info.getValue()}
-            </span>
-          ) : (
-            <span className="text-gray-400 dark:text-gray-500">—</span>
-          )}
-        </div>
-      ),
-    }),
-    columnHelper.accessor('gender', {
-      header: () => 'Пол',
-      cell: info => {
-        const getGenderLabel = (value: string) => {
-          const genderMap: Record<string, string> = {
-            male: 'Мужской',
-            female: 'Женский',
-            unisex: 'Унисекс',
-            men: 'Мужской',
-            women: 'Женский',
-            мужской: 'Мужской',
-            женский: 'Женский',
-            унисекс: 'Унисекс',
-          };
-          return genderMap[value.toLowerCase()] || value;
-        };
+    })
+  );
 
-        return (
-          <BadgeCell
-            value={info.getValue()}
-            getLabel={getGenderLabel}
-            bgColor="bg-purple-100 dark:bg-purple-900"
-            textColor="text-purple-800 dark:text-purple-200"
+  // Only add material, gender, season columns for approved status
+  if (isApproved) {
+    columns.push(
+      columnHelper.display({
+        id: 'material',
+        header: () => 'Материал',
+        cell: info => (
+          <MemoizedEditableCell
+            value={info.row.original.material}
+            onBlur={value => onPatch(info.row.original.id, { material: value })}
+            placeholder="Введите материал"
+            aria-label="Материал"
           />
-        );
-      },
-    }),
-    columnHelper.accessor('season', {
-      header: () => 'Сезон',
-      cell: info => {
-        const getSeasonLabel = (value: string) => {
-          const seasonMap: Record<string, string> = {
-            spring: 'Весна',
-            summer: 'Лето',
-            autumn: 'Осень',
-            fall: 'Осень',
-            winter: 'Зима',
-            'all-season': 'Всесезонный',
-            all_season: 'Всесезонный',
-            весна: 'Весна',
-            лето: 'Лето',
-            осень: 'Осень',
-            зима: 'Зима',
-            всесезонный: 'Всесезонный',
-          };
-          return seasonMap[value.toLowerCase()] || value;
-        };
+        ),
+      })
+    );
 
-        return (
-          <BadgeCell
-            value={info.getValue()}
-            getLabel={getSeasonLabel}
-            bgColor="bg-orange-100 dark:bg-orange-900"
-            textColor="text-orange-800 dark:text-orange-200"
-          />
-        );
-      },
-    }),
+    columns.push(
+      columnHelper.display({
+        id: 'gender',
+        header: () => 'Пол',
+        cell: info => {
+          return (
+            <MemoizedEditableCell
+              value={info.row.original.gender}
+              onBlur={value => onPatch(info.row.original.id, { gender: value })}
+              placeholder="Введите пол"
+              aria-label="Пол"
+            />
+          );
+        },
+      })
+    );
+
+    columns.push(
+      columnHelper.display({
+        id: 'season',
+        header: () => 'Сезон',
+        cell: info => {
+          return (
+            <MemoizedEditableCell
+              value={info.row.original.season}
+              onBlur={value => onPatch(info.row.original.id, { season: value })}
+              placeholder="Введите сезон"
+              aria-label="Сезон"
+            />
+          );
+        },
+      })
+    );
+  }
+
+  // Add remaining columns
+  columns.push(
     columnHelper.display({
       id: 'sizes',
       header: () => 'Размеры',
@@ -286,7 +303,72 @@ export function createDraftTableColumns(
           onChange={next => onPatch(info.row.original.id, { sizes: next })}
         />
       ),
-    }),
+    })
+  );
+
+  // Add AI status column for approved status
+  if (isApproved) {
+    columns.push(
+      columnHelper.display({
+        id: 'aiStatus',
+        header: () => 'AI Статус',
+        cell: info => {
+          const aiStatus = info.row.original.aiStatus;
+          const aiProcessedAt = info.row.original.aiProcessedAt;
+
+          if (!aiStatus) {
+            return <span className="text-gray-400 dark:text-gray-500">—</span>;
+          }
+
+          const getStatusColor = (status: string) => {
+            switch (status) {
+              case 'ai_processing':
+                return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+              case 'ai_completed':
+                return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+              case 'ai_failed':
+                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+              default:
+                return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+            }
+          };
+
+          const getStatusLabel = (status: string) => {
+            switch (status) {
+              case 'ai_processing':
+                return 'Обрабатывается';
+              case 'ai_completed':
+                return 'Завершено';
+              case 'ai_failed':
+                return 'Ошибка';
+              default:
+                return status;
+            }
+          };
+
+          return (
+            <div className="flex flex-col items-center space-y-1">
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(aiStatus)}`}
+              >
+                {aiStatus === 'ai_processing' && (
+                  <div className="mr-1 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                {getStatusLabel(aiStatus)}
+              </span>
+              {aiProcessedAt && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {new Date(aiProcessedAt).toLocaleTimeString('ru-RU')}
+                </span>
+              )}
+            </div>
+          );
+        },
+      })
+    );
+  }
+
+  columns.push(
     columnHelper.display({
       id: 'images',
       header: () => 'Изображения',
@@ -298,27 +380,58 @@ export function createDraftTableColumns(
           onReload={onReload}
         />
       ),
-    }),
+    })
+  );
+
+  columns.push(
     columnHelper.display({
       id: 'source',
       header: () => 'Источник',
       cell: info => <SourceCell source={info.row.original.source} />,
-    }),
+    })
+  );
+
+  columns.push(
     columnHelper.display({
       id: 'gptRequest',
       header: () => 'GPT Запрос',
       cell: info => (
         <GptRequestCell gptRequest={info.row.original.gptRequest} />
       ),
-    }),
+    })
+  );
+
+  columns.push(
     columnHelper.display({
       id: 'gptResponse',
       header: () => 'GPT Ответ',
       cell: info => (
         <GptResponseCell rawGptResponse={info.row.original.rawGptResponse} />
       ),
-    }),
-    // GPT2 columns hidden for now
+    })
+  );
+
+  columns.push(
+    columnHelper.display({
+      id: 'gptRequest2',
+      header: () => 'GPT Запрос 2',
+      cell: info => (
+        <GptRequestCell gptRequest={info.row.original.gptRequest2} />
+      ),
+    })
+  );
+
+  columns.push(
+    columnHelper.display({
+      id: 'gptResponse2',
+      header: () => 'GPT Ответ 2',
+      cell: info => (
+        <GptResponseCell rawGptResponse={info.row.original.rawGptResponse2} />
+      ),
+    })
+  );
+
+  columns.push(
     columnHelper.display({
       id: 'createdAt',
       header: () => 'Создано',
@@ -339,7 +452,10 @@ export function createDraftTableColumns(
           </div>
         );
       },
-    }),
+    })
+  );
+
+  columns.push(
     columnHelper.display({
       id: 'updatedAt',
       header: () => 'Обновлено',
@@ -360,7 +476,10 @@ export function createDraftTableColumns(
           </div>
         );
       },
-    }),
+    })
+  );
+
+  columns.push(
     columnHelper.display({
       id: 'actions',
       header: () => '',
@@ -376,6 +495,8 @@ export function createDraftTableColumns(
           </button>
         </div>
       ),
-    }),
-  ];
+    })
+  );
+
+  return columns;
 }

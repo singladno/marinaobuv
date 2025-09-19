@@ -6,6 +6,7 @@ import { DraftsTable } from '@/components/features/DraftsTable';
 import type { Draft } from '@/types/admin';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useCategories } from '@/hooks/useCategories';
+import { useAIStatus } from '@/hooks/useAIStatus';
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { TablePagination } from '@/components/ui/TablePagination';
@@ -25,9 +26,11 @@ export default function AdminDraftsPage() {
   } = useDrafts();
   const { categories, loading: categoriesLoading } = useCategories();
   const { addNotification } = useNotifications();
+  const { currentProcessingDraft, isProcessing } = useAIStatus(status);
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isRunningAI, setIsRunningAI] = React.useState(false);
   const selectedIds = React.useMemo(
     () => Object.keys(selected).filter(k => selected[k]),
     [selected]
@@ -186,6 +189,58 @@ export default function AdminDraftsPage() {
     }
   };
 
+  const runAIAnalysis = async () => {
+    setIsRunningAI(true);
+
+    try {
+      // Get all approved draft IDs
+      const approvedDrafts = data.filter(draft => draft.status === 'approved');
+      const draftIds = approvedDrafts.map(draft => draft.id);
+
+      if (draftIds.length === 0) {
+        addNotification({
+          type: 'warning',
+          title: 'Нет одобренных товаров',
+          message: 'Для запуска AI анализа нужны одобренные товары',
+        });
+        return;
+      }
+
+      const res = await fetch(`/api/admin/drafts/run-ai-analysis`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
+        body: JSON.stringify({ draftIds }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        addNotification({
+          type: 'error',
+          title: 'Ошибка при запуске AI анализа',
+          message: errorText,
+        });
+        return;
+      }
+
+      const result = await res.json();
+      addNotification({
+        type: 'success',
+        title: 'AI анализ запущен',
+        message: `Запущен анализ ${draftIds.length} товаров`,
+      });
+
+      // Don't reload immediately, let the polling handle updates
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка при запуске AI анализа',
+        message: 'Произошла неожиданная ошибка',
+      });
+    } finally {
+      setIsRunningAI(false);
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Table with reserved space for pagination */}
@@ -202,10 +257,13 @@ export default function AdminDraftsPage() {
           onApprove={approve}
           onConvertToCatalog={convertToCatalog}
           onBulkDelete={handleBulkDeleteClick}
+          onRunAIScript={runAIAnalysis}
           selectedCount={selectedIds.length}
           loading={loading || categoriesLoading}
           error={error}
           categories={categories}
+          isRunningAI={isRunningAI || isProcessing}
+          currentProcessingDraft={currentProcessingDraft}
         />
       </div>
 

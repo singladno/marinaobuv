@@ -12,6 +12,94 @@ import type { Draft } from '@/types/admin';
 import { useDraftSelection } from './useDraftSelection';
 import { useImageToggleWithUpdate } from './useImageToggleWithUpdate';
 
+// Custom hook for persistent column visibility
+function usePersistentColumnVisibility(
+  storageKey: string,
+  defaultVisibility: VisibilityState
+) {
+  const STORAGE_VERSION = '1.0';
+
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>(() => {
+      if (typeof window === 'undefined') {
+        return defaultVisibility;
+      }
+
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+
+          // Check if the saved data has the expected structure
+          if (parsed && typeof parsed === 'object') {
+            // If it's the old format (direct VisibilityState), migrate it
+            if (!parsed.version) {
+              console.log('Migrating column visibility from old format');
+              return { ...defaultVisibility, ...parsed };
+            }
+
+            // If version matches, use the data
+            if (parsed.version === STORAGE_VERSION && parsed.visibility) {
+              return { ...defaultVisibility, ...parsed.visibility };
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(
+          'Failed to load column visibility from localStorage:',
+          error
+        );
+      }
+
+      return defaultVisibility;
+    });
+
+  const updateColumnVisibility = React.useCallback(
+    (
+      newVisibility:
+        | VisibilityState
+        | ((prev: VisibilityState) => VisibilityState)
+    ) => {
+      setColumnVisibility(prev => {
+        const updated =
+          typeof newVisibility === 'function'
+            ? newVisibility(prev)
+            : newVisibility;
+
+        // Save to localStorage with version
+        if (typeof window !== 'undefined') {
+          try {
+            const dataToSave = {
+              version: STORAGE_VERSION,
+              visibility: updated,
+              timestamp: Date.now(),
+            };
+            localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+          } catch (error) {
+            console.warn(
+              'Failed to save column visibility to localStorage:',
+              error
+            );
+          }
+        }
+
+        return updated;
+      });
+    },
+    [storageKey]
+  );
+
+  const resetColumnVisibility = React.useCallback(() => {
+    updateColumnVisibility(defaultVisibility);
+  }, [updateColumnVisibility, defaultVisibility]);
+
+  return {
+    columnVisibility,
+    setColumnVisibility: updateColumnVisibility,
+    resetColumnVisibility,
+  };
+}
+
 type DraftWithSelected = Draft & { selected?: boolean };
 
 export function useDraftsTable({
@@ -23,6 +111,7 @@ export function useDraftsTable({
   onDelete,
   categories,
   onReload,
+  status,
 }: {
   data: Draft[];
   selected: Record<string, boolean>;
@@ -32,6 +121,7 @@ export function useDraftsTable({
   onDelete: (id: string) => Promise<void>;
   categories: CategoryNode[];
   onReload?: () => void;
+  status?: string;
 }) {
   const {
     localData,
@@ -42,14 +132,21 @@ export function useDraftsTable({
     someSelected,
   } = useDraftSelection(data, selected, onToggle, onSelectAll);
 
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({
-      category: false, // Hide category column
-      gptRequest: false,
-      gptResponse: false,
-      createdAt: false,
-      updatedAt: false,
-    });
+  const defaultColumnVisibility: VisibilityState = {
+    category: false, // Hide category column
+    gptRequest: false,
+    gptResponse: false,
+    gptRequest2: false,
+    gptResponse2: false,
+    createdAt: false,
+    updatedAt: false,
+  };
+
+  const { columnVisibility, setColumnVisibility, resetColumnVisibility } =
+    usePersistentColumnVisibility(
+      `marinaobuv-drafts-table-columns-${status || 'draft'}`,
+      defaultColumnVisibility
+    );
 
   const { handleImageToggleWithUpdate, savingStatus } =
     useImageToggleWithUpdate({
@@ -101,7 +198,8 @@ export function useDraftsTable({
       onReload,
       handleSelectAll,
       allSelected,
-      someSelected
+      someSelected,
+      status
     );
   }, [
     handleSelectionToggle,
@@ -113,6 +211,7 @@ export function useDraftsTable({
     handleSelectAll,
     allSelected,
     someSelected,
+    status,
   ]);
 
   const table = useReactTable({
@@ -133,14 +232,8 @@ export function useDraftsTable({
   }, []);
 
   const handleResetColumns = React.useCallback(() => {
-    setColumnVisibility({
-      category: false, // Keep category column hidden
-      gptRequest: false,
-      gptResponse: false,
-      createdAt: false,
-      updatedAt: false,
-    });
-  }, []);
+    resetColumnVisibility();
+  }, [resetColumnVisibility]);
 
   return {
     table,
