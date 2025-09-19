@@ -172,12 +172,28 @@ export function createDraftTableColumns(
     columnHelper.display({
       id: 'priceBoxRub',
       header: () => 'Цена коробки (₽)',
-      cell: info => (
-        <PriceCell
-          value={info.row.original.priceBox}
-          formatter={value => (value / 100).toLocaleString('ru-RU')}
-        />
-      ),
+      cell: info => {
+        const { pricePair, packPairs, providerDiscount } = info.row.original;
+
+        // Calculate box price: (pair price × pairs count in box) - provider discount
+        let calculatedBoxPrice: number | null = null;
+
+        if (pricePair !== null && packPairs !== null) {
+          calculatedBoxPrice = pricePair * packPairs;
+
+          // Subtract provider discount if available
+          if (providerDiscount !== null) {
+            calculatedBoxPrice -= providerDiscount;
+          }
+        }
+
+        return (
+          <PriceCell
+            value={calculatedBoxPrice}
+            formatter={value => (value / 100).toLocaleString('ru-RU')}
+          />
+        );
+      },
     }),
     columnHelper.display({
       id: 'providerDiscountRub',
