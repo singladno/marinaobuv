@@ -8,12 +8,28 @@ export async function POST(req: NextRequest) {
   try {
     requireRole(req, ['ADMIN' as Role]);
     const body = await req.json();
-    const { ids, categoryId } = body as { ids: string[]; categoryId: string };
-    if (!Array.isArray(ids) || !ids.length || !categoryId) {
-      return NextResponse.json(
-        { error: 'ids and categoryId are required' },
-        { status: 400 }
-      );
+    const { ids, categoryId } = body as { ids: string[]; categoryId?: string };
+    if (!Array.isArray(ids) || !ids.length) {
+      return NextResponse.json({ error: 'ids are required' }, { status: 400 });
+    }
+
+    // If no categoryId provided, use the first root category
+    let finalCategoryId = categoryId;
+    if (!finalCategoryId) {
+      const firstRootCategory = await prisma.category.findFirst({
+        where: { parentId: null, isActive: true },
+        orderBy: { sort: 'asc' },
+        select: { id: true },
+      });
+
+      if (!firstRootCategory) {
+        return NextResponse.json(
+          { error: 'No root category found' },
+          { status: 400 }
+        );
+      }
+
+      finalCategoryId = firstRootCategory.id;
     }
 
     const drafts = await prisma.waDraftProduct.findMany({
@@ -39,7 +55,7 @@ export async function POST(req: NextRequest) {
             data: {
               slug,
               name: d.name,
-              categoryId,
+              categoryId: finalCategoryId,
               pricePair: d.pricePair ?? 0,
               currency: d.currency ?? 'RUB',
               packPairs: d.packPairs ?? null,

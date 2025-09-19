@@ -10,7 +10,7 @@ import type { CategoryNode } from '@/components/ui/CategorySelector';
 import type { Draft } from '@/types/admin';
 
 import { useDraftSelection } from './useDraftSelection';
-import { useImageToggle } from './useImageToggle';
+import { useImageToggleWithUpdate } from './useImageToggleWithUpdate';
 
 type DraftWithSelected = Draft & { selected?: boolean };
 
@@ -39,13 +39,17 @@ export function useDraftsTable({
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
+      category: false, // Hide category column
       gptRequest: false,
       gptResponse: false,
       createdAt: false,
       updatedAt: false,
     });
 
-  const { handleImageToggle, savingStatus } = useImageToggle();
+  const { handleImageToggleWithUpdate, savingStatus } =
+    useImageToggleWithUpdate({
+      setLocalData,
+    });
 
   const handleDelete = React.useCallback(
     async (id: string) => {
@@ -60,23 +64,6 @@ export function useDraftsTable({
       }
     },
     [data, selected, onDelete, setLocalData]
-  );
-
-  const handleImageToggleWithUpdate = React.useCallback(
-    async (imageId: string, isActive: boolean) => {
-      await handleImageToggle(imageId, isActive);
-
-      // Update local data
-      setLocalData(prev =>
-        prev.map(draft => ({
-          ...draft,
-          images: draft.images.map(img =>
-            img.id === imageId ? { ...img, isActive } : img
-          ),
-        }))
-      );
-    },
-    [handleImageToggle, setLocalData]
   );
 
   const handlePatch = React.useCallback(
@@ -136,6 +123,7 @@ export function useDraftsTable({
 
   const handleResetColumns = React.useCallback(() => {
     setColumnVisibility({
+      category: false, // Keep category column hidden
       gptRequest: false,
       gptResponse: false,
       createdAt: false,

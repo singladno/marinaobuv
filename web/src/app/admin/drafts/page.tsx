@@ -8,10 +8,21 @@ import { useDrafts } from '@/hooks/useDrafts';
 import { useCategories } from '@/hooks/useCategories';
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { TablePagination } from '@/components/ui/TablePagination';
 
 export default function AdminDraftsPage() {
-  const { data, loading, error, reload, reloadSilent, status, setStatus } =
-    useDrafts();
+  const {
+    data,
+    loading,
+    error,
+    reload,
+    reloadSilent,
+    status,
+    setStatus,
+    pagination,
+    goToPage,
+    changePageSize,
+  } = useDrafts();
   const { categories, loading: categoriesLoading } = useCategories();
   const { addNotification } = useNotifications();
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
@@ -39,14 +50,11 @@ export default function AdminDraftsPage() {
     [reloadSilent]
   );
   const approve = async () => {
-    const categoryId = prompt('Category ID to place products into:');
-    if (!categoryId) return;
-
     try {
       const res = await fetch(`/api/admin/drafts/approve`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
-        body: JSON.stringify({ ids: selectedIds, categoryId }),
+        body: JSON.stringify({ ids: selectedIds }),
       });
 
       if (!res.ok) {
@@ -158,22 +166,38 @@ export default function AdminDraftsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <DraftsTable
-        data={data}
-        selected={selected}
-        onToggle={toggle}
-        onPatch={inlinePatch}
-        status={status}
-        onStatusChange={setStatus}
-        onReload={reload}
-        onApprove={approve}
-        onConvertToCatalog={convertToCatalog}
-        onBulkDelete={handleBulkDeleteClick}
-        selectedCount={selectedIds.length}
-        loading={loading || categoriesLoading}
-        error={error}
-        categories={categories}
-      />
+      {/* Table with reserved space for pagination */}
+      <div className="min-h-0 flex-1">
+        <DraftsTable
+          data={data}
+          selected={selected}
+          onToggle={toggle}
+          onPatch={inlinePatch}
+          status={status}
+          onStatusChange={setStatus}
+          onReload={reload}
+          onApprove={approve}
+          onConvertToCatalog={convertToCatalog}
+          onBulkDelete={handleBulkDeleteClick}
+          selectedCount={selectedIds.length}
+          loading={loading || categoriesLoading}
+          error={error}
+          categories={categories}
+        />
+      </div>
+
+      {/* Pagination - Fixed at bottom */}
+      <div className="flex-shrink-0">
+        <TablePagination
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.total}
+          pageSize={pagination.pageSize}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+          loading={loading}
+        />
+      </div>
 
       <ConfirmationModal
         isOpen={showDeleteModal}

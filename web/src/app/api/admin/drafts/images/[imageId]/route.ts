@@ -19,9 +19,6 @@ export async function PATCH(
     const updatedImage = await prisma.waDraftProductImage.update({
       where: { id: imageId },
       data: { isActive },
-      include: {
-        draftProduct: true,
-      },
     });
 
     return NextResponse.json({

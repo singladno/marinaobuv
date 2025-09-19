@@ -18,7 +18,11 @@ interface ImageThumbnailProps {
     alt?: string | null;
   };
   onImageClick: (index: number) => void;
-  onImageToggle: (imageId: string, isActive: boolean, event: React.MouseEvent) => void;
+  onImageToggle: (
+    imageId: string,
+    isActive: boolean,
+    event: React.MouseEvent
+  ) => void;
   isUpdating: boolean;
   index: number;
 }
@@ -34,7 +38,7 @@ export function ImageThumbnail({
   const isWAParser = isWAParserImage(image.url);
   const sanitizedUrl = sanitizeImageUrl(image.url);
 
-  const isActive = image.isActive !== false;
+  const isActive = image.isActive === true;
   const imageOpacity = isActive ? 'opacity-100' : 'opacity-30';
 
   const borderClasses = image.isPrimary
@@ -44,11 +48,11 @@ export function ImageThumbnail({
       : 'border border-gray-200 dark:border-gray-700';
 
   const badge = image.isPrimary ? (
-    <span className="absolute top-0 left-0 m-0.5 rounded bg-blue-500 px-1 text-[10px] text-white">
+    <span className="absolute left-0 top-0 m-0.5 rounded bg-blue-500 px-1 text-[10px] text-white">
       ★
     </span>
   ) : image.isFalseImage ? (
-    <span className="absolute top-0 left-0 m-0.5 rounded bg-red-500 px-1 text-[10px] text-white">
+    <span className="absolute left-0 top-0 m-0.5 rounded bg-red-500 px-1 text-[10px] text-white">
       ✗
     </span>
   ) : image.color ? (
@@ -58,10 +62,7 @@ export function ImageThumbnail({
   ) : null;
 
   return (
-    <div
-      key={image.id}
-      className="group relative h-12 w-12 flex-shrink-0"
-    >
+    <div key={image.id} className="group relative h-12 w-12 flex-shrink-0">
       <button
         onClick={() => onImageClick(index)}
         className={`relative h-full w-full overflow-hidden rounded-md border transition-colors hover:border-blue-300 dark:hover:border-blue-600 ${borderClasses}`}
@@ -75,10 +76,7 @@ export function ImageThumbnail({
           onError={e => {
             const target = e.target as HTMLImageElement;
             target.style.display = 'none';
-            console.error(
-              'Failed to load WA parser image:',
-              thumbnailUrl
-            );
+            console.error('Failed to load WA parser image:', thumbnailUrl);
           }}
         />
         {badge}

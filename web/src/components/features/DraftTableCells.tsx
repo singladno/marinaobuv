@@ -112,8 +112,8 @@ export function ImagesCell({
         <ImageActionButton
           imageId={hoveredImageId}
           isActive={
-            sortedImages.find(img => img.id === hoveredImageId)?.isActive !==
-            false
+            sortedImages.find(img => img.id === hoveredImageId)?.isActive ===
+            true
           }
           isUpdating={isUpdating === hoveredImageId}
           onToggle={handleImageToggle}

@@ -11,61 +11,66 @@ export async function GET(req: NextRequest) {
     const skip = parseInt(searchParams.get('skip') || '0', 10);
     const status = searchParams.get('status') || undefined;
 
-    const drafts = await prisma.waDraftProduct.findMany({
-      take,
-      skip,
-      where: { status: status as string | undefined, isDeleted: false },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        messageId: true,
-        providerId: true,
-        provider: {
-          select: { id: true, name: true, phone: true, place: true },
-        },
-        name: true,
-        categoryId: true,
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            path: true,
+    const where = { status: status as string | undefined, isDeleted: false };
+
+    const [drafts, total] = await Promise.all([
+      prisma.waDraftProduct.findMany({
+        take,
+        skip,
+        where,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          messageId: true,
+          providerId: true,
+          provider: {
+            select: { id: true, name: true, phone: true, place: true },
           },
-        },
-        pricePair: true,
-        currency: true,
-        packPairs: true,
-        priceBox: true,
-        material: true,
-        gender: true,
-        season: true,
-        description: true,
-        providerDiscount: true,
-        sizes: true,
-        status: true,
-        isDeleted: true,
-        createdAt: true,
-        updatedAt: true,
-        images: {
-          select: {
-            id: true,
-            url: true,
-            isPrimary: true,
-            sort: true,
-            alt: true,
-            isFalseImage: true,
-            isActive: true,
-            color: true,
+          name: true,
+          categoryId: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              path: true,
+            },
           },
+          pricePair: true,
+          currency: true,
+          packPairs: true,
+          priceBox: true,
+          material: true,
+          gender: true,
+          season: true,
+          description: true,
+          providerDiscount: true,
+          sizes: true,
+          status: true,
+          isDeleted: true,
+          createdAt: true,
+          updatedAt: true,
+          images: {
+            select: {
+              id: true,
+              url: true,
+              isPrimary: true,
+              sort: true,
+              alt: true,
+              isFalseImage: true,
+              isActive: true,
+              color: true,
+            },
+          },
+          gptRequest: true,
+          rawGptResponse: true,
+          gptRequest2: true,
+          rawGptResponse2: true,
+          source: true,
         },
-        gptRequest: true,
-        rawGptResponse: true,
-        gptRequest2: true,
-        rawGptResponse2: true,
-        source: true,
-      },
-    });
+      }),
+      prisma.waDraftProduct.count({ where }),
+    ]);
 
     // Fetch message data for all source message IDs
     const allSourceIds = drafts
@@ -120,7 +125,13 @@ export async function GET(req: NextRequest) {
           : null,
     }));
 
-    return NextResponse.json({ drafts: draftsWithMessages });
+    return NextResponse.json({
+      drafts: draftsWithMessages,
+      total,
+      page: Math.floor(skip / take) + 1,
+      pageSize: take,
+      totalPages: Math.ceil(total / take),
+    });
   } catch (e: any) {
     const status = e?.status ?? 500;
     return NextResponse.json(

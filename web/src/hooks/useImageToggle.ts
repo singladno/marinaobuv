@@ -21,12 +21,15 @@ export function useImageToggle() {
           throw new Error('Failed to update image status');
         }
 
+        const result = await response.json();
         setSavingStatus({ isSaving: false, message: 'Сохранено' });
 
         // Clear success message after 2 seconds
         setTimeout(() => {
           setSavingStatus({ isSaving: false, message: '' });
         }, 2000);
+
+        return result.image;
       } catch (error) {
         console.error('Failed to toggle image status:', error);
         setSavingStatus({ isSaving: false, message: 'Ошибка сохранения' });
@@ -35,6 +38,7 @@ export function useImageToggle() {
         setTimeout(() => {
           setSavingStatus({ isSaving: false, message: '' });
         }, 3000);
+        throw error;
       }
     },
     []
