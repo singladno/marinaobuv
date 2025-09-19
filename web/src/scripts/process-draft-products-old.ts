@@ -256,13 +256,7 @@ async function processMessageGroupToDraft(
         : null,
     };
 
-    // Validate that we have at least a name
-    if (!productData.name) {
-      console.log(
-        `No product name extracted from group ${groupKey} - skipping`
-      );
-      return;
-    }
+    // Name will be filled during second phase (image analysis)
 
     // Note: Media handling will be implemented separately using WaDraftProductImage model
 
@@ -448,13 +442,7 @@ async function processMessageToDraft(messageId: string): Promise<void> {
         : null,
     };
 
-    // Validate that we have at least a name
-    if (!productData.name) {
-      console.log(
-        `No product name extracted from message ${messageId} - skipping`
-      );
-      return;
-    }
+    // Name will be filled during second phase (image analysis)
 
     // Ensure providerId exists or derive it from message
     let providerId: string | null = message.providerId;

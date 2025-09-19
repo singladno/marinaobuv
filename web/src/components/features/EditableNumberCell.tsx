@@ -1,35 +1,62 @@
 import * as React from 'react';
 
-interface EditableCellProps {
-  value: string | null;
-  onBlur: (value: string | null) => void;
-  placeholder: string;
+interface EditableNumberCellProps {
+  value: number | null;
+  onBlur: (value: number | null) => void;
+  placeholder?: string;
   'aria-label': string;
+  min?: number;
+  max?: number;
   disabled?: boolean;
 }
 
-export function EditableCell({
+export function EditableNumberCell({
   value,
   onBlur,
-  placeholder,
+  placeholder = 'Введите число',
   'aria-label': ariaLabel,
+  min,
+  max,
   disabled = false,
-}: EditableCellProps) {
+}: EditableNumberCellProps) {
   const [isEditing, setIsEditing] = React.useState(false);
-  const [editValue, setEditValue] = React.useState(value || '');
+  const [editValue, setEditValue] = React.useState(
+    value !== null ? value.toString() : ''
+  );
 
   React.useEffect(() => {
-    setEditValue(value || '');
+    setEditValue(value !== null ? value.toString() : '');
   }, [value]);
 
   const handleSave = () => {
-    const trimmedValue = editValue.trim() || null;
-    onBlur(trimmedValue);
+    const trimmedValue = editValue.trim();
+    if (trimmedValue === '') {
+      onBlur(null);
+    } else {
+      const num = parseInt(trimmedValue, 10);
+      if (!isNaN(num) && num >= 0) {
+        // Check min/max constraints if provided
+        if (min !== undefined && num < min) {
+          setEditValue(value !== null ? value.toString() : '');
+          setIsEditing(false);
+          return;
+        }
+        if (max !== undefined && num > max) {
+          setEditValue(value !== null ? value.toString() : '');
+          setIsEditing(false);
+          return;
+        }
+        onBlur(num);
+      } else {
+        // Invalid input, revert to original value
+        setEditValue(value !== null ? value.toString() : '');
+      }
+    }
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditValue(value || '');
+    setEditValue(value !== null ? value.toString() : '');
     setIsEditing(false);
   };
 
@@ -44,7 +71,9 @@ export function EditableCell({
   if (isEditing) {
     return (
       <input
-        type="text"
+        type="number"
+        min={min}
+        max={max}
         value={editValue}
         onChange={e => setEditValue(e.target.value)}
         onBlur={handleSave}
@@ -61,14 +90,16 @@ export function EditableCell({
     <button
       onClick={() => !disabled && setIsEditing(true)}
       disabled={disabled}
-      className={`w-full text-left ${
+      className={`w-full text-center ${
         disabled
           ? 'cursor-not-allowed text-gray-400 dark:text-gray-500'
           : 'text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400'
       }`}
       aria-label={ariaLabel}
     >
-      {value || (
+      {value !== null ? (
+        <span className="font-medium">{value}</span>
+      ) : (
         <span className="text-gray-400 dark:text-gray-500">{placeholder}</span>
       )}
     </button>

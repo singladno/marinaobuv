@@ -57,7 +57,7 @@ export async function createDraftProduct(
     data: {
       messageId,
       providerId,
-      name: productData.name!,
+      name: productData.name,
       pricePair: productData.pricePair,
       currency: productData.currency,
       packPairs: productData.packPairs,

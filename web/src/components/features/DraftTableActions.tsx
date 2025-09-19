@@ -6,6 +6,8 @@ interface DraftTableActionsProps {
   onApprove?: () => void;
   onConvertToCatalog?: () => void;
   onBulkDelete?: () => void;
+  onBulkRestore?: () => void;
+  onBulkPermanentDelete?: () => void;
   onReload?: () => void;
   onOpenSettings: () => void;
   onRunAIScript?: () => void;
@@ -30,6 +32,8 @@ export function DraftTableActions({
   onApprove,
   onConvertToCatalog,
   onBulkDelete,
+  onBulkRestore,
+  onBulkPermanentDelete,
   onReload,
   onOpenSettings,
   onRunAIScript,
@@ -47,7 +51,11 @@ export function DraftTableActions({
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-3">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-            {status === 'approved' ? 'Одобренные товары' : 'Черновики товаров'}
+            {status === 'approved'
+              ? 'Одобренные товары'
+              : status === 'deleted'
+                ? 'Удаленные товары'
+                : 'Черновики товаров'}
           </h3>
         </div>
 
@@ -133,6 +141,44 @@ export function DraftTableActions({
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-500 dark:hover:bg-green-600"
             >
               Добавить в каталог ({selectedCount ?? 0})
+            </button>
+
+            {/* Saving Status Indicator */}
+            {savingStatus && savingStatus.message && (
+              <div
+                className={`flex items-center space-x-2 rounded-lg px-3 py-1 text-sm font-medium ${
+                  savingStatus.isSaving
+                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                    : savingStatus.message.includes('Ошибка')
+                      ? 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300'
+                      : 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300'
+                }`}
+              >
+                {savingStatus.isSaving && (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                )}
+                <span>{savingStatus.message}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {status === 'deleted' && (
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={onBulkRestore}
+              disabled={!selectedCount}
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-500 dark:hover:bg-green-600"
+            >
+              Восстановить ({selectedCount ?? 0})
+            </button>
+
+            <button
+              onClick={onBulkPermanentDelete}
+              disabled={!selectedCount}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-500 dark:hover:bg-red-600"
+            >
+              Удалить навсегда ({selectedCount ?? 0})
             </button>
 
             {/* Saving Status Indicator */}

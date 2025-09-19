@@ -145,13 +145,7 @@ async function processMessageGroupToDraft(
         : null,
     };
 
-    // Validate that we have at least a name
-    if (!productData.name) {
-      console.log(
-        `No product name extracted from group ${groupKey} - skipping`
-      );
-      return;
-    }
+    // Name will be filled during second phase (image analysis)
 
     // Create draft product for the first message in the group
     const firstMessage = messages[0];

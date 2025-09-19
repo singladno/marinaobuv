@@ -131,12 +131,7 @@ export async function processMessageGroupToDraft(
     // Convert to our DraftProductData format
     const productData = convertToProductData(productDraft);
 
-    // Validate that we have at least a name
-    if (!productData.name) {
-      throw new Error(
-        `No product name extracted from group ${groupKey}. GPT Response: ${JSON.stringify(productDraft)}`
-      );
-    }
+    // Name will be filled during second phase (image analysis)
 
     // Get or create provider
     const firstMessage = messages[0];

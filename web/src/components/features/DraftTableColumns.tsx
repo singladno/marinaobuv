@@ -10,6 +10,8 @@ import { ProviderCell } from './ProviderCell';
 import { PriceCell } from './PriceCell';
 import { BadgeCell } from './BadgeCell';
 import { EditableCell } from './EditableCell';
+import { EditablePriceCell } from './EditablePriceCell';
+import { EditableNumberCell } from './EditableNumberCell';
 import { SourceCell } from './SourceCell';
 import { GptRequestCell } from './GptRequestCell';
 import { GptResponseCell } from './GptResponseCell';
@@ -61,6 +63,8 @@ SelectionCheckbox.displayName = 'SelectionCheckbox';
 
 // Memoized cell components to prevent re-renders
 const MemoizedEditableCell = React.memo(EditableCell);
+const MemoizedEditablePriceCell = React.memo(EditablePriceCell);
+const MemoizedEditableNumberCell = React.memo(EditableNumberCell);
 const MemoizedCategoryCell = React.memo(CategoryCell);
 const MemoizedProviderCell = React.memo(ProviderCell);
 const MemoizedPriceCell = React.memo(PriceCell);
@@ -135,6 +139,7 @@ export function createDraftTableColumns(
             onBlur={value => onPatch(info.row.original.id, { name: value })}
             placeholder="Введите название"
             aria-label="Название"
+            disabled={(info as any).isProcessing}
           />
         ),
       })
@@ -183,9 +188,12 @@ export function createDraftTableColumns(
       id: 'pricePairRub',
       header: () => 'Цена/пара (₽)',
       cell: info => (
-        <MemoizedPriceCell
+        <MemoizedEditablePriceCell
           value={info.row.original.pricePair}
-          formatter={priceFormatter}
+          onBlur={value => onPatch(info.row.original.id, { pricePair: value })}
+          placeholder="Введите цену"
+          aria-label="Цена за пару"
+          disabled={(info as any).isProcessing}
         />
       ),
     })
@@ -196,15 +204,14 @@ export function createDraftTableColumns(
       id: 'packPairs',
       header: () => 'Пар в упаковке',
       cell: info => (
-        <div className="text-center">
-          {info.row.original.packPairs ? (
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {info.row.original.packPairs}
-            </span>
-          ) : (
-            <span className="text-gray-400 dark:text-gray-500">—</span>
-          )}
-        </div>
+        <MemoizedEditableNumberCell
+          value={info.row.original.packPairs}
+          onBlur={value => onPatch(info.row.original.id, { packPairs: value })}
+          placeholder="Введите количество"
+          aria-label="Пар в упаковке"
+          min={1}
+          disabled={(info as any).isProcessing}
+        />
       ),
     })
   );
@@ -243,9 +250,14 @@ export function createDraftTableColumns(
       id: 'providerDiscountRub',
       header: () => 'Скидка поставщика (₽)',
       cell: info => (
-        <PriceCell
+        <MemoizedEditablePriceCell
           value={info.row.original.providerDiscount}
-          formatter={value => (value / 100).toLocaleString('ru-RU')}
+          onBlur={value =>
+            onPatch(info.row.original.id, { providerDiscount: value })
+          }
+          placeholder="Введите скидку"
+          aria-label="Скидка поставщика"
+          disabled={(info as any).isProcessing}
         />
       ),
     })

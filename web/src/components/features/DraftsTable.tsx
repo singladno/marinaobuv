@@ -22,6 +22,8 @@ export function DraftsTable({
   onApprove,
   onConvertToCatalog,
   onBulkDelete,
+  onBulkRestore,
+  onBulkPermanentDelete,
   onRunAIScript,
   selectedCount,
   loading = false,
@@ -41,6 +43,8 @@ export function DraftsTable({
   onApprove?: () => void;
   onConvertToCatalog?: () => void;
   onBulkDelete?: () => void;
+  onBulkRestore?: () => void;
+  onBulkPermanentDelete?: () => void;
   onRunAIScript?: () => void;
   selectedCount?: number;
   loading?: boolean;
@@ -102,6 +106,7 @@ export function DraftsTable({
         >
           <Tab value="draft">Черновики</Tab>
           <Tab value="approved">Одобрено</Tab>
+          <Tab value="deleted">Удаленные</Tab>
         </Tabs>
       </div>
 
@@ -112,6 +117,8 @@ export function DraftsTable({
         onApprove={onApprove}
         onConvertToCatalog={onConvertToCatalog}
         onBulkDelete={onBulkDelete}
+        onBulkRestore={onBulkRestore}
+        onBulkPermanentDelete={onBulkPermanentDelete}
         onReload={onReload}
         onRunAIScript={onRunAIScript}
         onOpenSettings={() => setIsSettingsOpen(true)}

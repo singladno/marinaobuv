@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
     const skip = parseInt(searchParams.get('skip') || '0', 10);
     const status = searchParams.get('status') || undefined;
 
-    const where = { status: status as string | undefined, isDeleted: false };
+    const where =
+      status === 'deleted'
+        ? { isDeleted: true }
+        : { status: status as string | undefined, isDeleted: false };
 
     const [drafts, total] = await Promise.all([
       prisma.waDraftProduct.findMany({

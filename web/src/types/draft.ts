@@ -1,14 +1,6 @@
 import { z } from 'zod';
 
 export const ProductDraftSchema = z.object({
-  name: z.string().min(1).optional(),
-  categoryId: z
-    .string()
-    .uuid()
-    .or(z.string().min(1))
-    .nullable()
-    .optional()
-    .transform(val => (val == null || val === '' ? undefined : val)),
   season: z
     .string()
     .nullable()

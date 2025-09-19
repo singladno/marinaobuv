@@ -26,15 +26,48 @@ export default function AdminDraftsPage() {
   } = useDrafts();
   const { categories, loading: categoriesLoading } = useCategories();
   const { addNotification } = useNotifications();
-  const { currentProcessingDraft, isProcessing } = useAIStatus(status);
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+  const [showRestoreModal, setShowRestoreModal] = React.useState(false);
+  const [showPermanentDeleteModal, setShowPermanentDeleteModal] =
+    React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isRestoring, setIsRestoring] = React.useState(false);
+  const [isPermanentlyDeleting, setIsPermanentlyDeleting] =
+    React.useState(false);
   const [isRunningAI, setIsRunningAI] = React.useState(false);
+
+  const {
+    currentProcessingDraft,
+    isProcessing,
+    data: aiStatusData,
+    refetch: refetchAIStatus,
+  } = useAIStatus(status, isRunningAI);
   const selectedIds = React.useMemo(
     () => Object.keys(selected).filter(k => selected[k]),
     [selected]
   );
+
+  // Merge table data with AI status data to show real-time AI status
+  const mergedData = React.useMemo(() => {
+    if (!aiStatusData?.drafts) return data;
+
+    const aiStatusMap = new Map(
+      aiStatusData.drafts.map(draft => [draft.id, draft])
+    );
+
+    return data.map(draft => {
+      const aiStatus = aiStatusMap.get(draft.id);
+      if (aiStatus) {
+        return {
+          ...draft,
+          aiStatus: aiStatus.aiStatus,
+          aiProcessedAt: aiStatus.aiProcessedAt,
+        };
+      }
+      return draft;
+    });
+  }, [data, aiStatusData]);
 
   const toggle = React.useCallback((id: string) => {
     setSelected((m: Record<string, boolean>) => ({ ...m, [id]: !m[id] }));
@@ -44,7 +77,7 @@ export default function AdminDraftsPage() {
     (selectAll: boolean) => {
       if (selectAll) {
         // Select all items
-        const allSelected = data.reduce(
+        const allSelected = mergedData.reduce(
           (acc, item) => {
             acc[item.id] = true;
             return acc;
@@ -57,7 +90,7 @@ export default function AdminDraftsPage() {
         setSelected({});
       }
     },
-    [data]
+    [mergedData]
   );
 
   const inlinePatch = React.useCallback(
@@ -189,6 +222,96 @@ export default function AdminDraftsPage() {
     }
   };
 
+  const handleBulkRestoreClick = () => {
+    setShowRestoreModal(true);
+  };
+
+  const handleBulkRestoreConfirm = async () => {
+    setIsRestoring(true);
+
+    try {
+      const res = await fetch(`/api/admin/drafts/bulk-restore`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        addNotification({
+          type: 'error',
+          title: 'Ошибка при восстановлении',
+          message: errorText,
+        });
+        return;
+      }
+
+      const result = await res.json();
+      addNotification({
+        type: 'success',
+        title: 'Успешно восстановлено',
+        message: `Восстановлено ${result.count} черновиков`,
+      });
+
+      await reload();
+      setSelected({});
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка при восстановлении',
+        message: 'Произошла неожиданная ошибка',
+      });
+    } finally {
+      setIsRestoring(false);
+      setShowRestoreModal(false);
+    }
+  };
+
+  const handleBulkPermanentDeleteClick = () => {
+    setShowPermanentDeleteModal(true);
+  };
+
+  const handleBulkPermanentDeleteConfirm = async () => {
+    setIsPermanentlyDeleting(true);
+
+    try {
+      const res = await fetch(`/api/admin/drafts/bulk-permanent-delete`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        addNotification({
+          type: 'error',
+          title: 'Ошибка при удалении навсегда',
+          message: errorText,
+        });
+        return;
+      }
+
+      const result = await res.json();
+      addNotification({
+        type: 'success',
+        title: 'Успешно удалено навсегда',
+        message: `Удалено навсегда ${result.count} черновиков`,
+      });
+
+      await reload();
+      setSelected({});
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка при удалении навсегда',
+        message: 'Произошла неожиданная ошибка',
+      });
+    } finally {
+      setIsPermanentlyDeleting(false);
+      setShowPermanentDeleteModal(false);
+    }
+  };
+
   const runAIAnalysis = async () => {
     setIsRunningAI(true);
 
@@ -230,6 +353,9 @@ export default function AdminDraftsPage() {
 
       // Reload data to show updated AI status immediately
       await reload();
+
+      // Also refetch AI status to get immediate updates
+      await refetchAIStatus();
     } catch (error) {
       addNotification({
         type: 'error',
@@ -246,7 +372,7 @@ export default function AdminDraftsPage() {
       {/* Table with reserved space for pagination */}
       <div className="min-h-0 flex-1">
         <DraftsTable
-          data={data}
+          data={mergedData}
           selected={selected}
           onToggle={toggle}
           onSelectAll={selectAll}
@@ -257,6 +383,8 @@ export default function AdminDraftsPage() {
           onApprove={approve}
           onConvertToCatalog={convertToCatalog}
           onBulkDelete={handleBulkDeleteClick}
+          onBulkRestore={handleBulkRestoreClick}
+          onBulkPermanentDelete={handleBulkPermanentDeleteClick}
           onRunAIScript={runAIAnalysis}
           selectedCount={selectedIds.length}
           loading={loading || categoriesLoading}
@@ -290,6 +418,30 @@ export default function AdminDraftsPage() {
         cancelText="Отмена"
         variant="danger"
         isLoading={isDeleting}
+      />
+
+      <ConfirmationModal
+        isOpen={showRestoreModal}
+        onClose={() => setShowRestoreModal(false)}
+        onConfirm={handleBulkRestoreConfirm}
+        title="Подтверждение восстановления"
+        message={`Вы уверены, что хотите восстановить ${selectedIds.length} выбранных черновиков?`}
+        confirmText="Восстановить"
+        cancelText="Отмена"
+        variant="info"
+        isLoading={isRestoring}
+      />
+
+      <ConfirmationModal
+        isOpen={showPermanentDeleteModal}
+        onClose={() => setShowPermanentDeleteModal(false)}
+        onConfirm={handleBulkPermanentDeleteConfirm}
+        title="Подтверждение удаления навсегда"
+        message={`Вы уверены, что хотите удалить навсегда ${selectedIds.length} выбранных черновиков? Это действие нельзя отменить и данные будут потеряны навсегда.`}
+        confirmText="Удалить навсегда"
+        cancelText="Отмена"
+        variant="danger"
+        isLoading={isPermanentlyDeleting}
       />
     </div>
   );

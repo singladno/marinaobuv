@@ -1,35 +1,48 @@
 import * as React from 'react';
 
-interface EditableCellProps {
-  value: string | null;
-  onBlur: (value: string | null) => void;
-  placeholder: string;
+interface EditablePriceCellProps {
+  value: number | null; // Value in kopecks
+  onBlur: (value: number | null) => void; // Callback with value in kopecks
+  placeholder?: string;
   'aria-label': string;
   disabled?: boolean;
 }
 
-export function EditableCell({
+export function EditablePriceCell({
   value,
   onBlur,
-  placeholder,
+  placeholder = 'Введите сумму',
   'aria-label': ariaLabel,
   disabled = false,
-}: EditableCellProps) {
+}: EditablePriceCellProps) {
   const [isEditing, setIsEditing] = React.useState(false);
-  const [editValue, setEditValue] = React.useState(value || '');
+  const [editValue, setEditValue] = React.useState(
+    value !== null ? (value / 100).toString() : ''
+  );
 
   React.useEffect(() => {
-    setEditValue(value || '');
+    setEditValue(value !== null ? (value / 100).toString() : '');
   }, [value]);
 
   const handleSave = () => {
-    const trimmedValue = editValue.trim() || null;
-    onBlur(trimmedValue);
+    const trimmedValue = editValue.trim();
+    if (trimmedValue === '') {
+      onBlur(null);
+    } else {
+      const rubles = parseFloat(trimmedValue);
+      if (!isNaN(rubles) && rubles >= 0) {
+        const kopecks = Math.round(rubles * 100);
+        onBlur(kopecks);
+      } else {
+        // Invalid input, revert to original value
+        setEditValue(value !== null ? (value / 100).toString() : '');
+      }
+    }
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditValue(value || '');
+    setEditValue(value !== null ? (value / 100).toString() : '');
     setIsEditing(false);
   };
 
@@ -44,7 +57,9 @@ export function EditableCell({
   if (isEditing) {
     return (
       <input
-        type="text"
+        type="number"
+        step="0.01"
+        min="0"
         value={editValue}
         onChange={e => setEditValue(e.target.value)}
         onBlur={handleSave}
@@ -57,6 +72,9 @@ export function EditableCell({
     );
   }
 
+  const displayValue =
+    value !== null ? (value / 100).toLocaleString('ru-RU') : null;
+
   return (
     <button
       onClick={() => !disabled && setIsEditing(true)}
@@ -68,7 +86,9 @@ export function EditableCell({
       }`}
       aria-label={ariaLabel}
     >
-      {value || (
+      {displayValue ? (
+        <span className="font-medium">{displayValue}</span>
+      ) : (
         <span className="text-gray-400 dark:text-gray-500">{placeholder}</span>
       )}
     </button>

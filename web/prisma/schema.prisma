@@ -122,7 +122,7 @@ model WaDraftProduct {
   message        WhatsAppMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
   providerId     String
   provider       Provider              @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  name           String
+  name           String?
   pricePair      Int? // kopecks
   currency       String                @default("RUB")
   packPairs      Int?

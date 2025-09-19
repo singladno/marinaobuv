@@ -16,7 +16,7 @@ interface AIStatusData {
   };
 }
 
-export function useAIStatus(status?: string) {
+export function useAIStatus(status?: string, isRunningAI?: boolean) {
   const [data, setData] = useState<AIStatusData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,15 +49,15 @@ export function useAIStatus(status?: string) {
   useEffect(() => {
     fetchAIStatus();
 
-    // Poll every 2 seconds if there are processing items
+    // Poll every 2 seconds if there are processing items OR if AI is running
     const interval = setInterval(() => {
-      if (data?.counts.processing > 0) {
+      if (data?.counts.processing > 0 || isRunningAI) {
         fetchAIStatus();
       }
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [fetchAIStatus, data?.counts.processing]);
+  }, [fetchAIStatus, data?.counts.processing, isRunningAI]);
 
   const isProcessing = data?.counts.processing > 0;
   const currentProcessingDraft = data?.drafts.find(

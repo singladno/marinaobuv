@@ -5,7 +5,6 @@ export function getSystemPrompt(categoryTreeJson?: string): string {
   return `You are a product data extraction assistant for a shoe store.
  Extract product information from the given text and return STRICT JSON matching this schema:
  {
-   "name": string, // REQUIRED. If not present, synthesize a short descriptive name (e.g., "Товар")
    "season": "spring"|"summer"|"autumn"|"winter" (optional),
    "typeSlug": string (optional),
    "pricePair": number (in kopecks, optional),
@@ -15,8 +14,7 @@ export function getSystemPrompt(categoryTreeJson?: string): string {
    "gender": "female"|"male"|"unisex" (optional),
    "sizes": Array<{size: string, count: number}> (optional),
    "notes": string (optional),
-   "providerDiscount": number (in kopecks, optional),
-   "categoryId": string (optional) // ID from our provided categories tree
+   "providerDiscount": number (in kopecks, optional)
  }
  
  Rules:
@@ -51,17 +49,9 @@ Special Case (compact range with total pairs):
  
  General Rules:
  - Return only valid JSON, no additional text
- - The object MUST always include a non-empty name. If you cannot infer, set name to "Не указано".
  - If information is not clear, omit the field entirely (do not include null values)
  - Be conservative with assumptions
- - If there are multiple product names mentioned, use the most descriptive one
  - Combine all price information from different messages
-
-Category Selection:
-- You are provided a categories tree with node ids and names.
-- Choose the SINGLE best matching category id and set it to categoryId. If unsure, omit categoryId.
-- Categories JSON (id, name, slug, path, children):
-${categoryTreeJson ?? '[]'}
  
  Size Examples (what to extract vs what NOT to extract):
  ✅ CORRECT: "размеры 36/37/38" → sizes: [{"size": "36", "count": 1}, {"size": "37", "count": 1}, {"size": "38", "count": 1}], packPairs: 3

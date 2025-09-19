@@ -75,9 +75,15 @@ async function processDrafts(
 ): Promise<AnalysisResult[]> {
   const results: AnalysisResult[] = [];
 
-  for (const draft of drafts) {
+  for (let i = 0; i < drafts.length; i++) {
+    const draft = drafts[i];
     const result = await analyzeDraft(draft, categoryTreeJson);
     results.push(result);
+
+    // Add a small delay between requests to avoid overwhelming the API
+    if (i < drafts.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
 
   return results;

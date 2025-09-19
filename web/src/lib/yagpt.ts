@@ -2,7 +2,6 @@ import { ProductDraftSchema, type ProductDraft } from '@/types/draft';
 
 import { env } from './env';
 import { getSystemPrompt, getValidationPrompt } from './gpt-prompt';
-import { getCategoryTree } from './catalog';
 
 // Moved schema and types to @/types/draft to keep this file small
 
@@ -110,13 +109,6 @@ export async function normalizeTextToDraft(
       ? `Bearer ${env.YC_IAM_TOKEN}`
       : `Api-Key ${env.YC_API_KEY}`;
 
-    // fetch category tree to pass into the system prompt
-    let categoryTreeJson = '[]';
-    try {
-      const tree = await getCategoryTree();
-      categoryTreeJson = JSON.stringify(tree);
-    } catch {}
-
     const response = await fetch(
       `https://llm.api.cloud.yandex.net/foundationModels/v1/completion`,
       {
@@ -135,7 +127,7 @@ export async function normalizeTextToDraft(
           messages: [
             {
               role: 'system',
-              text: getSystemPrompt(categoryTreeJson),
+              text: getSystemPrompt(),
             },
             {
               role: 'user',

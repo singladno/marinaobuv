@@ -24,14 +24,9 @@ export const MemoizedTableRow = React.memo(
         key={row.id}
         className={`border-b border-gray-100 dark:border-gray-800 ${
           isProcessing
-            ? 'pointer-events-none bg-gradient-to-r from-purple-50 to-purple-100 shadow-lg shadow-purple-200/50 dark:from-purple-900/20 dark:to-purple-800/20 dark:shadow-purple-900/20'
+            ? 'pointer-events-none'
             : 'hover:bg-gray-50 dark:hover:bg-gray-800'
         }`}
-        style={{
-          ...(isProcessing && {
-            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-          }),
-        }}
       >
         {/* AI Processing Indicator - Left border */}
         {isProcessing && (
@@ -62,19 +57,19 @@ export const MemoizedTableRow = React.memo(
                   : isFrozenRight
                     ? 'sticky right-0 z-10 border-l border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900'
                     : ''
-              } ${isProcessing ? 'pointer-events-none opacity-75' : ''}`}
+              } ${isProcessing ? 'pointer-events-none' : ''}`}
               style={{
                 ...(isFrozenLeft
                   ? { left: 0 } // Select column: 0px
                   : isFrozenRight
                     ? { right: 0 }
                     : {}),
-                ...(isProcessing && {
-                  backgroundColor: 'transparent',
-                }),
               }}
             >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              {flexRender(cell.column.columnDef.cell, {
+                ...cell.getContext(),
+                isProcessing,
+              })}
             </td>
           );
         })}
