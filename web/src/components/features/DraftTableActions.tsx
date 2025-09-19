@@ -107,20 +107,24 @@ export function DraftTableActions({
 
         {status === 'approved' && (
           <div className="flex items-center space-x-3">
-            <button
-              onClick={onRunAIScript}
-              disabled={isRunningAI}
-              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-purple-500 dark:hover:bg-purple-600"
-            >
-              {isRunningAI ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Анализ...
-                </>
-              ) : (
-                '🤖 Запустить AI анализ'
-              )}
-            </button>
+            {isRunningAI ||
+            (currentProcessingDraft &&
+              currentProcessingDraft.aiStatus === 'ai_processing') ? (
+              <div className="flex items-center space-x-2 rounded-lg bg-purple-50 px-3 py-1 text-sm font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <span>
+                  Обрабатывается:{' '}
+                  {currentProcessingDraft?.name || 'AI анализ запущен...'}
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={onRunAIScript}
+                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600"
+              >
+                🤖 Запустить AI анализ
+              </button>
+            )}
 
             <button
               onClick={onConvertToCatalog}
@@ -129,18 +133,6 @@ export function DraftTableActions({
             >
               Добавить в каталог ({selectedCount ?? 0})
             </button>
-
-            {/* AI Processing Status */}
-            {currentProcessingDraft && (
-              <div className="flex items-center space-x-2 rounded-lg bg-purple-50 px-3 py-1 text-sm font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                <span>
-                  Обрабатывается:{' '}
-                  {currentProcessingDraft.name ||
-                    `ID: ${currentProcessingDraft.id.slice(0, 8)}`}
-                </span>
-              </div>
-            )}
 
             {/* Saving Status Indicator */}
             {savingStatus && savingStatus.message && (

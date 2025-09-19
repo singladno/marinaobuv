@@ -19,6 +19,13 @@ interface DraftTableContentProps {
     message: string;
   };
   onToggle?: (id: string) => void;
+  currentProcessingDraft?: {
+    id: string;
+    name: string | null;
+    aiStatus: string | null;
+    aiProcessedAt: string | null;
+    updatedAt: string;
+  } | null;
 }
 
 export function DraftTableContent({
@@ -29,6 +36,7 @@ export function DraftTableContent({
   hasData,
   savingStatus,
   onToggle,
+  currentProcessingDraft,
 }: DraftTableContentProps) {
   if (loading) {
     return (
@@ -102,6 +110,7 @@ export function DraftTableContent({
               key={row.id}
               row={row}
               onToggle={onToggle || (() => {})}
+              currentProcessingDraft={currentProcessingDraft}
             />
           ))}
         </tbody>

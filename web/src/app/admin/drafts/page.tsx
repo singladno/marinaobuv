@@ -229,7 +229,8 @@ export default function AdminDraftsPage() {
         message: `Запущен анализ ${draftIds.length} товаров`,
       });
 
-      // Don't reload immediately, let the polling handle updates
+      // Reload data to show updated AI status immediately
+      await reload();
     } catch (error) {
       addNotification({
         type: 'error',

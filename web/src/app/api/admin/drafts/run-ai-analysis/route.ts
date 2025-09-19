@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db-node';
+
 import { getCategoryTree } from '@/lib/catalog';
+import { prisma } from '@/lib/db-node';
+import { env } from '@/lib/env';
 import {
   SECOND_ANALYSIS_PROMPT,
   type SecondAnalysisData,
 } from '@/lib/second-prompt';
-import { env } from '@/lib/env';
+
+// Helper function to map Russian gender values to enum values
+function mapGenderToEnum(
+  gender: string | null
+): 'FEMALE' | 'MALE' | 'UNISEX' | null {
+  if (!gender) return null;
+
+  const genderMap: Record<string, 'FEMALE' | 'MALE' | 'UNISEX'> = {
+    женская: 'FEMALE',
+    мужская: 'MALE',
+    унисекс: 'UNISEX',
+  };
+
+  return genderMap[gender.toLowerCase()] || null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,7 +67,7 @@ export async function POST(request: NextRequest) {
       data: {
         aiStatus: 'ai_processing',
         aiProcessedAt: null,
-      },
+      } as any,
     });
 
     for (const draft of drafts) {
@@ -67,7 +83,7 @@ export async function POST(request: NextRequest) {
             data: {
               aiStatus: 'ai_failed',
               aiProcessedAt: new Date(),
-            },
+            } as any,
           });
           continue;
         }
@@ -149,14 +165,14 @@ ${imageUrls.map((url, index) => `Изображение ${index + 1}: ${url}`).j
           data: {
             name: analysisData.name,
             material: analysisData.material,
-            gender: analysisData.gender,
+            gender: mapGenderToEnum(analysisData.gender),
             season: analysisData.season,
             categoryId: analysisData.categoryId,
             rawGptResponse2: data,
             gptRequest2: prompt,
             aiStatus: 'ai_completed',
             aiProcessedAt: new Date(),
-          },
+          } as any,
         });
 
         // Update image colors
@@ -189,7 +205,7 @@ ${imageUrls.map((url, index) => `Изображение ${index + 1}: ${url}`).j
           data: {
             aiStatus: 'ai_failed',
             aiProcessedAt: new Date(),
-          },
+          } as any,
         });
 
         results.push({
