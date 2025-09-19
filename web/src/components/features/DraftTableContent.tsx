@@ -6,6 +6,7 @@ import type { Draft } from '@/types/admin';
 
 import { DraftEmptyState } from './DraftEmptyState';
 import { DraftErrorState } from './DraftErrorState';
+import { MemoizedTableRow } from './MemoizedTableRow';
 
 interface DraftTableContentProps {
   table: any; // Table from react-table
@@ -17,6 +18,7 @@ interface DraftTableContentProps {
     isSaving: boolean;
     message: string;
   };
+  onToggle?: (id: string) => void;
 }
 
 export function DraftTableContent({
@@ -26,6 +28,7 @@ export function DraftTableContent({
   status,
   hasData,
   savingStatus,
+  onToggle,
 }: DraftTableContentProps) {
   if (loading) {
     return (
@@ -50,9 +53,9 @@ export function DraftTableContent({
       <table className="w-full table-auto">
         {/* Header */}
         <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
-          {table.getHeaderGroups().map(headerGroup => (
+          {table.getHeaderGroups().map((headerGroup: any) => (
             <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header, index) => {
+              {headerGroup.headers.map((header: any, index: number) => {
                 const isFrozenLeft = index === 0; // First column only (select)
                 const isFrozenRight = header.column.id === 'actions'; // Last column (actions)
 
@@ -94,40 +97,12 @@ export function DraftTableContent({
 
         {/* Body */}
         <tbody className="bg-white dark:bg-gray-900">
-          {rows.map(row => (
-            <tr
+          {rows.map((row: any) => (
+            <MemoizedTableRow
               key={row.id}
-              className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
-            >
-              {row.getVisibleCells().map((cell, index) => {
-                const isFrozenLeft = index === 0; // First column only (select)
-                const isFrozenRight = cell.column.id === 'actions'; // Last column (actions)
-
-                return (
-                  <td
-                    key={cell.id}
-                    className={`whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${
-                      cell.column.id === 'images' ? 'overflow-visible' : ''
-                    } ${
-                      isFrozenLeft
-                        ? 'sticky left-0 z-10 border-r border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900'
-                        : isFrozenRight
-                          ? 'sticky right-0 z-10 border-l border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900'
-                          : ''
-                    }`}
-                    style={{
-                      ...(isFrozenLeft
-                        ? { left: 0 } // Select column: 0px
-                        : isFrozenRight
-                          ? { right: 0 }
-                          : {}),
-                    }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                );
-              })}
-            </tr>
+              row={row}
+              onToggle={onToggle || (() => {})}
+            />
           ))}
         </tbody>
       </table>

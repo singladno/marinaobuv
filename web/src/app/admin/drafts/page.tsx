@@ -1,36 +1,43 @@
 'use client';
 
+import * as React from 'react';
+
 import { DraftsTable } from '@/components/features/DraftsTable';
 import type { Draft } from '@/types/admin';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useCategories } from '@/hooks/useCategories';
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
-import { useMemo, useState } from 'react';
 
 export default function AdminDraftsPage() {
   const { data, loading, error, reload, reloadSilent, status, setStatus } =
     useDrafts();
   const { categories, loading: categoriesLoading } = useCategories();
   const { addNotification } = useNotifications();
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const selectedIds = useMemo(
+  const [selected, setSelected] = React.useState<Record<string, boolean>>({});
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const selectedIds = React.useMemo(
     () => Object.keys(selected).filter(k => selected[k]),
     [selected]
   );
 
-  const toggle = (id: string) => setSelected(m => ({ ...m, [id]: !m[id] }));
-  const inlinePatch = async (id: string, patch: Partial<Draft>) => {
-    await fetch(`/api/admin/drafts`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
-      body: JSON.stringify({ id, data: patch }),
-    });
-    // Avoid global loader; refresh in background
-    await reloadSilent();
-  };
+  const toggle = React.useCallback((id: string) => {
+    setSelected((m: Record<string, boolean>) => ({ ...m, [id]: !m[id] }));
+  }, []);
+
+  const inlinePatch = React.useCallback(
+    async (id: string, patch: Partial<Draft>) => {
+      await fetch(`/api/admin/drafts`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
+        body: JSON.stringify({ id, data: patch }),
+      });
+      // Avoid global loader; refresh in background
+      await reloadSilent();
+    },
+    [reloadSilent]
+  );
   const approve = async () => {
     const categoryId = prompt('Category ID to place products into:');
     if (!categoryId) return;

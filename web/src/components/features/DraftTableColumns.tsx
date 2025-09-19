@@ -1,4 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table';
+import * as React from 'react';
 
 import type { Draft } from '@/types/admin';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
@@ -18,6 +19,59 @@ type DraftWithSelected = Draft & { selected?: boolean };
 
 const columnHelper = createColumnHelper<DraftWithSelected>();
 
+// Memoized checkbox component to prevent unnecessary re-renders
+const SelectionCheckbox = React.memo(
+  ({
+    id,
+    selected,
+    onToggle,
+  }: {
+    id: string;
+    selected: boolean;
+    onToggle: (id: string) => void;
+  }) => {
+    const handleChange = React.useCallback(() => {
+      onToggle(id);
+    }, [id, onToggle]);
+
+    return (
+      <div className="flex h-full items-center justify-center">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={handleChange}
+          aria-label="Выбрать черновик"
+          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
+        />
+      </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.id === nextProps.id &&
+      prevProps.selected === nextProps.selected &&
+      prevProps.onToggle === nextProps.onToggle
+    );
+  }
+);
+
+SelectionCheckbox.displayName = 'SelectionCheckbox';
+
+// Memoized cell components to prevent re-renders
+const MemoizedEditableCell = React.memo(EditableCell);
+const MemoizedCategoryCell = React.memo(CategoryCell);
+const MemoizedProviderCell = React.memo(ProviderCell);
+const MemoizedPriceCell = React.memo(PriceCell);
+const MemoizedSizesCell = React.memo(SizesCell);
+const MemoizedImagesCell = React.memo(ImagesCell);
+const MemoizedBadgeCell = React.memo(BadgeCell);
+const MemoizedSourceCell = React.memo(SourceCell);
+const MemoizedGptRequestCell = React.memo(GptRequestCell);
+const MemoizedGptResponseCell = React.memo(GptResponseCell);
+
+// Memoized formatters to avoid recreation on every render
+const priceFormatter = (value: number) => (value / 100).toLocaleString('ru-RU');
+
 export function createDraftTableColumns(
   onToggle: (id: string) => void,
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>,
@@ -31,21 +85,17 @@ export function createDraftTableColumns(
       id: 'select',
       header: () => '',
       cell: info => (
-        <div className="flex h-full items-center justify-center">
-          <input
-            type="checkbox"
-            checked={Boolean(info.row.original.selected)}
-            onChange={() => onToggle(info.row.original.id)}
-            aria-label="Выбрать черновик"
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
-          />
-        </div>
+        <SelectionCheckbox
+          id={info.row.original.id}
+          selected={Boolean(info.row.original.selected)}
+          onToggle={onToggle}
+        />
       ),
     }),
     columnHelper.accessor('name', {
       header: () => 'Название',
       cell: info => (
-        <EditableCell
+        <MemoizedEditableCell
           value={info.row.original.name}
           onBlur={value => onPatch(info.row.original.id, { name: value })}
           placeholder="Введите название"
@@ -57,7 +107,7 @@ export function createDraftTableColumns(
       id: 'category',
       header: () => 'Категория',
       cell: info => (
-        <CategoryCell
+        <MemoizedCategoryCell
           category={info.row.original.category}
           categoryId={info.row.original.categoryId}
           onCategoryChange={value =>
@@ -70,15 +120,17 @@ export function createDraftTableColumns(
     columnHelper.display({
       id: 'provider',
       header: () => 'Поставщик',
-      cell: info => <ProviderCell provider={info.row.original.provider} />,
+      cell: info => (
+        <MemoizedProviderCell provider={info.row.original.provider} />
+      ),
     }),
     columnHelper.display({
       id: 'pricePairRub',
       header: () => 'Цена/пара (₽)',
       cell: info => (
-        <PriceCell
+        <MemoizedPriceCell
           value={info.row.original.pricePair}
-          formatter={value => (value / 100).toLocaleString('ru-RU')}
+          formatter={priceFormatter}
         />
       ),
     }),

@@ -9,6 +9,7 @@ import { createDraftTableColumns } from '@/components/features/DraftTableColumns
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import type { Draft } from '@/types/admin';
 
+import { useDraftSelection } from './useDraftSelection';
 import { useImageToggle } from './useImageToggle';
 
 type DraftWithSelected = Draft & { selected?: boolean };
@@ -30,8 +31,10 @@ export function useDraftsTable({
   categories: CategoryNode[];
   onReload?: () => void;
 }) {
-  const [localData, setLocalData] = React.useState<DraftWithSelected[]>(() =>
-    data.map(d => ({ ...d, selected: !!selected[d.id] }))
+  const { localData, setLocalData, handleSelectionToggle } = useDraftSelection(
+    data,
+    selected,
+    onToggle
   );
 
   const [columnVisibility, setColumnVisibility] =
@@ -43,10 +46,6 @@ export function useDraftsTable({
     });
 
   const { handleImageToggle, savingStatus } = useImageToggle();
-
-  React.useEffect(() => {
-    setLocalData(data.map(d => ({ ...d, selected: !!selected[d.id] })));
-  }, [data, selected]);
 
   const handleDelete = React.useCallback(
     async (id: string) => {
@@ -60,7 +59,7 @@ export function useDraftsTable({
         setLocalData(data.map(d => ({ ...d, selected: !!selected[d.id] })));
       }
     },
-    [data, selected, onDelete]
+    [data, selected, onDelete, setLocalData]
   );
 
   const handleImageToggleWithUpdate = React.useCallback(
@@ -77,11 +76,11 @@ export function useDraftsTable({
         }))
       );
     },
-    [handleImageToggle]
+    [handleImageToggle, setLocalData]
   );
 
-  const columns = React.useMemo(() => {
-    const handlePatch = async (id: string, patch: Partial<Draft>) => {
+  const handlePatch = React.useCallback(
+    async (id: string, patch: Partial<Draft>) => {
       let previous: DraftWithSelected[] = [];
       setLocalData(prev => {
         previous = prev;
@@ -96,10 +95,13 @@ export function useDraftsTable({
         setLocalData(previous);
         throw e;
       }
-    };
+    },
+    [onPatch, setLocalData]
+  );
 
+  const columns = React.useMemo(() => {
     return createDraftTableColumns(
-      onToggle,
+      handleSelectionToggle,
       handlePatch,
       handleDelete,
       handleImageToggleWithUpdate,
@@ -107,8 +109,8 @@ export function useDraftsTable({
       onReload
     );
   }, [
-    onToggle,
-    onPatch,
+    handleSelectionToggle,
+    handlePatch,
     handleDelete,
     handleImageToggleWithUpdate,
     categories,

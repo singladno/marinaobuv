@@ -108,6 +108,7 @@ export function DraftsTable({
           status={status}
           hasData={hasData}
           savingStatus={savingStatus}
+          onToggle={onToggle}
         />
       </div>
 
