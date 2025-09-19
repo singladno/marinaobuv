@@ -2,7 +2,7 @@ import * as React from 'react';
 
 interface UseImageModalKeyboardProps {
   isOpen: boolean;
-  images: Array<{ id: string }>;
+  images: Array<{ id: string; isActive?: boolean }>;
   currentIndex: number;
   selectedImages: Set<string>;
   onImageToggle?: (
@@ -50,11 +50,12 @@ export function useImageModalKeyboard({
           // Bulk delete selected images
           onBulkDelete();
         } else if (onImageToggle) {
-          // Single image delete (current behavior)
+          // Single image toggle (delete/restore based on current state)
           const safeIndex = Math.min(currentIndex, images.length - 1);
           const currentImage = images[safeIndex];
           if (currentImage) {
-            onImageToggle(currentImage.id, false, e as React.MouseEvent);
+            const isActive = currentImage.isActive === true;
+            onImageToggle(currentImage.id, !isActive, e as React.MouseEvent);
           }
         }
       }

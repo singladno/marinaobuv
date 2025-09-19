@@ -16,6 +16,7 @@ interface ImageModalProps {
     url: string;
     alt?: string | null;
     color?: string | null;
+    isActive?: boolean;
   }>;
   isOpen: boolean;
   onClose: () => void;

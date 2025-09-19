@@ -37,6 +37,26 @@ export default function AdminDraftsPage() {
     setSelected((m: Record<string, boolean>) => ({ ...m, [id]: !m[id] }));
   }, []);
 
+  const selectAll = React.useCallback(
+    (selectAll: boolean) => {
+      if (selectAll) {
+        // Select all items
+        const allSelected = data.reduce(
+          (acc, item) => {
+            acc[item.id] = true;
+            return acc;
+          },
+          {} as Record<string, boolean>
+        );
+        setSelected(allSelected);
+      } else {
+        // Deselect all items
+        setSelected({});
+      }
+    },
+    [data]
+  );
+
   const inlinePatch = React.useCallback(
     async (id: string, patch: Partial<Draft>) => {
       await fetch(`/api/admin/drafts`, {
@@ -172,6 +192,7 @@ export default function AdminDraftsPage() {
           data={data}
           selected={selected}
           onToggle={toggle}
+          onSelectAll={selectAll}
           onPatch={inlinePatch}
           status={status}
           onStatusChange={setStatus}

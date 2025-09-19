@@ -7,7 +7,8 @@ type DraftWithSelected = Draft & { selected?: boolean };
 export function useDraftSelection(
   data: Draft[],
   selected: Record<string, boolean>,
-  onToggle: (id: string) => void
+  onToggle: (id: string) => void,
+  onSelectAll?: (selectAll: boolean) => void
 ) {
   const [localData, setLocalData] = React.useState<DraftWithSelected[]>(() =>
     data.map(d => ({ ...d, selected: !!selected[d.id] }))
@@ -31,9 +32,30 @@ export function useDraftSelection(
     [onToggle]
   );
 
+  // Select all functionality
+  const handleSelectAll = React.useCallback(
+    (selectAll: boolean) => {
+      setLocalData(prev =>
+        prev.map(item => ({ ...item, selected: selectAll }))
+      );
+      if (onSelectAll) {
+        onSelectAll(selectAll);
+      }
+    },
+    [onSelectAll]
+  );
+
+  // Check if all items are selected
+  const allSelected =
+    localData.length > 0 && localData.every(item => item.selected);
+  const someSelected = localData.some(item => item.selected);
+
   return {
     localData,
     setLocalData,
     handleSelectionToggle,
+    handleSelectAll,
+    allSelected,
+    someSelected,
   };
 }

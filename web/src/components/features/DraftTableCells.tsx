@@ -91,14 +91,13 @@ export function ImagesCell({
       </div>
 
       <ImageModal
-        images={sortedImages
-          .filter(img => img.isActive !== false)
-          .map(img => ({
-            id: img.id,
-            url: sanitizeImageUrl(img.url),
-            alt: img.alt,
-            color: img.color || null,
-          }))}
+        images={sortedImages.map(img => ({
+          id: img.id,
+          url: sanitizeImageUrl(img.url),
+          alt: img.alt,
+          color: img.color || null,
+          isActive: img.isActive,
+        }))}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         initialIndex={selectedImageIndex}

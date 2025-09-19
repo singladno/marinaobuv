@@ -78,12 +78,33 @@ export function createDraftTableColumns(
   onDelete: (id: string) => Promise<void>,
   onImageToggle: (imageId: string, isActive: boolean) => Promise<void>,
   categories: CategoryNode[],
-  onReload?: () => void
+  onReload?: () => void,
+  onSelectAll?: (selectAll: boolean) => void,
+  allSelected?: boolean,
+  someSelected?: boolean
 ) {
   return [
     columnHelper.display({
       id: 'select',
-      header: () => '',
+      header: () =>
+        onSelectAll ? (
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={allSelected || false}
+              ref={input => {
+                if (input)
+                  input.indeterminate =
+                    (someSelected || false) && !(allSelected || false);
+              }}
+              onChange={e => onSelectAll(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              title={allSelected ? 'Снять выделение со всех' : 'Выделить все'}
+            />
+          </div>
+        ) : (
+          ''
+        ),
       cell: info => (
         <SelectionCheckbox
           id={info.row.original.id}

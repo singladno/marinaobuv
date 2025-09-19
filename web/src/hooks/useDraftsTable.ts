@@ -18,6 +18,7 @@ export function useDraftsTable({
   data,
   selected,
   onToggle,
+  onSelectAll,
   onPatch,
   onDelete,
   categories,
@@ -26,16 +27,20 @@ export function useDraftsTable({
   data: Draft[];
   selected: Record<string, boolean>;
   onToggle: (id: string) => void;
+  onSelectAll?: (selectAll: boolean) => void;
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   categories: CategoryNode[];
   onReload?: () => void;
 }) {
-  const { localData, setLocalData, handleSelectionToggle } = useDraftSelection(
-    data,
-    selected,
-    onToggle
-  );
+  const {
+    localData,
+    setLocalData,
+    handleSelectionToggle,
+    handleSelectAll,
+    allSelected,
+    someSelected,
+  } = useDraftSelection(data, selected, onToggle, onSelectAll);
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
@@ -93,7 +98,10 @@ export function useDraftsTable({
       handleDelete,
       handleImageToggleWithUpdate,
       categories,
-      onReload
+      onReload,
+      handleSelectAll,
+      allSelected,
+      someSelected
     );
   }, [
     handleSelectionToggle,
@@ -102,6 +110,9 @@ export function useDraftsTable({
     handleImageToggleWithUpdate,
     categories,
     onReload,
+    handleSelectAll,
+    allSelected,
+    someSelected,
   ]);
 
   const table = useReactTable({
@@ -137,5 +148,8 @@ export function useDraftsTable({
     handleToggleColumn,
     handleResetColumns,
     savingStatus,
+    handleSelectAll,
+    allSelected,
+    someSelected,
   };
 }

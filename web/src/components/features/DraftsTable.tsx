@@ -14,6 +14,7 @@ export function DraftsTable({
   data,
   selected,
   onToggle,
+  onSelectAll,
   onPatch,
   status,
   onStatusChange,
@@ -29,6 +30,7 @@ export function DraftsTable({
   data: Draft[];
   selected: Record<string, boolean>;
   onToggle: (id: string) => void;
+  onSelectAll?: (selectAll: boolean) => void;
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
   status?: string;
   onStatusChange?: (status: string | undefined) => void;
@@ -60,10 +62,14 @@ export function DraftsTable({
     handleToggleColumn,
     handleResetColumns,
     savingStatus,
+    handleSelectAll,
+    allSelected,
+    someSelected,
   } = useDraftsTable({
     data,
     selected,
     onToggle,
+    onSelectAll,
     onPatch,
     onDelete: handleDelete,
     categories,

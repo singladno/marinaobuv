@@ -6,6 +6,7 @@ interface ImageModalThumbnailsProps {
     url: string;
     alt?: string | null;
     color?: string | null;
+    isActive?: boolean;
   }>;
   currentIndex: number;
   selectedImages: Set<string>;
@@ -27,6 +28,8 @@ export function ImageModalThumbnails({
       {images.map((img, index) => {
         const isSelected = selectedImages.has(img.id);
         const isCurrent = index === currentIndex;
+        const isActive = img.isActive === true;
+        const imageOpacity = isActive ? 'opacity-100' : 'opacity-30';
 
         return (
           <div key={img.id} className="relative">
@@ -41,7 +44,7 @@ export function ImageModalThumbnails({
               <img
                 src={img.url}
                 alt={img.alt || `Миниатюра ${index + 1}`}
-                className="h-full w-full object-cover"
+                className={`h-full w-full object-cover transition-opacity ${imageOpacity}`}
               />
               {img.color && (
                 <span className="absolute bottom-0 right-0 m-0.5 rounded bg-black/60 px-1 text-[10px] text-white">
