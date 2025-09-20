@@ -143,8 +143,9 @@ export default function AdminDraftsPage() {
         headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
         body: JSON.stringify({ id, data: patch }),
       });
-      // Only reload for non-size updates to avoid race conditions with optimistic updates
-      if (!('sizes' in patch)) {
+      // Don't reload for size or image updates as they are handled optimistically
+      // Only reload for other field changes that might affect the display
+      if (!('sizes' in patch) && !('images' in patch)) {
         await reloadSilent();
       }
     },
@@ -439,24 +440,26 @@ export default function AdminDraftsPage() {
           isActive,
         }),
       });
-      await reload();
+      // Don't reload the entire page, just refresh silently to get updated data
+      await reloadSilent();
     } catch (error) {
       console.error('Error toggling image:', error);
     }
   };
 
   // Use the useDraftsTable hook
-  const { table, handleSelectAll, allSelected, someSelected } = useDraftsTable({
-    data: mergedData,
-    selected,
-    onToggle: toggle,
-    onSelectAll: selectAll,
-    onPatch: inlinePatch,
-    onDelete: deleteDraft,
-    categories,
-    onReload: reload,
-    status,
-  });
+  const { table, handleSelectAll, allSelected, someSelected, tableKey } =
+    useDraftsTable({
+      data: mergedData,
+      selected,
+      onToggle: toggle,
+      onSelectAll: selectAll,
+      onPatch: inlinePatch,
+      onDelete: deleteDraft,
+      categories,
+      onReload: reload,
+      status,
+    });
 
   const columns = table.getAllColumns().map(col => col.columnDef);
 
@@ -465,6 +468,7 @@ export default function AdminDraftsPage() {
       {/* Table with reserved space for pagination */}
       <div className="min-h-0 flex-1">
         <UnifiedDataTable
+          key={tableKey}
           columns={columns}
           data={mergedData}
           selected={selected}

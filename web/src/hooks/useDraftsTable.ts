@@ -9,7 +9,6 @@ import { createDraftTableColumns } from '@/components/features/DraftTableColumns
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import type { Draft } from '@/types/admin';
 
-import { useDraftSelection } from './useDraftSelection';
 import { useImageToggleWithUpdate } from './useImageToggleWithUpdate';
 
 // Custom hook for persistent column visibility
@@ -122,14 +121,70 @@ export function useDraftsTable({
   onReload?: () => void;
   status?: string;
 }) {
-  const {
-    localData,
-    setLocalData,
-    handleSelectionToggle,
-    handleSelectAll,
-    allSelected,
-    someSelected,
-  } = useDraftSelection(data, selected, onToggle, onSelectAll);
+  // Manage local data directly instead of using useDraftSelection
+  const [localData, setLocalData] = React.useState<DraftWithSelected[]>(() =>
+    data.map(d => ({ ...d, selected: !!selected[d.id] }))
+  );
+
+  // Sync with external data changes, but preserve local optimistic updates
+  React.useEffect(() => {
+    setLocalData(prev => {
+      const newData = data.map(d => ({ ...d, selected: !!selected[d.id] }));
+
+      // Only update if the data has actually changed (by comparing IDs and key fields)
+      const hasSignificantChanges =
+        prev.length !== newData.length ||
+        prev.some((prevItem, index) => {
+          const newItem = newData[index];
+          if (!newItem || prevItem.id !== newItem.id) return true;
+
+          // Check if key fields have changed (excluding sizes and images which are handled optimistically)
+          return (
+            prevItem.name !== newItem.name ||
+            prevItem.pricePair !== newItem.pricePair ||
+            prevItem.packPairs !== newItem.packPairs ||
+            prevItem.providerDiscount !== newItem.providerDiscount ||
+            prevItem.material !== newItem.material ||
+            prevItem.gender !== newItem.gender ||
+            prevItem.season !== newItem.season ||
+            prevItem.categoryId !== newItem.categoryId ||
+            prevItem.aiStatus !== newItem.aiStatus ||
+            prevItem.aiProcessedAt !== newItem.aiProcessedAt
+          );
+        });
+
+      return hasSignificantChanges ? newData : prev;
+    });
+  }, [data, selected]);
+
+  // Selection management
+  const handleSelectionToggle = React.useCallback(
+    (id: string) => {
+      setLocalData(prev =>
+        prev.map(item =>
+          item.id === id ? { ...item, selected: !item.selected } : item
+        )
+      );
+      onToggle(id);
+    },
+    [onToggle]
+  );
+
+  const handleSelectAll = React.useCallback(
+    (selectAll: boolean) => {
+      setLocalData(prev =>
+        prev.map(item => ({ ...item, selected: selectAll }))
+      );
+      if (onSelectAll) {
+        onSelectAll(selectAll);
+      }
+    },
+    [onSelectAll]
+  );
+
+  const allSelected =
+    localData.length > 0 && localData.every(item => item.selected);
+  const someSelected = localData.some(item => item.selected);
 
   const defaultColumnVisibility: VisibilityState = {
     category: status === 'approved', // Show category column only for approved status
@@ -178,21 +233,38 @@ export function useDraftsTable({
   const handlePatch = React.useCallback(
     async (id: string, patch: Partial<Draft>) => {
       let previous: DraftWithSelected[] = [];
+
+      // Optimistic update - immediately update local data
       setLocalData(prev => {
         previous = prev;
-        return prev.map(item =>
+        const updated = prev.map(item =>
           item.id === id ? { ...item, ...patch } : item
         );
+        return updated;
       });
+
       try {
         await onPatch(id, patch);
+
+        // After successful patch, ensure the local data is still up to date
+        // This handles cases where the server response might have additional changes
+        setLocalData(prev => {
+          const currentItem = prev.find(item => item.id === id);
+          if (currentItem) {
+            // Keep the optimistic update if it's still valid
+            return prev;
+          }
+          // If item was removed, sync with external data
+          return data.map(d => ({ ...d, selected: !!selected[d.id] }));
+        });
       } catch (e) {
         console.error('Failed to patch draft', e);
+        // Revert optimistic update on error
         setLocalData(previous);
         throw e;
       }
     },
-    [onPatch, setLocalData]
+    [onPatch, data, selected]
   );
 
   const columns = React.useMemo(() => {
@@ -221,6 +293,16 @@ export function useDraftsTable({
     status,
   ]);
 
+  // Create a key that changes when localData changes to force table re-render
+  const tableKey = React.useMemo(() => {
+    return localData
+      .map(
+        item =>
+          `${item.id}-${JSON.stringify(item.sizes)}-${JSON.stringify(item.images)}`
+      )
+      .join('|');
+  }, [localData]);
+
   const table = useReactTable({
     data: localData,
     columns,
@@ -247,7 +329,7 @@ export function useDraftsTable({
         return newVisibility;
       });
     },
-    [status]
+    [status, setColumnVisibility]
   );
 
   const handleResetColumns = React.useCallback(() => {
@@ -263,5 +345,6 @@ export function useDraftsTable({
     handleSelectAll,
     allSelected,
     someSelected,
+    tableKey, // Add tableKey to force re-renders
   };
 }

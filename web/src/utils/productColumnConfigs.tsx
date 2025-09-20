@@ -102,8 +102,13 @@ export function createProductColumns(
 
     columnHelper.display({
       id: 'actions',
-      header: 'Действия',
-      cell: () => <ProductActionsCell />,
+      header: 'Статус',
+      cell: ({ row }) => (
+        <ProductActionsCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+        />
+      ),
     }),
   ];
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { Draft } from '@/types/admin';
 
@@ -14,37 +14,37 @@ export function useDrafts() {
     totalPages: 0,
   });
 
-  const load = async (
-    page = pagination.page,
-    pageSize = pagination.pageSize
-  ) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const skip = (page - 1) * pageSize;
-      const res = await fetch(
-        `/api/admin/drafts?status=${status ?? ''}&skip=${skip}&take=${pageSize}`,
-        {
-          headers: { 'x-role': 'ADMIN' },
-        }
-      );
-      if (!res.ok) throw new Error(await res.text());
-      const json = await res.json();
-      setData(json.drafts ?? []);
-      setPagination({
-        page: json.page ?? page,
-        pageSize: json.pageSize ?? pageSize,
-        total: json.total ?? 0,
-        totalPages: json.totalPages ?? 0,
-      });
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load drafts');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = React.useCallback(
+    async (page = pagination.page, pageSize = pagination.pageSize) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const skip = (page - 1) * pageSize;
+        const res = await fetch(
+          `/api/admin/drafts?status=${status ?? ''}&skip=${skip}&take=${pageSize}`,
+          {
+            headers: { 'x-role': 'ADMIN' },
+          }
+        );
+        if (!res.ok) throw new Error(await res.text());
+        const json = await res.json();
+        setData(json.drafts ?? []);
+        setPagination({
+          page: json.page ?? page,
+          pageSize: json.pageSize ?? pageSize,
+          total: json.total ?? 0,
+          totalPages: json.totalPages ?? 0,
+        });
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Failed to load drafts');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pagination.page, pagination.pageSize, status]
+  );
 
-  const loadSilent = async () => {
+  const loadSilent = React.useCallback(async () => {
     try {
       const skip = (pagination.page - 1) * pagination.pageSize;
       const res = await fetch(
@@ -66,7 +66,7 @@ export function useDrafts() {
       // swallow errors silently for background refresh
       console.error('Silent reload drafts failed', e);
     }
-  };
+  }, [pagination.page, pagination.pageSize, status]);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= pagination.totalPages) {

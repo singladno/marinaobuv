@@ -1,3 +1,6 @@
+'use client';
+
+import React, { useState } from 'react';
 import { EditableProductCell } from '@/components/features/EditableProductCell';
 import type { Product } from '@/types/product';
 
@@ -10,10 +13,28 @@ export function ProductArticleCell({
   product,
   onUpdateProduct,
 }: ProductArticleCellProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async (value: string) => {
+    setIsSaving(true);
+    try {
+      await onUpdateProduct(product.id, { article: value || null });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating product article:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <EditableProductCell
       value={product.article || ''}
-      onSave={value => onUpdateProduct(product.id, { article: value || null })}
+      onSave={handleSave}
+      isEditing={isEditing}
+      onEdit={() => setIsEditing(!isEditing)}
+      isSaving={isSaving}
       type="text"
     />
   );

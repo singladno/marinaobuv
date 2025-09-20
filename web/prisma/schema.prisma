@@ -61,6 +61,7 @@ model Product {
   season                Season?
   description           String?
   availabilityCheckedAt DateTime?
+  isActive              Boolean        @default(true)
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   images                ProductImage[]
@@ -69,6 +70,7 @@ model Product {
   @@index([categoryId])
   @@index([season])
   @@index([pricePair])
+  @@index([isActive])
 }
 
 model ProductImage {

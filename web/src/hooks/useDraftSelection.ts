@@ -14,37 +14,29 @@ export function useDraftSelection(
     data.map(d => ({ ...d, selected: !!selected[d.id] }))
   );
 
+  // Only sync with external data changes, don't override local optimistic updates
   React.useEffect(() => {
     const newData = data.map(d => ({ ...d, selected: !!selected[d.id] }));
     setLocalData(prev => {
-      // Keep optimistically deleted items out of the new data
-      const prevIds = new Set(prev.map(item => item.id));
-      const newIds = new Set(newData.map(item => item.id));
-
-      // If new data has items that weren't in previous data, it's a fresh load
-      // If previous data has items not in new data, they were optimistically deleted
-      const hasNewItems = newData.some(item => !prevIds.has(item.id));
-      const hasDeletedItems = prev.some(item => !newIds.has(item.id));
-
-      if (hasNewItems && !hasDeletedItems) {
-        // Fresh data load - use new data
+      // If this is the initial load (no previous data), use new data
+      if (prev.length === 0) {
         return newData;
-      } else {
-        // Merge: keep optimistically deleted items out, add new items, update existing
-        const merged = new Map();
+      }
 
-        // Add all new data items
-        newData.forEach(item => merged.set(item.id, item));
-
-        // Add back items that were optimistically deleted (they should stay deleted)
-        prev.forEach(item => {
-          if (!newIds.has(item.id)) {
-            // This item was optimistically deleted, keep it out
-            return;
-          }
+      // For subsequent updates, only update if the data has actually changed
+      // This prevents overriding optimistic updates
+      const dataChanged =
+        data.length !== prev.length ||
+        data.some((newItem, index) => {
+          const prevItem = prev[index];
+          return !prevItem || prevItem.id !== newItem.id;
         });
 
-        return Array.from(merged.values());
+      if (dataChanged) {
+        return newData;
+      } else {
+        // No data change, keep local state to preserve optimistic updates
+        return prev;
       }
     });
   }, [data, selected]);

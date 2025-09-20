@@ -47,7 +47,11 @@ export function EditableProductCell({
 
   if (!isEditing) {
     return (
-      <div className={`cursor-pointer ${className}`} onClick={onEdit}>
+      <div
+        className={`cursor-pointer ${className}`}
+        onClick={onEdit}
+        data-editable="true"
+      >
         {value || '-'}
       </div>
     );

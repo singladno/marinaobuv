@@ -150,21 +150,26 @@ export function DataTable<TData, TValue>({
 
     return (
       <tbody>
-        {table.getRowModel().rows.map(row => (
-          <tr
-            key={row.id}
-            className="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
-          >
-            {row.getVisibleCells().map(cell => (
-              <td
-                key={cell.id}
-                className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </td>
-            ))}
-          </tr>
-        ))}
+        {table.getRowModel().rows.map(row => {
+          // Extract product ID from row data for data-product-id attribute
+          const productId = (row.original as any)?.id;
+          return (
+            <tr
+              key={row.id}
+              data-product-id={productId}
+              className="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+            >
+              {row.getVisibleCells().map(cell => (
+                <td
+                  key={cell.id}
+                  className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </td>
+              ))}
+            </tr>
+          );
+        })}
       </tbody>
     );
   };

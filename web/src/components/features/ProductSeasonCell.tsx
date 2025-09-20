@@ -1,3 +1,6 @@
+'use client';
+
+import React, { useState } from 'react';
 import { EditableProductCell } from '@/components/features/EditableProductCell';
 import type { Product } from '@/types/product';
 
@@ -12,6 +15,9 @@ export function ProductSeasonCell({
   season,
   onUpdateProduct,
 }: ProductSeasonCellProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const getSeasonLabel = (season: string | null) => {
     switch (season) {
       case 'SPRING':
@@ -27,19 +33,32 @@ export function ProductSeasonCell({
     }
   };
 
+  const handleSave = async (value: string) => {
+    setIsSaving(true);
+    try {
+      const seasonMap: Record<string, string | null> = {
+        Весна: 'SPRING',
+        Лето: 'SUMMER',
+        Осень: 'AUTUMN',
+        Зима: 'WINTER',
+        '-': null,
+      };
+      await onUpdateProduct(product.id, { season: seasonMap[value] || null });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating product season:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <EditableProductCell
       value={getSeasonLabel(season)}
-      onSave={value => {
-        const seasonMap: Record<string, string | null> = {
-          Весна: 'SPRING',
-          Лето: 'SUMMER',
-          Осень: 'AUTUMN',
-          Зима: 'WINTER',
-          '-': null,
-        };
-        onUpdateProduct(product.id, { season: seasonMap[value] || null });
-      }}
+      onSave={handleSave}
+      isEditing={isEditing}
+      onEdit={() => setIsEditing(!isEditing)}
+      isSaving={isSaving}
       type="select"
       options={[
         { value: 'Весна', label: 'Весна' },

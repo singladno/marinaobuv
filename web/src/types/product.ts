@@ -13,6 +13,7 @@ export interface Product {
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description: string | null;
   availabilityCheckedAt: Date | null;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   category: {
@@ -50,6 +51,7 @@ export interface ProductUpdateData {
   gender?: 'FEMALE' | 'MALE' | 'UNISEX' | null;
   season?: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description?: string | null;
+  isActive?: boolean;
 }
 
 export interface ProductsResponse {

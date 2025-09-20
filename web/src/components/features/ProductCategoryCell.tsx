@@ -1,3 +1,6 @@
+'use client';
+
+import React, { useState } from 'react';
 import { EditableProductCell } from '@/components/features/EditableProductCell';
 import type { Product } from '@/types/product';
 
@@ -12,13 +15,31 @@ export function ProductCategoryCell({
   categories,
   onUpdateProduct,
 }: ProductCategoryCellProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async (value: string) => {
+    setIsSaving(true);
+    try {
+      const category = categories.find(c => c.name === value);
+      if (category) {
+        await onUpdateProduct(product.id, { categoryId: category.id });
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Error updating product category:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <EditableProductCell
       value={product.category.name}
-      onSave={value => {
-        const category = categories.find(c => c.name === value);
-        if (category) onUpdateProduct(product.id, { categoryId: category.id });
-      }}
+      onSave={handleSave}
+      isEditing={isEditing}
+      onEdit={() => setIsEditing(!isEditing)}
+      isSaving={isSaving}
       type="select"
       options={categories.map(c => ({ value: c.name, label: c.name }))}
     />
