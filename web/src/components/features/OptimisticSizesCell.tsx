@@ -72,8 +72,29 @@ export function OptimisticSizesCell({
     top: number;
     left: number;
   }>({ top: 0, left: 0 });
+  const [localSizes, setLocalSizes] = useState<DraftSize[]>([]);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [lastApiCallTime, setLastApiCallTime] = useState<number>(0);
   const chipRefs = useRef<(HTMLDivElement | null)[]>([]);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync local state with props only when not updating and not recently after API call
+  React.useEffect(() => {
+    const now = Date.now();
+    const timeSinceLastApiCall = now - lastApiCallTime;
+
+    if (!isUpdating && timeSinceLastApiCall > 1000) {
+      // Only sync if more than 1 second since last API call
+      console.log('Syncing sizes from props:', sizes);
+      // Ensure all sizes have proper id fields
+      const sizesWithIds = (sizes || []).map((size, index) => ({
+        ...size,
+        id: size.id || `size-${index}-${Date.now()}`,
+      }));
+      console.log('Sizes with IDs:', sizesWithIds);
+      setLocalSizes(sizesWithIds);
+    }
+  }, [sizes, isUpdating, lastApiCallTime]);
 
   // Cleanup timeout on unmount
   React.useEffect(() => {
@@ -86,33 +107,68 @@ export function OptimisticSizesCell({
 
   const handleAddSize = useCallback(async () => {
     if (disabled) return;
-    const newSize = { size: '', quantity: 0 };
-    const updatedSizes = [...(sizes || []), newSize];
-    await onChange(updatedSizes);
-  }, [disabled, sizes, onChange]);
+    const newSize = {
+      id: `size-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      size: '',
+      quantity: 0,
+    };
+    const updatedSizes = [...(localSizes || []), newSize];
+    console.log('Adding new size:', newSize);
+    console.log('Updated sizes:', updatedSizes);
+    setLocalSizes(updatedSizes);
+    setIsUpdating(true);
+    try {
+      await onChange(updatedSizes);
+      console.log('API call completed');
+      setLastApiCallTime(Date.now());
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [disabled, localSizes, onChange]);
 
   const handleDeleteSize = useCallback(
     async (index: number) => {
       if (disabled) return;
-      const updatedSizes = (sizes || []).filter((_, i) => i !== index);
-      await onChange(updatedSizes.length > 0 ? updatedSizes : null);
+      const updatedSizes = (localSizes || []).filter((_, i) => i !== index);
+      setLocalSizes(updatedSizes);
+      setIsUpdating(true);
+      try {
+        await onChange(updatedSizes.length > 0 ? updatedSizes : null);
+        setLastApiCallTime(Date.now());
+      } finally {
+        setIsUpdating(false);
+      }
       setHoveredIndex(null);
     },
-    [disabled, sizes, onChange]
+    [disabled, localSizes, onChange]
   );
 
   const handleSizeChange = useCallback(
-    async (
-      index: number,
-      field: 'size' | 'quantity',
-      value: string | number
-    ) => {
+    (index: number, field: 'size' | 'quantity', value: string | number) => {
       if (disabled) return;
-      const updatedSizes = [...(sizes || [])];
-      updatedSizes[index] = { ...updatedSizes[index], [field]: value };
-      await onChange(updatedSizes);
+      // Update local state immediately for responsive UI
+      setLocalSizes(prev => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], [field]: value };
+        return updated;
+      });
     },
-    [disabled, sizes, onChange]
+    [disabled]
+  );
+
+  const handleSizeBlur = useCallback(
+    async (index: number) => {
+      if (disabled) return;
+      // Make API call with current local state
+      setIsUpdating(true);
+      try {
+        await onChange(localSizes);
+        setLastApiCallTime(Date.now());
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [disabled, localSizes, onChange]
   );
 
   const handleMouseEnter = useCallback(
@@ -162,7 +218,7 @@ export function OptimisticSizesCell({
   return (
     <>
       <div className="flex items-center gap-1.5 overflow-x-auto">
-        {(sizes || []).map((size, index) => (
+        {(localSizes || []).map((size, index) => (
           <div
             key={size.id || `size-${index}`}
             ref={el => (chipRefs.current[index] = el)}
@@ -176,6 +232,7 @@ export function OptimisticSizesCell({
                 type="text"
                 value={size.size || ''}
                 onChange={e => handleSizeChange(index, 'size', e.target.value)}
+                onBlur={() => handleSizeBlur(index)}
                 className="w-full bg-transparent text-center text-sm font-semibold outline-none"
                 placeholder="?"
                 aria-label={`Размер ${index + 1}`}
@@ -195,6 +252,7 @@ export function OptimisticSizesCell({
                     parseInt(e.target.value) || 0
                   )
                 }
+                onBlur={() => handleSizeBlur(index)}
                 className="w-full bg-transparent text-center text-xs outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 min="0"
                 aria-label={`Количество ${index + 1}`}
