@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { DraftSize } from '@/types/admin';
 
 interface OptimisticSizesCellProps {
@@ -9,289 +10,233 @@ interface OptimisticSizesCellProps {
   disabled?: boolean;
 }
 
+interface PortalDeleteButtonProps {
+  isVisible: boolean;
+  position: { top: number; left: number };
+  onDelete: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}
+
+function PortalDeleteButton({
+  isVisible,
+  position,
+  onDelete,
+  onMouseEnter,
+  onMouseLeave,
+}: PortalDeleteButtonProps) {
+  if (!isVisible || typeof window === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed z-50 p-1"
+      style={{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <button
+        type="button"
+        className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white transition-opacity hover:bg-red-600"
+        onClick={onDelete}
+        aria-label="Удалить размер"
+      >
+        <svg
+          className="h-2.5 w-2.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>,
+    document.body
+  );
+}
+
 export function OptimisticSizesCell({
   sizes,
   onChange,
   disabled = false,
 }: OptimisticSizesCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editSizes, setEditSizes] = useState<DraftSize[]>(sizes || []);
-  const [isSaving, setIsSaving] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [deleteButtonPosition, setDeleteButtonPosition] = useState<{
+    top: number;
+    left: number;
+  }>({ top: 0, left: 0 });
+  const chipRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleEdit = useCallback(() => {
-    if (disabled) return;
-    setIsEditing(true);
-    setEditSizes(sizes ? [...sizes] : []);
-  }, [disabled, sizes]);
-
-  const handleSave = useCallback(async () => {
-    if (isSaving) return;
-
-    // Only save if sizes actually changed
-    const hasChanges =
-      JSON.stringify(editSizes) !== JSON.stringify(sizes || []);
-    if (!hasChanges) {
-      setIsEditing(false);
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await onChange(editSizes);
-    } catch (error) {
-      console.error('Failed to save sizes:', error);
-      // Revert to original sizes on error
-      setEditSizes([...(sizes || [])]);
-    } finally {
-      setIsSaving(false);
-    }
-
-    setIsEditing(false);
-  }, [isSaving, editSizes, sizes, onChange]);
-
-  const handleCancel = useCallback(() => {
-    setEditSizes([...(sizes || [])]);
-    setIsEditing(false);
-  }, [sizes]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleSave();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        handleCancel();
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
       }
+    };
+  }, []);
+
+  const handleAddSize = useCallback(async () => {
+    if (disabled) return;
+    const newSize = { size: '', quantity: 0 };
+    const updatedSizes = [...(sizes || []), newSize];
+    await onChange(updatedSizes);
+  }, [disabled, sizes, onChange]);
+
+  const handleDeleteSize = useCallback(
+    async (index: number) => {
+      if (disabled) return;
+      const updatedSizes = (sizes || []).filter((_, i) => i !== index);
+      await onChange(updatedSizes.length > 0 ? updatedSizes : null);
+      setHoveredIndex(null);
     },
-    [handleSave, handleCancel]
+    [disabled, sizes, onChange]
   );
 
-  const handleBlur = useCallback(() => {
-    if (isEditing) {
-      handleSave();
+  const handleSizeChange = useCallback(
+    async (
+      index: number,
+      field: 'size' | 'quantity',
+      value: string | number
+    ) => {
+      if (disabled) return;
+      const updatedSizes = [...(sizes || [])];
+      updatedSizes[index] = { ...updatedSizes[index], [field]: value };
+      await onChange(updatedSizes);
+    },
+    [disabled, sizes, onChange]
+  );
+
+  const handleMouseEnter = useCallback(
+    (index: number) => {
+      if (disabled) return;
+
+      // Clear any pending hide timeout
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
+
+      setHoveredIndex(index);
+
+      const chipElement = chipRefs.current[index];
+      if (chipElement) {
+        const rect = chipElement.getBoundingClientRect();
+        setDeleteButtonPosition({
+          top: rect.top - 24, // 24px above the chip for better visibility
+          left: rect.left + rect.width / 2 - 16, // Center horizontally, 16px is half of total area (32px with padding)
+        });
+      }
+    },
+    [disabled]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    // Add a delay before hiding to allow moving to the delete button
+    hideTimeoutRef.current = setTimeout(() => {
+      setHoveredIndex(null);
+    }, 150); // 150ms delay
+  }, []);
+
+  const handleDeleteButtonMouseEnter = useCallback(() => {
+    // Clear hide timeout when hovering over delete button
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
     }
-  }, [isEditing, handleSave]);
-
-  const addSize = useCallback(() => {
-    const newSize: DraftSize = {
-      id: `temp-${Date.now()}`,
-      size: '',
-      quantity: 1,
-      isActive: true,
-    };
-    setEditSizes(prev => [...prev, newSize]);
   }, []);
 
-  const removeSize = useCallback((id: string) => {
-    setEditSizes(prev => prev.filter(size => size.id !== id));
+  const handleDeleteButtonMouseLeave = useCallback(() => {
+    // Hide immediately when leaving delete button
+    setHoveredIndex(null);
   }, []);
 
-  const updateSize = useCallback((id: string, updates: Partial<DraftSize>) => {
-    setEditSizes(prev =>
-      prev.map(size => (size.id === id ? { ...size, ...updates } : size))
-    );
-  }, []);
-
-  const toggleSizeActive = useCallback((id: string) => {
-    setEditSizes(prev =>
-      prev.map(size =>
-        size.id === id ? { ...size, isActive: !size.isActive } : size
-      )
-    );
-  }, []);
-
-  const displaySizes = useMemo(() => {
-    if (!sizes || !Array.isArray(sizes)) {
-      return '';
-    }
-    return sizes
-      .filter(size => size.isActive)
-      .map(size => size.size)
-      .join(', ');
-  }, [sizes]);
-
-  if (!isEditing) {
-    // View mode - show table-like interface
-    if (!sizes || sizes.length === 0) {
-      return (
-        <div className="flex items-center gap-2">
-          <span className="text-gray-400 dark:text-gray-500">—</span>
-          {!disabled && (
-            <button
-              type="button"
-              className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-200"
-              onClick={handleEdit}
-              aria-label="Добавить размер"
-            >
-              +
-            </button>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-2 rounded border border-gray-300 bg-white p-2 dark:border-gray-600 dark:bg-gray-800">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-            Размеры
-          </span>
-          {!disabled && (
-            <button
-              type="button"
-              className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
-              onClick={handleEdit}
-              aria-label="Добавить размер"
-            >
-              + Добавить
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          {sizes.map((size, index) => (
-            <div
-              key={size.id || `size-${index}`}
-              className="flex items-center space-x-2"
-            >
+  return (
+    <>
+      <div className="flex items-center gap-1.5 overflow-x-auto">
+        {(sizes || []).map((size, index) => (
+          <div
+            key={size.id || `size-${index}`}
+            ref={el => (chipRefs.current[index] = el)}
+            className="group relative flex flex-shrink-0 flex-col items-center justify-center rounded-full bg-blue-100 px-2.5 py-1.5 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:hover:bg-blue-900/50"
+            onMouseEnter={() => handleMouseEnter(index)}
+            onMouseLeave={handleMouseLeave}
+          >
+            {/* Size input */}
+            <div className="flex w-8 justify-center">
               <input
                 type="text"
-                value={size.size}
-                readOnly
-                className="flex-1 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                onClick={!disabled ? handleEdit : undefined}
-                title={
-                  disabled
-                    ? 'Редактирование отключено'
-                    : 'Нажмите для редактирования'
-                }
+                value={size.size || ''}
+                onChange={e => handleSizeChange(index, 'size', e.target.value)}
+                className="w-full bg-transparent text-center text-sm font-semibold outline-none"
+                placeholder="?"
+                aria-label={`Размер ${index + 1}`}
+                disabled={disabled}
               />
+            </div>
+
+            {/* Quantity input */}
+            <div className="flex w-8 justify-center">
               <input
                 type="number"
                 value={size.quantity || 0}
-                readOnly
-                className="w-16 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                onClick={!disabled ? handleEdit : undefined}
-                title={
-                  disabled
-                    ? 'Редактирование отключено'
-                    : 'Нажмите для редактирования'
+                onChange={e =>
+                  handleSizeChange(
+                    index,
+                    'quantity',
+                    parseInt(e.target.value) || 0
+                  )
                 }
+                className="w-full bg-transparent text-center text-xs outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                min="0"
+                aria-label={`Количество ${index + 1}`}
+                disabled={disabled}
               />
-              <button
-                className={`rounded px-2 py-1 text-xs ${
-                  size.isActive
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
-                }`}
-                onClick={!disabled ? handleEdit : undefined}
-                title={
-                  disabled
-                    ? 'Редактирование отключено'
-                    : 'Нажмите для редактирования'
-                }
-              >
-                {size.isActive ? '✓' : '✕'}
-              </button>
-              {!disabled && (
-                <button
-                  onClick={() => removeSize(size.id)}
-                  className="rounded bg-red-100 px-2 py-1 text-xs text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800"
-                  type="button"
-                  title="Удалить размер"
-                >
-                  🗑️
-                </button>
-              )}
             </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="space-y-2 rounded border border-gray-300 bg-white p-2 dark:border-gray-600 dark:bg-gray-800"
-      onKeyDown={handleKeyDown}
-      onBlur={handleBlur}
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-          Размеры
-        </span>
-        <div className="flex space-x-1">
-          <button
-            onClick={addSize}
-            className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
-            type="button"
-          >
-            + Добавить
-          </button>
-          <button
-            onClick={handleSave}
-            className="rounded bg-green-500 px-2 py-1 text-xs text-white hover:bg-green-600"
-            type="button"
-            disabled={isSaving}
-          >
-            ✓
-          </button>
-          <button
-            onClick={handleCancel}
-            className="rounded bg-gray-500 px-2 py-1 text-xs text-white hover:bg-gray-600"
-            type="button"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        {editSizes.map((size, index) => (
-          <div
-            key={size.id || `size-${index}`}
-            className="flex items-center space-x-2"
-          >
-            <input
-              type="text"
-              value={size.size}
-              onChange={e => updateSize(size.id, { size: e.target.value })}
-              placeholder="Размер"
-              aria-label="Размер"
-              className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
-            <input
-              type="number"
-              value={size.quantity}
-              onChange={e =>
-                updateSize(size.id, { quantity: Number(e.target.value) })
-              }
-              min="1"
-              aria-label="Количество"
-              className="w-16 rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
-            <button
-              onClick={() => toggleSizeActive(size.id)}
-              className={`rounded px-2 py-1 text-xs ${
-                size.isActive
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
-              }`}
-              type="button"
-            >
-              {size.isActive ? '✓' : '✕'}
-            </button>
-            <button
-              onClick={() => removeSize(size.id)}
-              className="rounded bg-red-100 px-2 py-1 text-xs text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800"
-              type="button"
-            >
-              🗑️
-            </button>
           </div>
         ))}
+
+        {/* Add button */}
+        {!disabled && (
+          <button
+            type="button"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            onClick={handleAddSize}
+            aria-label="Добавить размер"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
+          </button>
+        )}
       </div>
-    </div>
+
+      {/* Portal Delete Button */}
+      <PortalDeleteButton
+        isVisible={hoveredIndex !== null}
+        position={deleteButtonPosition}
+        onDelete={() => hoveredIndex !== null && handleDeleteSize(hoveredIndex)}
+        onMouseEnter={handleDeleteButtonMouseEnter}
+        onMouseLeave={handleDeleteButtonMouseLeave}
+      />
+    </>
   );
 }
