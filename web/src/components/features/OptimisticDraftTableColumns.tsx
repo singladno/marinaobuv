@@ -117,6 +117,9 @@ export function createOptimisticDraftTableColumns(
           onToggle={onToggle}
         />
       ),
+      meta: {
+        frozen: 'left',
+      },
     }),
   ];
 
@@ -509,6 +512,9 @@ export function createOptimisticDraftTableColumns(
           </button>
         </div>
       ),
+      meta: {
+        frozen: 'right',
+      },
     })
   );
 

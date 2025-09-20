@@ -159,14 +159,27 @@ export function DataTable<TData, TValue>({
               data-product-id={productId}
               className="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
             >
-              {row.getVisibleCells().map(cell => (
-                <td
-                  key={cell.id}
-                  className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
+              {row.getVisibleCells().map(cell => {
+                const isFrozenLeft =
+                  cell.column.columnDef.meta?.frozen === 'left';
+                const isFrozenRight =
+                  cell.column.columnDef.meta?.frozen === 'right';
+
+                return (
+                  <td
+                    key={cell.id}
+                    className={`px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${
+                      isFrozenLeft
+                        ? 'sticky left-0 z-10 border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                        : isFrozenRight
+                          ? 'sticky right-0 z-10 border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                          : ''
+                    }`}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                );
+              })}
             </tr>
           );
         })}
@@ -182,19 +195,32 @@ export function DataTable<TData, TValue>({
             <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th
-                      key={header.id}
-                      className="border-b border-gray-200 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </th>
-                  ))}
+                  {headerGroup.headers.map(header => {
+                    const isFrozenLeft =
+                      header.column.columnDef.meta?.frozen === 'left';
+                    const isFrozenRight =
+                      header.column.columnDef.meta?.frozen === 'right';
+
+                    return (
+                      <th
+                        key={header.id}
+                        className={`border-b border-gray-200 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400 ${
+                          isFrozenLeft
+                            ? 'sticky left-0 z-40 border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                            : isFrozenRight
+                              ? 'sticky right-0 z-40 border-l border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                              : ''
+                        }`}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </th>
+                    );
+                  })}
                 </tr>
               ))}
             </thead>
