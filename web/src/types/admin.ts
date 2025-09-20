@@ -43,7 +43,12 @@ export type Draft = {
     phone: string | null;
     place: string | null;
   } | null;
-  sizes?: Array<{ size: string; stock?: number; count?: number }> | null;
+  sizes?: Array<{
+    size: string;
+    stock?: number;
+    count?: number;
+    quantity?: number;
+  }> | null;
   gptRequest?: string | null;
   rawGptResponse?: any;
   gptRequest2?: string | null;

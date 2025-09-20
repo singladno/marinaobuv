@@ -110,6 +110,16 @@ export function DraftTablePage({
 
   const inlinePatch = React.useCallback(
     async (id: string, patch: Partial<Draft>) => {
+      // Transform sizes data to database format
+      if (patch.sizes) {
+        const transformedSizes = patch.sizes.map(size => ({
+          size: size.size,
+          stock: size.quantity,
+          count: size.quantity,
+        }));
+        patch = { ...patch, sizes: transformedSizes };
+      }
+
       await fetch(`/api/admin/drafts`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
