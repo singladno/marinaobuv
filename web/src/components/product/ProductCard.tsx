@@ -23,7 +23,19 @@ export default function ProductCard({
   category,
   showCategory = false,
 }: Props) {
-  const img = imageUrl ?? '/images/demo/1.jpg';
+  // Use a deterministic demo image based on product slug for consistency
+  const demoImages = [
+    '/images/demo/1.svg',
+    '/images/demo/2.svg',
+    '/images/demo/3.svg',
+    '/images/demo/4.svg',
+    '/images/demo/5.svg',
+    '/images/demo/6.svg',
+  ];
+  const demoIndex =
+    slug.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) %
+    demoImages.length;
+  const img = imageUrl ?? demoImages[demoIndex];
 
   return (
     <div className="border-border bg-card group relative overflow-hidden rounded-xl border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
