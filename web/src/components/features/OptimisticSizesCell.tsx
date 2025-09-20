@@ -112,25 +112,101 @@ export function OptimisticSizesCell({
   }, [sizes]);
 
   if (!isEditing) {
+    // View mode - show table-like interface
+    if (!sizes || sizes.length === 0) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400 dark:text-gray-500">—</span>
+          {!disabled && (
+            <button
+              type="button"
+              className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-200"
+              onClick={handleEdit}
+              aria-label="Добавить размер"
+            >
+              +
+            </button>
+          )}
+        </div>
+      );
+    }
+
     return (
-      <div
-        className={`cursor-pointer rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-800 ${
-          disabled ? 'cursor-not-allowed opacity-50' : ''
-        }`}
-        onClick={handleEdit}
-        data-editable="true"
-        title={
-          disabled ? 'Редактирование отключено' : 'Нажмите для редактирования'
-        }
-      >
-        {isSaving ? (
-          <div className="flex items-center space-x-2">
-            <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-            <span className="text-xs text-gray-500">Сохранение...</span>
-          </div>
-        ) : (
-          displaySizes || '—'
-        )}
+      <div className="space-y-2 rounded border border-gray-300 bg-white p-2 dark:border-gray-600 dark:bg-gray-800">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            Размеры
+          </span>
+          {!disabled && (
+            <button
+              type="button"
+              className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
+              onClick={handleEdit}
+              aria-label="Добавить размер"
+            >
+              + Добавить
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-1">
+          {sizes.map((size, index) => (
+            <div
+              key={size.id || `size-${index}`}
+              className="flex items-center space-x-2"
+            >
+              <input
+                type="text"
+                value={size.size}
+                readOnly
+                className="flex-1 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                onClick={!disabled ? handleEdit : undefined}
+                title={
+                  disabled
+                    ? 'Редактирование отключено'
+                    : 'Нажмите для редактирования'
+                }
+              />
+              <input
+                type="number"
+                value={size.quantity || 0}
+                readOnly
+                className="w-16 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                onClick={!disabled ? handleEdit : undefined}
+                title={
+                  disabled
+                    ? 'Редактирование отключено'
+                    : 'Нажмите для редактирования'
+                }
+              />
+              <button
+                className={`rounded px-2 py-1 text-xs ${
+                  size.isActive
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                }`}
+                onClick={!disabled ? handleEdit : undefined}
+                title={
+                  disabled
+                    ? 'Редактирование отключено'
+                    : 'Нажмите для редактирования'
+                }
+              >
+                {size.isActive ? '✓' : '✕'}
+              </button>
+              {!disabled && (
+                <button
+                  onClick={() => removeSize(size.id)}
+                  className="rounded bg-red-100 px-2 py-1 text-xs text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800"
+                  type="button"
+                  title="Удалить размер"
+                >
+                  🗑️
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -173,7 +249,10 @@ export function OptimisticSizesCell({
 
       <div className="space-y-1">
         {editSizes.map((size, index) => (
-          <div key={size.id} className="flex items-center space-x-2">
+          <div
+            key={size.id || `size-${index}`}
+            className="flex items-center space-x-2"
+          >
             <input
               type="text"
               value={size.size}

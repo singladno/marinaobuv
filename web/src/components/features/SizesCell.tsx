@@ -100,6 +100,73 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
     );
   }
 
+  // Check if we're in edit mode (any size is being edited)
+  const isInEditMode = editingIndex !== null;
+
+  if (!isInEditMode) {
+    // View mode - show table-like interface
+    return (
+      <div className="space-y-2 rounded border border-gray-300 bg-white p-2 dark:border-gray-600 dark:bg-gray-800">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            Размеры
+          </span>
+          {onChange && (
+            <button
+              type="button"
+              className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
+              onClick={() => startEdit(sizes.length)} // Start editing by adding new size
+              aria-label="Добавить размер"
+            >
+              + Добавить
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-1">
+          {sizes.map((size, index) => (
+            <div key={index} className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={size.size}
+                readOnly
+                className="flex-1 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                onClick={() => onChange && startEdit(index)}
+                title="Нажмите для редактирования"
+              />
+              <input
+                type="number"
+                value={size.stock || size.count || (size as any).quantity || 0}
+                readOnly
+                className="w-16 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                onClick={() => onChange && startEdit(index)}
+                title="Нажмите для редактирования"
+              />
+              <button
+                className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+                onClick={() => onChange && startEdit(index)}
+                title="Нажмите для редактирования"
+              >
+                ✓
+              </button>
+              {onChange && (
+                <button
+                  onClick={() => deleteItem(index)}
+                  className="rounded bg-red-100 px-2 py-1 text-xs text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800"
+                  type="button"
+                  title="Удалить размер"
+                >
+                  🗑️
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Edit mode - show individual editing interface
   return (
     <>
       <div className="flex items-center gap-1 overflow-x-auto overflow-y-visible py-2">

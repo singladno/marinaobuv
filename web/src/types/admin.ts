@@ -1,3 +1,10 @@
+export type DraftSize = {
+  id: string;
+  size: string;
+  quantity: number;
+  isActive: boolean;
+};
+
 export type Draft = {
   id: string;
   name: string | null;
