@@ -11,6 +11,7 @@ export function useDraftBulkOperations() {
   const [isRestoring, setIsRestoring] = React.useState(false);
   const [isPermanentlyDeleting, setIsPermanentlyDeleting] =
     React.useState(false);
+  const [isRunningAI, setIsRunningAI] = React.useState(false);
 
   const approve = React.useCallback(
     async (
@@ -256,6 +257,8 @@ export function useDraftBulkOperations() {
           return;
         }
 
+        setIsRunningAI(true);
+
         const res = await fetch(`/api/admin/drafts/run-ai-analysis`, {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
@@ -284,8 +287,10 @@ export function useDraftBulkOperations() {
         // Wait a moment for the database to be updated, then refetch AI status
         setTimeout(async () => {
           await onRefetchAIStatus();
+          setIsRunningAI(false);
         }, 500);
       } catch (error) {
+        setIsRunningAI(false);
         addNotification({
           type: 'error',
           title: 'Ошибка при запуске AI анализа',
@@ -307,6 +312,7 @@ export function useDraftBulkOperations() {
     isDeleting,
     isRestoring,
     isPermanentlyDeleting,
+    isRunningAI,
 
     // Actions
     approve,

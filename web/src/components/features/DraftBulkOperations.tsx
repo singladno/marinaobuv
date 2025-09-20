@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import type { Draft } from '@/types/admin';
+import { Loader } from '@/components/ui/Loader';
 
 interface DraftBulkOperationsProps {
   selectedIds: string[];
@@ -14,7 +15,13 @@ interface DraftBulkOperationsProps {
   onRunAIScript: () => Promise<void>;
   isRunningAI: boolean;
   isProcessing: boolean;
-  currentProcessingDraft?: string | null;
+  currentProcessingDraft?: {
+    id: string;
+    name: string | null;
+    aiStatus: string | null;
+    aiProcessedAt: string | null;
+    updatedAt: string;
+  } | null;
 }
 
 export function DraftBulkOperations({
@@ -69,9 +76,16 @@ export function DraftBulkOperations({
           <button
             onClick={onRunAIScript}
             disabled={isRunningAI || isProcessing}
-            className="rounded bg-purple-600 px-3 py-1 text-sm text-white hover:bg-purple-700 disabled:opacity-50"
+            className="flex items-center rounded bg-purple-600 px-3 py-1 text-sm text-white hover:bg-purple-700 disabled:opacity-50"
           >
-            {isRunningAI ? 'Запуск AI...' : 'Запустить AI'}
+            {isRunningAI ? (
+              <>
+                <Loader size="sm" className="mr-2" />
+                Запуск AI...
+              </>
+            ) : (
+              'Запустить AI'
+            )}
           </button>
 
           <button
@@ -115,7 +129,8 @@ export function DraftBulkOperations({
 
       {isProcessing && currentProcessingDraft && (
         <span className="text-xs text-gray-500">
-          Обрабатывается: {currentProcessingDraft}
+          Обрабатывается:{' '}
+          {currentProcessingDraft.name || 'AI анализ запущен...'}
         </span>
       )}
     </div>
