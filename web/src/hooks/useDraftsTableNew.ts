@@ -1,0 +1,270 @@
+import {
+  useReactTable,
+  getCoreRowModel,
+  VisibilityState,
+} from '@tanstack/react-table';
+import * as React from 'react';
+
+import { createOptimisticDraftTableColumns } from '@/components/features/OptimisticDraftTableColumns';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
+import type { Draft } from '@/types/admin';
+
+import { useDraftOperations } from './useDraftOperations';
+
+// Custom hook for persistent column visibility
+function usePersistentColumnVisibility(
+  storageKey: string,
+  defaultVisibility: VisibilityState
+) {
+  const STORAGE_VERSION = '1.3';
+
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>(() => {
+      if (typeof window === 'undefined') {
+        return defaultVisibility;
+      }
+
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+
+          // Check if the saved data has the expected structure
+          if (parsed && typeof parsed === 'object') {
+            // If it's the old format (direct VisibilityState), migrate it
+            if (!parsed.version) {
+              return { ...defaultVisibility, ...parsed };
+            }
+
+            // If version matches, use the data
+            if (parsed.version === STORAGE_VERSION && parsed.visibility) {
+              return { ...defaultVisibility, ...parsed.visibility };
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(
+          'Failed to load column visibility from localStorage:',
+          error
+        );
+      }
+
+      return defaultVisibility;
+    });
+
+  const updateColumnVisibility = React.useCallback(
+    (
+      newVisibility:
+        | VisibilityState
+        | ((prev: VisibilityState) => VisibilityState)
+    ) => {
+      setColumnVisibility(prev => {
+        const updated =
+          typeof newVisibility === 'function'
+            ? newVisibility(prev)
+            : newVisibility;
+
+        // Save to localStorage with version
+        if (typeof window !== 'undefined') {
+          try {
+            const dataToSave = {
+              version: STORAGE_VERSION,
+              visibility: updated,
+              timestamp: Date.now(),
+            };
+            localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+          } catch (error) {
+            console.warn(
+              'Failed to save column visibility to localStorage:',
+              error
+            );
+          }
+        }
+
+        return updated;
+      });
+    },
+    [storageKey]
+  );
+
+  const resetColumnVisibility = React.useCallback(() => {
+    updateColumnVisibility(defaultVisibility);
+  }, [updateColumnVisibility, defaultVisibility]);
+
+  return {
+    columnVisibility,
+    setColumnVisibility: updateColumnVisibility,
+    resetColumnVisibility,
+  };
+}
+
+export function useDraftsTableNew({
+  data,
+  selected,
+  onToggle,
+  onSelectAll,
+  onPatch,
+  onDelete,
+  onImageToggle,
+  categories,
+  onReload,
+  status,
+}: {
+  data: Draft[];
+  selected: Record<string, boolean>;
+  onToggle: (id: string) => void;
+  onSelectAll?: (selectAll: boolean) => void;
+  onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onImageToggle: (imageId: string, isActive: boolean) => Promise<void>;
+  categories: CategoryNode[];
+  onReload?: () => void;
+  status?: string;
+}) {
+  const {
+    state,
+    actions,
+    selectedIds,
+    allSelected,
+    someSelected,
+    dataWithOptimisticUpdates,
+    updateDraft,
+    deleteDraft,
+    toggleImage,
+    isProcessing,
+  } = useDraftOperations({
+    onPatch,
+    onDelete,
+    onImageToggle,
+  });
+
+  // Sync external data with internal state
+  React.useEffect(() => {
+    actions.setData(data);
+  }, [data, actions]);
+
+  // Sync external selection with internal state
+  React.useEffect(() => {
+    actions.clearSelection();
+    Object.entries(selected).forEach(([id, isSelected]) => {
+      if (isSelected) {
+        actions.toggleSelection(id);
+      }
+    });
+  }, [selected, actions]);
+
+  // Selection handlers
+  const handleSelectionToggle = React.useCallback(
+    (id: string) => {
+      actions.toggleSelection(id);
+      onToggle(id);
+    },
+    [actions, onToggle]
+  );
+
+  const handleSelectAll = React.useCallback(
+    (selectAll: boolean) => {
+      actions.selectAll(selectAll);
+      if (onSelectAll) {
+        onSelectAll(selectAll);
+      }
+    },
+    [actions, onSelectAll]
+  );
+
+  const defaultColumnVisibility: VisibilityState = {
+    category: status === 'approved',
+    gptRequest: false,
+    gptResponse: false,
+    gptRequest2: false,
+    gptResponse2: false,
+    createdAt: false,
+    updatedAt: false,
+  };
+
+  const { columnVisibility, setColumnVisibility, resetColumnVisibility } =
+    usePersistentColumnVisibility(
+      `marinaobuv-drafts-table-columns-${status || 'draft'}`,
+      defaultColumnVisibility
+    );
+
+  // Force category visibility for approved status
+  const finalColumnVisibility = React.useMemo(() => {
+    if (status === 'approved') {
+      return { ...columnVisibility, category: true };
+    }
+    return columnVisibility;
+  }, [columnVisibility, status]);
+
+  const columns = React.useMemo(() => {
+    return createOptimisticDraftTableColumns(
+      handleSelectionToggle,
+      updateDraft,
+      deleteDraft,
+      toggleImage,
+      categories,
+      onReload,
+      handleSelectAll,
+      allSelected,
+      someSelected,
+      status
+    );
+  }, [
+    handleSelectionToggle,
+    updateDraft,
+    deleteDraft,
+    toggleImage,
+    categories,
+    onReload,
+    handleSelectAll,
+    allSelected,
+    someSelected,
+    status,
+  ]);
+
+  const table = useReactTable({
+    data: dataWithOptimisticUpdates,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    state: {
+      columnVisibility: finalColumnVisibility,
+    },
+    onColumnVisibilityChange: setColumnVisibility,
+  });
+
+  const handleToggleColumn = React.useCallback(
+    (columnId: string) => {
+      setColumnVisibility(prev => {
+        const newVisibility = {
+          ...prev,
+          [columnId]: !prev[columnId],
+        };
+
+        // For approved status, always keep category visible
+        if (status === 'approved' && columnId === 'category') {
+          newVisibility.category = true;
+        }
+
+        return newVisibility;
+      });
+    },
+    [status, setColumnVisibility]
+  );
+
+  const handleResetColumns = React.useCallback(() => {
+    resetColumnVisibility();
+  }, [resetColumnVisibility]);
+
+  return {
+    table,
+    columnVisibility: finalColumnVisibility,
+    handleToggleColumn,
+    handleResetColumns,
+    savingStatus: isProcessing ? 'saving' : 'idle',
+    handleSelectAll,
+    allSelected,
+    someSelected,
+    selectedIds,
+    dataWithOptimisticUpdates,
+  };
+}

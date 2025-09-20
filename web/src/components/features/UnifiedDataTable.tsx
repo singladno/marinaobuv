@@ -102,7 +102,7 @@ export function UnifiedDataTable<TData, TValue>({
   onFiltersChange,
   onUpdateProduct,
 }: UnifiedDataTableProps<TData, TValue>) {
-  const { renderDraftActions, renderProductFilters } = useTableRenderers({
+  const { renderProductFilters } = useTableRenderers({
     isDraftTable,
     isProductTable,
     status,
@@ -138,8 +138,7 @@ export function UnifiedDataTable<TData, TValue>({
         </div>
       )}
 
-      {/* Actions for draft table */}
-      {renderDraftActions()}
+      {/* Actions removed - now handled by DraftBulkOperations at the top */}
 
       {/* Filters for product table */}
       {renderProductFilters()}
