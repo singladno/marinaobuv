@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+/* Cache bust: Updated muted colors to neutral gray */
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0, 0, 0, 0.1);
@@ -33,7 +35,7 @@
   --primary-foreground: 0 0% 98%;
   --secondary: 210 10% 89%;
   --secondary-foreground: 15 8% 15%;
-  --muted: 210 10% 91%;
+  --muted: 0 0% 96%;
   --muted-foreground: 15 8% 45%;
   --accent: 142 25% 90%;
   --accent-foreground: 15 8% 15%;
@@ -150,7 +152,7 @@
   --primary-foreground: 15 8% 15%;
   --secondary: 220 10% 22%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 220 10% 18%;
+  --muted: 0 0% 15%;
   --muted-foreground: 0 0% 65%;
   --accent: 142 25% 20%;
   --accent-foreground: 0 0% 98%;
@@ -185,7 +187,7 @@
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-surface: hsl(var(--card));
-  --color-muted: hsl(var(--muted-foreground));
+  --color-muted: hsl(var(--muted));
   --color-border: hsl(var(--border));
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
@@ -221,7 +223,7 @@
     --background: #0b1220; /* near-navy */
     --foreground: #e2e8f0; /* slate-200 */
     --surface: #0f172a; /* slate-900 */
-    --muted: #94a3b8; /* slate-400 */
+    --muted: #f1f5f9; /* slate-100 */
     --border: #1f2937; /* slate-800 */
     --primary: #fb923c; /* orange-400 for dark */
     --primary-foreground: #1a0e05; /* stable */

@@ -24,7 +24,6 @@ export default function CatalogPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
-    brands: [],
     priceRange: [0, 50000],
     minRating: 0,
     inStock: false,
@@ -106,7 +105,6 @@ export default function CatalogPage() {
   const handleClearFilters = () => {
     setFilters({
       categories: [],
-      brands: [],
       priceRange: [0, 50000],
       minRating: 0,
       inStock: false,
@@ -129,7 +127,6 @@ export default function CatalogPage() {
 
   const hasActiveFilters =
     filters.categories.length > 0 ||
-    filters.brands.length > 0 ||
     filters.priceRange[0] > 0 ||
     filters.priceRange[1] < 50000 ||
     filters.minRating > 0 ||
@@ -138,7 +135,7 @@ export default function CatalogPage() {
 
   if (loading) {
     return (
-      <div className="bg-background min-h-screen">
+      <div className="min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="py-12 text-center">
             <div className="mb-4 text-6xl">⏳</div>
@@ -153,7 +150,7 @@ export default function CatalogPage() {
 
   if (error) {
     return (
-      <div className="bg-background min-h-screen">
+      <div className="min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="py-12 text-center">
             <div className="mb-4 text-6xl">❌</div>
@@ -170,7 +167,7 @@ export default function CatalogPage() {
   }
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">

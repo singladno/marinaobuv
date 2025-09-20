@@ -19,7 +19,6 @@ import { FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export interface FilterOptions {
   categories: string[];
-  brands: string[];
   priceRange: [number, number];
   minRating: number;
   inStock: boolean;
@@ -48,7 +47,6 @@ export default function ProductFilters({
 }: ProductFiltersProps) {
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
-    brands: [],
     priceRange: [0, 50000],
     minRating: 0,
     inStock: false,
@@ -68,13 +66,6 @@ export default function ProductFilters({
     updateFilters({ categories: newCategories });
   };
 
-  const handleBrandChange = (brand: string, checked: boolean) => {
-    const newBrands = checked
-      ? [...filters.brands, brand]
-      : filters.brands.filter(b => b !== brand);
-    updateFilters({ brands: newBrands });
-  };
-
   const handlePriceRangeChange = (value: number[]) => {
     updateFilters({ priceRange: [value[0], value[1]] });
   };
@@ -82,7 +73,6 @@ export default function ProductFilters({
   const handleClearAll = () => {
     const defaultFilters: FilterOptions = {
       categories: [],
-      brands: [],
       priceRange: [0, 50000],
       minRating: 0,
       inStock: false,
@@ -94,7 +84,6 @@ export default function ProductFilters({
 
   const hasActiveFilters =
     filters.categories.length > 0 ||
-    filters.brands.length > 0 ||
     filters.priceRange[0] > 0 ||
     filters.priceRange[1] < 50000 ||
     filters.minRating > 0 ||
@@ -179,29 +168,6 @@ export default function ProductFilters({
         </div>
       </Card>
 
-      {/* Brands */}
-      <Card className="p-4">
-        <div className="mb-3">
-          <Text className="text-sm font-semibold">Бренды</Text>
-        </div>
-        <div className="space-y-3">
-          {['Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance'].map(brand => (
-            <div key={brand} className="flex items-center space-x-2">
-              <Checkbox
-                id={`brand-${brand}`}
-                checked={filters.brands.includes(brand)}
-                onCheckedChange={checked =>
-                  handleBrandChange(brand, checked as boolean)
-                }
-              />
-              <Label htmlFor={`brand-${brand}`} className="text-sm font-normal">
-                {brand}
-              </Label>
-            </div>
-          ))}
-        </div>
-      </Card>
-
       {/* Price Range */}
       <Card className="p-4">
         <div className="mb-3">
@@ -211,12 +177,12 @@ export default function ProductFilters({
           <Slider
             value={filters.priceRange}
             onValueChange={handlePriceRangeChange}
-            max={50000}
+            max={100000}
             min={0}
             step={1000}
             className="w-full"
           />
-          <div className="text-muted-foreground flex justify-between text-sm">
+          <div className="flex justify-between text-sm font-medium text-gray-600">
             <span>{filters.priceRange[0].toLocaleString()} ₽</span>
             <span>{filters.priceRange[1].toLocaleString()} ₽</span>
           </div>
@@ -258,15 +224,6 @@ export default function ProductFilters({
                   <XMarkIcon
                     className="h-3 w-3 cursor-pointer"
                     onClick={() => handleCategoryChange(category, false)}
-                  />
-                </Badge>
-              ))}
-              {filters.brands.map(brand => (
-                <Badge key={brand} variant="secondary" className="gap-1">
-                  {brand}
-                  <XMarkIcon
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => handleBrandChange(brand, false)}
                   />
                 </Badge>
               ))}
