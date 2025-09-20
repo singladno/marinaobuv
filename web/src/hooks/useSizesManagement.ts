@@ -34,14 +34,30 @@ export function useSizesManagement({
       // Only sync if more than 1 second since last API call
       console.log('Syncing sizes from props:', sizes);
       // Transform database sizes to component format
-      const sizesWithIds = (sizes || []).map((size, index) => ({
-        id:
-          size.id ||
-          `size-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        size: size.size || '',
-        quantity: size.quantity || size.stock || size.count || 0,
-        isActive: size.isActive !== undefined ? size.isActive : true,
-      }));
+      const sizesWithIds = (sizes || []).map((size, index) => {
+        // Parse size string to extract size and quantity
+        // Handle cases like "38.2" where "38" is size and "2" is quantity
+        let parsedSize = size.size || '';
+        let parsedQuantity = size.quantity || size.stock || size.count || 0;
+
+        // If size contains a dot and no explicit quantity, parse it
+        if (parsedSize.includes('.') && parsedQuantity === 0) {
+          const parts = parsedSize.split('.');
+          if (parts.length === 2) {
+            parsedSize = parts[0]; // "38"
+            parsedQuantity = parseInt(parts[1]) || 0; // "2"
+          }
+        }
+
+        return {
+          id:
+            size.id ||
+            `size-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          size: parsedSize,
+          quantity: parsedQuantity,
+          isActive: size.isActive !== undefined ? size.isActive : true,
+        };
+      });
       console.log('Sizes with IDs:', sizesWithIds);
       setLocalSizes(sizesWithIds);
     }
