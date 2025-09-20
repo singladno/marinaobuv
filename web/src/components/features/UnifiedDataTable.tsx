@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, Table } from '@tanstack/react-table';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 import { DataTable } from '@/components/ui/DataTable';
@@ -9,8 +9,9 @@ import { Tabs, Tab } from '@/components/ui/Tabs';
 import { useTableRenderers } from '@/hooks/useTableRenderers';
 
 interface UnifiedDataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+  table?: Table<TData>;
+  columns?: ColumnDef<TData, TValue>[];
+  data?: TData[];
   loading?: boolean;
   error?: string | null;
   pagination?: {
@@ -65,6 +66,7 @@ interface UnifiedDataTableProps<TData, TValue> {
 }
 
 export function UnifiedDataTable<TData, TValue>({
+  table,
   columns,
   data,
   loading = false,
@@ -146,6 +148,7 @@ export function UnifiedDataTable<TData, TValue>({
       {/* Table content */}
       <div className="min-h-0 flex-1">
         <DataTable
+          table={table}
           columns={columns}
           data={data}
           loading={loading}

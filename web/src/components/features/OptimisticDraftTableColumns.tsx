@@ -1,8 +1,8 @@
 import { createColumnHelper } from '@tanstack/react-table';
 import * as React from 'react';
 
-import type { Draft } from '@/types/admin';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
+import type { Draft } from '@/types/admin';
 
 import { OptimisticEditableCell } from './OptimisticEditableCell';
 import { OptimisticSizesCell } from './OptimisticSizesCell';
@@ -17,105 +17,69 @@ import { CategoryCell } from './CategoryCell';
 import { GenderSelectCell } from './GenderSelectCell';
 import { SeasonSelectCell } from './SeasonSelectCell';
 
-type DraftWithSelected = Draft & { selected?: boolean };
+type DraftWithSelected = Draft;
 
 const columnHelper = createColumnHelper<DraftWithSelected>();
-
-// Memoized checkbox component to prevent unnecessary re-renders
-const SelectionCheckbox = React.memo(
-  ({
-    id,
-    selected,
-    onToggle,
-  }: {
-    id: string;
-    selected: boolean;
-    onToggle: (id: string) => void;
-  }) => {
-    const handleChange = React.useCallback(() => {
-      onToggle(id);
-    }, [id, onToggle]);
-
-    return (
-      <div className="flex h-full items-center justify-center">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={handleChange}
-          aria-label="Выбрать черновик"
-          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
-        />
-      </div>
-    );
-  },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.id === nextProps.id &&
-      prevProps.selected === nextProps.selected &&
-      prevProps.onToggle === nextProps.onToggle
-    );
-  }
-);
-
-SelectionCheckbox.displayName = 'SelectionCheckbox';
 
 // Memoized cell components to prevent re-renders
 const MemoizedOptimisticEditableCell = React.memo(OptimisticEditableCell);
 const MemoizedOptimisticSizesCell = React.memo(OptimisticSizesCell);
-const MemoizedOptimisticImagesCell = React.memo(OptimisticImagesCell);
 const MemoizedCategoryCell = React.memo(CategoryCell);
 const MemoizedProviderCell = React.memo(ProviderCell);
-const MemoizedPriceCell = React.memo(PriceCell);
-const MemoizedBadgeCell = React.memo(BadgeCell);
-const MemoizedSourceCell = React.memo(SourceCell);
-const MemoizedGptRequestCell = React.memo(GptRequestCell);
-const MemoizedGptResponseCell = React.memo(GptResponseCell);
 const MemoizedGenderSelectCell = React.memo(GenderSelectCell);
 const MemoizedSeasonSelectCell = React.memo(SeasonSelectCell);
 
 export function createOptimisticDraftTableColumns(
-  onToggle: (id: string) => void,
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>,
   onDelete: (id: string) => Promise<void>,
   onImageToggle: (imageId: string, isActive: boolean) => Promise<void>,
   categories: CategoryNode[],
   onReload?: () => void,
-  onSelectAll?: (selectAll: boolean) => void,
-  allSelected?: boolean,
-  someSelected?: boolean,
   status?: string
 ) {
-  const isDraft = status === 'draft' || !status;
   const isApproved = status === 'approved';
 
   const columns = [
+    // TanStack Table's built-in selection column
     columnHelper.display({
       id: 'select',
-      header: () =>
-        onSelectAll ? (
+      header: ({ table }) => {
+        const isAllSelected = table.getIsAllRowsSelected();
+        const isSomeSelected = table.getIsSomeRowsSelected();
+
+        return (
           <div className="flex items-center">
             <input
               type="checkbox"
-              checked={allSelected || false}
+              checked={isAllSelected}
               ref={input => {
-                if (input)
-                  input.indeterminate =
-                    (someSelected || false) && !(allSelected || false);
+                if (input) {
+                  input.indeterminate = isSomeSelected && !isAllSelected;
+                }
               }}
-              onChange={e => onSelectAll(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              title={allSelected ? 'Снять выделение со всех' : 'Выделить все'}
+              onChange={e => table.toggleAllRowsSelected(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 accent-blue-600 focus:ring-blue-500"
+              title={isAllSelected ? 'Снять выделение со всех' : 'Выделить все'}
+              aria-label={
+                isAllSelected ? 'Снять выделение со всех' : 'Выделить все'
+              }
             />
           </div>
-        ) : (
-          ''
-        ),
-      cell: info => (
-        <SelectionCheckbox
-          id={info.row.original.id}
-          selected={Boolean(info.row.original.selected)}
-          onToggle={onToggle}
-        />
+        );
+      },
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={e => {
+              e.stopPropagation();
+              row.toggleSelected(e.target.checked);
+            }}
+            className="h-4 w-4 rounded border-gray-300 text-blue-600 accent-blue-600 focus:ring-blue-500"
+            aria-label="Выбрать черновик"
+          />
+        </div>
       ),
       meta: {
         frozen: 'left',

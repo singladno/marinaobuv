@@ -183,25 +183,20 @@ export function useDraftOperations({
     [actions, addOperation]
   );
 
+  const dataWithOptimisticUpdates = React.useMemo(() => {
+    return state.data.map(draft => {
+      const optimisticUpdate = state.optimisticUpdates.get(draft.id);
+      return optimisticUpdate ? { ...draft, ...optimisticUpdate } : draft;
+    });
+  }, [state.data, state.optimisticUpdates]);
+
   return {
     // State
     state,
     actions,
     operationQueue,
     isProcessing,
-
-    // Computed values
-    selectedIds: state.data
-      .filter(draft => state.selected[draft.id])
-      .map(draft => draft.id),
-    allSelected:
-      state.data.length > 0 &&
-      state.data.every(draft => state.selected[draft.id]),
-    someSelected: state.data.some(draft => state.selected[draft.id]),
-    dataWithOptimisticUpdates: state.data.map(draft => {
-      const optimisticUpdate = state.optimisticUpdates.get(draft.id);
-      return optimisticUpdate ? { ...draft, ...optimisticUpdate } : draft;
-    }),
+    dataWithOptimisticUpdates,
 
     // Operations
     updateDraft,

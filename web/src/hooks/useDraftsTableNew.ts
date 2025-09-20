@@ -2,6 +2,7 @@ import {
   useReactTable,
   getCoreRowModel,
   VisibilityState,
+  RowSelectionState,
 } from '@tanstack/react-table';
 import * as React from 'react';
 
@@ -100,9 +101,6 @@ function usePersistentColumnVisibility(
 
 export function useDraftsTableNew({
   data,
-  selected,
-  onToggle,
-  onSelectAll,
   onPatch,
   onDelete,
   onImageToggle,
@@ -111,9 +109,6 @@ export function useDraftsTableNew({
   status,
 }: {
   data: Draft[];
-  selected: Record<string, boolean>;
-  onToggle: (id: string) => void;
-  onSelectAll?: (selectAll: boolean) => void;
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onImageToggle: (imageId: string, isActive: boolean) => Promise<void>;
@@ -124,9 +119,6 @@ export function useDraftsTableNew({
   const {
     state,
     actions,
-    selectedIds,
-    allSelected,
-    someSelected,
     dataWithOptimisticUpdates,
     updateDraft,
     deleteDraft,
@@ -138,39 +130,13 @@ export function useDraftsTableNew({
     onImageToggle,
   });
 
+  // TanStack Table row selection state
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
   // Sync external data with internal state
   React.useEffect(() => {
     actions.setData(data);
-  }, [data, actions]);
-
-  // Sync external selection with internal state
-  React.useEffect(() => {
-    actions.clearSelection();
-    Object.entries(selected).forEach(([id, isSelected]) => {
-      if (isSelected) {
-        actions.toggleSelection(id);
-      }
-    });
-  }, [selected, actions]);
-
-  // Selection handlers
-  const handleSelectionToggle = React.useCallback(
-    (id: string) => {
-      actions.toggleSelection(id);
-      onToggle(id);
-    },
-    [actions, onToggle]
-  );
-
-  const handleSelectAll = React.useCallback(
-    (selectAll: boolean) => {
-      actions.selectAll(selectAll);
-      if (onSelectAll) {
-        onSelectAll(selectAll);
-      }
-    },
-    [actions, onSelectAll]
-  );
+  }, [data]); // actions is stable from useDraftOperations
 
   const defaultColumnVisibility: VisibilityState = {
     category: status === 'approved',
@@ -198,29 +164,14 @@ export function useDraftsTableNew({
 
   const columns = React.useMemo(() => {
     return createOptimisticDraftTableColumns(
-      handleSelectionToggle,
       updateDraft,
       deleteDraft,
       toggleImage,
       categories,
       onReload,
-      handleSelectAll,
-      allSelected,
-      someSelected,
       status
     );
-  }, [
-    handleSelectionToggle,
-    updateDraft,
-    deleteDraft,
-    toggleImage,
-    categories,
-    onReload,
-    handleSelectAll,
-    allSelected,
-    someSelected,
-    status,
-  ]);
+  }, [updateDraft, deleteDraft, toggleImage, categories, onReload, status]);
 
   const table = useReactTable({
     data: dataWithOptimisticUpdates,
@@ -228,8 +179,12 @@ export function useDraftsTableNew({
     getCoreRowModel: getCoreRowModel(),
     state: {
       columnVisibility: finalColumnVisibility,
+      rowSelection,
     },
     onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
+    getRowId: row => row.id,
   });
 
   const handleToggleColumn = React.useCallback(
@@ -255,16 +210,22 @@ export function useDraftsTableNew({
     resetColumnVisibility();
   }, [resetColumnVisibility]);
 
+  // Get selected rows using TanStack Table methods
+  const selectedRows = table.getSelectedRowModel().rows;
+  const selectedIds = selectedRows.map(row => row.id);
+  const allSelected = table.getIsAllRowsSelected();
+  const someSelected = table.getIsSomeRowsSelected();
+
   return {
     table,
     columnVisibility: finalColumnVisibility,
     handleToggleColumn,
     handleResetColumns,
     savingStatus: isProcessing ? 'saving' : 'idle',
-    handleSelectAll,
+    selectedRows,
+    selectedIds,
     allSelected,
     someSelected,
-    selectedIds,
     dataWithOptimisticUpdates,
   };
 }

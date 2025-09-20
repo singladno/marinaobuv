@@ -2,15 +2,16 @@
 
 import * as React from 'react';
 
-import { DraftBulkOperations } from './DraftBulkOperations';
-import { DraftConfirmationModals } from './DraftConfirmationModals';
-import { UnifiedDataTable } from './UnifiedDataTable';
 import { useDraftBulkOperations } from '@/hooks/useDraftBulkOperations';
 import { useDraftsTableNew } from '@/hooks/useDraftsTableNew';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useCategories } from '@/hooks/useCategories';
 import { useAIStatus } from '@/hooks/useAIStatus';
 import type { Draft } from '@/types/admin';
+
+import { DraftBulkOperations } from './DraftBulkOperations';
+import { DraftConfirmationModals } from './DraftConfirmationModals';
+import { UnifiedDataTable } from './UnifiedDataTable';
 
 interface DraftTablePageProps {
   initialStatus: string;
@@ -22,8 +23,6 @@ interface DraftTablePageProps {
 export function DraftTablePage({
   initialStatus,
   onStatusChange,
-  searchParams,
-  router,
 }: DraftTablePageProps) {
   const {
     data,
@@ -38,7 +37,6 @@ export function DraftTablePage({
     changePageSize,
   } = useDrafts();
   const { categories, loading: categoriesLoading } = useCategories();
-  const [selected, setSelected] = React.useState<Record<string, boolean>>({});
   const [isTabChanging, setIsTabChanging] = React.useState(false);
 
   const {
@@ -83,30 +81,6 @@ export function DraftTablePage({
       return draft;
     });
   }, [data, aiStatusData, isTabChanging]);
-
-  const toggle = React.useCallback((id: string) => {
-    setSelected((m: Record<string, boolean>) => ({ ...m, [id]: !m[id] }));
-  }, []);
-
-  const selectAll = React.useCallback(
-    (selectAll: boolean) => {
-      if (selectAll) {
-        // Select all items
-        const allSelected = mergedData.reduce(
-          (acc, item) => {
-            acc[item.id] = true;
-            return acc;
-          },
-          {} as Record<string, boolean>
-        );
-        setSelected(allSelected);
-      } else {
-        // Deselect all items
-        setSelected({});
-      }
-    },
-    [mergedData]
-  );
 
   const inlinePatch = React.useCallback(
     async (id: string, patch: Partial<Draft>) => {
@@ -166,16 +140,8 @@ export function DraftTablePage({
   };
 
   // Use the new useDraftsTableNew hook
-  const {
-    table,
-    handleSelectAll,
-    dataWithOptimisticUpdates,
-    selectedIds: newSelectedIds,
-  } = useDraftsTableNew({
+  const { table, selectedIds: newSelectedIds } = useDraftsTableNew({
     data: mergedData,
-    selected,
-    onToggle: toggle,
-    onSelectAll: selectAll,
     onPatch: inlinePatch,
     onDelete: deleteDraft,
     onImageToggle: toggleImage,
@@ -203,8 +169,6 @@ export function DraftTablePage({
     runAIAnalysis,
   } = useDraftBulkOperations();
 
-  const columns = table.getAllColumns().map(col => col.columnDef);
-
   return (
     <div className="flex h-full flex-col">
       {/* Bulk Operations */}
@@ -212,11 +176,9 @@ export function DraftTablePage({
         <DraftBulkOperations
           selectedIds={newSelectedIds}
           status={status}
-          onApprove={() =>
-            approve(newSelectedIds, reload, () => setSelected({}))
-          }
+          onApprove={() => approve(newSelectedIds, reload, () => {})}
           onConvertToCatalog={() =>
-            convertToCatalog(newSelectedIds, reload, () => setSelected({}))
+            convertToCatalog(newSelectedIds, reload, () => {})
           }
           onBulkDelete={() => setShowDeleteModal(true)}
           onBulkRestore={() => setShowRestoreModal(true)}
@@ -226,27 +188,21 @@ export function DraftTablePage({
           }
           isRunningAI={false}
           isProcessing={isProcessing}
-          currentProcessingDraft={currentProcessingDraft?.id}
+          currentProcessingDraft={currentProcessingDraft}
         />
       </div>
 
       {/* Table with reserved space for pagination */}
       <div className="min-h-0 flex-1">
         <UnifiedDataTable
-          columns={columns}
-          data={dataWithOptimisticUpdates}
-          selected={selected}
-          onToggle={toggle}
-          onSelectAll={handleSelectAll}
+          table={table}
           onPatch={inlinePatch}
           status={status}
           onStatusChange={onStatusChange}
           onReload={reload}
-          onApprove={() =>
-            approve(newSelectedIds, reload, () => setSelected({}))
-          }
+          onApprove={() => approve(newSelectedIds, reload, () => {})}
           onConvertToCatalog={() =>
-            convertToCatalog(newSelectedIds, reload, () => setSelected({}))
+            convertToCatalog(newSelectedIds, reload, () => {})
           }
           onBulkDelete={() => setShowDeleteModal(true)}
           onBulkRestore={() => setShowRestoreModal(true)}
@@ -259,7 +215,7 @@ export function DraftTablePage({
           error={error}
           categories={categories}
           isRunningAI={isProcessing}
-          currentProcessingDraft={currentProcessingDraft?.id}
+          currentProcessingDraft={currentProcessingDraft}
           isDraftTable={true}
           pagination={pagination}
           onPageChange={goToPage}

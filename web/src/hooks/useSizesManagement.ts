@@ -32,7 +32,6 @@ export function useSizesManagement({
 
     if (!isUpdating && timeSinceLastApiCall > 1000) {
       // Only sync if more than 1 second since last API call
-      console.log('Syncing sizes from props:', sizes);
       // Transform database sizes to component format
       const sizesWithIds = (sizes || []).map((size, index) => {
         // Parse size string to extract size and quantity
@@ -58,7 +57,6 @@ export function useSizesManagement({
           isActive: size.isActive !== undefined ? size.isActive : true,
         };
       });
-      console.log('Sizes with IDs:', sizesWithIds);
       setLocalSizes(sizesWithIds);
     }
   }, [sizes, isUpdating, lastApiCallTime]);
@@ -81,8 +79,6 @@ export function useSizesManagement({
       isActive: true,
     };
     const updatedSizes = [...(localSizes || []), newSize];
-    console.log('Adding new size:', newSize);
-    console.log('Updated sizes:', updatedSizes);
     setLocalSizes(updatedSizes);
 
     // Track the new size as being updated
@@ -90,7 +86,6 @@ export function useSizesManagement({
     setIsUpdating(true);
     try {
       await onChange(updatedSizes);
-      console.log('API call completed');
       setLastApiCallTime(Date.now());
     } finally {
       setIsUpdating(false);

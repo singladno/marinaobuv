@@ -7,11 +7,12 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, Table } from '@tanstack/react-table';
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
+  table?: Table<TData>;
+  columns?: ColumnDef<TData, TValue>[];
+  data?: TData[];
   loading?: boolean;
   error?: string | null;
   pagination?: {
@@ -28,6 +29,7 @@ interface DataTableProps<TData, TValue> {
 }
 
 export function DataTable<TData, TValue>({
+  table: providedTable,
   columns,
   data,
   loading = false,
@@ -39,11 +41,13 @@ export function DataTable<TData, TValue>({
   emptyMessage = 'Данные не найдены',
   loadingMessage = 'Загрузка...',
 }: DataTableProps<TData, TValue>) {
-  const table = useReactTable({
-    data,
-    columns,
+  const internalTable = useReactTable({
+    data: data || [],
+    columns: columns || [],
     getCoreRowModel: getCoreRowModel(),
   });
+
+  const table = providedTable || internalTable;
 
   const renderPagination = () => {
     if (!pagination || !onPageChange || !onPageSizeChange) return null;
@@ -96,11 +100,12 @@ export function DataTable<TData, TValue>({
 
   const renderContent = () => {
     if (loading) {
+      const columnCount = table.getAllColumns().length;
       return (
         <tbody>
           <tr>
             <td
-              colSpan={columns.length}
+              colSpan={columnCount}
               className="border-b border-gray-200 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
             >
               <div className="flex items-center justify-center">
@@ -114,11 +119,12 @@ export function DataTable<TData, TValue>({
     }
 
     if (error) {
+      const columnCount = table.getAllColumns().length;
       return (
         <tbody>
           <tr>
             <td
-              colSpan={columns.length}
+              colSpan={columnCount}
               className="border-b border-gray-200 px-4 py-8 text-center text-red-500 dark:border-gray-700"
             >
               <div className="flex flex-col items-center">
@@ -133,12 +139,14 @@ export function DataTable<TData, TValue>({
       );
     }
 
-    if (data.length === 0) {
+    const tableData = table.getRowModel().rows;
+    if (tableData.length === 0) {
+      const columnCount = table.getAllColumns().length;
       return (
         <tbody>
           <tr>
             <td
-              colSpan={columns.length}
+              colSpan={columnCount}
               className="border-b border-gray-200 px-4 py-8 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400"
             >
               {emptyMessage}
