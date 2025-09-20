@@ -151,6 +151,9 @@ export function DraftTablePage({
       throw new Error(`Failed to update image status: ${response.status}`);
     }
 
+    // Trigger a silent reload to update the external data with the new image state
+    await reloadSilent();
+
     return response.json();
   };
 

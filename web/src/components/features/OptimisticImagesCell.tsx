@@ -23,7 +23,7 @@ export function OptimisticImagesCell({
   const [togglingImages, setTogglingImages] = useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [hoveredImageId, setHoveredImageId] = useState<string | null>(null);
+  const [hoveredImages, setHoveredImages] = useState<Set<string>>(new Set());
   const imageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleImageToggle = useCallback(
@@ -86,8 +86,16 @@ export function OptimisticImagesCell({
             <div
               key={img.id}
               ref={setImageRef(img.id)}
-              onMouseEnter={() => setHoveredImageId(img.id)}
-              onMouseLeave={() => setHoveredImageId(null)}
+              onMouseEnter={() =>
+                setHoveredImages(prev => new Set(prev).add(img.id))
+              }
+              onMouseLeave={() =>
+                setHoveredImages(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(img.id);
+                  return newSet;
+                })
+              }
             >
               <ImageThumbnail
                 image={img}
@@ -116,20 +124,34 @@ export function OptimisticImagesCell({
         isUpdating={Array.from(togglingImages)[0] || null}
       />
 
-      {hoveredImageId && imageRefs.current[hoveredImageId] && (
-        <ImageActionButton
-          imageId={hoveredImageId}
-          isActive={
-            sortedImages.find(img => img.id === hoveredImageId)?.isActive ||
-            false
-          }
-          isUpdating={togglingImages.has(hoveredImageId)}
-          onToggle={handleImageToggle}
-          onMouseEnter={() => setHoveredImageId(hoveredImageId)}
-          onMouseLeave={() => setHoveredImageId(null)}
-          imageRef={imageRefs.current[hoveredImageId]}
-        />
-      )}
+      {Array.from(hoveredImages).map(hoveredImageId => {
+        const imageRef = imageRefs.current[hoveredImageId];
+        if (!imageRef) return null;
+
+        return (
+          <ImageActionButton
+            key={hoveredImageId}
+            imageId={hoveredImageId}
+            isActive={
+              sortedImages.find(img => img.id === hoveredImageId)?.isActive ||
+              false
+            }
+            isUpdating={togglingImages.has(hoveredImageId)}
+            onToggle={handleImageToggle}
+            onMouseEnter={() =>
+              setHoveredImages(prev => new Set(prev).add(hoveredImageId))
+            }
+            onMouseLeave={() =>
+              setHoveredImages(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(hoveredImageId);
+                return newSet;
+              })
+            }
+            imageRef={imageRef}
+          />
+        );
+      })}
     </>
   );
 }

@@ -47,8 +47,8 @@ export function useDraftOperations({
             currentOperation.data.imageId,
             currentOperation.data.isActive
           );
-          // Don't clear optimistic update on success - let it persist
-          // The optimistic update represents the new state
+          // Don't clear optimistic update immediately - wait for external data to be updated
+          // The optimistic update will be cleared when the external data is synced
           break;
       }
 

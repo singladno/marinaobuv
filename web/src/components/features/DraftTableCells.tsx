@@ -23,8 +23,8 @@ export function ImagesCell({
 }: ImagesCellProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
-  const [hoveredImageId, setHoveredImageId] = React.useState<string | null>(
-    null
+  const [hoveredImages, setHoveredImages] = React.useState<Set<string>>(
+    new Set()
   );
   const imageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -75,8 +75,16 @@ export function ImagesCell({
             <div
               key={img.id}
               ref={setImageRef(img.id)}
-              onMouseEnter={() => setHoveredImageId(img.id)}
-              onMouseLeave={() => setHoveredImageId(null)}
+              onMouseEnter={() =>
+                setHoveredImages(prev => new Set(prev).add(img.id))
+              }
+              onMouseLeave={() =>
+                setHoveredImages(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(img.id);
+                  return newSet;
+                })
+              }
             >
               <ImageThumbnail
                 image={img}
@@ -107,20 +115,34 @@ export function ImagesCell({
         isUpdating={isUpdating}
       />
 
-      {hoveredImageId && imageRefs.current[hoveredImageId] && (
-        <ImageActionButton
-          imageId={hoveredImageId}
-          isActive={
-            sortedImages.find(img => img.id === hoveredImageId)?.isActive ===
-            true
-          }
-          isUpdating={isUpdating === hoveredImageId}
-          onToggle={handleImageToggle}
-          onMouseEnter={() => setHoveredImageId(hoveredImageId)}
-          onMouseLeave={() => setHoveredImageId(null)}
-          imageRef={imageRefs.current[hoveredImageId]}
-        />
-      )}
+      {Array.from(hoveredImages).map(hoveredImageId => {
+        const imageRef = imageRefs.current[hoveredImageId];
+        if (!imageRef) return null;
+
+        return (
+          <ImageActionButton
+            key={hoveredImageId}
+            imageId={hoveredImageId}
+            isActive={
+              sortedImages.find(img => img.id === hoveredImageId)?.isActive ===
+              true
+            }
+            isUpdating={isUpdating === hoveredImageId}
+            onToggle={handleImageToggle}
+            onMouseEnter={() =>
+              setHoveredImages(prev => new Set(prev).add(hoveredImageId))
+            }
+            onMouseLeave={() =>
+              setHoveredImages(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(hoveredImageId);
+                return newSet;
+              })
+            }
+            imageRef={imageRef}
+          />
+        );
+      })}
     </>
   );
 }
