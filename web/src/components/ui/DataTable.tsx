@@ -157,7 +157,7 @@ export function DataTable<TData, TValue>({
             <tr
               key={row.id}
               data-product-id={productId}
-              className="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              className="border-b border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
             >
               {row.getVisibleCells().map(cell => {
                 const isFrozenLeft =
@@ -192,7 +192,7 @@ export function DataTable<TData, TValue>({
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="h-full overflow-auto">
           <table className="w-full border-collapse">
-            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800">
+            <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => {
@@ -206,9 +206,9 @@ export function DataTable<TData, TValue>({
                         key={header.id}
                         className={`border-b border-gray-200 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400 ${
                           isFrozenLeft
-                            ? 'sticky left-0 z-40 border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                            ? 'sticky left-0 z-50 border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
                             : isFrozenRight
-                              ? 'sticky right-0 z-40 border-l border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                              ? 'sticky right-0 z-50 border-l border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
                               : ''
                         }`}
                       >
