@@ -1,51 +1,101 @@
+'use client';
+
 import Link from 'next/link';
+import { MoonIcon, SunIcon, UserIcon } from '@heroicons/react/24/outline';
 
+import { Button } from '@/components/ui/Button';
+import MobileMenu from '@/components/ui/MobileMenu';
+import { SearchBar } from '@/components/ui/SearchBar';
 import { Text } from '@/components/ui/Text';
+import { useTheme } from '@/components/ui/ThemeProvider';
 import { site } from '@/lib/site';
-import { getSession } from '@/lib/server/session';
 
-export default async function Header() {
-  const session = await getSession();
-  const isAuthed = !!session;
-  const isAdmin = session?.role === 'ADMIN';
+interface HeaderProps {
+  onSearch?: (query: string) => void;
+}
+
+export default function Header({ onSearch }: HeaderProps) {
+  const { theme, toggleTheme } = useTheme();
+
+  const handleSearch = (query: string) => {
+    if (onSearch) {
+      onSearch(query);
+    } else {
+      // Default search behavior - redirect to catalog with search params
+      const searchParams = new URLSearchParams();
+      if (query) {
+        searchParams.set('search', query);
+      }
+      window.location.href = `/catalog?${searchParams.toString()}`;
+    }
+  };
+
+  const handleMenuClick = (item: string) => {
+    console.log(`Navigation clicked: ${item}`);
+  };
 
   return (
-    <header className="border-border/80 bg-surface/80 supports-[backdrop-filter]:bg-surface/70 border-b backdrop-blur">
-      <div className="container mx-auto flex items-center justify-between px-4 py-4">
-        <Link href={site.links.home} className="hover:opacity-90">
-          <Text as="span" className="text-xl font-semibold tracking-tight">
-            {site.brand}
-          </Text>
-        </Link>
+    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
+      <div className="container mx-auto flex h-16 items-center gap-4 px-4">
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <Link href={site.links.home} className="hover:opacity-90">
+            <Text as="span" className="text-xl font-bold">
+              {site.brand}
+            </Text>
+          </Link>
+        </div>
 
-        <nav className="flex items-center gap-6 text-sm">
-          <Link href={site.links.catalog} className="hover:text-primary">
-            <Text as="span">Каталог</Text>
-          </Link>
-          <Link href={site.links.about} className="hover:text-primary">
-            <Text as="span">О нас</Text>
-          </Link>
-          {!isAuthed && (
-            <Link
-              href="/login"
-              className="text-primary rounded-md px-3 py-1.5 hover:bg-[color-mix(in_oklab,var(--color-primary),transparent_85%)]"
-            >
-              <Text as="span" className="font-medium">
-                Войти
-              </Text>
-            </Link>
-          )}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="rounded-md bg-[color-mix(in_oklab,var(--color-primary),transparent_85%)] px-3 py-1.5 text-[color-mix(in_oklab,var(--color-primary),#000_20%)] hover:bg-[color-mix(in_oklab,var(--color-primary),transparent_78%)]"
-            >
-              <Text as="span" className="font-medium">
-                Админ
-              </Text>
-            </Link>
-          )}
+        {/* Desktop Navigation */}
+        <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
+          <Button
+            variant="ghost"
+            onClick={() => handleMenuClick('catalog')}
+            asChild
+          >
+            <Link href={site.links.catalog}>Каталог</Link>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => handleMenuClick('about')}
+            asChild
+          >
+            <Link href={site.links.about}>О нас</Link>
+          </Button>
         </nav>
+
+        {/* Search Bar - Centered and Wider */}
+        <div className="flex flex-1 justify-center">
+          <div className="w-full max-w-md">
+            <SearchBar onSearch={handleSearch} />
+          </div>
+        </div>
+
+        {/* Right Actions */}
+        <div className="ml-auto flex items-center gap-2">
+          {/* Theme Toggle */}
+          <Button variant="ghost" size="icon" onClick={toggleTheme}>
+            {theme === 'light' ? (
+              <MoonIcon className="h-4 w-4" />
+            ) : (
+              <SunIcon className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* Account */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleMenuClick('account')}
+          >
+            <UserIcon className="h-4 w-4" />
+          </Button>
+
+          {/* Mobile Menu */}
+          <div className="md:hidden">
+            <MobileMenu />
+          </div>
+        </div>
       </div>
     </header>
   );

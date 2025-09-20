@@ -3,13 +3,14 @@ import Link from 'next/link';
 import React from 'react';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'subtle' | 'ghost';
-type Size = 'sm' | 'md' | 'lg';
+type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 type CommonProps = {
   variant?: Variant;
   size?: Size;
   className?: string;
   children: React.ReactNode;
+  asChild?: boolean;
 };
 
 type ButtonProps = CommonProps & React.ButtonHTMLAttributes<HTMLButtonElement>;
@@ -21,6 +22,7 @@ const sizes: Record<Size, string> = {
   sm: 'px-3 py-1.5 text-sm',
   md: 'px-4 py-2 text-sm',
   lg: 'px-5 py-2.5',
+  icon: 'h-9 w-9 p-0',
 };
 const variants: Record<Variant, string> = {
   primary:
@@ -31,8 +33,7 @@ const variants: Record<Variant, string> = {
     'bg-transparent text-foreground border border-border hover:bg-[color-mix(in_oklab,var(--color-background),#000_4%)]',
   subtle:
     'bg-[color-mix(in_oklab,var(--color-primary),transparent_85%)] text-[color-mix(in_oklab,var(--color-primary),#000_20%)] hover:bg-[color-mix(in_oklab,var(--color-primary),transparent_78%)]',
-  ghost:
-    'bg-transparent text-foreground hover:bg-[color-mix(in_oklab,var(--color-background),#000_5%)]',
+  ghost: 'bg-transparent text-foreground hover-elevate',
 };
 
 export function Button({
@@ -40,13 +41,19 @@ export function Button({
   size = 'md',
   className,
   children,
+  asChild = false,
   ...rest
 }: ButtonProps) {
+  const buttonClasses = clsx(base, variants[variant], sizes[size], className);
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      className: clsx(buttonClasses, children.props.className),
+    });
+  }
+
   return (
-    <button
-      className={clsx(base, variants[variant], sizes[size], className)}
-      {...rest}
-    >
+    <button className={buttonClasses} {...rest}>
       {children}
     </button>
   );
