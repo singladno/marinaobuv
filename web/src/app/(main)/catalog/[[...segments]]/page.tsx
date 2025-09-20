@@ -24,7 +24,7 @@ export default function CatalogPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
-    priceRange: [0, 50000],
+    priceRange: [0, 100000],
     minRating: 0,
     inStock: false,
     sortBy: 'featured',
@@ -42,7 +42,9 @@ export default function CatalogPage() {
         const query = searchQuery.toLowerCase();
         if (
           !product.name.toLowerCase().includes(query) &&
-          !product.category?.toLowerCase().includes(query)
+          !(product.category?.name || product.category)
+            ?.toLowerCase()
+            .includes(query)
         ) {
           return false;
         }
@@ -52,7 +54,7 @@ export default function CatalogPage() {
       if (
         filters.categories.length > 0 &&
         product.category &&
-        !filters.categories.includes(product.category)
+        !filters.categories.includes(product.category?.name || product.category)
       ) {
         return false;
       }
@@ -105,7 +107,7 @@ export default function CatalogPage() {
   const handleClearFilters = () => {
     setFilters({
       categories: [],
-      priceRange: [0, 50000],
+      priceRange: [0, 100000],
       minRating: 0,
       inStock: false,
       sortBy: 'featured',
@@ -128,7 +130,7 @@ export default function CatalogPage() {
   const hasActiveFilters =
     filters.categories.length > 0 ||
     filters.priceRange[0] > 0 ||
-    filters.priceRange[1] < 50000 ||
+    filters.priceRange[1] < 100000 ||
     filters.minRating > 0 ||
     filters.inStock ||
     searchQuery.length > 0;
