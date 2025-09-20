@@ -165,10 +165,6 @@ export function createDraftTableColumns(
       })
     );
   } else {
-    console.log(
-      'Not creating category column - status is not approved:',
-      status
-    );
   }
 
   // Add provider column
@@ -519,11 +515,6 @@ export function createDraftTableColumns(
         </div>
       ),
     })
-  );
-
-  console.log(
-    'Final columns array:',
-    columns.map(col => col.id)
   );
   return columns;
 }

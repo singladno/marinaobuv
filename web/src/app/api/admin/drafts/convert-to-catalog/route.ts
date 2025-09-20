@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { slugify } from '@/utils/slugify';
+import { processDraftProductImages } from '@/lib/draft-to-product-image-processor';
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,6 +33,36 @@ export async function POST(req: NextRequest) {
 
     for (const d of drafts) {
       try {
+        console.log(
+          `Processing draft ${d.id} (${d.name}) for catalog conversion...`
+        );
+
+        // Process images and upload to S3
+        console.log(
+          `  📸 Processing ${d.images.length} images for draft ${d.id}...`
+        );
+        const processedImages = await processDraftProductImages(d.id);
+
+        if (processedImages.length === 0) {
+          console.log(
+            `  ⚠️  No active images found for draft ${d.id}, skipping...`
+          );
+          results.push({
+            draftId: d.id,
+            error: 'No active images found',
+          });
+          continue;
+        }
+
+        // Log sizes information
+        if (d.sizes && Array.isArray(d.sizes)) {
+          console.log(
+            `  📏 Processing ${d.sizes.length} sizes for draft ${d.id}...`
+          );
+        } else {
+          console.log(`  📏 No sizes data found for draft ${d.id}`);
+        }
+
         // Create unique slug
         const baseSlug = slugify(`${d.name}-${d.id.slice(0, 6)}`);
         let slug = baseSlug;
@@ -57,19 +88,27 @@ export async function POST(req: NextRequest) {
               season: d.season ?? null,
               description: d.description ?? null,
               images: {
-                create: d.images
-                  .filter(img => img.isActive) // Only include active images
-                  .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-                  .map(img => ({
-                    url: img.url,
-                    key: img.key,
-                    alt: img.alt ?? null,
-                    sort: img.sort ?? 0,
-                    isPrimary: !!img.isPrimary,
-                    color: img.color ?? null,
-                    width: img.width ?? null,
-                    height: img.height ?? null,
-                  })),
+                create: processedImages.map(img => ({
+                  url: img.url,
+                  key: img.key,
+                  alt: img.alt,
+                  sort: img.sort,
+                  isPrimary: img.isPrimary,
+                  color: img.color,
+                  width: img.width,
+                  height: img.height,
+                })),
+              },
+              sizes: {
+                create:
+                  d.sizes && Array.isArray(d.sizes)
+                    ? d.sizes.map((size: any) => ({
+                        size: size.size || size.name || 'Unknown',
+                        perBox: size.count || size.perBox || null,
+                        stock: size.stock || null,
+                        sku: size.sku || null,
+                      }))
+                    : [],
               },
             },
           });
@@ -83,8 +122,12 @@ export async function POST(req: NextRequest) {
           return created;
         });
 
+        console.log(
+          `  ✅ Successfully converted draft ${d.id} to product ${product.id} with ${processedImages.length} images`
+        );
         results.push({ draftId: d.id, productId: product.id });
       } catch (err: any) {
+        console.error(`  ❌ Failed to convert draft ${d.id}:`, err);
         results.push({
           draftId: d.id,
           error: err?.message ?? 'Failed to convert to catalog',

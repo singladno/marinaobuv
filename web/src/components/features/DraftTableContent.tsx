@@ -40,7 +40,7 @@ export function DraftTableContent({
 }: DraftTableContentProps) {
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center bg-white dark:bg-gray-900">
+      <div className="flex h-full items-center justify-center bg-white transition-opacity duration-200 ease-in-out dark:bg-gray-900">
         <TableLoader message="Загрузка данных..." />
       </div>
     );
@@ -57,7 +57,7 @@ export function DraftTableContent({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="h-full overflow-auto">
+    <div className="h-full overflow-auto transition-opacity duration-200 ease-in-out">
       <table className="w-full table-auto">
         {/* Header */}
         <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">

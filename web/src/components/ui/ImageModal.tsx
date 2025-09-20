@@ -78,9 +78,15 @@ export function ImageModal({
   const safeCurrentIndex = Math.min(currentIndex, images.length - 1);
   const currentImage = images[safeCurrentIndex];
 
-  // If currentImage is undefined, close the modal
+  // If currentImage is undefined, don't close the modal immediately
+  // This prevents the modal from closing during image updates
   if (!currentImage) {
-    onClose();
+    // Only close if we have no images at all, not just a missing current image
+    if (images.length === 0) {
+      onClose();
+      return null;
+    }
+    // If we have images but currentImage is undefined, just return null without closing
     return null;
   }
 

@@ -7,6 +7,7 @@ type Props = {
   page: number;
   pageSize: number;
   filters?: CatalogFilters;
+  categoryId?: string;
 };
 
 export default function Pagination({
@@ -15,6 +16,7 @@ export default function Pagination({
   page,
   pageSize,
   filters,
+  categoryId,
 }: Props) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   if (totalPages <= 1) return null;
@@ -23,7 +25,11 @@ export default function Pagination({
     <div className="mt-6 flex items-center justify-center gap-2 text-sm">
       {Array.from({ length: totalPages }).map((_, i) => {
         const n = i + 1;
-        const href = `${basePath}${buildQueryString({ page: n }, filters)}`;
+        const queryParams: { page: number; categoryId?: string } = { page: n };
+        if (categoryId) {
+          queryParams.categoryId = categoryId;
+        }
+        const href = `${basePath}${buildQueryString(queryParams, { ...filters, categoryId })}`;
         const isActive = n === page;
         return (
           <a

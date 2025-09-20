@@ -70,6 +70,7 @@ export function DraftsTable({
         data: { isDeleted: true },
       }),
     });
+    // No reload needed - optimistic update will handle UI
   }, []);
 
   const {

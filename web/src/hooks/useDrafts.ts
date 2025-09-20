@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import type { Draft } from '@/types/admin';
 
 export function useDrafts() {
@@ -36,8 +37,8 @@ export function useDrafts() {
         total: json.total ?? 0,
         totalPages: json.totalPages ?? 0,
       });
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load drafts');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load drafts');
     } finally {
       setLoading(false);
     }

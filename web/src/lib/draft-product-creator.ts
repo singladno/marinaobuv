@@ -8,7 +8,6 @@ export interface DraftProductData {
   currency: string;
   packPairs: number | null;
   priceBox: number | null;
-  material: string | null;
   gender: 'FEMALE' | 'MALE' | 'UNISEX' | null;
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description: string | null;
@@ -62,7 +61,6 @@ export async function createDraftProduct(
       currency: productData.currency,
       packPairs: productData.packPairs,
       priceBox: productData.priceBox,
-      material: productData.material,
       gender: productData.gender,
       season: productData.season,
       description: productData.description,

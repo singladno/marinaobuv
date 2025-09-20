@@ -54,13 +54,14 @@ SEQUENCE PATTERN ANALYSIS (CRITICAL):
 - If you see repeated image-text-image-text patterns, create separate groups for each sequence
 - Each continuous image sequence (followed by text) represents one product
 
-VALID GROUP REQUIREMENTS (FLEXIBLE):
-- PREFER groups with both images AND text messages
-- Text messages SHOULD include: price, sizes, amount, or product descriptions
-- Groups with ONLY images can be VALID if they show clear product content (max 5-6 images)
-- Groups with ONLY text can be VALID if they contain detailed product information
-- Groups with product-related content (shoe types, materials, descriptions) are VALID
-- Create groups that have meaningful product content (visual or textual)
+VALID GROUP REQUIREMENTS (STRICT):
+- EVERY group MUST contain BOTH images AND text messages - this is MANDATORY
+- Groups with ONLY images are INVALID - they cannot be processed into products
+- Groups with ONLY text are INVALID - they cannot be processed into products
+- Text messages MUST include: price, sizes, amount, or product descriptions
+- Images MUST show the actual product being described in the text
+- Each group must be a complete product unit that can be processed into a catalog entry
+- If you cannot create a group with both images and text, DO NOT create that group
 
 GROUPING STRATEGY:
 - FIRST: Analyze sequence patterns - look for image-text-image-text patterns that indicate different products
@@ -79,6 +80,15 @@ GROUPING STRATEGY:
 - Example: Message1[Image] + Message2[Image] + Message3[Image] + Message4[Text] = One product group
 - ENFORCE the 5-6 image limit - if a group exceeds this, split it based on timestamps and content
 - ENFORCE sequence patterns - split at text message boundaries when you see repeated image-text patterns
+- CRITICAL: Only create groups that have BOTH images AND text - incomplete groups are useless for product processing
+
+VALIDATION RULES (MANDATORY):
+- Before creating any group, verify it contains at least 1 image AND at least 1 text message
+- Text messages must contain product information (price, sizes, description, etc.)
+- Images must show the product being described in the text
+- If a group would only have images OR only text, DO NOT create that group
+- It's better to have fewer, complete groups than many incomplete groups
+- Each group must be processable into a complete product catalog entry
 
 RESPONSE (JSON only):
 {

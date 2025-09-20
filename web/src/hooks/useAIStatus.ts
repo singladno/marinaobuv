@@ -59,6 +59,13 @@ export function useAIStatus(status?: string, isRunningAI?: boolean) {
     return () => clearInterval(interval);
   }, [fetchAIStatus, data?.counts.processing, isRunningAI]);
 
+  // Immediately fetch AI status when isRunningAI changes to true
+  useEffect(() => {
+    if (isRunningAI) {
+      fetchAIStatus();
+    }
+  }, [isRunningAI, fetchAIStatus]);
+
   const isProcessing = data?.counts.processing > 0;
   const currentProcessingDraft = data?.drafts.find(
     d => d.aiStatus === 'ai_processing'

@@ -58,6 +58,13 @@ export async function getCategoryByPath(path: string) {
   });
 }
 
+export async function getCategoryById(id: string) {
+  return prisma.category.findUnique({
+    where: { id },
+    include: { parent: true, children: true },
+  });
+}
+
 export type ProductCardDTO = {
   id: string;
   slug: string;
@@ -148,6 +155,92 @@ export async function listProductsByCategoryPath(opts: {
   return { items, total, page, pageSize };
 }
 
+export async function listProductsByCategoryId(opts: {
+  categoryId?: string;
+  filters?: CatalogFilters;
+}): Promise<{
+  items: ProductCardDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const page = Math.max(1, opts.filters?.page ?? 1);
+  const pageSize = Math.min(60, Math.max(1, opts.filters?.pageSize ?? 24));
+
+  let where: Prisma.ProductWhereInput = {};
+  if (opts.categoryId) {
+    // Get the category to determine if it's a season (parent) or subcategory
+    const category = await prisma.category.findUnique({
+      where: { id: opts.categoryId },
+      select: { path: true, children: { select: { id: true } } },
+    });
+
+    if (category) {
+      const isSeason = category.children.length > 0;
+      if (isSeason) {
+        // Include all subcategories
+        where = { category: { path: { startsWith: category.path } } };
+      } else {
+        // Only this specific category
+        where = { categoryId: opts.categoryId };
+      }
+    }
+  }
+
+  // Price filter (RUB -> kopecks)
+  const pf =
+    opts.filters?.priceFrom != null ? opts.filters.priceFrom * 100 : undefined;
+  const pt =
+    opts.filters?.priceTo != null ? opts.filters.priceTo * 100 : undefined;
+  if (pf != null || pt != null) {
+    const priceFilter: Prisma.IntFilter = {};
+    if (pf != null) priceFilter.gte = pf;
+    if (pt != null) priceFilter.lte = pt;
+    where.pricePair = priceFilter;
+  }
+
+  // Sorting
+  let orderBy: Prisma.ProductOrderByWithRelationInput | undefined = undefined;
+  const sort = opts.filters?.sort ?? 'relevance';
+  if (sort === 'price-asc') orderBy = { pricePair: 'asc' };
+  else if (sort === 'price-desc') orderBy = { pricePair: 'desc' };
+  else if (sort === 'newest') orderBy = { createdAt: 'desc' };
+  else orderBy = { createdAt: 'desc' }; // relevance fallback
+
+  const [rows, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        pricePair: true,
+        currency: true,
+        images: {
+          orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
+          take: 1,
+          select: { url: true },
+        },
+      },
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  const items: ProductCardDTO[] = rows.map(p => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    pricePair: p.pricePair,
+    currency: p.currency,
+    primaryImageUrl: p.images[0]?.url ?? null,
+  }));
+
+  return { items, total, page, pageSize };
+}
+
 export async function getSizeFacetsForPath(
   path?: string
 ): Promise<Array<{ size: string; count: number }>> {
@@ -190,6 +283,39 @@ export async function getPriceBoundsForPath(
     const isSeason = !input?.includes('/');
     if (isSeason) where = { category: { path: { startsWith: full } } };
     else where = { category: { path: full } };
+  }
+
+  const agg = await prisma.product.aggregate({
+    where,
+    _min: { pricePair: true },
+    _max: { pricePair: true },
+  });
+  const min = agg._min.pricePair ?? 0;
+  const max = agg._max.pricePair ?? 0;
+  return { min: Math.floor(min / 100), max: Math.floor(max / 100) };
+}
+
+export async function getPriceBoundsForCategoryId(
+  categoryId?: string
+): Promise<{ min: number; max: number }> {
+  let where: Prisma.ProductWhereInput = {};
+  if (categoryId) {
+    // Get the category to determine if it's a season (parent) or subcategory
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { path: true, children: { select: { id: true } } },
+    });
+
+    if (category) {
+      const isSeason = category.children.length > 0;
+      if (isSeason) {
+        // Include all subcategories
+        where = { category: { path: { startsWith: category.path } } };
+      } else {
+        // Only this specific category
+        where = { categoryId };
+      }
+    }
   }
 
   const agg = await prisma.product.aggregate({

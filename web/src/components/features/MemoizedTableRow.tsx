@@ -28,20 +28,6 @@ export const MemoizedTableRow = React.memo(
             : 'hover:bg-gray-50 dark:hover:bg-gray-800'
         }`}
       >
-        {/* AI Processing Indicator - Left border */}
-        {isProcessing && (
-          <div className="absolute bottom-0 left-0 top-0 w-1 bg-gradient-to-b from-purple-400 to-purple-600 shadow-lg shadow-purple-400/50" />
-        )}
-
-        {/* AI Processing Badge - Top right corner */}
-        {isProcessing && (
-          <div className="absolute right-2 top-2 z-30">
-            <div className="flex items-center space-x-1 rounded-full bg-purple-600 px-2 py-1 text-xs font-medium text-white shadow-lg">
-              <div className="h-2 w-2 animate-spin rounded-full border border-white border-t-transparent" />
-              <span>AI</span>
-            </div>
-          </div>
-        )}
         {row.getVisibleCells().map((cell: any, index: number) => {
           const isFrozenLeft = index === 0; // First column only (select)
           const isFrozenRight = cell.column.id === 'actions'; // Last column (actions)
@@ -66,10 +52,20 @@ export const MemoizedTableRow = React.memo(
                     : {}),
               }}
             >
-              {flexRender(cell.column.columnDef.cell, {
-                ...cell.getContext(),
-                isProcessing,
-              })}
+              {isProcessing && isFrozenLeft ? (
+                // Show AI loader in checkbox column when processing
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center space-x-1 rounded-full bg-purple-600 px-2 py-1 text-xs font-medium text-white shadow-lg">
+                    <div className="h-2 w-2 animate-spin rounded-full border border-white border-t-transparent" />
+                    <span>AI</span>
+                  </div>
+                </div>
+              ) : (
+                flexRender(cell.column.columnDef.cell, {
+                  ...cell.getContext(),
+                  isProcessing,
+                })
+              )}
             </td>
           );
         })}

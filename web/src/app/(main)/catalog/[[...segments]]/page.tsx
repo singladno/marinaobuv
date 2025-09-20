@@ -9,9 +9,12 @@ import Pagination from '@/components/ui/Pagination';
 import { Text } from '@/components/ui/Text';
 import {
   getCategoryByPath,
+  getCategoryById,
   getCategoryTree,
   getPriceBoundsForPath,
+  getPriceBoundsForCategoryId,
   listProductsByCategoryPath,
+  listProductsByCategoryId,
 } from '@/lib/catalog';
 import { parseFilters } from '@/lib/filters';
 import { buildMetadata } from '@/lib/seo';
@@ -53,20 +56,34 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
   }
   const filters = parseFilters(sp);
 
+  // Check if we're using categoryId-based navigation
+  const categoryId = sp.get('categoryId');
+
   const [tree, category, list, bounds] = await Promise.all([
     getCategoryTree(),
-    path ? getCategoryByPath(path) : Promise.resolve(null),
-    listProductsByCategoryPath({ path, filters }),
-    getPriceBoundsForPath(path),
+    categoryId
+      ? getCategoryById(categoryId)
+      : path
+        ? getCategoryByPath(path)
+        : Promise.resolve(null),
+    categoryId
+      ? listProductsByCategoryId({ categoryId, filters })
+      : listProductsByCategoryPath({ path, filters }),
+    categoryId
+      ? getPriceBoundsForCategoryId(categoryId)
+      : getPriceBoundsForPath(path),
   ]);
 
-  if (path && !category) notFound();
+  if ((path && !category) || (categoryId && !category)) notFound();
 
   const { items, total, page, pageSize } = list;
 
   const heading = category?.parent
     ? `${category.parent.name} — ${category.name}`
     : (category?.name ?? 'Каталог обуви');
+
+  // Determine active path for CategoryTree
+  const activePath = categoryId ? category?.path?.replace(/^obuv\//, '') : path;
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
@@ -75,7 +92,7 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
           <Text variant="overline" className="mb-2">
             Категории
           </Text>
-          <CategoryTree tree={tree} activePath={path} />
+          <CategoryTree tree={tree} activePath={activePath} />
         </Card>
       </aside>
       <section className="md:col-span-9 lg:col-span-9">
@@ -85,7 +102,12 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
 
         {/* Filters bar */}
         <div className="hidden md:block">
-          <FilterBar path={path} filters={filters} bounds={bounds} />
+          <FilterBar
+            path={categoryId ? undefined : path}
+            categoryId={categoryId}
+            filters={filters}
+            bounds={bounds}
+          />
         </div>
 
         <div className="text-muted mb-3 text-sm">Найдено: {total}</div>
@@ -110,11 +132,14 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
         )}
 
         <Pagination
-          basePath={`/catalog${path ? '/' + path : ''}`}
+          basePath={
+            categoryId ? '/catalog' : `/catalog${path ? '/' + path : ''}`
+          }
           total={total}
           page={page}
           pageSize={pageSize}
           filters={filters}
+          categoryId={categoryId}
         />
       </section>
     </div>
