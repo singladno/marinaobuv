@@ -6,6 +6,7 @@ import { ImageModal } from '@/components/ui/ImageModal';
 import { ImageThumbnail } from './ImageThumbnail';
 import { ImageActionButton } from './ImageActionButton';
 import { isWAParserImage, sanitizeImageUrl } from '@/lib/image-security';
+import { useImageHandling } from '@/hooks/useImageHandling';
 
 interface OptimisticImagesCellProps {
   draftId: string;
@@ -25,6 +26,12 @@ export function OptimisticImagesCell({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [hoveredImages, setHoveredImages] = useState<Set<string>>(new Set());
   const imageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const { handleBulkDelete, handleBulkSplit } = useImageHandling({
+    draftId,
+    onImageToggle,
+    onReload,
+  });
 
   const handleImageToggle = useCallback(
     async (imageId: string, isActive: boolean, event: React.MouseEvent) => {
@@ -121,6 +128,8 @@ export function OptimisticImagesCell({
         onClose={() => setIsModalOpen(false)}
         initialIndex={selectedImageIndex}
         onImageToggle={handleImageToggle}
+        onBulkDelete={handleBulkDelete}
+        onBulkSplit={handleBulkSplit}
         isUpdating={Array.from(togglingImages)[0] || null}
       />
 
