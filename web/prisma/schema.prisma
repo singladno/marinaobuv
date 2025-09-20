@@ -125,6 +125,7 @@ model WaDraftProduct {
   providerId     String
   provider       Provider              @relation(fields: [providerId], references: [id], onDelete: Restrict)
   name           String?
+  article        String?               // Auto-generated article number
   pricePair      Int? // kopecks
   currency       String                @default("RUB")
   packPairs      Int?

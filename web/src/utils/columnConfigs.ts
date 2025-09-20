@@ -17,6 +17,12 @@ export function createColumnConfigs(
       required: isApproved,
     },
     {
+      id: 'article',
+      label: 'Артикул',
+      visible: true, // Always visible
+      required: true,
+    },
+    {
       id: 'category',
       label: 'Категория',
       visible: isApproved,

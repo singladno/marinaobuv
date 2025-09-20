@@ -139,6 +139,7 @@ export function useDraftsTableNew({
   }, [data]); // actions is stable from useDraftOperations
 
   const defaultColumnVisibility: VisibilityState = {
+    article: true, // Always visible
     category: status === 'approved',
     gptRequest: false,
     gptResponse: false,

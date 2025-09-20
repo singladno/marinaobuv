@@ -187,6 +187,7 @@ export function useDraftsTable({
   const someSelected = localData.some(item => item.selected);
 
   const defaultColumnVisibility: VisibilityState = {
+    article: true, // Always visible
     category: status === 'approved', // Show category column only for approved status
     gptRequest: false,
     gptResponse: false,

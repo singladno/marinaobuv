@@ -8,6 +8,7 @@ export type DraftSize = {
 export type Draft = {
   id: string;
   name: string | null;
+  article: string | null;
   categoryId: string | null;
   category?: {
     id: string;

@@ -1,6 +1,7 @@
 import { prisma } from './db-node';
 import { normalizeTextToDraft } from './yagpt';
 import { ImageData } from './draft-image-processor';
+import { generateArticleNumber } from './article-generator';
 
 export interface DraftProductData {
   name: string | null;
@@ -51,12 +52,16 @@ export async function createDraftProduct(
   sourceMessageIds: string[],
   imageData: ImageData[]
 ): Promise<{ id: string }> {
+  // Generate unique article number
+  const article = await generateArticleNumber();
+
   // Create the draft product
   const draftProduct = await prisma.waDraftProduct.create({
     data: {
       messageId,
       providerId,
       name: productData.name,
+      article,
       pricePair: productData.pricePair,
       currency: productData.currency,
       packPairs: productData.packPairs,

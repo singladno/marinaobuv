@@ -15,7 +15,10 @@ interface DraftTablePageProps {
   router: unknown;
 }
 
-export function DraftTablePage({ initialStatus }: DraftTablePageProps) {
+export function DraftTablePage({
+  initialStatus,
+  onStatusChange,
+}: DraftTablePageProps) {
   const {
     data,
     loading,
@@ -46,7 +49,6 @@ export function DraftTablePage({ initialStatus }: DraftTablePageProps) {
     handleBulkRestoreConfirm,
     handleBulkPermanentDeleteConfirm,
     runAIAnalysis,
-    handleStatusChange,
     reload,
   } = useDraftTablePage(initialStatus);
 
@@ -79,7 +81,7 @@ export function DraftTablePage({ initialStatus }: DraftTablePageProps) {
           table={table}
           onPatch={async () => {}}
           status={status}
-          onStatusChange={handleStatusChange}
+          onStatusChange={onStatusChange}
           onReload={reload}
           onApprove={() => approve(newSelectedIds, reload, () => {})}
           onConvertToCatalog={() =>
@@ -98,6 +100,7 @@ export function DraftTablePage({ initialStatus }: DraftTablePageProps) {
           pagination={pagination}
           onPageChange={goToPage}
           onPageSizeChange={changePageSize}
+          isDraftTable={true}
         />
       </div>
 

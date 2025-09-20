@@ -36,19 +36,6 @@ export function useDraftTablePage(initialStatus: string) {
     }
   }, [initialStatus, setStatus, status]);
 
-  // Handle tab changes with loading state
-  const handleStatusChange = React.useCallback(
-    (newStatus: string | undefined) => {
-      if (newStatus && newStatus !== status) {
-        setIsTabChanging(true);
-        setStatus(newStatus);
-        // Reset loading state after a short delay
-        setTimeout(() => setIsTabChanging(false), 500);
-      }
-    },
-    [status, setStatus]
-  );
-
   // Merge AI status data with main data
   const mergedData = React.useMemo(() => {
     if (!aiStatusData?.drafts || isTabChanging) {
@@ -195,7 +182,6 @@ export function useDraftTablePage(initialStatus: string) {
     runAIAnalysis,
 
     // Actions
-    handleStatusChange,
     reload,
   };
 }

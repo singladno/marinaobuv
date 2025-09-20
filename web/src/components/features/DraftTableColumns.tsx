@@ -146,6 +146,19 @@ export function createDraftTableColumns(
     );
   }
 
+  // Add article column - always visible, non-editable
+  columns.push(
+    columnHelper.display({
+      id: 'article',
+      header: () => 'Артикул',
+      cell: info => (
+        <div className="px-2 py-1 text-sm text-gray-900 dark:text-gray-100">
+          {info.row.original.article || '—'}
+        </div>
+      ),
+    })
+  );
+
   // Add category column only for approved status
   if (isApproved) {
     columns.push(
