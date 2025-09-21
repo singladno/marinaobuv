@@ -42,18 +42,31 @@ export function useCatalogProducts(): UseCatalogProductsReturn {
       const data = await response.json();
 
       // The API already returns the data in the correct format
-      const transformedProducts = data.products.map((product: any) => ({
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        pricePair: product.pricePair || 0,
-        currency: product.currency || 'RUB',
-        primaryImageUrl: product.primaryImageUrl,
-        category: product.category,
-        isActive: product.isActive ?? true,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-      }));
+      const transformedProducts = data.products.map(
+        (product: {
+          id: string;
+          name: string;
+          slug: string;
+          pricePair?: number;
+          currency?: string;
+          primaryImageUrl: string | null;
+          category: { id: string; name: string } | null;
+          isActive?: boolean;
+          createdAt: string;
+          updatedAt: string;
+        }) => ({
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          pricePair: product.pricePair || 0,
+          currency: product.currency || 'RUB',
+          primaryImageUrl: product.primaryImageUrl,
+          category: product.category,
+          isActive: product.isActive ?? true,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+        })
+      );
 
       setProducts(transformedProducts);
     } catch (err) {
