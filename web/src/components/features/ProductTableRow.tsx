@@ -6,7 +6,7 @@ import { useCategories } from '@/hooks/useCategories';
 import type { Product, ProductUpdateData } from '@/types/product';
 
 import { EditableProductCell } from './EditableProductCell';
-import { EditableProductSizesCell } from './EditableProductSizesCell';
+import { ProductSizesCell } from './ProductSizesCell';
 
 interface ProductTableRowProps {
   product: Product;
@@ -223,8 +223,9 @@ export function ProductTableRow({
           e.stopPropagation();
         }}
       >
-        <EditableProductSizesCell
+        <ProductSizesCell
           sizes={product.sizes}
+          disabled={product.isActive}
           onChange={handleSizesUpdate}
         />
       </td>

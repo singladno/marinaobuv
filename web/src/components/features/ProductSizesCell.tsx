@@ -7,9 +7,14 @@ import type { DraftSize } from '@/types/admin';
 interface ProductSizesCellProps {
   sizes: ProductSize[];
   onChange?: (next: ProductSize[]) => Promise<void> | void;
+  disabled?: boolean;
 }
 
-export function ProductSizesCell({ sizes, onChange }: ProductSizesCellProps) {
+export function ProductSizesCell({
+  sizes,
+  onChange,
+  disabled = false,
+}: ProductSizesCellProps) {
   // Convert ProductSize[] to DraftSize[] format
   const draftSizes: DraftSize[] = sizes.map(size => ({
     id: size.id,
@@ -35,5 +40,11 @@ export function ProductSizesCell({ sizes, onChange }: ProductSizesCellProps) {
     [onChange]
   );
 
-  return <OptimisticSizesCell sizes={draftSizes} onChange={handleChange} />;
+  return (
+    <OptimisticSizesCell
+      sizes={draftSizes}
+      onChange={handleChange}
+      disabled={disabled}
+    />
+  );
 }

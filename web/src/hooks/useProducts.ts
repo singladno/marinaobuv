@@ -6,6 +6,7 @@ import type {
   ProductsFilters,
   ProductUpdateData,
 } from '@/types/product';
+import { useProductOperations } from './useProductOperations';
 
 interface UseProductsReturn {
   products: Product[];
@@ -28,7 +29,6 @@ interface UseProductsReturn {
 }
 
 export function useProducts(): UseProductsReturn {
-  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
@@ -42,6 +42,52 @@ export function useProducts(): UseProductsReturn {
     categoryId: '',
     page: 1,
     pageSize: 20,
+  });
+
+  // API functions for actual server calls
+  const updateProductAPI = useCallback(
+    async (id: string, data: ProductUpdateData) => {
+      const response = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, ...data }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.product;
+    },
+    []
+  );
+
+  const deleteProductAPI = useCallback(async (id: string) => {
+    const response = await fetch('/api/admin/products', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  }, []);
+
+  // Use optimistic operations
+  const {
+    dataWithOptimisticUpdates: products,
+    updateProduct: updateProductOptimistic,
+    deleteProduct: deleteProductOptimistic,
+    actions,
+  } = useProductOperations({
+    onUpdate: updateProductAPI,
+    onDelete: deleteProductAPI,
   });
 
   const fetchProducts = useCallback(
@@ -64,7 +110,8 @@ export function useProducts(): UseProductsReturn {
 
         const data: ProductsResponse = await response.json();
 
-        setProducts(data.products);
+        // Update the state manager with fresh data
+        actions.setData(data.products);
         setPagination(data.pagination);
       } catch (err) {
         const errorMessage =
@@ -75,68 +122,15 @@ export function useProducts(): UseProductsReturn {
         setLoading(false);
       }
     },
-    [filters]
+    [filters, actions]
   );
 
   const reload = useCallback(() => fetchProducts(false), [fetchProducts]);
   const reloadSilent = useCallback(() => fetchProducts(true), [fetchProducts]);
 
-  const updateProduct = useCallback(
-    async (id: string, data: ProductUpdateData) => {
-      try {
-        const response = await fetch('/api/admin/products', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ id, ...data }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        // Update the product in the local state
-        setProducts(prev =>
-          prev.map(product => (product.id === id ? result.product : product))
-        );
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to update product';
-        setError(errorMessage);
-        console.error('Error updating product:', err);
-        throw err;
-      }
-    },
-    []
-  );
-
-  const deleteProduct = useCallback(async (id: string) => {
-    try {
-      const response = await fetch('/api/admin/products', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Remove the product from the local state
-      setProducts(prev => prev.filter(product => product.id !== id));
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to delete product';
-      setError(errorMessage);
-      console.error('Error deleting product:', err);
-      throw err;
-    }
-  }, []);
+  // Use optimistic update functions
+  const updateProduct = updateProductOptimistic;
+  const deleteProduct = deleteProductOptimistic;
 
   const setFilters = useCallback((newFilters: Partial<ProductsFilters>) => {
     setFiltersState(prev => ({

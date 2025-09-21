@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import type { Product } from '@/types/product';
+import type { Product, ProductUpdateData } from '@/types/product';
 
 import { ProductTableRow } from './ProductTableRow';
 
@@ -10,7 +10,7 @@ interface ProductsTableContentProps {
   products: Product[];
   loading: boolean;
   error: string | null;
-  onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
 }
 
 export function ProductsTableContent({

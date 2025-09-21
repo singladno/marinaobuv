@@ -159,6 +159,7 @@ export function createProductColumnDefinitions({
       cell: ({ getValue, row }) => (
         <ProductSizesCell
           sizes={getValue()}
+          disabled={row.original.isActive}
           onChange={async sizes => {
             try {
               const response = await fetch(
