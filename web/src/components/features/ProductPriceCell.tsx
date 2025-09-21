@@ -6,7 +6,7 @@ import type { Product } from '@/types/product';
 
 interface ProductPriceCellProps {
   product: Product;
-  priceInKopecks: number;
+  priceInKopecks: number | string | null | undefined;
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
   disabled?: boolean;
 }
@@ -19,7 +19,11 @@ export function ProductPriceCell({
 }: ProductPriceCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const formattedPrice = priceInKopecks.toFixed(2);
+  const formattedPrice = (() => {
+    if (!priceInKopecks) return '0.00';
+    const num = Number(priceInKopecks);
+    return isNaN(num) ? '0.00' : num.toFixed(2);
+  })();
 
   const handleSave = async (value: string) => {
     setIsSaving(true);

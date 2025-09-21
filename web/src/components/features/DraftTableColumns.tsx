@@ -195,16 +195,11 @@ export function createDraftTableColumns(
       cell: info => {
         const { pricePair, packPairs, providerDiscount } = info.row.original;
 
-        // Calculate box price: (pair price × pairs count in box) - provider discount
+        // Calculate box price: pair price × pairs count in box
         let calculatedBoxPrice: number | null = null;
 
         if (pricePair !== null && packPairs !== null) {
           calculatedBoxPrice = pricePair * packPairs;
-
-          // Subtract provider discount if available
-          if (providerDiscount !== null) {
-            calculatedBoxPrice -= providerDiscount;
-          }
         }
 
         return (
