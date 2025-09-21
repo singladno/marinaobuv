@@ -62,18 +62,7 @@ export function ImagesCell({
     <>
       <div className="flex gap-1 overflow-x-auto overflow-y-visible py-2">
         {sortedImages.map((img, index) => {
-          // Check if it's a Yandex S3 image (uploaded during approval)
-          if (!isS3Image(img.url)) {
-            return (
-              <div
-                key={img.id}
-                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md border border-yellow-200 bg-yellow-50 text-xs font-medium text-yellow-600 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-400"
-                title="Неизвестный источник изображения"
-              >
-                ?
-              </div>
-            );
-          }
+          // Always display the image, regardless of source
 
           return (
             <div
