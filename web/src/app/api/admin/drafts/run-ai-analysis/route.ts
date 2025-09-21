@@ -7,6 +7,7 @@ import {
   markDraftsAsProcessing,
   type AnalysisResult,
 } from '@/lib/second-analysis-helpers';
+import { broadcastAIEvent } from '@/app/api/ai-events/route';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,12 +31,36 @@ export async function POST(request: NextRequest) {
     const categoryTreeJson = await getCategoryTreeJson();
     await markDraftsAsProcessing(draftIds);
 
-    const results = await processDrafts(drafts, categoryTreeJson);
+    // Broadcast AI start event
+    console.log('🚀 Broadcasting AI start event for', drafts.length, 'drafts');
+    broadcastAIEvent({
+      type: 'ai_start',
+      totalDrafts: drafts.length,
+      timestamp: Date.now(),
+    });
+
+    const results = await processDrafts(drafts, categoryTreeJson, draftIds);
+
+    // Broadcast AI complete event
+    const successCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
+
+    console.log('✅ Broadcasting AI complete event:', {
+      successCount,
+      failedCount,
+    });
+    broadcastAIEvent({
+      type: 'ai_complete',
+      success: true,
+      totalProcessed: successCount,
+      totalFailed: failedCount,
+      timestamp: Date.now(),
+    });
 
     return NextResponse.json({
       success: true,
       results,
-      message: `Analyzed ${results.filter(r => r.success).length} out of ${drafts.length} drafts`,
+      message: `Analyzed ${successCount} out of ${drafts.length} drafts`,
     });
   } catch (error) {
     console.error('AI analysis error:', error);
@@ -71,12 +96,28 @@ async function processDrafts(
     id: string;
     images: Array<{ url: string; id: string; sort: number }>;
   }>,
-  categoryTreeJson: string
+  categoryTreeJson: string,
+  draftIds: string[]
 ): Promise<AnalysisResult[]> {
   const results: AnalysisResult[] = [];
 
   for (let i = 0; i < drafts.length; i++) {
     const draft = drafts[i];
+
+    // Broadcast progress event
+    console.log(
+      `📊 Broadcasting AI progress event: ${i + 1}/${drafts.length} for draft ${draft.id}`
+    );
+    broadcastAIEvent({
+      type: 'ai_progress',
+      draftId: draft.id,
+      currentDraft: i + 1,
+      totalDrafts: drafts.length,
+      draftName: draft.id, // You might want to get the actual name from the draft
+      status: 'processing',
+      timestamp: Date.now(),
+    });
+
     const result = await analyzeDraft(draft, categoryTreeJson);
     results.push(result);
 

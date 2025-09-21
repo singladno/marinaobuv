@@ -1,6 +1,6 @@
 import React from 'react';
 import { AIIndicator } from '@/components/ui/AIIndicator';
-import { useAIStatus } from '@/hooks/useAIStatus';
+import { useAIEventsConnection } from '@/hooks/useAIEventsConnection';
 
 interface AISelectionCellWithEventsProps {
   id: string;
@@ -10,11 +10,10 @@ interface AISelectionCellWithEventsProps {
 
 export const AISelectionCellWithEvents = React.memo(
   ({ id, selected, onToggle }: AISelectionCellWithEventsProps) => {
-    const { data: aiStatusData } = useAIStatus('approved');
+    const { aiState } = useAIEventsConnection();
 
-    // Find the current draft in AI status data
-    const currentDraft = aiStatusData?.drafts.find(draft => draft.id === id);
-    const isProcessing = currentDraft?.aiStatus === 'ai_processing';
+    // Check if this specific draft is being processed
+    const isProcessing = aiState.isRunning && aiState.lastEvent?.draftId === id;
 
     // If the draft is being processed by AI, show the AI indicator
     if (isProcessing) {
