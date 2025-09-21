@@ -5,6 +5,7 @@ import type { CategoryNode } from '@/components/ui/CategorySelector';
 import type { Draft } from '@/types/admin';
 
 import { ApprovalSelectionCellWithEvents } from './ApprovalSelectionCellWithEvents';
+import { AISelectionCellWithEvents } from './AISelectionCellWithEvents';
 import { CategoryCell } from './CategoryCell';
 import { GenderSelectCell } from './GenderSelectCell';
 import { GptRequestCell } from './GptRequestCell';
@@ -92,13 +93,26 @@ export function createOptimisticDraftTableColumns(
           </div>
         );
       },
-      cell: ({ row }) => (
-        <ApprovalSelectionCellWithEvents
-          id={row.original.id}
-          selected={row.getIsSelected()}
-          onToggle={onToggle || (() => {})}
-        />
-      ),
+      cell: ({ row }) => {
+        // Use AI selection cell for approved status, approval cell for other statuses
+        if (isApproved) {
+          return (
+            <AISelectionCellWithEvents
+              id={row.original.id}
+              selected={row.getIsSelected()}
+              onToggle={onToggle || (() => {})}
+            />
+          );
+        }
+
+        return (
+          <ApprovalSelectionCellWithEvents
+            id={row.original.id}
+            selected={row.getIsSelected()}
+            onToggle={onToggle || (() => {})}
+          />
+        );
+      },
       meta: {
         frozen: 'left',
       },
