@@ -34,7 +34,15 @@ export async function processDraftImagesForApproval(
 ): Promise<ApprovalImageData[]> {
   const processedImages: ApprovalImageData[] = [];
 
-  console.log(`Processing ${draftImages.length} draft images for approval...`);
+  console.log(
+    `\n📸 Processing ${draftImages.length} draft images for approval...`
+  );
+  console.log(
+    `   Active images: ${draftImages.filter(img => img.isActive).length}`
+  );
+  console.log(
+    `   Inactive images: ${draftImages.filter(img => !img.isActive).length}`
+  );
 
   for (let i = 0; i < draftImages.length; i++) {
     const draftImage = draftImages[i];
@@ -48,17 +56,21 @@ export async function processDraftImagesForApproval(
     }
 
     console.log(
-      `  📸 Processing image ${i + 1}/${draftImages.length}: ${draftImage.id}`
+      `\n  📸 Processing image ${i + 1}/${draftImages.length}: ${draftImage.id}`
     );
+    console.log(`     URL: ${draftImage.url}`);
+    console.log(`     Current key: ${draftImage.key || 'None'}`);
+    console.log(`     Is Primary: ${draftImage.isPrimary}`);
+    console.log(`     Color: ${draftImage.color || 'None'}`);
 
     try {
-      // Check if image is already in S3 (not a WhatsApp URL)
+      // Check if image is already in our Yandex S3 (not wasabi or WhatsApp)
       if (
         draftImage.key &&
-        !draftImage.url.includes('whatsapp') &&
-        !draftImage.url.includes('wa.me')
+        draftImage.url.includes('storage.yandexcloud.net')
       ) {
-        console.log(`  ✓ Image already in S3: ${draftImage.key}`);
+        console.log(`  ✅ Image already in our Yandex S3: ${draftImage.key}`);
+        console.log(`     Skipping upload - already processed`);
         processedImages.push({
           id: draftImage.id,
           url: draftImage.url,
@@ -74,8 +86,22 @@ export async function processDraftImagesForApproval(
         continue;
       }
 
-      // Upload WhatsApp image to S3
-      console.log(`  ⬆️  Uploading WhatsApp image to S3: ${draftImage.url}`);
+      // Determine source type
+      let sourceType = 'Unknown';
+      if (
+        draftImage.url.includes('whatsapp') ||
+        draftImage.url.includes('wa.me')
+      ) {
+        sourceType = 'WhatsApp';
+      } else if (draftImage.url.includes('wasabisys.com')) {
+        sourceType = 'Wasabi S3';
+      } else if (draftImage.url.includes('s3.')) {
+        sourceType = 'Other S3';
+      }
+
+      // Upload image to our Yandex S3 (from wasabi or WhatsApp)
+      console.log(`  ⬆️  Uploading ${sourceType} image to our Yandex S3...`);
+      console.log(`     Source: ${draftImage.url}`);
 
       // Generate S3 key for draft images with better naming
       const timestamp = Date.now();
@@ -83,7 +109,8 @@ export async function processDraftImagesForApproval(
       const ext = getExtensionFromMime('image/jpeg'); // Default to jpg for WhatsApp images
       const s3Key = `draft-products/${timestamp}-${random}.${ext}`;
 
-      // Upload image from WhatsApp URL to S3
+      // Upload image from source URL to our Yandex S3
+      console.log(`     Target S3 Key: ${s3Key}`);
       const uploadResult = await putFromUrl(
         s3Key,
         draftImage.url,
@@ -91,7 +118,10 @@ export async function processDraftImagesForApproval(
       );
 
       if (uploadResult.success && uploadResult.url) {
-        console.log(`  ✅ Image uploaded successfully: ${uploadResult.url}`);
+        console.log(
+          `  ✅ Successfully uploaded ${sourceType} image to Yandex S3!`
+        );
+        console.log(`     New S3 URL: ${uploadResult.url}`);
         processedImages.push({
           id: draftImage.id,
           url: uploadResult.url,
@@ -106,9 +136,11 @@ export async function processDraftImagesForApproval(
         });
       } else {
         console.error(
-          `  ❌ Failed to upload image ${draftImage.id}:`,
+          `  ❌ Failed to upload ${sourceType} image ${draftImage.id}:`,
           uploadResult.error
         );
+        console.error(`     Source URL: ${draftImage.url}`);
+        console.error(`     Target S3 Key: ${s3Key}`);
         // Continue processing other images even if one fails
       }
     } catch (error) {
@@ -117,7 +149,20 @@ export async function processDraftImagesForApproval(
     }
   }
 
-  console.log(`✅ Processed ${processedImages.length} images for approval`);
+  console.log(`\n✅ Image processing complete!`);
+  console.log(`   Total processed: ${processedImages.length} images`);
+  console.log(`   Successfully uploaded: ${processedImages.length} images`);
+  console.log(
+    `   Failed uploads: ${draftImages.filter(img => img.isActive).length - processedImages.length} images`
+  );
+
+  if (processedImages.length > 0) {
+    console.log(`\n   New S3 URLs:`);
+    processedImages.forEach((img, index) => {
+      console.log(`     ${index + 1}. ${img.url}`);
+    });
+  }
+
   return processedImages;
 }
 
@@ -146,7 +191,17 @@ export async function processDraftImagesForApprovalById(
 export async function updateDraftImagesWithS3Urls(
   processedImages: ApprovalImageData[]
 ): Promise<void> {
-  for (const image of processedImages) {
+  console.log(`\n🔄 Updating database with new S3 URLs...`);
+
+  for (let i = 0; i < processedImages.length; i++) {
+    const image = processedImages[i];
+    console.log(
+      `  ${i + 1}/${processedImages.length} Updating image ${image.id}...`
+    );
+    console.log(`     Old URL: [will be replaced]`);
+    console.log(`     New URL: ${image.url}`);
+    console.log(`     New Key: ${image.key}`);
+
     await prisma.waDraftProductImage.update({
       where: { id: image.id },
       data: {
@@ -154,5 +209,9 @@ export async function updateDraftImagesWithS3Urls(
         key: image.key,
       },
     });
+
+    console.log(`     ✅ Database updated successfully`);
   }
+
+  console.log(`\n✅ All ${processedImages.length} images updated in database!`);
 }

@@ -46,19 +46,44 @@ export async function POST(req: NextRequest) {
 
     for (const d of drafts) {
       try {
+        console.log(`\n🚀 Starting approval process for draft: ${d.id}`);
+        console.log(`   Name: ${d.name || 'No name'}`);
+        console.log(`   Current status: ${d.status}`);
+        console.log(`   Images count: ${d.images.length}`);
+
+        // Log current image URLs
+        console.log(`   Current image URLs:`);
+        d.images.forEach((img, index) => {
+          console.log(
+            `     ${index + 1}. ${img.url} (Active: ${img.isActive})`
+          );
+        });
+
         // Process and upload images to S3 before approval
-        console.log(`Processing images for draft ${d.id}...`);
+        console.log(`\n📸 Processing images for draft ${d.id}...`);
         const processedImages = await processDraftImagesForApprovalById(d.id);
 
         // Update draft images with S3 URLs
         if (processedImages.length > 0) {
+          console.log(
+            `\n🔄 Updating ${processedImages.length} images with S3 URLs...`
+          );
           await updateDraftImagesWithS3Urls(processedImages);
           console.log(
-            `Updated ${processedImages.length} images with S3 URLs for draft ${d.id}`
+            `✅ Successfully updated ${processedImages.length} images with S3 URLs for draft ${d.id}`
           );
+
+          // Log new S3 URLs
+          console.log(`   New S3 URLs:`);
+          processedImages.forEach((img, index) => {
+            console.log(`     ${index + 1}. ${img.url}`);
+          });
+        } else {
+          console.log(`⚠️  No images were processed for draft ${d.id}`);
         }
 
         // Update the draft status to 'approved' after S3 upload
+        console.log(`\n✅ Updating draft status to 'approved'...`);
         await prisma.waDraftProduct.update({
           where: { id: d.id },
           data: {
@@ -67,14 +92,31 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        console.log(`🎉 Draft ${d.id} successfully approved!`);
         results.push({ draftId: d.id });
       } catch (err: unknown) {
-        console.error(`Error processing draft ${d.id}:`, err);
+        console.error(`❌ Error processing draft ${d.id}:`, err);
         results.push({
           draftId: d.id,
           error: err instanceof Error ? err.message : 'Failed to approve',
         });
       }
+    }
+
+    console.log(`\n🎉 Approval process completed!`);
+    console.log(`   Total drafts processed: ${drafts.length}`);
+    console.log(
+      `   Successful approvals: ${results.filter(r => !r.error).length}`
+    );
+    console.log(`   Failed approvals: ${results.filter(r => r.error).length}`);
+
+    if (results.some(r => r.error)) {
+      console.log(`\n❌ Errors encountered:`);
+      results
+        .filter(r => r.error)
+        .forEach(r => {
+          console.log(`   Draft ${r.draftId}: ${r.error}`);
+        });
     }
 
     return NextResponse.json({ results });
