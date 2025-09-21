@@ -7,6 +7,7 @@ import type { CategoryNode } from '@/components/ui/CategorySelector';
 import { DataTable } from '@/components/ui/DataTable';
 import { Tabs, Tab } from '@/components/ui/Tabs';
 import { useTableRenderers } from '@/hooks/useTableRenderers';
+// import { useApprovalEvents } from '@/hooks/useApprovalEvents';
 
 interface UnifiedDataTableProps<TData, TValue> {
   table?: Table<TData>;
@@ -104,6 +105,11 @@ export function UnifiedDataTable<TData, TValue>({
   onFiltersChange,
   onUpdateProduct,
 }: UnifiedDataTableProps<TData, TValue>) {
+  // SSE connection for real-time approval updates (only for draft table)
+  // Draft IDs calculation removed - not needed without SSE
+
+  // SSE completely disabled to fix navigation issues
+  const isConnected = false;
   const { renderProductFilters } = useTableRenderers({
     isDraftTable,
     isProductTable,

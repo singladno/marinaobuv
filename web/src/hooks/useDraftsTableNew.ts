@@ -62,6 +62,14 @@ export function useDraftsTableNew({
     resetColumnVisibility,
   } = useDraftColumnVisibility(status);
 
+  // Function to toggle individual row selection
+  const toggleRowSelection = React.useCallback((id: string) => {
+    setRowSelection(prev => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  }, []);
+
   const columns = React.useMemo(() => {
     return createOptimisticDraftTableColumns(
       updateDraft,
@@ -69,9 +77,18 @@ export function useDraftsTableNew({
       toggleImage,
       categories,
       onReload,
-      status
+      status,
+      toggleRowSelection
     );
-  }, [updateDraft, deleteDraft, toggleImage, categories, onReload, status]);
+  }, [
+    updateDraft,
+    deleteDraft,
+    toggleImage,
+    categories,
+    onReload,
+    status,
+    toggleRowSelection,
+  ]);
 
   const table = useReactTable({
     data: dataWithOptimisticUpdates,

@@ -16,6 +16,7 @@ import { GptResponseCell } from './GptResponseCell';
 import { CategoryCell } from './CategoryCell';
 import { GenderSelectCell } from './GenderSelectCell';
 import { SeasonSelectCell } from './SeasonSelectCell';
+import { ApprovalSelectionCell } from './ApprovalSelectionCell';
 
 type DraftWithSelected = Draft;
 
@@ -35,7 +36,8 @@ export function createOptimisticDraftTableColumns(
   onImageToggle: (imageId: string, isActive: boolean) => Promise<void>,
   categories: CategoryNode[],
   onReload?: () => void,
-  status?: string
+  status?: string,
+  onToggle?: (id: string) => void
 ) {
   const isApproved = status === 'approved';
 
@@ -68,18 +70,11 @@ export function createOptimisticDraftTableColumns(
         );
       },
       cell: ({ row }) => (
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            checked={row.getIsSelected()}
-            onChange={e => {
-              e.stopPropagation();
-              row.toggleSelected(e.target.checked);
-            }}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 accent-blue-600 focus:ring-blue-500"
-            aria-label="Выбрать черновик"
-          />
-        </div>
+        <ApprovalSelectionCell
+          id={row.original.id}
+          selected={row.getIsSelected()}
+          onToggle={onToggle || (() => {})}
+        />
       ),
       meta: {
         frozen: 'left',

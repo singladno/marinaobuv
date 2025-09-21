@@ -1,5 +1,6 @@
 import { prisma } from './db-node';
 import { putFromUrl, getExtensionFromMime } from './s3u';
+import { broadcastApprovalEvent } from '../app/api/approval-events/route';
 
 export interface ApprovalImageData {
   id: string;
@@ -30,7 +31,8 @@ export async function processDraftImagesForApproval(
     color: string | null;
     width: number | null;
     height: number | null;
-  }>
+  }>,
+  draftId?: string
 ): Promise<ApprovalImageData[]> {
   const processedImages: ApprovalImageData[] = [];
 
@@ -109,6 +111,20 @@ export async function processDraftImagesForApproval(
       const ext = getExtensionFromMime('image/jpeg'); // Default to jpg for WhatsApp images
       const s3Key = `draft-products/${timestamp}-${random}.${ext}`;
 
+      // Emit progress event - uploading
+      if (draftId) {
+        broadcastApprovalEvent(draftId, {
+          type: 'approval_progress',
+          draftId,
+          currentImage: i + 1,
+          totalImages: draftImages.filter(img => img.isActive).length,
+          imageId: draftImage.id,
+          imageUrl: draftImage.url,
+          status: 'uploading',
+          timestamp: Date.now(),
+        });
+      }
+
       // Upload image from source URL to our Yandex S3
       console.log(`     Target S3 Key: ${s3Key}`);
       const uploadResult = await putFromUrl(
@@ -122,6 +138,21 @@ export async function processDraftImagesForApproval(
           `  ✅ Successfully uploaded ${sourceType} image to Yandex S3!`
         );
         console.log(`     New S3 URL: ${uploadResult.url}`);
+
+        // Emit progress event - uploaded
+        if (draftId) {
+          broadcastApprovalEvent(draftId, {
+            type: 'approval_progress',
+            draftId,
+            currentImage: i + 1,
+            totalImages: draftImages.filter(img => img.isActive).length,
+            imageId: draftImage.id,
+            imageUrl: uploadResult.url,
+            status: 'uploaded',
+            timestamp: Date.now(),
+          });
+        }
+
         processedImages.push({
           id: draftImage.id,
           url: uploadResult.url,
@@ -141,6 +172,21 @@ export async function processDraftImagesForApproval(
         );
         console.error(`     Source URL: ${draftImage.url}`);
         console.error(`     Target S3 Key: ${s3Key}`);
+
+        // Emit progress event - failed
+        if (draftId) {
+          broadcastApprovalEvent(draftId, {
+            type: 'approval_progress',
+            draftId,
+            currentImage: i + 1,
+            totalImages: draftImages.filter(img => img.isActive).length,
+            imageId: draftImage.id,
+            imageUrl: draftImage.url,
+            status: 'failed',
+            timestamp: Date.now(),
+          });
+        }
+
         // Continue processing other images even if one fails
       }
     } catch (error) {
@@ -182,7 +228,7 @@ export async function processDraftImagesForApprovalById(
     throw new Error(`Draft product not found: ${draftId}`);
   }
 
-  return await processDraftImagesForApproval(draft.images);
+  return await processDraftImagesForApproval(draft.images, draftId);
 }
 
 /**
