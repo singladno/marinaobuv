@@ -1,6 +1,6 @@
 import React from 'react';
 import { AIIndicator } from '@/components/ui/AIIndicator';
-import { useAIEventsConnection } from '@/hooks/useAIEventsConnection';
+import { useAIEvents } from '@/contexts/AIEventsContext';
 
 interface AISelectionCellWithEventsProps {
   id: string;
@@ -10,7 +10,7 @@ interface AISelectionCellWithEventsProps {
 
 export const AISelectionCellWithEvents = React.memo(
   ({ id, selected, onToggle }: AISelectionCellWithEventsProps) => {
-    const { aiState } = useAIEventsConnection();
+    const { aiState } = useAIEvents();
 
     // Check if this specific draft is being processed
     const isProcessing = aiState.isRunning && aiState.lastEvent?.draftId === id;

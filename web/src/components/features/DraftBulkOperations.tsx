@@ -4,7 +4,7 @@ import * as React from 'react';
 import type { Draft } from '@/types/admin';
 import { Loader } from '@/components/ui/Loader';
 import { useApprovalEvents } from '@/contexts/ApprovalEventsContext';
-import { useAIEventsConnection } from '@/hooks/useAIEventsConnection';
+import { useAIEvents } from '@/contexts/AIEventsContext';
 
 interface DraftBulkOperationsProps {
   selectedIds: string[];
@@ -16,7 +16,6 @@ interface DraftBulkOperationsProps {
   onBulkPermanentDelete: () => void;
   onRunAIScript: () => Promise<void>;
   onCancelAI?: () => Promise<void>;
-  isRunningAI: boolean;
   isProcessing: boolean;
   currentProcessingDraft?: {
     id: string;
@@ -37,14 +36,13 @@ export function DraftBulkOperations({
   onBulkPermanentDelete,
   onRunAIScript,
   onCancelAI,
-  isRunningAI,
   isProcessing,
   currentProcessingDraft,
 }: DraftBulkOperationsProps) {
   const selectedCount = selectedIds.length;
   const { isAnyDraftApproving, getApprovingDrafts, getApprovalState } =
     useApprovalEvents();
-  const { aiState } = useAIEventsConnection();
+  const { aiState } = useAIEvents();
 
   // Check if any selected drafts are currently being approved
   const isApproving = isAnyDraftApproving(selectedIds);
@@ -58,12 +56,6 @@ export function DraftBulkOperations({
 
   // Use AI events state instead of polling-based isRunningAI
   const isAIActuallyRunning = aiState.isRunning;
-
-  // Debug logging
-  React.useEffect(() => {
-    console.log('🔍 DraftBulkOperations AI state:', aiState);
-    console.log('🔍 isAIActuallyRunning:', isAIActuallyRunning);
-  }, [aiState, isAIActuallyRunning]);
 
   return (
     <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">
@@ -124,7 +116,7 @@ export function DraftBulkOperations({
             </button>
 
             {/* Cancel AI Analysis Button - Only show when AI is running */}
-            {isRunningAI && onCancelAI && (
+            {isAIActuallyRunning && onCancelAI && (
               <button
                 onClick={onCancelAI}
                 className="flex items-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600"

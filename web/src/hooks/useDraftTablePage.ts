@@ -33,7 +33,6 @@ export function useDraftTablePage(initialStatus: string) {
     isDeleting,
     isRestoring,
     isPermanentlyDeleting,
-    isRunningAI,
     approve,
     convertToCatalog,
     handleBulkDeleteConfirm,
@@ -48,7 +47,7 @@ export function useDraftTablePage(initialStatus: string) {
     isProcessing,
     data: aiStatusData,
     refetch: refetchAIStatus,
-  } = useAIStatus(status, isRunningAI);
+  } = useAIStatus(status, false); // Disable polling since we use WebSocket events
 
   // Set initial status from URL params only on mount
   React.useEffect(() => {
@@ -178,7 +177,6 @@ export function useDraftTablePage(initialStatus: string) {
     isDeleting,
     isRestoring,
     isPermanentlyDeleting,
-    isRunningAI,
     approve,
     convertToCatalog,
     handleBulkDeleteConfirm,

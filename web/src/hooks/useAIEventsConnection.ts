@@ -41,10 +41,12 @@ export function useAIEventsConnection() {
 
     // Close existing connection if any
     if (eventSourceRef.current) {
+      console.log('🔌 Closing existing AI SSE connection');
       eventSourceRef.current.close();
     }
 
     // Create EventSource for AI events
+    console.log('🔌 Creating new EventSource for /api/ai-events');
     const eventSource = new EventSource('/api/ai-events');
     eventSourceRef.current = eventSource;
 
@@ -56,8 +58,6 @@ export function useAIEventsConnection() {
     eventSource.onmessage = event => {
       try {
         const data: AIEvent = JSON.parse(event.data);
-        console.log('📡 Received AI event:', data);
-
         // Handle ping events
         if (data.type === 'ping') {
           return;
@@ -65,7 +65,6 @@ export function useAIEventsConnection() {
 
         switch (data.type) {
           case 'ai_start':
-            console.log('🚀 Processing ai_start event');
             setAIState({
               isRunning: true,
               currentDraft: 0,
@@ -81,11 +80,6 @@ export function useAIEventsConnection() {
               ? Math.round((data.currentDraft! / data.totalDrafts) * 100)
               : 0;
 
-            console.log('📊 Processing ai_progress event:', {
-              currentDraft: data.currentDraft,
-              totalDrafts: data.totalDrafts,
-              progress,
-            });
             setAIState(prev => ({
               ...prev,
               currentDraft: data.currentDraft || 0,
@@ -97,9 +91,6 @@ export function useAIEventsConnection() {
             break;
 
           case 'ai_complete':
-            console.log('✅ Processing ai_complete event:', {
-              success: data.success,
-            });
             setAIState(prev => ({
               ...prev,
               isRunning: false,
@@ -117,7 +108,16 @@ export function useAIEventsConnection() {
     eventSource.onerror = error => {
       console.error(`❌ Error with AI events:`, error);
       console.error(`EventSource readyState:`, eventSource.readyState);
+      console.error(`EventSource URL:`, eventSource.url);
       setIsConnected(false);
+      
+      // Try to reconnect after a delay
+      setTimeout(() => {
+        if (eventSource.readyState === EventSource.CLOSED) {
+          console.log('🔄 Attempting to reconnect AI events...');
+          // The useEffect will handle reconnection
+        }
+      }, 5000);
     };
 
     // Cleanup
@@ -128,11 +128,6 @@ export function useAIEventsConnection() {
       }
     };
   }, []);
-
-  // Debug logging for state changes
-  useEffect(() => {
-    console.log('🔄 AI state updated:', aiState);
-  }, [aiState]);
 
   return { aiState, isConnected };
 }

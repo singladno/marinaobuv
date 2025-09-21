@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
     await markDraftsAsProcessing(draftIds);
 
     // Broadcast AI start event
-    console.log('🚀 Broadcasting AI start event for', drafts.length, 'drafts');
     broadcastAIEvent({
       type: 'ai_start',
       totalDrafts: drafts.length,
@@ -45,10 +44,6 @@ export async function POST(request: NextRequest) {
     const successCount = results.filter(r => r.success).length;
     const failedCount = results.filter(r => !r.success).length;
 
-    console.log('✅ Broadcasting AI complete event:', {
-      successCount,
-      failedCount,
-    });
     broadcastAIEvent({
       type: 'ai_complete',
       success: true,
@@ -105,9 +100,6 @@ async function processDrafts(
     const draft = drafts[i];
 
     // Broadcast progress event
-    console.log(
-      `📊 Broadcasting AI progress event: ${i + 1}/${drafts.length} for draft ${draft.id}`
-    );
     broadcastAIEvent({
       type: 'ai_progress',
       draftId: draft.id,

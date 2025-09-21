@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import type { Draft } from '@/types/admin';
 
@@ -14,14 +14,16 @@ export function useDrafts() {
     totalPages: 0,
   });
 
-  const load = React.useCallback(
-    async (page = pagination.page, pageSize = pagination.pageSize) => {
+  const load = useCallback(
+    async (page?: number, pageSize?: number) => {
       setLoading(true);
       setError(null);
       try {
-        const skip = (page - 1) * pageSize;
+        const currentPage = page ?? pagination.page;
+        const currentPageSize = pageSize ?? pagination.pageSize;
+        const skip = (currentPage - 1) * currentPageSize;
         const res = await fetch(
-          `/api/admin/drafts?status=${status ?? ''}&skip=${skip}&take=${pageSize}`,
+          `/api/admin/drafts?status=${status ?? ''}&skip=${skip}&take=${currentPageSize}`,
           {
             headers: { 'x-role': 'ADMIN' },
           }
@@ -30,8 +32,8 @@ export function useDrafts() {
         const json = await res.json();
         setData(json.drafts ?? []);
         setPagination({
-          page: json.page ?? page,
-          pageSize: json.pageSize ?? pageSize,
+          page: json.page ?? currentPage,
+          pageSize: json.pageSize ?? currentPageSize,
           total: json.total ?? 0,
           totalPages: json.totalPages ?? 0,
         });
@@ -41,10 +43,10 @@ export function useDrafts() {
         setLoading(false);
       }
     },
-    [pagination.page, pagination.pageSize, status]
+    [status, pagination.page, pagination.pageSize]
   );
 
-  const loadSilent = React.useCallback(async () => {
+  const loadSilent = useCallback(async () => {
     try {
       const skip = (pagination.page - 1) * pagination.pageSize;
       const res = await fetch(
@@ -56,17 +58,17 @@ export function useDrafts() {
       if (!res.ok) throw new Error(await res.text());
       const json = await res.json();
       setData(json.drafts ?? []);
-      setPagination({
-        page: json.page ?? pagination.page,
-        pageSize: json.pageSize ?? pagination.pageSize,
-        total: json.total ?? pagination.total,
-        totalPages: json.totalPages ?? pagination.totalPages,
-      });
+      setPagination(prev => ({
+        page: json.page ?? prev.page,
+        pageSize: json.pageSize ?? prev.pageSize,
+        total: json.total ?? prev.total,
+        totalPages: json.totalPages ?? prev.totalPages,
+      }));
     } catch (e) {
       // swallow errors silently for background refresh
       console.error('Silent reload drafts failed', e);
     }
-  }, [pagination.page, pagination.pageSize, status]);
+  }, [status, pagination.page, pagination.pageSize]);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= pagination.totalPages) {
@@ -78,8 +80,10 @@ export function useDrafts() {
     load(1, newPageSize);
   };
 
+  // Load data when status changes, but reset to page 1
   useEffect(() => {
-    load();
+    setPagination(prev => ({ ...prev, page: 1 }));
+    load(1, 10); // Use default page size to avoid dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
