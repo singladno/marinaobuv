@@ -34,7 +34,14 @@ export function useProductOperations({
     try {
       switch (currentOperation.type) {
         case 'update':
-          await onUpdate(currentOperation.id, currentOperation.data);
+          const updatedProduct = await onUpdate(
+            currentOperation.id,
+            currentOperation.data
+          );
+          // Update the local state with the server response
+          if (updatedProduct) {
+            actions.updateProduct(currentOperation.id, updatedProduct);
+          }
           actions.clearOptimisticUpdate(currentOperation.id);
           break;
         case 'delete':

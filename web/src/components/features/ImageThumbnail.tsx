@@ -3,6 +3,7 @@ import * as React from 'react';
 import {
   getThumbnailUrl,
   isWAParserImage,
+  isS3Image,
   sanitizeImageUrl,
 } from '@/lib/image-security';
 
@@ -35,7 +36,7 @@ export function ImageThumbnail({
   index,
 }: ImageThumbnailProps) {
   const thumbnailUrl = getThumbnailUrl(image.url);
-  const isWAParser = isWAParserImage(image.url);
+  const isS3 = isS3Image(image.url);
   const sanitizedUrl = sanitizeImageUrl(image.url);
 
   const isActive = image.isActive === true;
@@ -76,7 +77,7 @@ export function ImageThumbnail({
           onError={e => {
             const target = e.target as HTMLImageElement;
             target.style.display = 'none';
-            console.error('Failed to load WA parser image:', thumbnailUrl);
+            console.error('Failed to load S3 image:', thumbnailUrl);
           }}
         />
         {badge}

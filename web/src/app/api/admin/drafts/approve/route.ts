@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import {
+  processDraftImagesForApprovalById,
+  updateDraftImagesWithS3Urls,
+} from '@/lib/draft-approval-image-processor';
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,7 +46,19 @@ export async function POST(req: NextRequest) {
 
     for (const d of drafts) {
       try {
-        // Only update the draft status to 'approved' - don't create Product records
+        // Process and upload images to S3 before approval
+        console.log(`Processing images for draft ${d.id}...`);
+        const processedImages = await processDraftImagesForApprovalById(d.id);
+
+        // Update draft images with S3 URLs
+        if (processedImages.length > 0) {
+          await updateDraftImagesWithS3Urls(processedImages);
+          console.log(
+            `Updated ${processedImages.length} images with S3 URLs for draft ${d.id}`
+          );
+        }
+
+        // Update the draft status to 'approved' after S3 upload
         await prisma.waDraftProduct.update({
           where: { id: d.id },
           data: {
@@ -53,6 +69,7 @@ export async function POST(req: NextRequest) {
 
         results.push({ draftId: d.id });
       } catch (err: unknown) {
+        console.error(`Error processing draft ${d.id}:`, err);
         results.push({
           draftId: d.id,
           error: err instanceof Error ? err.message : 'Failed to approve',

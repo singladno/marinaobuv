@@ -5,7 +5,11 @@ import type { DraftImage } from '@/types/admin';
 import { ImageModal } from '@/components/ui/ImageModal';
 import { ImageThumbnail } from './ImageThumbnail';
 import { ImageActionButton } from './ImageActionButton';
-import { isWAParserImage, sanitizeImageUrl } from '@/lib/image-security';
+import {
+  isWAParserImage,
+  isS3Image,
+  sanitizeImageUrl,
+} from '@/lib/image-security';
 import { useImageHandling } from '@/hooks/useImageHandling';
 
 interface OptimisticImagesCellProps {
@@ -76,8 +80,8 @@ export function OptimisticImagesCell({
     <>
       <div className="flex gap-1 overflow-x-auto overflow-y-visible py-2">
         {sortedImages.map((img, index) => {
-          // Check if it's a WA parser image
-          if (!isWAParserImage(img.url)) {
+          // Check if it's a Yandex S3 image (uploaded during approval)
+          if (!isS3Image(img.url)) {
             return (
               <div
                 key={img.id}

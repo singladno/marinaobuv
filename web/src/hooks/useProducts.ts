@@ -122,7 +122,7 @@ export function useProducts(): UseProductsReturn {
         setLoading(false);
       }
     },
-    [filters, actions]
+    [filters]
   );
 
   const reload = useCallback(() => fetchProducts(false), [fetchProducts]);

@@ -73,6 +73,24 @@ export function isWAParserImage(url: string): boolean {
 }
 
 /**
+ * Check if image is from our Yandex S3 storage (uploaded during approval)
+ */
+export function isS3Image(url: string): boolean {
+  // Check for our CDN base URL (Yandex S3 images uploaded during approval)
+  // Using hardcoded CDN base URL to avoid server-side env import in client components
+  const cdnBaseUrl = 'https://storage.yandexcloud.net/marinaobuv-photos';
+
+  try {
+    const urlObj = new URL(url);
+    const cdnUrlObj = new URL(cdnBaseUrl);
+    return urlObj.hostname === cdnUrlObj.hostname;
+  } catch {
+    // If URL parsing fails, fall back to string matching
+    return url.startsWith(cdnBaseUrl);
+  }
+}
+
+/**
  * Sanitize image URL to prevent XSS
  */
 export function sanitizeImageUrl(url: string): string {

@@ -52,7 +52,7 @@ export function DraftBulkOperations({
               disabled={selectedCount === 0 || isRunningAI || isProcessing}
               className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Активировать
+              Одобрить
             </button>
 
             <button
