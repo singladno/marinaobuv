@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { EditableProductCell } from '@/components/features/EditableProductCell';
+import {
+  CategorySelector,
+  type CategoryNode,
+} from '@/components/ui/CategorySelector';
 import type { Product } from '@/types/product';
 
 interface ProductCategoryCellProps {
   product: Product;
-  categories: Array<{ id: string; name: string }>;
+  categories: CategoryNode[];
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
   disabled?: boolean;
 }
@@ -17,17 +20,14 @@ export function ProductCategoryCell({
   onUpdateProduct,
   disabled = false,
 }: ProductCategoryCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async (value: string) => {
+  const handleCategoryChange = async (categoryId: string | null) => {
+    if (disabled || isSaving) return;
+
     setIsSaving(true);
     try {
-      const category = categories.find(c => c.name === value);
-      if (category) {
-        await onUpdateProduct(product.id, { categoryId: category.id });
-        setIsEditing(false);
-      }
+      await onUpdateProduct(product.id, { categoryId });
     } catch (error) {
       console.error('Error updating product category:', error);
     } finally {
@@ -36,15 +36,14 @@ export function ProductCategoryCell({
   };
 
   return (
-    <EditableProductCell
-      value={product.category.name}
-      onSave={handleSave}
-      isEditing={isEditing}
-      onEdit={() => !disabled && setIsEditing(!isEditing)}
-      isSaving={isSaving}
-      type="select"
-      options={categories.map(c => ({ value: c.name, label: c.name }))}
-      disabled={disabled}
-    />
+    <div className="w-full min-w-[200px]">
+      <CategorySelector
+        value={product.categoryId}
+        onChange={handleCategoryChange}
+        categories={categories}
+        placeholder="Выберите категорию"
+        disabled={disabled || isSaving}
+      />
+    </div>
   );
 }

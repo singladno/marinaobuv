@@ -7,6 +7,7 @@ interface EditableProductCellProps {
   onSave: (value: string) => void;
   isEditing: boolean;
   onEdit: () => void;
+  onCancel?: () => void;
   isSaving: boolean;
   type?: 'text' | 'number' | 'select';
   step?: string;
@@ -20,6 +21,7 @@ export function EditableProductCell({
   onSave,
   isEditing,
   onEdit,
+  onCancel,
   isSaving,
   type = 'text',
   step,
@@ -37,6 +39,10 @@ export function EditableProductCell({
     if (editValue !== value) {
       onSave(editValue);
     }
+    // Always switch back to view mode after save
+    if (onCancel) {
+      onCancel();
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -44,6 +50,9 @@ export function EditableProductCell({
       handleSave();
     } else if (e.key === 'Escape') {
       setEditValue(value);
+      if (onCancel) {
+        onCancel();
+      }
     }
   };
 
@@ -66,7 +75,7 @@ export function EditableProductCell({
         onChange={e => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className={`w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`}
+        className={`w-full min-w-[200px] rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`}
         autoFocus
         disabled={disabled || isSaving}
         aria-label="Выберите значение"
@@ -88,7 +97,7 @@ export function EditableProductCell({
       onBlur={handleSave}
       onKeyDown={handleKeyDown}
       step={step}
-      className={`w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`}
+      className={`w-full min-w-[200px] rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`}
       autoFocus
       disabled={disabled || isSaving}
       aria-label="Редактировать значение"

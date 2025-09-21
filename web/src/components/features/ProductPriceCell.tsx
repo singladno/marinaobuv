@@ -39,6 +39,7 @@ export function ProductPriceCell({
       onSave={handleSave}
       isEditing={isEditing}
       onEdit={() => !disabled && setIsEditing(!isEditing)}
+      onCancel={() => setIsEditing(false)}
       isSaving={isSaving}
       type="number"
       step="0.01"

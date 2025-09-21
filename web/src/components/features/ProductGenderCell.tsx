@@ -57,6 +57,7 @@ export function ProductGenderCell({
       onSave={handleSave}
       isEditing={isEditing}
       onEdit={() => !disabled && setIsEditing(!isEditing)}
+      onCancel={() => setIsEditing(false)}
       isSaving={isSaving}
       type="select"
       options={[

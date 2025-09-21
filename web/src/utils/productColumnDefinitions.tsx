@@ -11,6 +11,7 @@ import { ProductPriceCell } from '@/components/features/ProductPriceCell';
 import { ProductSeasonCell } from '@/components/features/ProductSeasonCell';
 import { ProductSelectionCheckbox } from '@/components/features/ProductSelectionCheckbox';
 import { ProductSizesCell } from '@/components/features/ProductSizesCell';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 import type { Product } from '@/types/product';
 
 type ProductWithSelected = Product & { selected?: boolean };
@@ -28,7 +29,7 @@ export function createProductColumnDefinitions({
 }: {
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
   onDeleteProduct: (id: string) => Promise<void>;
-  categories: Array<{ id: string; name: string }>;
+  categories: CategoryNode[];
   onToggle?: (id: string) => void;
   onSelectAll?: (selectAll: boolean) => void;
   allSelected?: boolean;
@@ -125,6 +126,7 @@ export function createProductColumnDefinitions({
           disabled={row.original.isActive}
         />
       ),
+      size: 200, // Twice as wide
     }),
 
     // Gender column
@@ -138,6 +140,7 @@ export function createProductColumnDefinitions({
           disabled={row.original.isActive}
         />
       ),
+      size: 200, // Twice as wide
     }),
 
     // Season column
@@ -151,6 +154,7 @@ export function createProductColumnDefinitions({
           disabled={row.original.isActive}
         />
       ),
+      size: 200, // Twice as wide
     }),
 
     // Sizes column

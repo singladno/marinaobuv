@@ -90,23 +90,23 @@ export default function ProductCard({
                 {rub(pricePair)}
               </Text>
 
-              {/* Quick Action Button */}
-              <div className="opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-full shadow-sm">
+              {/* Add to Cart Button */}
+              <div>
+                <button className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white">
                   <svg
                     className="h-4 w-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
+                    <circle cx="8" cy="21" r="1"></circle>
+                    <circle cx="19" cy="21" r="1"></circle>
+                    <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
                   </svg>
-                </div>
+                </button>
               </div>
             </div>
           </div>
