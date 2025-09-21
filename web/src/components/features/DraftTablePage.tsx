@@ -50,6 +50,8 @@ export function DraftTablePage({
     handleBulkPermanentDeleteConfirm,
     runAIAnalysis,
     reload,
+    clearSelection,
+    cancelAIAnalysis,
   } = useDraftTablePage(initialStatus);
 
   return (
@@ -59,16 +61,23 @@ export function DraftTablePage({
         <DraftBulkOperations
           selectedIds={newSelectedIds}
           status={status}
-          onApprove={() => approve(newSelectedIds, reload, () => {})}
+          onApprove={() => approve(newSelectedIds, reload, clearSelection)}
           onConvertToCatalog={() =>
-            convertToCatalog(newSelectedIds, reload, () => {})
+            convertToCatalog(newSelectedIds, reload, clearSelection)
           }
           onBulkDelete={() => setShowDeleteModal(true)}
           onBulkRestore={() => setShowRestoreModal(true)}
           onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
           onRunAIScript={() =>
-            runAIAnalysis(newSelectedIds, reload, refetchAIStatus, status)
+            runAIAnalysis(
+              newSelectedIds,
+              reload,
+              refetchAIStatus,
+              status,
+              clearSelection
+            )
           }
+          onCancelAI={cancelAIAnalysis}
           isRunningAI={isRunningAI}
           isProcessing={isProcessing}
           currentProcessingDraft={currentProcessingDraft}
@@ -83,15 +92,21 @@ export function DraftTablePage({
           status={status}
           onStatusChange={onStatusChange}
           onReload={reload}
-          onApprove={() => approve(newSelectedIds, reload, () => {})}
+          onApprove={() => approve(newSelectedIds, reload, clearSelection)}
           onConvertToCatalog={() =>
-            convertToCatalog(newSelectedIds, reload, () => {})
+            convertToCatalog(newSelectedIds, reload, clearSelection)
           }
           onBulkDelete={() => setShowDeleteModal(true)}
           onBulkRestore={() => setShowRestoreModal(true)}
           onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
           onRunAIScript={() =>
-            runAIAnalysis(newSelectedIds, reload, refetchAIStatus, status)
+            runAIAnalysis(
+              newSelectedIds,
+              reload,
+              refetchAIStatus,
+              status,
+              clearSelection
+            )
           }
           loading={loading}
           error={error}
@@ -114,13 +129,17 @@ export function DraftTablePage({
         setShowPermanentDeleteModal={setShowPermanentDeleteModal}
         selectedCount={newSelectedIds.length}
         onBulkDeleteConfirm={() =>
-          handleBulkDeleteConfirm(newSelectedIds, reload, () => {})
+          handleBulkDeleteConfirm(newSelectedIds, reload, clearSelection)
         }
         onBulkRestoreConfirm={() =>
-          handleBulkRestoreConfirm(newSelectedIds, reload, () => {})
+          handleBulkRestoreConfirm(newSelectedIds, reload, clearSelection)
         }
         onBulkPermanentDeleteConfirm={() =>
-          handleBulkPermanentDeleteConfirm(newSelectedIds, reload, () => {})
+          handleBulkPermanentDeleteConfirm(
+            newSelectedIds,
+            reload,
+            clearSelection
+          )
         }
         isDeleting={isDeleting}
         isRestoring={isRestoring}

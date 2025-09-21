@@ -52,10 +52,10 @@ model Product {
   article               String?
   categoryId            String
   category              Category       @relation(fields: [categoryId], references: [id])
-  pricePair             Int // kopecks
+  pricePair             Decimal // rubles
   currency              String         @default("RUB")
   packPairs             Int?
-  priceBox              Int?
+  priceBox              Decimal?
   material              String?
   gender                Gender?
   season                Season?
@@ -126,16 +126,16 @@ model WaDraftProduct {
   provider       Provider              @relation(fields: [providerId], references: [id], onDelete: Restrict)
   name           String?
   article        String?               // Auto-generated article number
-  pricePair      Int? // kopecks
+  pricePair      Decimal? // rubles
   currency       String                @default("RUB")
   packPairs      Int?
-  priceBox       Int?
+  priceBox       Decimal?
   material       String?
   gender         Gender?
   season         Season?
   description    String?
   sizes          Json? // Array of size objects
-  providerDiscount Int? // Provider's discount in kopecks (e.g., 50000 = 500 rubles discount)
+  providerDiscount Decimal? // Provider's discount in rubles (e.g., 500 = 500 rubles discount)
   rawGptResponse Json? // Full GPT response for debugging
   gptRequest     String? // Raw text sent to GPT for processing
   rawGptResponse2 Json? // Full second-pass GPT response for debugging

@@ -24,7 +24,7 @@ export default function CatalogPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
-    priceRange: [0, 100000],
+    priceRange: [0, 10000],
     minRating: 0,
     inStock: false,
     sortBy: 'featured',
@@ -107,7 +107,7 @@ export default function CatalogPage() {
   const handleClearFilters = () => {
     setFilters({
       categories: [],
-      priceRange: [0, 100000],
+      priceRange: [0, 10000],
       minRating: 0,
       inStock: false,
       sortBy: 'featured',
@@ -130,7 +130,7 @@ export default function CatalogPage() {
   const hasActiveFilters =
     filters.categories.length > 0 ||
     filters.priceRange[0] > 0 ||
-    filters.priceRange[1] < 100000 ||
+    filters.priceRange[1] < 10000 ||
     filters.minRating > 0 ||
     filters.inStock ||
     searchQuery.length > 0;

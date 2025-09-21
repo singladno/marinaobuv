@@ -99,13 +99,11 @@ export async function listProductsByCategoryPath(opts: {
     }
   }
 
-  // Price filter (RUB -> kopecks)
-  const pf =
-    opts.filters?.priceFrom != null ? opts.filters.priceFrom * 100 : undefined;
-  const pt =
-    opts.filters?.priceTo != null ? opts.filters.priceTo * 100 : undefined;
+  // Price filter (now in rubles, no conversion needed)
+  const pf = opts.filters?.priceFrom;
+  const pt = opts.filters?.priceTo;
   if (pf != null || pt != null) {
-    const priceFilter: Prisma.IntFilter = {};
+    const priceFilter: Prisma.DecimalFilter = {};
     if (pf != null) priceFilter.gte = pf;
     if (pt != null) priceFilter.lte = pt;
     where.pricePair = priceFilter;
@@ -187,13 +185,11 @@ export async function listProductsByCategoryId(opts: {
     }
   }
 
-  // Price filter (RUB -> kopecks)
-  const pf =
-    opts.filters?.priceFrom != null ? opts.filters.priceFrom * 100 : undefined;
-  const pt =
-    opts.filters?.priceTo != null ? opts.filters.priceTo * 100 : undefined;
+  // Price filter (now in rubles, no conversion needed)
+  const pf = opts.filters?.priceFrom;
+  const pt = opts.filters?.priceTo;
   if (pf != null || pt != null) {
-    const priceFilter: Prisma.IntFilter = {};
+    const priceFilter: Prisma.DecimalFilter = {};
     if (pf != null) priceFilter.gte = pf;
     if (pt != null) priceFilter.lte = pt;
     where.pricePair = priceFilter;
@@ -292,7 +288,7 @@ export async function getPriceBoundsForPath(
   });
   const min = agg._min.pricePair ?? 0;
   const max = agg._max.pricePair ?? 0;
-  return { min: Math.floor(min / 100), max: Math.floor(max / 100) };
+  return { min: Math.floor(min), max: Math.floor(max) };
 }
 
 export async function getPriceBoundsForCategoryId(
@@ -325,5 +321,5 @@ export async function getPriceBoundsForCategoryId(
   });
   const min = agg._min.pricePair ?? 0;
   const max = agg._max.pricePair ?? 0;
-  return { min: Math.floor(min / 100), max: Math.floor(max / 100) };
+  return { min: Math.floor(min), max: Math.floor(max) };
 }

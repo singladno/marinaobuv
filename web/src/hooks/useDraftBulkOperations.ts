@@ -243,12 +243,47 @@ export function useDraftBulkOperations() {
     [addNotification]
   );
 
+  const cancelAIAnalysis = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/drafts/cancel-ai-analysis`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-role': 'ADMIN' },
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        addNotification({
+          type: 'error',
+          title: 'Ошибка при отмене AI анализа',
+          message: errorText,
+        });
+        return;
+      }
+
+      const result = await res.json();
+      addNotification({
+        type: 'success',
+        title: 'AI анализ отменен',
+        message: result.message,
+      });
+
+      setIsRunningAI(false);
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка при отмене AI анализа',
+        message: 'Произошла неожиданная ошибка',
+      });
+    }
+  }, [addNotification]);
+
   const runAIAnalysis = React.useCallback(
     async (
       selectedIds: string[],
       onReload: () => Promise<void>,
       onRefetchAIStatus: () => Promise<void>,
-      status?: string
+      status?: string,
+      onClearSelection?: () => void
     ) => {
       try {
         if (selectedIds.length === 0) {
@@ -306,14 +341,23 @@ export function useDraftBulkOperations() {
               } else {
                 // All processing is complete
                 setIsRunningAI(false);
+                if (onClearSelection) {
+                  onClearSelection();
+                }
               }
             } else {
               // Error fetching status, stop polling
               setIsRunningAI(false);
+              if (onClearSelection) {
+                onClearSelection();
+              }
             }
           } catch (error) {
             console.error('Error polling AI status:', error);
             setIsRunningAI(false);
+            if (onClearSelection) {
+              onClearSelection();
+            }
           }
         };
 
@@ -321,6 +365,9 @@ export function useDraftBulkOperations() {
         setTimeout(pollForCompletion, 1000);
       } catch (error) {
         setIsRunningAI(false);
+        if (onClearSelection) {
+          onClearSelection();
+        }
         addNotification({
           type: 'error',
           title: 'Ошибка при запуске AI анализа',
@@ -351,5 +398,6 @@ export function useDraftBulkOperations() {
     handleBulkRestoreConfirm,
     handleBulkPermanentDeleteConfirm,
     runAIAnalysis,
+    cancelAIAnalysis,
   };
 }

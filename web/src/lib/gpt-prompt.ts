@@ -7,21 +7,21 @@ export function getSystemPrompt(categoryTreeJson?: string): string {
  {
    "season": "spring"|"summer"|"autumn"|"winter" (optional),
    "typeSlug": string (optional),
-   "pricePair": number (in kopecks, optional),
+   "pricePair": number (in rubles, optional),
    "packPairs": number (optional),
    "priceBox": number (optional),
    "material": string (optional),
    "gender": "female"|"male"|"unisex" (optional),
    "sizes": Array<{size: string, count: number}> (optional),
    "notes": string (optional),
-   "providerDiscount": number (in kopecks, optional)
+   "providerDiscount": number (in rubles, optional)
  }
  
  Rules:
  - The text may contain multiple messages from the same user about the same product
  - Combine all information from all messages to create a complete product description
  - Extract only information explicitly mentioned in the text
- - Convert prices to kopecks (multiply by 100)
+ - Store prices in rubles (no conversion needed)
  - NEVER skip any data - every image and text message must be accounted for in the final product entries
  
  Size Extraction Rules (CRITICAL):
@@ -65,9 +65,9 @@ Special Case (compact range with total pairs):
  Discount Extraction:
  - Look for discount patterns like "С КОРОБКИ 500Р СКИДКА", "скидка 500", "скидка 400"
  - Also look for simple negative numbers like "-500", "-400" (these are discount amounts)
- - Convert discount amounts to kopecks (multiply by 100)
+ - Store discount amounts in rubles (no conversion needed)
  - Only extract if discount is explicitly mentioned
- - Examples: "500Р СКИДКА" = 50000 kopecks, "-500" = 50000 kopecks`;
+ - Examples: "500Р СКИДКА" = 500 rubles, "-500" = 500 rubles`;
 }
 
 export function getValidationPrompt(): string {

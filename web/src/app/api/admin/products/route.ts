@@ -104,10 +104,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Convert price from rubles to kopecks if provided
-    if (updateData.pricePair && typeof updateData.pricePair === 'number') {
-      updateData.pricePair = Math.round(updateData.pricePair * 100);
-    }
+    // Prices are now stored in rubles, no conversion needed
 
     const updatedProduct = await prisma.product.update({
       where: { id },

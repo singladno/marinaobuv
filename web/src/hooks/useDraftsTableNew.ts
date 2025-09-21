@@ -97,6 +97,11 @@ export function useDraftsTableNew({
   const allSelected = table.getIsAllRowsSelected();
   const someSelected = table.getIsSomeRowsSelected();
 
+  // Function to clear all selections
+  const clearSelection = React.useCallback(() => {
+    setRowSelection({});
+  }, []);
+
   return {
     table,
     columnVisibility: finalColumnVisibility,
@@ -108,5 +113,6 @@ export function useDraftsTableNew({
     allSelected,
     someSelected,
     dataWithOptimisticUpdates,
+    clearSelection,
   };
 }

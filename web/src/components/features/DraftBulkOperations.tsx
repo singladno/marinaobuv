@@ -13,6 +13,7 @@ interface DraftBulkOperationsProps {
   onBulkRestore: () => void;
   onBulkPermanentDelete: () => void;
   onRunAIScript: () => Promise<void>;
+  onCancelAI?: () => Promise<void>;
   isRunningAI: boolean;
   isProcessing: boolean;
   currentProcessingDraft?: {
@@ -33,6 +34,7 @@ export function DraftBulkOperations({
   onBulkRestore,
   onBulkPermanentDelete,
   onRunAIScript,
+  onCancelAI,
   isRunningAI,
   isProcessing,
   currentProcessingDraft,
@@ -79,6 +81,16 @@ export function DraftBulkOperations({
               'Запустить AI'
             )}
           </button>
+
+          {/* Cancel AI Analysis Button - Only show when AI is running */}
+          {isRunningAI && onCancelAI && (
+            <button
+              onClick={onCancelAI}
+              className="flex items-center rounded bg-orange-600 px-3 py-1 text-sm text-white hover:bg-orange-700"
+            >
+              Отменить AI
+            </button>
+          )}
 
           <button
             onClick={onConvertToCatalog}
@@ -133,6 +145,14 @@ export function DraftBulkOperations({
             Обрабатывается:{' '}
             {currentProcessingDraft.name || 'AI анализ запущен...'}
           </span>
+          {onCancelAI && (
+            <button
+              onClick={onCancelAI}
+              className="ml-2 rounded bg-orange-500 px-2 py-1 text-xs text-white hover:bg-orange-600"
+            >
+              Отменить
+            </button>
+          )}
         </div>
       )}
 
@@ -141,6 +161,14 @@ export function DraftBulkOperations({
         <div className="ml-4 flex items-center space-x-2">
           <div className="h-2 w-2 animate-pulse rounded-full bg-purple-500"></div>
           <span className="text-xs text-gray-500">AI анализ запущен...</span>
+          {onCancelAI && (
+            <button
+              onClick={onCancelAI}
+              className="ml-2 rounded bg-orange-500 px-2 py-1 text-xs text-white hover:bg-orange-600"
+            >
+              Отменить
+            </button>
+          )}
         </div>
       )}
     </div>

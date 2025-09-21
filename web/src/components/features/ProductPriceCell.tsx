@@ -19,12 +19,12 @@ export function ProductPriceCell({
 }: ProductPriceCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const formattedPrice = (priceInKopecks / 100).toFixed(2);
+  const formattedPrice = priceInKopecks.toFixed(2);
 
   const handleSave = async (value: string) => {
     setIsSaving(true);
     try {
-      await onUpdateProduct(product.id, { pricePair: parseFloat(value) * 100 });
+      await onUpdateProduct(product.id, { pricePair: parseFloat(value) });
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating product price:', error);

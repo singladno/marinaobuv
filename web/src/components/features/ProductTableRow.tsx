@@ -31,8 +31,8 @@ export function ProductTableRow({
     }
   };
 
-  const formatPrice = (priceInKopecks: number) => {
-    return (priceInKopecks / 100).toFixed(2);
+  const formatPrice = (priceInRubles: number) => {
+    return priceInRubles.toFixed(2);
   };
 
   const formatDate = (date: Date) => {
@@ -127,7 +127,7 @@ export function ProductTableRow({
       <td className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <EditableProductCell
           value={formatPrice(product.pricePair)}
-          onSave={value => handleSave('pricePair', parseFloat(value) * 100)}
+          onSave={value => handleSave('pricePair', parseFloat(value))}
           isEditing={isEditing}
           onEdit={() => setIsEditing(!isEditing)}
           isSaving={isSaving}

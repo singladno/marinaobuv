@@ -78,7 +78,7 @@ const MemoizedGenderSelectCell = React.memo(GenderSelectCell);
 const MemoizedSeasonSelectCell = React.memo(SeasonSelectCell);
 
 // Memoized formatters to avoid recreation on every render
-const priceFormatter = (value: number) => (value / 100).toLocaleString('ru-RU');
+const priceFormatter = (value: number) => value.toLocaleString('ru-RU');
 
 export function createDraftTableColumns(
   onToggle: (id: string) => void,
@@ -247,7 +247,7 @@ export function createDraftTableColumns(
         return (
           <PriceCell
             value={calculatedBoxPrice}
-            formatter={value => (value / 100).toLocaleString('ru-RU')}
+            formatter={value => value.toLocaleString('ru-RU')}
           />
         );
       },

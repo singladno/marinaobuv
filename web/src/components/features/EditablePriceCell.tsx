@@ -1,8 +1,8 @@
 import * as React from 'react';
 
 interface EditablePriceCellProps {
-  value: number | null; // Value in kopecks
-  onBlur: (value: number | null) => void; // Callback with value in kopecks
+  value: number | null; // Value in rubles
+  onBlur: (value: number | null) => void; // Callback with value in rubles
   placeholder?: string;
   'aria-label': string;
   disabled?: boolean;
@@ -17,11 +17,11 @@ export function EditablePriceCell({
 }: EditablePriceCellProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState(
-    value !== null ? (value / 100).toString() : ''
+    value !== null ? value.toString() : ''
   );
 
   React.useEffect(() => {
-    setEditValue(value !== null ? (value / 100).toString() : '');
+    setEditValue(value !== null ? value.toString() : '');
   }, [value]);
 
   const handleSave = () => {
@@ -31,18 +31,17 @@ export function EditablePriceCell({
     } else {
       const rubles = parseFloat(trimmedValue);
       if (!isNaN(rubles) && rubles >= 0) {
-        const kopecks = Math.round(rubles * 100);
-        onBlur(kopecks);
+        onBlur(rubles);
       } else {
         // Invalid input, revert to original value
-        setEditValue(value !== null ? (value / 100).toString() : '');
+        setEditValue(value !== null ? value.toString() : '');
       }
     }
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditValue(value !== null ? (value / 100).toString() : '');
+    setEditValue(value !== null ? value.toString() : '');
     setIsEditing(false);
   };
 
@@ -72,8 +71,7 @@ export function EditablePriceCell({
     );
   }
 
-  const displayValue =
-    value !== null ? (value / 100).toLocaleString('ru-RU') : null;
+  const displayValue = value !== null ? value.toLocaleString('ru-RU') : null;
 
   return (
     <button

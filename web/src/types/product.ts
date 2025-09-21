@@ -4,10 +4,10 @@ export interface Product {
   name: string;
   article: string | null;
   categoryId: string;
-  pricePair: number; // in kopecks
+  pricePair: number; // in rubles
   currency: string;
   packPairs: number | null;
-  priceBox: number | null;
+  priceBox: number | null; // in rubles
   material: string | null;
   gender: 'FEMALE' | 'MALE' | 'UNISEX' | null;
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
@@ -43,10 +43,10 @@ export interface ProductUpdateData {
   name?: string;
   article?: string | null;
   categoryId?: string;
-  pricePair?: number; // in rubles for frontend
+  pricePair?: number; // in rubles
   currency?: string;
   packPairs?: number | null;
-  priceBox?: number | null;
+  priceBox?: number | null; // in rubles
   material?: string | null;
   gender?: 'FEMALE' | 'MALE' | 'UNISEX' | null;
   season?: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;

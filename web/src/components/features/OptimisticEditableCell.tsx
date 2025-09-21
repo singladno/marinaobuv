@@ -91,7 +91,7 @@ export function OptimisticEditableCell({
       if (val === null || val === '') return placeholder || '—';
 
       if (type === 'price' && typeof val === 'number') {
-        return (val / 100).toLocaleString('ru-RU');
+        return val.toLocaleString('ru-RU');
       }
 
       return String(val);

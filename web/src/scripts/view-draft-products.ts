@@ -40,7 +40,7 @@ async function viewDraftProducts() {
       console.log(`Name: ${draft.name}`);
       console.log(`Provider: ${draft.provider.name} (${draft.provider.phone})`);
       console.log(
-        `Price: ${draft.pricePair ? (draft.pricePair / 100).toFixed(2) : 'N/A'} ${draft.currency}`
+        `Price: ${draft.pricePair ? draft.pricePair.toFixed(2) : 'N/A'} ${draft.currency}`
       );
       console.log(`Pack: ${draft.packPairs || 'N/A'} pairs`);
       console.log(`Material: ${draft.material || 'N/A'}`);

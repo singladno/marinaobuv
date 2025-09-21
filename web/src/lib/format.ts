@@ -1,8 +1,9 @@
-export function rub(kopecks: number): string {
-  const rubles = (kopecks ?? 0) / 100;
-  return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(
-    rubles,
-  );
+export function rub(rubles: number): string {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 0,
+  }).format(rubles ?? 0);
 }
 
 export const genderRu: Record<string, string> = {
@@ -18,7 +19,9 @@ export const seasonRu: Record<string, string> = {
   WINTER: 'Зима',
 };
 
-export function sortLabel(key: 'relevance' | 'price-asc' | 'price-desc' | 'newest'): string {
+export function sortLabel(
+  key: 'relevance' | 'price-asc' | 'price-desc' | 'newest'
+): string {
   switch (key) {
     case 'price-asc':
       return 'Сначала дешевле';

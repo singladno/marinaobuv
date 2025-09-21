@@ -16,15 +16,15 @@ export type Draft = {
     slug: string;
     path: string;
   } | null;
-  pricePair: number | null; // kopecks
+  pricePair: number | null; // rubles
   currency: string;
   packPairs: number | null;
-  priceBox: number | null; // kopecks
+  priceBox: number | null; // rubles
   material: string | null;
   gender: string | null;
   season: string | null;
   description: string | null;
-  providerDiscount: number | null; // kopecks
+  providerDiscount: number | null; // rubles
   status: string;
   images: {
     id: string;

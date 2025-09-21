@@ -40,6 +40,7 @@ export function useDraftTablePage(initialStatus: string) {
     handleBulkRestoreConfirm,
     handleBulkPermanentDeleteConfirm,
     runAIAnalysis,
+    cancelAIAnalysis,
   } = useDraftBulkOperations();
 
   const {
@@ -133,7 +134,11 @@ export function useDraftTablePage(initialStatus: string) {
   };
 
   // Use the new useDraftsTableNew hook
-  const { table, selectedIds: newSelectedIds } = useDraftsTableNew({
+  const {
+    table,
+    selectedIds: newSelectedIds,
+    clearSelection,
+  } = useDraftsTableNew({
     data: mergedData,
     onPatch: inlinePatch,
     onDelete: deleteDraft,
@@ -183,5 +188,7 @@ export function useDraftTablePage(initialStatus: string) {
 
     // Actions
     reload,
+    clearSelection,
+    cancelAIAnalysis,
   };
 }

@@ -189,22 +189,6 @@ export function PortalSwitcher() {
       >
         {isAdmin ? 'A' : 'C'}
       </div>
-
-      {/* Tooltip */}
-      <div
-        className={`absolute bottom-16 right-0 mb-2 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-lg transition-all duration-300 ${
-          isOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
-        }`}
-      >
-        <div className="text-center">
-          <div className="font-semibold">
-            {isAdmin ? 'Админ панель' : 'Клиентский портал'}
-          </div>
-          <div className="text-xs opacity-80">Нажмите для переключения</div>
-        </div>
-        {/* Arrow */}
-        <div className="absolute right-4 top-full h-0 w-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
-      </div>
     </div>
   );
 }

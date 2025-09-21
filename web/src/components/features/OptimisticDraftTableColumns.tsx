@@ -205,7 +205,7 @@ export function createOptimisticDraftTableColumns(
         return (
           <PriceCell
             value={calculatedBoxPrice}
-            formatter={value => (value / 100).toLocaleString('ru-RU')}
+            formatter={value => value.toLocaleString('ru-RU')}
           />
         );
       },
