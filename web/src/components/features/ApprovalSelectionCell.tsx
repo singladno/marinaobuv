@@ -1,26 +1,24 @@
 import React from 'react';
+
 import { ApprovalLoader } from '@/components/ui/ApprovalLoader';
-// import { useApprovalEvents } from '@/hooks/useApprovalEvents';
+
+interface ApprovalState {
+  isProcessing: boolean;
+  currentImage: number;
+  totalImages: number;
+  progress: number;
+  status: 'idle' | 'processing' | 'completed' | 'failed';
+}
 
 interface ApprovalSelectionCellProps {
   id: string;
   selected: boolean;
   onToggle: (id: string) => void;
+  approvalState: ApprovalState;
 }
 
 export const ApprovalSelectionCell = React.memo(
-  ({ id, selected, onToggle }: ApprovalSelectionCellProps) => {
-    // SSE disabled to fix navigation issues
-    // const { getApprovalState } = useApprovalEvents([id]);
-    const getApprovalState = () => ({
-      isProcessing: false,
-      currentImage: 0,
-      totalImages: 0,
-      progress: 0,
-      status: 'idle' as const,
-    });
-    const approvalState = getApprovalState(id);
-
+  ({ id, selected, onToggle, approvalState }: ApprovalSelectionCellProps) => {
     const handleChange = React.useCallback(() => {
       if (!approvalState.isProcessing) {
         onToggle(id);

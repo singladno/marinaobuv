@@ -71,15 +71,16 @@ export function useDraftsTableNew({
   }, []);
 
   const columns = React.useMemo(() => {
-    return createOptimisticDraftTableColumns(
-      updateDraft,
-      deleteDraft,
-      toggleImage,
+    return createOptimisticDraftTableColumns({
+      onPatch: updateDraft,
+      onDelete: deleteDraft,
+      onImageToggle: toggleImage,
       categories,
       onReload,
       status,
-      toggleRowSelection
-    );
+      onToggle: toggleRowSelection,
+      draftIds: data.map(draft => draft.id),
+    });
   }, [
     updateDraft,
     deleteDraft,
@@ -88,6 +89,7 @@ export function useDraftsTableNew({
     onReload,
     status,
     toggleRowSelection,
+    data,
   ]);
 
   const table = useReactTable({
