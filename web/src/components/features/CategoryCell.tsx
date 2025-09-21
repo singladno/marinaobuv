@@ -9,6 +9,7 @@ interface CategoryCellProps {
   categoryId: string | null;
   onCategoryChange: (categoryId: string | null) => void;
   categories: CategoryNode[];
+  disabled?: boolean;
 }
 
 export function CategoryCell({
@@ -16,14 +17,18 @@ export function CategoryCell({
   categoryId,
   onCategoryChange,
   categories,
+  disabled = false,
 }: CategoryCellProps) {
   return (
-    <div className="min-w-[200px]">
+    <div
+      className={`min-w-[200px] ${disabled ? 'pointer-events-none opacity-50' : ''}`}
+    >
       <CategorySelector
         value={categoryId}
         onChange={onCategoryChange}
         categories={categories}
         placeholder="Выберите категорию"
+        disabled={disabled}
       />
     </div>
   );

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type { Draft } from '@/types/admin';
 import { Loader } from '@/components/ui/Loader';
+import { useApprovalEvents } from '@/contexts/ApprovalEventsContext';
 
 interface DraftBulkOperationsProps {
   selectedIds: string[];
@@ -40,6 +41,11 @@ export function DraftBulkOperations({
   currentProcessingDraft,
 }: DraftBulkOperationsProps) {
   const selectedCount = selectedIds.length;
+  const { isAnyDraftApproving, getApprovingDrafts } = useApprovalEvents();
+
+  // Check if any selected drafts are currently being approved
+  const isApproving = isAnyDraftApproving(selectedIds);
+  const approvingDrafts = getApprovingDrafts(selectedIds);
 
   return (
     <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">
@@ -49,10 +55,22 @@ export function DraftBulkOperations({
           <>
             <button
               onClick={onApprove}
-              disabled={selectedCount === 0 || isRunningAI || isProcessing}
-              className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={
+                selectedCount === 0 ||
+                isRunningAI ||
+                isProcessing ||
+                isApproving
+              }
+              className="flex items-center rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Одобрить
+              {isApproving ? (
+                <>
+                  <Loader size="sm" className="mr-2" />
+                  Одобрение...
+                </>
+              ) : (
+                'Одобрить'
+              )}
             </button>
 
             <button
@@ -177,6 +195,19 @@ export function DraftBulkOperations({
               Отменить
             </button>
           )}
+        </div>
+      )}
+
+      {/* Approval Status - Show when drafts are being approved */}
+      {isApproving && (
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
+            <span className="text-sm text-blue-900 dark:text-blue-100">
+              Одобрение в процессе... ({approvingDrafts.length} из{' '}
+              {selectedCount})
+            </span>
+          </div>
         </div>
       )}
     </div>

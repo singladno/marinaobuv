@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 export interface ApprovalEvent {
   type:
@@ -34,9 +41,37 @@ export interface ApprovalState {
   };
 }
 
-export function useApprovalEvents(draftIds: string[]) {
+interface ApprovalEventsContextType {
+  approvalStates: ApprovalState;
+  isConnected: boolean;
+  getApprovalState: (draftId: string) => {
+    isProcessing: boolean;
+    currentImage: number;
+    totalImages: number;
+    progress: number;
+    status: 'idle' | 'processing' | 'completed' | 'failed';
+  };
+  updateDraftIds: (draftIds: string[]) => void;
+  isAnyDraftApproving: (draftIds: string[]) => boolean;
+  getApprovingDrafts: (draftIds: string[]) => string[];
+}
+
+const ApprovalEventsContext = createContext<ApprovalEventsContextType | null>(
+  null
+);
+
+interface ApprovalEventsProviderProps {
+  children: React.ReactNode;
+  draftIds?: string[];
+}
+
+export function ApprovalEventsProvider({
+  children,
+  draftIds: initialDraftIds = [],
+}: ApprovalEventsProviderProps) {
   const [approvalStates, setApprovalStates] = useState<ApprovalState>({});
   const [isConnected, setIsConnected] = useState(false);
+  const [draftIds, setDraftIds] = useState<string[]>(initialDraftIds);
   const eventSourceRef = useRef<EventSource | null>(null);
   const draftIdsRef = useRef<string[]>([]);
 
@@ -45,13 +80,23 @@ export function useApprovalEvents(draftIds: string[]) {
     draftIdsRef.current = draftIds;
   }, [draftIds]);
 
+  // Function to update draft IDs
+  const updateDraftIds = useCallback((newDraftIds: string[]) => {
+    setDraftIds(newDraftIds);
+  }, []);
+
   useEffect(() => {
-    if (draftIds.length === 0) return;
+    if (!draftIds || draftIds.length === 0) return;
 
     console.log(
       `🔌 Creating single SSE connection for ${draftIds.length} drafts:`,
       draftIds
     );
+
+    // Close existing connection if any
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
 
     // Create a single EventSource for all drafts
     const eventSource = new EventSource('/api/approval-events');
@@ -149,7 +194,7 @@ export function useApprovalEvents(draftIds: string[]) {
         eventSourceRef.current = null;
       }
     };
-  }, []); // Remove draftIds dependency to prevent recreation
+  }, [draftIds]); // Only recreate when draftIds change
 
   const getApprovalState = (draftId: string) => {
     return (
@@ -163,9 +208,48 @@ export function useApprovalEvents(draftIds: string[]) {
     );
   };
 
-  return {
-    isConnected,
-    approvalStates,
-    getApprovalState,
-  };
+  const isAnyDraftApproving = useCallback(
+    (draftIds: string[]) => {
+      return draftIds.some(draftId => {
+        const state = approvalStates[draftId];
+        return state?.isProcessing || false;
+      });
+    },
+    [approvalStates]
+  );
+
+  const getApprovingDrafts = useCallback(
+    (draftIds: string[]) => {
+      return draftIds.filter(draftId => {
+        const state = approvalStates[draftId];
+        return state?.isProcessing || false;
+      });
+    },
+    [approvalStates]
+  );
+
+  return (
+    <ApprovalEventsContext.Provider
+      value={{
+        approvalStates,
+        isConnected,
+        getApprovalState,
+        updateDraftIds,
+        isAnyDraftApproving,
+        getApprovingDrafts,
+      }}
+    >
+      {children}
+    </ApprovalEventsContext.Provider>
+  );
+}
+
+export function useApprovalEvents() {
+  const context = useContext(ApprovalEventsContext);
+  if (!context) {
+    throw new Error(
+      'useApprovalEvents must be used within an ApprovalEventsProvider'
+    );
+  }
+  return context;
 }

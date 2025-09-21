@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import * as React from 'react';
 
 import { DraftTablePage } from '@/components/features/DraftTablePage';
+import { ApprovalEventsProvider } from '@/contexts/ApprovalEventsContext';
 
 export default function AdminDraftsPage() {
   const router = useRouter();
@@ -26,11 +27,13 @@ export default function AdminDraftsPage() {
   );
 
   return (
-    <DraftTablePage
-      initialStatus={initialStatus}
-      onStatusChange={handleStatusChange}
-      searchParams={searchParams}
-      router={router}
-    />
+    <ApprovalEventsProvider>
+      <DraftTablePage
+        initialStatus={initialStatus}
+        onStatusChange={handleStatusChange}
+        searchParams={searchParams}
+        router={router}
+      />
+    </ApprovalEventsProvider>
   );
 }

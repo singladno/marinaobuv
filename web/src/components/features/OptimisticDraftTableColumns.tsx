@@ -11,7 +11,7 @@ interface CreateColumnsOptions {
   onReload?: () => void;
   status?: string;
   onToggle?: (id: string) => void;
-  draftIds?: string[];
+  getApprovalState?: (id: string) => { isProcessing: boolean };
 }
 
 export function createOptimisticDraftTableColumns(
@@ -25,6 +25,6 @@ export function createOptimisticDraftTableColumns(
     options.onReload,
     options.status,
     options.onToggle,
-    options.draftIds
+    options.getApprovalState
   );
 }

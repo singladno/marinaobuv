@@ -37,9 +37,32 @@ export function createOptimisticDraftTableColumns(
   onReload?: () => void,
   status?: string,
   onToggle?: (id: string) => void,
-  draftIds?: string[]
+  getApprovalState?: (id: string) => { isProcessing: boolean }
 ) {
   const isApproved = status === 'approved';
+
+  // Helper function to check if a row is disabled (being approved)
+  const isRowDisabled = (draftId: string) => {
+    return getApprovalState?.(draftId)?.isProcessing ?? false;
+  };
+
+  // Helper function to get row class based on disabled state
+  const getRowClass = (draftId: string) => {
+    return isRowDisabled(draftId)
+      ? 'opacity-60 bg-gray-50 dark:bg-gray-800/50'
+      : '';
+  };
+
+  // Add a meta property to the first column to store row styling info
+  const addRowMeta = (columns: any[]) => {
+    if (columns.length > 0) {
+      columns[0].meta = {
+        ...columns[0].meta,
+        getRowClass: (row: any) => getRowClass(row.original.id),
+      };
+    }
+    return columns;
+  };
 
   const columns = [
     // TanStack Table's built-in selection column
@@ -74,7 +97,6 @@ export function createOptimisticDraftTableColumns(
           id={row.original.id}
           selected={row.getIsSelected()}
           onToggle={onToggle || (() => {})}
-          draftIds={draftIds || []}
         />
       ),
       meta: {
@@ -95,6 +117,7 @@ export function createOptimisticDraftTableColumns(
             onSave={value => onPatch(info.row.original.id, { name: value })}
             placeholder="Введите название"
             aria-label="Название"
+            disabled={isRowDisabled(info.row.original.id)}
           />
         ),
       })
@@ -128,6 +151,7 @@ export function createOptimisticDraftTableColumns(
               onPatch(info.row.original.id, { categoryId: value })
             }
             categories={categories}
+            disabled={isRowDisabled(info.row.original.id)}
           />
         ),
       })
@@ -157,6 +181,7 @@ export function createOptimisticDraftTableColumns(
           placeholder="Введите цену"
           aria-label="Цена за пару"
           type="price"
+          disabled={isRowDisabled(info.row.original.id)}
         />
       ),
     })
@@ -174,6 +199,7 @@ export function createOptimisticDraftTableColumns(
           aria-label="Пар в упаковке"
           type="number"
           min={1}
+          disabled={isRowDisabled(info.row.original.id)}
         />
       ),
     })
@@ -221,6 +247,7 @@ export function createOptimisticDraftTableColumns(
           placeholder="Введите скидку"
           aria-label="Скидка поставщика"
           type="price"
+          disabled={isRowDisabled(info.row.original.id)}
         />
       ),
     })
@@ -238,6 +265,7 @@ export function createOptimisticDraftTableColumns(
             onSave={value => onPatch(info.row.original.id, { material: value })}
             placeholder="Введите материал"
             aria-label="Материал"
+            disabled={isRowDisabled(info.row.original.id)}
           />
         ),
       })
@@ -258,6 +286,7 @@ export function createOptimisticDraftTableColumns(
               onChange={value =>
                 onPatch(info.row.original.id, { gender: value })
               }
+              disabled={isRowDisabled(info.row.original.id)}
             />
           );
         },
@@ -279,6 +308,7 @@ export function createOptimisticDraftTableColumns(
               onChange={value =>
                 onPatch(info.row.original.id, { season: value })
               }
+              disabled={isRowDisabled(info.row.original.id)}
             />
           );
         },
@@ -298,6 +328,7 @@ export function createOptimisticDraftTableColumns(
             onChange={next => {
               onPatch(info.row.original.id, { sizes: next });
             }}
+            disabled={isRowDisabled(info.row.original.id)}
           />
         );
       },
@@ -499,5 +530,5 @@ export function createOptimisticDraftTableColumns(
     })
   );
 
-  return columns;
+  return addRowMeta(columns);
 }

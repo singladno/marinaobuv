@@ -3,6 +3,7 @@ import * as React from 'react';
 interface SeasonSelectCellProps {
   value: string | null;
   onChange: (value: string | null) => void;
+  disabled?: boolean;
 }
 
 const SEASON_OPTIONS = [
@@ -12,7 +13,11 @@ const SEASON_OPTIONS = [
   { value: 'WINTER', label: 'Зима' },
 ];
 
-export function SeasonSelectCell({ value, onChange }: SeasonSelectCellProps) {
+export function SeasonSelectCell({
+  value,
+  onChange,
+  disabled = false,
+}: SeasonSelectCellProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [localValue, setLocalValue] = React.useState(value);
 
@@ -25,12 +30,14 @@ export function SeasonSelectCell({ value, onChange }: SeasonSelectCellProps) {
   );
 
   const handleSelect = (optionValue: string) => {
+    if (disabled) return;
     setLocalValue(optionValue);
     onChange(optionValue);
     setIsOpen(false);
   };
 
   const handleClear = () => {
+    if (disabled) return;
     setLocalValue(null);
     onChange(null);
     setIsOpen(false);
@@ -40,8 +47,11 @@ export function SeasonSelectCell({ value, onChange }: SeasonSelectCellProps) {
     <div className="relative">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
+          disabled ? 'cursor-not-allowed opacity-50' : ''
+        }`}
       >
         {selectedOption ? selectedOption.label : 'Выберите сезон'}
       </button>

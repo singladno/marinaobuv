@@ -20,6 +20,7 @@ export function useDraftsTableNew({
   categories,
   onReload,
   status,
+  getApprovalState,
 }: {
   data: Draft[];
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
@@ -28,6 +29,7 @@ export function useDraftsTableNew({
   categories: CategoryNode[];
   onReload?: () => void;
   status?: string;
+  getApprovalState?: (id: string) => { isProcessing: boolean };
 }) {
   const {
     actions,
@@ -79,7 +81,7 @@ export function useDraftsTableNew({
       onReload,
       status,
       onToggle: toggleRowSelection,
-      draftIds: data.map(draft => draft.id),
+      getApprovalState,
     });
   }, [
     updateDraft,
@@ -89,7 +91,7 @@ export function useDraftsTableNew({
     onReload,
     status,
     toggleRowSelection,
-    data,
+    getApprovalState,
   ]);
 
   const table = useReactTable({

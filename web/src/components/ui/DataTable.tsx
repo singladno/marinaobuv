@@ -1,13 +1,12 @@
 'use client';
 
-import React from 'react';
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-
 import type { ColumnDef, Table } from '@tanstack/react-table';
+import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import React from 'react';
+
+import { DataTableHeader } from './DataTableHeader';
+import { DataTablePagination } from './DataTablePagination';
+import { DataTableRow } from './DataTableRow';
 
 interface DataTableProps<TData, TValue> {
   table?: Table<TData>;
@@ -48,55 +47,6 @@ export function DataTable<TData, TValue>({
   });
 
   const table = providedTable || internalTable;
-
-  const renderPagination = () => {
-    if (!pagination || !onPageChange || !onPageSizeChange) return null;
-
-    const { page, pageSize, total, totalPages } = pagination;
-    const startItem = (page - 1) * pageSize + 1;
-    const endItem = Math.min(page * pageSize, total);
-
-    return (
-      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Показано {startItem}-{endItem} из {total}
-          </span>
-          <select
-            value={pageSize}
-            onChange={e => onPageSizeChange(Number(e.target.value))}
-            className="rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            aria-label="Размер страницы"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1}
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-          >
-            Назад
-          </button>
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Страница {page} из {totalPages}
-          </span>
-          <button
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages}
-            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-          >
-            Вперед
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   const renderContent = () => {
     if (loading) {
@@ -158,39 +108,9 @@ export function DataTable<TData, TValue>({
 
     return (
       <tbody>
-        {table.getRowModel().rows.map(row => {
-          // Extract product ID from row data for data-product-id attribute
-          const productId = (row.original as any)?.id;
-          return (
-            <tr
-              key={row.id}
-              data-product-id={productId}
-              className="border-b border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
-            >
-              {row.getVisibleCells().map(cell => {
-                const isFrozenLeft =
-                  cell.column.columnDef.meta?.frozen === 'left';
-                const isFrozenRight =
-                  cell.column.columnDef.meta?.frozen === 'right';
-
-                return (
-                  <td
-                    key={cell.id}
-                    className={`px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${
-                      isFrozenLeft
-                        ? 'sticky left-0 z-10 border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
-                        : isFrozenRight
-                          ? 'sticky right-0 z-10 border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
-                          : ''
-                    }`}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                );
-              })}
-            </tr>
-          );
-        })}
+        {table.getRowModel().rows.map(row => (
+          <DataTableRow key={row.id} row={row} />
+        ))}
       </tbody>
     );
   };
@@ -200,43 +120,16 @@ export function DataTable<TData, TValue>({
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="h-full overflow-auto">
           <table className="w-full border-collapse">
-            <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => {
-                    const isFrozenLeft =
-                      header.column.columnDef.meta?.frozen === 'left';
-                    const isFrozenRight =
-                      header.column.columnDef.meta?.frozen === 'right';
-
-                    return (
-                      <th
-                        key={header.id}
-                        className={`border-b border-gray-200 px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400 ${
-                          isFrozenLeft
-                            ? 'sticky left-0 z-50 border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
-                            : isFrozenRight
-                              ? 'sticky right-0 z-50 border-l border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
-                              : ''
-                        }`}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
-            </thead>
+            <DataTableHeader table={table} />
             {renderContent()}
           </table>
         </div>
       </div>
-      {renderPagination()}
+      <DataTablePagination
+        pagination={pagination}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
     </div>
   );
 }

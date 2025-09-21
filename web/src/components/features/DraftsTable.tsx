@@ -3,7 +3,6 @@ import * as React from 'react';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import { Tabs, Tab } from '@/components/ui/Tabs';
 import { useDraftsTable } from '@/hooks/useDraftsTable';
-// import { useApprovalEvents } from '@/hooks/useApprovalEvents';
 import type { Draft } from '@/types/admin';
 import { createColumnConfigs } from '@/utils/columnConfigs';
 
@@ -65,7 +64,6 @@ export function DraftsTable({
   // SSE connection for real-time approval updates
   const draftIds = React.useMemo(() => data.map(draft => draft.id), [data]);
   // SSE disabled to fix navigation issues
-  // const { isConnected } = useApprovalEvents(draftIds);
   const isConnected = false;
 
   const handleDelete = React.useCallback(async (id: string) => {

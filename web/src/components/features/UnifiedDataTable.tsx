@@ -7,7 +7,6 @@ import type { CategoryNode } from '@/components/ui/CategorySelector';
 import { DataTable } from '@/components/ui/DataTable';
 import { Tabs, Tab } from '@/components/ui/Tabs';
 import { useTableRenderers } from '@/hooks/useTableRenderers';
-// import { useApprovalEvents } from '@/hooks/useApprovalEvents';
 
 interface UnifiedDataTableProps<TData, TValue> {
   table?: Table<TData>;

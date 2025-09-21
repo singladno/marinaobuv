@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
           controller.enqueue(`data: ${JSON.stringify({ type: 'ping' })}\n\n`);
         } catch (error) {
           clearInterval(keepAlive);
-          connections.delete(draftId);
+          connections.delete(controller);
         }
       }, 30000);
 
