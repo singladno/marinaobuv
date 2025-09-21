@@ -6,6 +6,7 @@ import { useCategories } from '@/hooks/useCategories';
 import type { Product, ProductUpdateData } from '@/types/product';
 
 import { EditableProductCell } from './EditableProductCell';
+import { EditableProductSizesCell } from './EditableProductSizesCell';
 
 interface ProductTableRowProps {
   product: Product;
@@ -26,6 +27,30 @@ export function ProductTableRow({
       await onUpdateProduct(product.id, { [field]: value });
     } catch (error) {
       console.error('Error updating product:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSizesUpdate = async (sizes: any[]) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/admin/products/${product.id}/sizes`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sizes }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update sizes');
+      }
+
+      // Reload the page to reflect changes
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating sizes:', error);
     } finally {
       setIsSaving(false);
     }
@@ -137,7 +162,7 @@ export function ProductTableRow({
       </td>
 
       {/* Gender */}
-      <td className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+      <td className="w-32 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <EditableProductCell
           value={getGenderLabel(product.gender)}
           onSave={value => {
@@ -163,7 +188,7 @@ export function ProductTableRow({
       </td>
 
       {/* Season */}
-      <td className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+      <td className="w-32 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <EditableProductCell
           value={getSeasonLabel(product.season)}
           onSave={value => {
@@ -191,16 +216,17 @@ export function ProductTableRow({
       </td>
 
       {/* Sizes */}
-      <td className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-        <div className="text-sm">
-          {product.sizes.length > 0 ? (
-            <span className="text-gray-600 dark:text-gray-400">
-              {product.sizes.length} размеров
-            </span>
-          ) : (
-            <span className="text-gray-400">-</span>
-          )}
-        </div>
+      <td
+        className="border-b border-gray-200 px-4 py-3 dark:border-gray-700"
+        onClick={e => {
+          console.log('Table cell clicked', e);
+          e.stopPropagation();
+        }}
+      >
+        <EditableProductSizesCell
+          sizes={product.sizes}
+          onChange={handleSizesUpdate}
+        />
       </td>
 
       {/* Created */}

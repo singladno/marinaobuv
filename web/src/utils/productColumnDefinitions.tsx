@@ -156,7 +156,34 @@ export function createProductColumnDefinitions({
     // Sizes column
     columnHelper.accessor('sizes', {
       header: 'Размеры',
-      cell: ({ getValue }) => <ProductSizesCell sizes={getValue()} />,
+      cell: ({ getValue, row }) => (
+        <ProductSizesCell
+          sizes={getValue()}
+          onChange={async sizes => {
+            try {
+              const response = await fetch(
+                `/api/admin/products/${row.original.id}/sizes`,
+                {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ sizes }),
+                }
+              );
+
+              if (!response.ok) {
+                throw new Error('Failed to update sizes');
+              }
+
+              // Reload the page to reflect changes
+              window.location.reload();
+            } catch (error) {
+              console.error('Error updating sizes:', error);
+            }
+          }}
+        />
+      ),
     }),
 
     // Created date column

@@ -88,6 +88,11 @@ export function DraftTableContent({
                         : isFrozenRight
                           ? { right: 0 }
                           : {}),
+                      ...(header.column.columnDef.meta?.width && {
+                        width: header.column.columnDef.meta.width,
+                        minWidth: header.column.columnDef.meta.width,
+                        maxWidth: header.column.columnDef.meta.width,
+                      }),
                     }}
                   >
                     {header.isPlaceholder

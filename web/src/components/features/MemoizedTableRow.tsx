@@ -53,6 +53,11 @@ export const MemoizedTableRow = ({
                 : isFrozenRight
                   ? { right: 0 }
                   : {}),
+              ...(cell.column.columnDef.meta?.width && {
+                width: cell.column.columnDef.meta.width,
+                minWidth: cell.column.columnDef.meta.width,
+                maxWidth: cell.column.columnDef.meta.width,
+              }),
             }}
           >
             {isProcessing && isFrozenLeft ? (

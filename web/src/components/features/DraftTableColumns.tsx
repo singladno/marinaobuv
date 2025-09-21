@@ -293,6 +293,10 @@ export function createDraftTableColumns(
       columnHelper.display({
         id: 'gender',
         header: () => 'Пол',
+        size: 180,
+        meta: {
+          width: '180px',
+        },
         cell: info => {
           return (
             <MemoizedGenderSelectCell
@@ -310,6 +314,10 @@ export function createDraftTableColumns(
       columnHelper.display({
         id: 'season',
         header: () => 'Сезон',
+        size: 180,
+        meta: {
+          width: '180px',
+        },
         cell: info => {
           return (
             <MemoizedSeasonSelectCell

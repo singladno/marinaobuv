@@ -42,113 +42,117 @@ export function DraftBulkOperations({
   const selectedCount = selectedIds.length;
 
   return (
-    <div className="flex items-center space-x-2">
-      {/* Черновики - одобрить, удалить */}
-      {status === 'draft' && (
-        <>
-          <button
-            onClick={onApprove}
-            disabled={selectedCount === 0 || isRunningAI || isProcessing}
-            className="rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 disabled:opacity-50"
-          >
-            Одобрить
-          </button>
-
-          <button
-            onClick={onBulkDelete}
-            disabled={selectedCount === 0 || isRunningAI || isProcessing}
-            className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-          >
-            Удалить
-          </button>
-        </>
-      )}
-
-      {/* Одобрено - Запустить AI, добавить в каталог, удалить */}
-      {status === 'approved' && (
-        <>
-          <button
-            onClick={onRunAIScript}
-            disabled={selectedCount === 0 || isRunningAI || isProcessing}
-            className="flex items-center rounded bg-purple-600 px-3 py-1 text-sm text-white hover:bg-purple-700 disabled:opacity-50"
-          >
-            {isRunningAI ? (
-              <>
-                <Loader size="sm" className="mr-2" />
-                Запуск AI...
-              </>
-            ) : (
-              'Запустить AI'
-            )}
-          </button>
-
-          {/* Cancel AI Analysis Button - Only show when AI is running */}
-          {isRunningAI && onCancelAI && (
+    <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">
+      <div className="flex items-center space-x-3">
+        {/* Черновики - одобрить, удалить */}
+        {status === 'draft' && (
+          <>
             <button
-              onClick={onCancelAI}
-              className="flex items-center rounded bg-orange-600 px-3 py-1 text-sm text-white hover:bg-orange-700"
+              onClick={onApprove}
+              disabled={selectedCount === 0 || isRunningAI || isProcessing}
+              className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Отменить AI
+              Активировать
             </button>
-          )}
 
-          <button
-            onClick={onConvertToCatalog}
-            disabled={selectedCount === 0 || isRunningAI || isProcessing}
-            className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            В каталог
-          </button>
+            <button
+              onClick={onBulkDelete}
+              disabled={selectedCount === 0 || isRunningAI || isProcessing}
+              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Удалить
+            </button>
+          </>
+        )}
 
-          <button
-            onClick={onBulkDelete}
-            disabled={selectedCount === 0 || isRunningAI || isProcessing}
-            className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-          >
-            Удалить
-          </button>
-        </>
-      )}
+        {/* Одобрено - Запустить AI, добавить в каталог, удалить */}
+        {status === 'approved' && (
+          <>
+            <button
+              onClick={onRunAIScript}
+              disabled={selectedCount === 0 || isRunningAI || isProcessing}
+              className="flex items-center rounded-lg bg-purple-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isRunningAI ? (
+                <>
+                  <Loader size="sm" className="mr-2" />
+                  Запуск AI...
+                </>
+              ) : (
+                'Запустить AI'
+              )}
+            </button>
 
-      {/* Удаленные - восстановить, удалить навсегда */}
-      {status === 'deleted' && (
-        <>
-          <button
-            onClick={onBulkRestore}
-            disabled={selectedCount === 0 || isRunningAI || isProcessing}
-            className="rounded bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700 disabled:opacity-50"
-          >
-            Восстановить
-          </button>
+            {/* Cancel AI Analysis Button - Only show when AI is running */}
+            {isRunningAI && onCancelAI && (
+              <button
+                onClick={onCancelAI}
+                className="flex items-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600"
+              >
+                Отменить AI
+              </button>
+            )}
 
-          <button
-            onClick={onBulkPermanentDelete}
-            disabled={selectedCount === 0 || isRunningAI || isProcessing}
-            className="rounded bg-red-800 px-3 py-1 text-sm text-white hover:bg-red-900 disabled:opacity-50"
-          >
-            Удалить навсегда
-          </button>
-        </>
-      )}
+            <button
+              onClick={onConvertToCatalog}
+              disabled={selectedCount === 0 || isRunningAI || isProcessing}
+              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              В каталог
+            </button>
 
-      <span className="text-sm text-gray-700 dark:text-gray-300">
+            <button
+              onClick={onBulkDelete}
+              disabled={selectedCount === 0 || isRunningAI || isProcessing}
+              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Удалить
+            </button>
+          </>
+        )}
+
+        {/* Удаленные - восстановить, удалить навсегда */}
+        {status === 'deleted' && (
+          <>
+            <button
+              onClick={onBulkRestore}
+              disabled={selectedCount === 0 || isRunningAI || isProcessing}
+              className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Восстановить
+            </button>
+
+            <button
+              onClick={onBulkPermanentDelete}
+              disabled={selectedCount === 0 || isRunningAI || isProcessing}
+              className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Удалить навсегда
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
         {selectedCount > 0
           ? `Выбрано: ${selectedCount}`
           : 'Выберите товары для действий'}
-      </span>
+      </div>
 
       {/* AI Status - Always visible when processing */}
       {isProcessing && currentProcessingDraft && (
-        <div className="ml-4 flex items-center space-x-2">
-          <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
-          <span className="text-xs text-gray-500">
-            Обрабатывается:{' '}
-            {currentProcessingDraft.name || 'AI анализ запущен...'}
-          </span>
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
+            <span className="text-sm text-blue-900 dark:text-blue-100">
+              Обрабатывается:{' '}
+              {currentProcessingDraft.name || 'AI анализ запущен...'}
+            </span>
+          </div>
           {onCancelAI && (
             <button
               onClick={onCancelAI}
-              className="ml-2 rounded bg-orange-500 px-2 py-1 text-xs text-white hover:bg-orange-600"
+              className="rounded-lg bg-orange-500 px-3 py-1 text-sm font-medium text-white shadow-sm hover:bg-orange-600"
             >
               Отменить
             </button>
@@ -158,13 +162,17 @@ export function DraftBulkOperations({
 
       {/* AI Status - Show when running but no specific draft */}
       {isRunningAI && !currentProcessingDraft && (
-        <div className="ml-4 flex items-center space-x-2">
-          <div className="h-2 w-2 animate-pulse rounded-full bg-purple-500"></div>
-          <span className="text-xs text-gray-500">AI анализ запущен...</span>
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-purple-500"></div>
+            <span className="text-sm text-blue-900 dark:text-blue-100">
+              AI анализ запущен...
+            </span>
+          </div>
           {onCancelAI && (
             <button
               onClick={onCancelAI}
-              className="ml-2 rounded bg-orange-500 px-2 py-1 text-xs text-white hover:bg-orange-600"
+              className="rounded-lg bg-orange-500 px-3 py-1 text-sm font-medium text-white shadow-sm hover:bg-orange-600"
             >
               Отменить
             </button>

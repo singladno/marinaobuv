@@ -18,26 +18,26 @@ export function ProductBulkOperations({
   onClearSelection,
 }: ProductBulkOperationsProps) {
   return (
-    <div className="flex items-center justify-between rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-      <div className="flex items-center space-x-2">
+    <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">
+      <div className="flex items-center space-x-3">
         <button
           onClick={onBulkActivate}
           disabled={selectedCount === 0}
-          className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+          className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Активировать
         </button>
         <button
           onClick={onBulkDeactivate}
           disabled={selectedCount === 0}
-          className="rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50"
+          className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Деактивировать
         </button>
         <button
           onClick={onBulkDelete}
           disabled={selectedCount === 0}
-          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
+          className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Удалить
         </button>
