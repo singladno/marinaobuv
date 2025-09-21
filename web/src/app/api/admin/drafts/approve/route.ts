@@ -64,12 +64,28 @@ export async function POST(req: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Emit approval start event
+        const activeImages = d.images.filter(img => img.isActive);
         broadcastApprovalEvent(d.id, {
           type: 'approval_start',
           draftId: d.id,
-          totalImages: d.images.filter(img => img.isActive).length,
+          totalImages: activeImages.length,
           timestamp: Date.now(),
         });
+
+        // If no active images, send a progress event immediately
+        if (activeImages.length === 0) {
+          console.log(`📡 No active images, sending immediate progress event`);
+          broadcastApprovalEvent(d.id, {
+            type: 'approval_progress',
+            draftId: d.id,
+            currentImage: 0,
+            totalImages: 0,
+            status: 'uploaded',
+            timestamp: Date.now(),
+          });
+          // Add a small delay to make the progress visible
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
 
         // Process and upload images to S3 before approval
         console.log(`\n📸 Processing images for draft ${d.id}...`);
@@ -92,6 +108,20 @@ export async function POST(req: NextRequest) {
           });
         } else {
           console.log(`⚠️  No images were processed for draft ${d.id}`);
+
+          // Send progress event even if no images were processed
+          const activeImages = d.images.filter(img => img.isActive);
+          if (activeImages.length === 0) {
+            console.log(`📡 No active images, sending progress event`);
+            broadcastApprovalEvent(d.id, {
+              type: 'approval_progress',
+              draftId: d.id,
+              currentImage: 0,
+              totalImages: 0,
+              status: 'uploaded',
+              timestamp: Date.now(),
+            });
+          }
         }
 
         // Update the draft status to 'approved' after S3 upload

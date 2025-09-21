@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 
+import { ApprovalEventsProvider } from '@/contexts/ApprovalEventsContext';
 import { useDraftTablePage } from '@/hooks/useDraftTablePage';
 
 import { DraftBulkOperations } from './DraftBulkOperations';
@@ -54,97 +55,104 @@ export function DraftTablePage({
     cancelAIAnalysis,
   } = useDraftTablePage(initialStatus);
 
+  // Get all draft IDs for the ApprovalEventsProvider
+  const allDraftIds = React.useMemo(() => {
+    return data?.map(draft => draft.id) || [];
+  }, [data]);
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Bulk Operations */}
-      <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
-        <DraftBulkOperations
-          selectedIds={newSelectedIds}
-          status={status}
-          onApprove={() => approve(newSelectedIds, reload, clearSelection)}
-          onConvertToCatalog={() =>
-            convertToCatalog(newSelectedIds, reload, clearSelection)
+    <ApprovalEventsProvider draftIds={allDraftIds}>
+      <div className="flex h-full flex-col">
+        {/* Bulk Operations */}
+        <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+          <DraftBulkOperations
+            selectedIds={newSelectedIds}
+            status={status}
+            onApprove={() => approve(newSelectedIds, reload, clearSelection)}
+            onConvertToCatalog={() =>
+              convertToCatalog(newSelectedIds, reload, clearSelection)
+            }
+            onBulkDelete={() => setShowDeleteModal(true)}
+            onBulkRestore={() => setShowRestoreModal(true)}
+            onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
+            onRunAIScript={() =>
+              runAIAnalysis(
+                newSelectedIds,
+                reload,
+                refetchAIStatus,
+                status,
+                clearSelection
+              )
+            }
+            onCancelAI={cancelAIAnalysis}
+            isRunningAI={isRunningAI}
+            isProcessing={isProcessing}
+            currentProcessingDraft={currentProcessingDraft}
+          />
+        </div>
+
+        {/* Table with reserved space for pagination */}
+        <div className="min-h-0 flex-1">
+          <UnifiedDataTable
+            table={table}
+            onPatch={async () => {}}
+            status={status}
+            onStatusChange={onStatusChange}
+            onReload={reload}
+            onApprove={() => approve(newSelectedIds, reload, clearSelection)}
+            onConvertToCatalog={() =>
+              convertToCatalog(newSelectedIds, reload, clearSelection)
+            }
+            onBulkDelete={() => setShowDeleteModal(true)}
+            onBulkRestore={() => setShowRestoreModal(true)}
+            onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
+            onRunAIScript={() =>
+              runAIAnalysis(
+                newSelectedIds,
+                reload,
+                refetchAIStatus,
+                status,
+                clearSelection
+              )
+            }
+            loading={loading}
+            error={error}
+            data={data}
+            categories={categories}
+            pagination={pagination}
+            onPageChange={goToPage}
+            onPageSizeChange={changePageSize}
+            isDraftTable={true}
+          />
+        </div>
+
+        {/* Confirmation Modals */}
+        <DraftConfirmationModals
+          showDeleteModal={showDeleteModal}
+          setShowDeleteModal={setShowDeleteModal}
+          showRestoreModal={showRestoreModal}
+          setShowRestoreModal={setShowRestoreModal}
+          showPermanentDeleteModal={showPermanentDeleteModal}
+          setShowPermanentDeleteModal={setShowPermanentDeleteModal}
+          selectedCount={newSelectedIds.length}
+          onBulkDeleteConfirm={() =>
+            handleBulkDeleteConfirm(newSelectedIds, reload, clearSelection)
           }
-          onBulkDelete={() => setShowDeleteModal(true)}
-          onBulkRestore={() => setShowRestoreModal(true)}
-          onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
-          onRunAIScript={() =>
-            runAIAnalysis(
+          onBulkRestoreConfirm={() =>
+            handleBulkRestoreConfirm(newSelectedIds, reload, clearSelection)
+          }
+          onBulkPermanentDeleteConfirm={() =>
+            handleBulkPermanentDeleteConfirm(
               newSelectedIds,
               reload,
-              refetchAIStatus,
-              status,
               clearSelection
             )
           }
-          onCancelAI={cancelAIAnalysis}
-          isRunningAI={isRunningAI}
-          isProcessing={isProcessing}
-          currentProcessingDraft={currentProcessingDraft}
+          isDeleting={isDeleting}
+          isRestoring={isRestoring}
+          isPermanentlyDeleting={isPermanentlyDeleting}
         />
       </div>
-
-      {/* Table with reserved space for pagination */}
-      <div className="min-h-0 flex-1">
-        <UnifiedDataTable
-          table={table}
-          onPatch={async () => {}}
-          status={status}
-          onStatusChange={onStatusChange}
-          onReload={reload}
-          onApprove={() => approve(newSelectedIds, reload, clearSelection)}
-          onConvertToCatalog={() =>
-            convertToCatalog(newSelectedIds, reload, clearSelection)
-          }
-          onBulkDelete={() => setShowDeleteModal(true)}
-          onBulkRestore={() => setShowRestoreModal(true)}
-          onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
-          onRunAIScript={() =>
-            runAIAnalysis(
-              newSelectedIds,
-              reload,
-              refetchAIStatus,
-              status,
-              clearSelection
-            )
-          }
-          loading={loading}
-          error={error}
-          data={data}
-          categories={categories}
-          pagination={pagination}
-          onPageChange={goToPage}
-          onPageSizeChange={changePageSize}
-          isDraftTable={true}
-        />
-      </div>
-
-      {/* Confirmation Modals */}
-      <DraftConfirmationModals
-        showDeleteModal={showDeleteModal}
-        setShowDeleteModal={setShowDeleteModal}
-        showRestoreModal={showRestoreModal}
-        setShowRestoreModal={setShowRestoreModal}
-        showPermanentDeleteModal={showPermanentDeleteModal}
-        setShowPermanentDeleteModal={setShowPermanentDeleteModal}
-        selectedCount={newSelectedIds.length}
-        onBulkDeleteConfirm={() =>
-          handleBulkDeleteConfirm(newSelectedIds, reload, clearSelection)
-        }
-        onBulkRestoreConfirm={() =>
-          handleBulkRestoreConfirm(newSelectedIds, reload, clearSelection)
-        }
-        onBulkPermanentDeleteConfirm={() =>
-          handleBulkPermanentDeleteConfirm(
-            newSelectedIds,
-            reload,
-            clearSelection
-          )
-        }
-        isDeleting={isDeleting}
-        isRestoring={isRestoring}
-        isPermanentlyDeleting={isPermanentlyDeleting}
-      />
-    </div>
+    </ApprovalEventsProvider>
   );
 }

@@ -41,11 +41,18 @@ export function DraftBulkOperations({
   currentProcessingDraft,
 }: DraftBulkOperationsProps) {
   const selectedCount = selectedIds.length;
-  const { isAnyDraftApproving, getApprovingDrafts } = useApprovalEvents();
+  const { isAnyDraftApproving, getApprovingDrafts, getApprovalState } =
+    useApprovalEvents();
 
   // Check if any selected drafts are currently being approved
   const isApproving = isAnyDraftApproving(selectedIds);
   const approvingDrafts = getApprovingDrafts(selectedIds);
+
+  // Get detailed approval state for the first approving draft
+  const firstApprovingDraft = approvingDrafts[0];
+  const approvalState = firstApprovingDraft
+    ? getApprovalState(firstApprovingDraft)
+    : null;
 
   return (
     <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">
@@ -208,6 +215,33 @@ export function DraftBulkOperations({
               {selectedCount})
             </span>
           </div>
+
+          {/* Detailed progress for the first approving draft */}
+          {approvalState && approvalState.isProcessing && (
+            <div className="flex items-center space-x-2">
+              <div className="text-xs text-blue-700 dark:text-blue-300">
+                {approvalState.totalImages > 0
+                  ? approvalState.currentImage > 0
+                    ? `Загрузка изображений: ${approvalState.currentImage}/${approvalState.totalImages} (${approvalState.progress}%)`
+                    : 'Подготовка к загрузке...'
+                  : 'Обработка черновика...'}
+              </div>
+              {approvalState.totalImages > 0 ? (
+                <div className="h-1 w-16 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className="h-1 rounded-full bg-green-500 transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, approvalState.progress))}%`,
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="h-1 w-16 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div className="h-1 w-full animate-pulse rounded-full bg-green-500" />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -209,6 +209,20 @@ export async function processDraftImagesForApproval(
     });
   }
 
+  // Send progress events even if no images were processed
+  const activeImages = draftImages.filter(img => img.isActive);
+  if (activeImages.length === 0 && draftId) {
+    console.log(`📡 No active images to process, sending completion event`);
+    broadcastApprovalEvent(draftId, {
+      type: 'approval_progress',
+      draftId,
+      currentImage: 0,
+      totalImages: 0,
+      status: 'uploaded',
+      timestamp: Date.now(),
+    });
+  }
+
   return processedImages;
 }
 

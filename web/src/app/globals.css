@@ -378,3 +378,13 @@ a:hover {
       transparent
     );
 }
+
+/* Progress bar width utility */
+.progress-bar {
+  width: var(--progress-width, 0%);
+}
+
+/* Progress bar with data attribute */
+.progress-bar[data-progress] {
+  width: attr(data-progress);
+}
