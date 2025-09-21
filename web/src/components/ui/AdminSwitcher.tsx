@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { PortalSwitcher } from './PortalSwitcher';
 
 export function AdminSwitcher() {
-  return null;
+  return <PortalSwitcher />;
 }

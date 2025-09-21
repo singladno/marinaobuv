@@ -43,13 +43,14 @@ export function useDraftBulkOperations() {
         });
 
         await onReload();
-        onClearSelection();
       } catch (error) {
         addNotification({
           type: 'error',
           title: 'Ошибка при одобрении',
           message: 'Произошла неожиданная ошибка',
         });
+      } finally {
+        onClearSelection(); // Always clear selection regardless of success/failure
       }
     },
     [addNotification]
@@ -85,13 +86,14 @@ export function useDraftBulkOperations() {
         });
 
         await onReload();
-        onClearSelection();
       } catch (error) {
         addNotification({
           type: 'error',
           title: 'Ошибка при добавлении в каталог',
           message: 'Произошла неожиданная ошибка',
         });
+      } finally {
+        onClearSelection(); // Always clear selection regardless of success/failure
       }
     },
     [addNotification]
@@ -130,7 +132,6 @@ export function useDraftBulkOperations() {
         });
 
         await onReload();
-        onClearSelection();
       } catch (error) {
         addNotification({
           type: 'error',
@@ -140,6 +141,7 @@ export function useDraftBulkOperations() {
       } finally {
         setIsDeleting(false);
         setShowDeleteModal(false);
+        onClearSelection(); // Always clear selection regardless of success/failure
       }
     },
     [addNotification]
@@ -178,7 +180,6 @@ export function useDraftBulkOperations() {
         });
 
         await onReload();
-        onClearSelection();
       } catch (error) {
         addNotification({
           type: 'error',
@@ -188,6 +189,7 @@ export function useDraftBulkOperations() {
       } finally {
         setIsRestoring(false);
         setShowRestoreModal(false);
+        onClearSelection(); // Always clear selection regardless of success/failure
       }
     },
     [addNotification]
@@ -226,7 +228,6 @@ export function useDraftBulkOperations() {
         });
 
         await onReload();
-        onClearSelection();
       } catch (error) {
         addNotification({
           type: 'error',
@@ -236,6 +237,7 @@ export function useDraftBulkOperations() {
       } finally {
         setIsPermanentlyDeleting(false);
         setShowPermanentDeleteModal(false);
+        onClearSelection(); // Always clear selection regardless of success/failure
       }
     },
     [addNotification]

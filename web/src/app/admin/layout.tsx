@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
 
-import { getSession } from '@/lib/server/session';
-import AdminSidebarLayout from '@/components/ui/AdminSidebarLayout';
 import { ClientProviders } from '@/components/ClientProviders';
+import AdminSidebarLayout from '@/components/ui/AdminSidebarLayout';
+import { PortalSwitcher } from '@/components/ui/PortalSwitcher';
+import { getSession } from '@/lib/server/session';
 
 export default async function AdminLayout({
   children,
@@ -16,6 +17,7 @@ export default async function AdminLayout({
     <ClientProviders>
       <div className="bg-background text-foreground flex h-screen">
         <AdminSidebarLayout>{children}</AdminSidebarLayout>
+        <PortalSwitcher />
       </div>
     </ClientProviders>
   );

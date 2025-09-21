@@ -126,6 +126,11 @@ export function useDraftsTable({
     data.map(d => ({ ...d, selected: !!selected[d.id] }))
   );
 
+  // Clear selection when status (tab) changes
+  React.useEffect(() => {
+    setLocalData(prev => prev.map(item => ({ ...item, selected: false })));
+  }, [status]);
+
   // Sync with external data changes, but preserve local optimistic updates
   React.useEffect(() => {
     setLocalData(prev => {

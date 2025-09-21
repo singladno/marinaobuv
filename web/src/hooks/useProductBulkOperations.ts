@@ -65,9 +65,11 @@ export function useProductBulkOperations(
     ) {
       try {
         await Promise.all(selectedIds.map(id => onDeleteProduct(id)));
-        clearSelection();
       } catch (error) {
         console.error('Error bulk deleting products:', error);
+        throw error; // Re-throw to let the caller handle the error
+      } finally {
+        clearSelection(); // Always clear selection regardless of success/failure
       }
     }
   }, [selected, onDeleteProduct, clearSelection]);
@@ -83,9 +85,11 @@ export function useProductBulkOperations(
       await Promise.all(
         selectedIds.map(id => onUpdateProduct(id, { isActive: true }))
       );
-      clearSelection();
     } catch (error) {
       console.error('Error bulk activating products:', error);
+      throw error; // Re-throw to let the caller handle the error
+    } finally {
+      clearSelection(); // Always clear selection regardless of success/failure
     }
   }, [selected, onUpdateProduct, clearSelection]);
 
@@ -100,9 +104,11 @@ export function useProductBulkOperations(
       await Promise.all(
         selectedIds.map(id => onUpdateProduct(id, { isActive: false }))
       );
-      clearSelection();
     } catch (error) {
       console.error('Error bulk deactivating products:', error);
+      throw error; // Re-throw to let the caller handle the error
+    } finally {
+      clearSelection(); // Always clear selection regardless of success/failure
     }
   }, [selected, onUpdateProduct, clearSelection]);
 

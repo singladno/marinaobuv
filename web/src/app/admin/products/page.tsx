@@ -86,6 +86,9 @@ export default function AdminProductsPage() {
         type: 'error',
         message: 'Ошибка при удалении товаров',
       });
+    } finally {
+      // Ensure selection is cleared even if there was an error
+      clearSelection();
     }
   };
 
@@ -101,6 +104,9 @@ export default function AdminProductsPage() {
         type: 'error',
         message: 'Ошибка при активации товаров',
       });
+    } finally {
+      // Ensure selection is cleared even if there was an error
+      clearSelection();
     }
   };
 
@@ -116,6 +122,9 @@ export default function AdminProductsPage() {
         type: 'error',
         message: 'Ошибка при деактивации товаров',
       });
+    } finally {
+      // Ensure selection is cleared even if there was an error
+      clearSelection();
     }
   };
 
