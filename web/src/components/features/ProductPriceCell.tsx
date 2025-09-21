@@ -8,12 +8,14 @@ interface ProductPriceCellProps {
   product: Product;
   priceInKopecks: number;
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  disabled?: boolean;
 }
 
 export function ProductPriceCell({
   product,
   priceInKopecks,
   onUpdateProduct,
+  disabled = false,
 }: ProductPriceCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -36,10 +38,11 @@ export function ProductPriceCell({
       value={formattedPrice}
       onSave={handleSave}
       isEditing={isEditing}
-      onEdit={() => setIsEditing(!isEditing)}
+      onEdit={() => !disabled && setIsEditing(!isEditing)}
       isSaving={isSaving}
       type="number"
       step="0.01"
+      disabled={disabled}
     />
   );
 }

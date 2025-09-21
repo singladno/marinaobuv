@@ -206,7 +206,9 @@ function NotificationToast({ notification, onClose }: NotificationToastProps) {
       } ${styles.container}`}
     >
       <div className="flex items-start">
-        <div className={`flex-shrink-0 ${styles.icon}`}>{styles.iconSvg}</div>
+        <div className={`flex flex-shrink-0 items-center ${styles.icon}`}>
+          {styles.iconSvg}
+        </div>
         <div className="ml-3 flex-1">
           <h4 className={`text-sm font-medium ${styles.title}`}>
             {notification.title}

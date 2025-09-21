@@ -12,6 +12,7 @@ interface EditableProductCellProps {
   step?: string;
   className?: string;
   options?: Array<{ value: string; label: string }>;
+  disabled?: boolean;
 }
 
 export function EditableProductCell({
@@ -24,6 +25,7 @@ export function EditableProductCell({
   step,
   className = '',
   options = [],
+  disabled = false,
 }: EditableProductCellProps) {
   const [editValue, setEditValue] = useState(value);
 
@@ -48,8 +50,8 @@ export function EditableProductCell({
   if (!isEditing) {
     return (
       <div
-        className={`cursor-pointer ${className}`}
-        onClick={onEdit}
+        className={`${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${className}`}
+        onClick={disabled ? undefined : onEdit}
         data-editable="true"
       >
         {value || '-'}
@@ -66,6 +68,7 @@ export function EditableProductCell({
         onKeyDown={handleKeyDown}
         className={`w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`}
         autoFocus
+        disabled={disabled || isSaving}
         aria-label="Выберите значение"
       >
         {options.map(option => (
@@ -87,7 +90,7 @@ export function EditableProductCell({
       step={step}
       className={`w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`}
       autoFocus
-      disabled={isSaving}
+      disabled={disabled || isSaving}
       aria-label="Редактировать значение"
     />
   );

@@ -8,12 +8,14 @@ interface ProductSeasonCellProps {
   product: Product;
   season: string | null;
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  disabled?: boolean;
 }
 
 export function ProductSeasonCell({
   product,
   season,
   onUpdateProduct,
+  disabled = false,
 }: ProductSeasonCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -57,7 +59,7 @@ export function ProductSeasonCell({
       value={getSeasonLabel(season)}
       onSave={handleSave}
       isEditing={isEditing}
-      onEdit={() => setIsEditing(!isEditing)}
+      onEdit={() => !disabled && setIsEditing(!isEditing)}
       isSaving={isSaving}
       type="select"
       options={[
@@ -67,6 +69,7 @@ export function ProductSeasonCell({
         { value: 'Зима', label: 'Зима' },
         { value: '-', label: '-' },
       ]}
+      disabled={disabled}
     />
   );
 }

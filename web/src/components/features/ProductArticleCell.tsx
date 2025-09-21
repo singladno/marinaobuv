@@ -7,11 +7,13 @@ import type { Product } from '@/types/product';
 interface ProductArticleCellProps {
   product: Product;
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  disabled?: boolean;
 }
 
 export function ProductArticleCell({
   product,
   onUpdateProduct,
+  disabled = false,
 }: ProductArticleCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -33,9 +35,10 @@ export function ProductArticleCell({
       value={product.article || ''}
       onSave={handleSave}
       isEditing={isEditing}
-      onEdit={() => setIsEditing(!isEditing)}
+      onEdit={() => !disabled && setIsEditing(!isEditing)}
       isSaving={isSaving}
       type="text"
+      disabled={disabled}
     />
   );
 }

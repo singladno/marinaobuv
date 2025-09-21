@@ -8,12 +8,14 @@ interface ProductGenderCellProps {
   product: Product;
   gender: string | null;
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  disabled?: boolean;
 }
 
 export function ProductGenderCell({
   product,
   gender,
   onUpdateProduct,
+  disabled = false,
 }: ProductGenderCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,7 +56,7 @@ export function ProductGenderCell({
       value={getGenderLabel(gender)}
       onSave={handleSave}
       isEditing={isEditing}
-      onEdit={() => setIsEditing(!isEditing)}
+      onEdit={() => !disabled && setIsEditing(!isEditing)}
       isSaving={isSaving}
       type="select"
       options={[
@@ -63,6 +65,7 @@ export function ProductGenderCell({
         { value: 'Унисекс', label: 'Унисекс' },
         { value: '-', label: '-' },
       ]}
+      disabled={disabled}
     />
   );
 }

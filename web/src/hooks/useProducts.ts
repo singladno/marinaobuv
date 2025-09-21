@@ -22,6 +22,7 @@ interface UseProductsReturn {
   reload: () => Promise<void>;
   reloadSilent: () => Promise<void>;
   updateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
   goToPage: (page: number) => void;
   changePageSize: (pageSize: number) => void;
 }
@@ -112,6 +113,31 @@ export function useProducts(): UseProductsReturn {
     []
   );
 
+  const deleteProduct = useCallback(async (id: string) => {
+    try {
+      const response = await fetch('/api/admin/products', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Remove the product from the local state
+      setProducts(prev => prev.filter(product => product.id !== id));
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to delete product';
+      setError(errorMessage);
+      console.error('Error deleting product:', err);
+      throw err;
+    }
+  }, []);
+
   const setFilters = useCallback((newFilters: Partial<ProductsFilters>) => {
     setFiltersState(prev => ({
       ...prev,
@@ -142,6 +168,7 @@ export function useProducts(): UseProductsReturn {
     reload,
     reloadSilent,
     updateProduct,
+    deleteProduct,
     goToPage,
     changePageSize,
   };

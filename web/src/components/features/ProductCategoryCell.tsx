@@ -8,12 +8,14 @@ interface ProductCategoryCellProps {
   product: Product;
   categories: Array<{ id: string; name: string }>;
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  disabled?: boolean;
 }
 
 export function ProductCategoryCell({
   product,
   categories,
   onUpdateProduct,
+  disabled = false,
 }: ProductCategoryCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -38,10 +40,11 @@ export function ProductCategoryCell({
       value={product.category.name}
       onSave={handleSave}
       isEditing={isEditing}
-      onEdit={() => setIsEditing(!isEditing)}
+      onEdit={() => !disabled && setIsEditing(!isEditing)}
       isSaving={isSaving}
       type="select"
       options={categories.map(c => ({ value: c.name, label: c.name }))}
+      disabled={disabled}
     />
   );
 }

@@ -49,7 +49,6 @@ export async function GET(req: NextRequest) {
           },
           images: {
             orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
-            take: 1,
             select: {
               id: true,
               url: true,
@@ -123,7 +122,6 @@ export async function PATCH(req: NextRequest) {
         },
         images: {
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
-          take: 1,
           select: {
             id: true,
             url: true,
@@ -147,6 +145,38 @@ export async function PATCH(req: NextRequest) {
     console.error('Error updating product:', error);
     return NextResponse.json(
       { error: 'Failed to update product' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Product ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Delete the product (this will cascade delete related records)
+    await prisma.product.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete product' },
       { status: 500 }
     );
   }
