@@ -59,6 +59,7 @@ export default async function ProductPage({
           {/* Product Info */}
           <div className="space-y-6">
             <ProductDetails
+              productId={product.id}
               name={product.name}
               article={product.article}
               pricePair={product.pricePair}

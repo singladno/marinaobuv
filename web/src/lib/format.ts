@@ -7,8 +7,8 @@ export function rub(rubles: number): string {
 }
 
 export const genderRu: Record<string, string> = {
-  FEMALE: 'Женское',
-  MALE: 'Мужское',
+  FEMALE: 'Женский',
+  MALE: 'Мужской',
   UNISEX: 'Унисекс',
 };
 

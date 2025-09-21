@@ -9,9 +9,13 @@ import {
   Plus,
   Share,
   Truck,
+  User,
+  Users,
+  Package,
+  Calendar,
 } from 'lucide-react';
 
-import ProductSizes from '@/components/product/ProductSizes';
+import ProductReviews from '@/components/product/ProductReviews';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -27,6 +31,7 @@ type Size = {
 };
 
 type Props = {
+  productId: string;
   name: string;
   article?: string | null;
   pricePair: number;
@@ -42,6 +47,7 @@ type Props = {
 
 export default function ProductDetails(props: Props) {
   const {
+    productId,
     name,
     article,
     pricePair,
@@ -59,42 +65,12 @@ export default function ProductDetails(props: Props) {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string>('');
 
-  // Mock rating for now - in real app this would come from props
-  const rating = 4.5;
-  const reviewCount = 127;
+  // Rating will be displayed in the reviews section
 
   // Initialize size selection
   if (!selectedSize && sizes.length > 0) {
     setSelectedSize(sizes[0].id);
   }
-
-  const renderStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(
-        <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-      );
-    }
-
-    if (hasHalfStar) {
-      stars.push(
-        <Star
-          key="half"
-          className="h-4 w-4 fill-yellow-400/50 text-yellow-400"
-        />
-      );
-    }
-
-    const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Star key={`empty-${i}`} className="h-4 w-4 text-gray-300" />);
-    }
-
-    return stars;
-  };
 
   const handleAddToCart = () => {
     // TODO: Implement add to cart functionality
@@ -131,15 +107,6 @@ export default function ProductDetails(props: Props) {
               <Share className="h-5 w-5" />
             </Button>
           </div>
-        </div>
-
-        {/* Rating */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">{renderStars(rating)}</div>
-          <span className="text-sm font-medium">{rating}</span>
-          <span className="text-muted-foreground text-sm">
-            ({reviewCount} отзывов)
-          </span>
         </div>
 
         {/* Price */}
@@ -235,36 +202,62 @@ export default function ProductDetails(props: Props) {
       {/* Key Features */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Ключевые особенности</h3>
-        <ul className="space-y-2">
+        <div className="grid grid-cols-2 gap-4">
           {material && (
-            <li className="flex items-start gap-2 text-sm">
-              <div className="bg-foreground mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full" />
-              <span>Материал: {material}</span>
-            </li>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                <Package className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Материал</p>
+                <p className="text-sm font-medium">{material}</p>
+              </div>
+            </div>
           )}
           {gender && (
-            <li className="flex items-start gap-2 text-sm">
-              <div className="bg-foreground mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full" />
-              <span>Пол: {genderRu[gender]}</span>
-            </li>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pink-100">
+                {gender === 'female' ? (
+                  <User className="h-4 w-4 text-pink-600" />
+                ) : (
+                  <Users className="h-4 w-4 text-blue-600" />
+                )}
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Пол</p>
+                <p className="text-sm font-medium">{genderRu[gender]}</p>
+              </div>
+            </div>
           )}
           {season && (
-            <li className="flex items-start gap-2 text-sm">
-              <div className="bg-foreground mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full" />
-              <span>Сезон: {seasonRu[season]}</span>
-            </li>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
+                <Calendar className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Сезон</p>
+                <p className="text-sm font-medium">{seasonRu[season]}</p>
+              </div>
+            </div>
           )}
           {packPairs != null && (
-            <li className="flex items-start gap-2 text-sm">
-              <div className="bg-foreground mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full" />
-              <span>Пар в коробке: {packPairs}</span>
-            </li>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">
+                <Package className="h-4 w-4 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Пар в коробке</p>
+                <p className="text-sm font-medium">{packPairs}</p>
+              </div>
+            </div>
           )}
-        </ul>
+        </div>
       </div>
 
-      {/* Sizes */}
-      <ProductSizes sizes={sizes} />
+      <Separator />
+
+      {/* Reviews Section */}
+      <ProductReviews productId={productId} />
     </div>
   );
 }

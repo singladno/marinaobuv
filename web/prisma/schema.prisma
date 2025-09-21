@@ -7,6 +7,236 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Category {
+  id            String           @id @default(cuid())
+  parentId      String?
+  name          String
+  slug          String           @unique
+  path          String           @unique
+  sort          Int              @default(500)
+  isActive      Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  parent        Category?        @relation("CatToParent", fields: [parentId], references: [id])
+  children      Category[]       @relation("CatToParent")
+  products      Product[]
+  draftProducts WaDraftProduct[]
+
+  @@index([parentId])
+}
+
+model Product {
+  id                    String         @id @default(cuid())
+  slug                  String         @unique
+  name                  String
+  article               String?
+  categoryId            String
+  pricePair             Decimal
+  currency              String         @default("RUB")
+  packPairs             Int?
+  priceBox              Decimal?
+  material              String?
+  gender                Gender?
+  season                Season?
+  description           String?
+  availabilityCheckedAt DateTime?
+  isActive              Boolean        @default(true)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  category              Category       @relation(fields: [categoryId], references: [id])
+  images                ProductImage[]
+  sizes                 ProductSize[]
+  reviews               Review[]
+
+  @@index([categoryId])
+  @@index([season])
+  @@index([pricePair])
+  @@index([isActive])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  key       String? @unique
+  alt       String?
+  sort      Int     @default(0)
+  isPrimary Boolean @default(false)
+  color     String?
+  width     Int?
+  height    Int?
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sort])
+}
+
+model ProductSize {
+  id        String  @id @default(cuid())
+  productId String
+  size      String
+  perBox    Int?
+  stock     Int?
+  sku       String?
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, size])
+  @@index([size])
+}
+
+model Provider {
+  id            String            @id @default(cuid())
+  name          String            @unique
+  phone         String?
+  place         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  users         User[]
+  draftProducts WaDraftProduct[]
+  messages      WhatsAppMessage[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([place])
+}
+
+model WaDraftProduct {
+  id               String                @id @default(cuid())
+  messageId        String                @unique
+  providerId       String
+  name             String?
+  article          String?
+  pricePair        Decimal?
+  currency         String                @default("RUB")
+  packPairs        Int?
+  priceBox         Decimal?
+  material         String?
+  gender           Gender?
+  season           Season?
+  description      String?
+  sizes            Json?
+  providerDiscount Decimal?
+  rawGptResponse   Json?
+  gptRequest       String?
+  rawGptResponse2  Json?
+  gptRequest2      String?
+  source           Json?
+  color            String?
+  categoryId       String?
+  status           String                @default("draft")
+  aiStatus         String?
+  aiProcessedAt    DateTime?
+  isDeleted        Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  category         Category?             @relation(fields: [categoryId], references: [id])
+  message          WhatsAppMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  provider         Provider              @relation(fields: [providerId], references: [id])
+  images           WaDraftProductImage[]
+
+  @@index([providerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([categoryId])
+  @@index([isDeleted])
+}
+
+model WaDraftProductImage {
+  id             String         @id @default(cuid())
+  draftProductId String
+  url            String
+  key            String?        @unique
+  mimeType       String?
+  sha256         String?
+  alt            String?
+  sort           Int            @default(0)
+  isPrimary      Boolean        @default(false)
+  isFalseImage   Boolean        @default(false)
+  isActive       Boolean        @default(true)
+  color          String?
+  width          Int?
+  height         Int?
+  createdAt      DateTime       @default(now())
+  draftProduct   WaDraftProduct @relation(fields: [draftProductId], references: [id], onDelete: Cascade)
+
+  @@index([draftProductId, sort])
+}
+
+model WhatsAppMessage {
+  id             String          @id @default(cuid())
+  waMessageId    String          @unique
+  from           String?
+  type           String?
+  source         String?
+  chatId         String?
+  fromMe         Boolean         @default(false)
+  fromName       String?
+  timestamp      BigInt?
+  mediaId        String?
+  mediaWidth     Int?
+  mediaHeight    Int?
+  mediaSha256    String?
+  mediaPreview   String?
+  mediaFileSize  Int?
+  mediaMimeType  String?
+  text           String?
+  mediaS3Key     String?
+  mediaUrl       String?
+  providerId     String?
+  processed      Boolean         @default(false)
+  rawPayload     Json
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  draftProductId String?
+  draftProduct   WaDraftProduct?
+  provider       Provider?       @relation(fields: [providerId], references: [id])
+
+  @@index([createdAt])
+  @@index([from])
+  @@index([type])
+  @@index([fromMe])
+  @@index([chatId])
+  @@index([timestamp])
+  @@index([providerId])
+}
+
+model User {
+  id           String    @id @default(cuid())
+  phone        String    @unique
+  name         String?
+  role         Role
+  providerId   String?
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  reviews      Review[]
+  provider     Provider? @relation(fields: [providerId], references: [id])
+
+  @@index([role])
+  @@index([providerId])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  productId   String
+  userId      String?
+  rating      Int
+  title       String?
+  comment     String?
+  name        String?
+  email       String?
+  isVerified  Boolean  @default(false)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([productId])
+  @@index([rating])
+  @@index([isPublished])
+  @@index([createdAt])
+}
+
 enum Role {
   ADMIN
   PROVIDER
@@ -25,218 +255,4 @@ enum Season {
   SUMMER
   AUTUMN
   WINTER
-}
-
-model Category {
-  id        String     @id @default(cuid())
-  parentId  String?
-  parent    Category?  @relation("CatToParent", fields: [parentId], references: [id])
-  children  Category[] @relation("CatToParent")
-  name      String
-  slug      String     @unique
-  path      String     @unique
-  sort      Int        @default(500)
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  products  Product[]
-  draftProducts WaDraftProduct[]
-
-  @@index([parentId])
-}
-
-model Product {
-  id                    String         @id @default(cuid())
-  slug                  String         @unique
-  name                  String
-  article               String?
-  categoryId            String
-  category              Category       @relation(fields: [categoryId], references: [id])
-  pricePair             Decimal // rubles
-  currency              String         @default("RUB")
-  packPairs             Int?
-  priceBox              Decimal?
-  material              String?
-  gender                Gender?
-  season                Season?
-  description           String?
-  availabilityCheckedAt DateTime?
-  isActive              Boolean        @default(true)
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  images                ProductImage[]
-  sizes                 ProductSize[]
-
-  @@index([categoryId])
-  @@index([season])
-  @@index([pricePair])
-  @@index([isActive])
-}
-
-model ProductImage {
-  id        String  @id @default(cuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url       String
-  key       String? @unique
-  alt       String?
-  sort      Int     @default(0)
-  isPrimary Boolean @default(false)
-  color     String?
-  width     Int?
-  height    Int?
-
-  @@index([productId, sort])
-}
-
-model ProductSize {
-  id        String  @id @default(cuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  size      String
-  perBox    Int?
-  stock     Int?
-  sku       String?
-
-  @@unique([productId, size])
-  @@index([size])
-}
-
-model Provider {
-  id            String            @id @default(cuid())
-  name          String            @unique
-  phone         String? // Phone number from 'from' field
-  place         String? // Market address/place (e.g., "3/4/17")
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  messages      WhatsAppMessage[]
-  draftProducts WaDraftProduct[]
-  users         User[]
-
-  @@index([name])
-  @@index([phone])
-  @@index([place])
-}
-
-model WaDraftProduct {
-  id             String                @id @default(cuid())
-  messageId      String                @unique
-  message        WhatsAppMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  providerId     String
-  provider       Provider              @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  name           String?
-  article        String?               // Auto-generated article number
-  pricePair      Decimal? // rubles
-  currency       String                @default("RUB")
-  packPairs      Int?
-  priceBox       Decimal?
-  material       String?
-  gender         Gender?
-  season         Season?
-  description    String?
-  sizes          Json? // Array of size objects
-  providerDiscount Decimal? // Provider's discount in rubles (e.g., 500 = 500 rubles discount)
-  rawGptResponse Json? // Full GPT response for debugging
-  gptRequest     String? // Raw text sent to GPT for processing
-  rawGptResponse2 Json? // Full second-pass GPT response for debugging
-  gptRequest2     String? // Raw text sent to GPT for second-pass validation
-  source         Json? // Array of message IDs used for this draft product
-  color          String? // Dominant/selected color for this draft product
-  categoryId     String?
-  category       Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  status         String                @default("draft") // draft, processed, approved, rejected
-  aiStatus       String?               // ai_processing, ai_completed, ai_failed
-  aiProcessedAt  DateTime?
-  isDeleted      Boolean               @default(false)
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  images         WaDraftProductImage[]
-
-  @@index([providerId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([categoryId])
-  @@index([isDeleted])
-}
-
-model WaDraftProductImage {
-  id             String         @id @default(cuid())
-  draftProductId String
-  draftProduct   WaDraftProduct @relation(fields: [draftProductId], references: [id], onDelete: Cascade)
-  url            String
-  key            String?        @unique
-  mimeType       String?
-  sha256         String?
-  alt            String?
-  sort           Int            @default(0)
-  isPrimary      Boolean        @default(false)
-  isFalseImage   Boolean        @default(false) // Mark if this image is not of the product
-  isActive       Boolean        @default(true) // Mark if this image is active/visible
-  color          String? // Detected color for this image (used for color variants)
-  width          Int?
-  height         Int?
-  createdAt      DateTime       @default(now())
-
-  @@index([draftProductId, sort])
-}
-
-model WhatsAppMessage {
-  id          String @id @default(cuid()) // Auto-generated unique ID
-  waMessageId String @unique // WhatsApp message ID for deduplication
-
-  // Basic message fields
-  from      String? // Sender phone number
-  type      String? // Message type (text, image, etc.)
-  source    String? // Source (mobile, web, etc.)
-  chatId    String? // Chat/group ID
-  fromMe    Boolean @default(false)
-  fromName  String? // Sender display name
-  timestamp BigInt? // Message timestamp
-
-  // Media fields (for image/video/audio messages)
-  mediaId       String? // Media ID
-  mediaWidth    Int? // Media width
-  mediaHeight   Int? // Media height
-  mediaSha256   String? // Media SHA256 hash
-  mediaPreview  String? // Media preview (base64)
-  mediaFileSize Int? // Media file size
-  mediaMimeType String? // Media MIME type
-
-  // Extracted/processed fields
-  text       String? // Extracted text content
-  mediaS3Key String? // S3 key for media files
-  mediaUrl   String? // Media URL
-  providerId String? // Provider identifier
-  provider   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
-  processed  Boolean @default(false) // Whether message has been processed by draft parser
-
-  // Raw data
-  rawPayload   Json // Full API response
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  draftProductId String?
-  draftProduct   WaDraftProduct?
-
-  @@index([createdAt])
-  @@index([from])
-  @@index([type])
-  @@index([fromMe])
-  @@index([chatId])
-  @@index([timestamp])
-  @@index([providerId])
-}
-
-model User {
-  id           String    @id @default(cuid())
-  phone        String    @unique
-  name         String?
-  role         Role
-  providerId   String?
-  provider     Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
-  passwordHash String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  @@index([role])
-  @@index([providerId])
 }
