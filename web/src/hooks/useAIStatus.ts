@@ -49,12 +49,14 @@ export function useAIStatus(status?: string, isRunningAI?: boolean) {
   useEffect(() => {
     fetchAIStatus();
 
-    // Poll every 2 seconds if there are processing items OR if AI is running
+    // More aggressive polling when AI is running
+    const pollInterval = isRunningAI ? 1000 : 2000; // 1 second when running, 2 seconds otherwise
+
     const interval = setInterval(() => {
       if (data?.counts.processing > 0 || isRunningAI) {
         fetchAIStatus();
       }
-    }, 2000);
+    }, pollInterval);
 
     return () => clearInterval(interval);
   }, [fetchAIStatus, data?.counts.processing, isRunningAI]);
@@ -63,6 +65,11 @@ export function useAIStatus(status?: string, isRunningAI?: boolean) {
   useEffect(() => {
     if (isRunningAI) {
       fetchAIStatus();
+      // Also fetch again after a short delay to catch immediate updates
+      const timeout = setTimeout(() => {
+        fetchAIStatus();
+      }, 500);
+      return () => clearTimeout(timeout);
     }
   }, [isRunningAI, fetchAIStatus]);
 

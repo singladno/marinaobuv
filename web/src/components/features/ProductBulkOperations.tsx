@@ -17,41 +17,46 @@ export function ProductBulkOperations({
   onBulkDeactivate,
   onClearSelection,
 }: ProductBulkOperationsProps) {
-  if (selectedCount === 0) return null;
-
   return (
     <div className="flex items-center justify-between rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-      <div className="flex items-center space-x-4">
-        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-          Выбрано товаров: {selectedCount}
-        </span>
-        <button
-          onClick={onClearSelection}
-          className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-        >
-          Очистить выбор
-        </button>
-      </div>
-
       <div className="flex items-center space-x-2">
         <button
           onClick={onBulkActivate}
-          className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          disabled={selectedCount === 0}
+          className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
         >
           Активировать
         </button>
         <button
           onClick={onBulkDeactivate}
-          className="rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+          disabled={selectedCount === 0}
+          className="rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50"
         >
           Деактивировать
         </button>
         <button
           onClick={onBulkDelete}
-          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          disabled={selectedCount === 0}
+          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
         >
           Удалить
         </button>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+          {selectedCount > 0
+            ? `Выбрано товаров: ${selectedCount}`
+            : 'Выберите товары для действий'}
+        </span>
+        {selectedCount > 0 && (
+          <button
+            onClick={onClearSelection}
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+          >
+            Очистить выбор
+          </button>
+        )}
       </div>
     </div>
   );

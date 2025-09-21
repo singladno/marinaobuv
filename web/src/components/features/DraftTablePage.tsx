@@ -67,7 +67,7 @@ export function DraftTablePage({
           onBulkRestore={() => setShowRestoreModal(true)}
           onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
           onRunAIScript={() =>
-            runAIAnalysis(newSelectedIds, reload, refetchAIStatus)
+            runAIAnalysis(newSelectedIds, reload, refetchAIStatus, status)
           }
           isRunningAI={isRunningAI}
           isProcessing={isProcessing}
@@ -91,7 +91,7 @@ export function DraftTablePage({
           onBulkRestore={() => setShowRestoreModal(true)}
           onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
           onRunAIScript={() =>
-            runAIAnalysis(newSelectedIds, reload, refetchAIStatus)
+            runAIAnalysis(newSelectedIds, reload, refetchAIStatus, status)
           }
           loading={loading}
           error={error}

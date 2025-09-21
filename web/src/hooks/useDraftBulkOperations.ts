@@ -247,7 +247,8 @@ export function useDraftBulkOperations() {
     async (
       selectedIds: string[],
       onReload: () => Promise<void>,
-      onRefetchAIStatus: () => Promise<void>
+      onRefetchAIStatus: () => Promise<void>,
+      status?: string
     ) => {
       try {
         if (selectedIds.length === 0) {
@@ -286,11 +287,38 @@ export function useDraftBulkOperations() {
         // Reload data to show updated AI status immediately
         await onReload();
 
-        // Wait a moment for the database to be updated, then refetch AI status
-        setTimeout(async () => {
-          await onRefetchAIStatus();
-          setIsRunningAI(false);
-        }, 500);
+        // Start continuous polling for AI status updates
+        const pollForCompletion = async () => {
+          try {
+            await onRefetchAIStatus();
+
+            // Check if there are still processing items
+            const response = await fetch(
+              `/api/admin/drafts/ai-status?status=${status || ''}`
+            );
+            if (response.ok) {
+              const result = await response.json();
+              const processingCount = result.data?.counts?.processing || 0;
+
+              if (processingCount > 0) {
+                // Continue polling every 2 seconds
+                setTimeout(pollForCompletion, 2000);
+              } else {
+                // All processing is complete
+                setIsRunningAI(false);
+              }
+            } else {
+              // Error fetching status, stop polling
+              setIsRunningAI(false);
+            }
+          } catch (error) {
+            console.error('Error polling AI status:', error);
+            setIsRunningAI(false);
+          }
+        };
+
+        // Start polling after a short delay
+        setTimeout(pollForCompletion, 1000);
       } catch (error) {
         setIsRunningAI(false);
         addNotification({

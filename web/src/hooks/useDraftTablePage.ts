@@ -22,12 +22,32 @@ export function useDraftTablePage(initialStatus: string) {
   const { categories, loading: categoriesLoading } = useCategories();
   const [isTabChanging, setIsTabChanging] = React.useState(false);
 
+  // Use bulk operations hook first to get isRunningAI state
+  const {
+    showDeleteModal,
+    setShowDeleteModal,
+    showRestoreModal,
+    setShowRestoreModal,
+    showPermanentDeleteModal,
+    setShowPermanentDeleteModal,
+    isDeleting,
+    isRestoring,
+    isPermanentlyDeleting,
+    isRunningAI,
+    approve,
+    convertToCatalog,
+    handleBulkDeleteConfirm,
+    handleBulkRestoreConfirm,
+    handleBulkPermanentDeleteConfirm,
+    runAIAnalysis,
+  } = useDraftBulkOperations();
+
   const {
     currentProcessingDraft,
     isProcessing,
     data: aiStatusData,
     refetch: refetchAIStatus,
-  } = useAIStatus(status, false);
+  } = useAIStatus(status, isRunningAI);
 
   // Set initial status from URL params only on mount
   React.useEffect(() => {
@@ -122,26 +142,6 @@ export function useDraftTablePage(initialStatus: string) {
     onReload: reload,
     status,
   });
-
-  // Use bulk operations hook
-  const {
-    showDeleteModal,
-    setShowDeleteModal,
-    showRestoreModal,
-    setShowRestoreModal,
-    showPermanentDeleteModal,
-    setShowPermanentDeleteModal,
-    isDeleting,
-    isRestoring,
-    isPermanentlyDeleting,
-    isRunningAI,
-    approve,
-    convertToCatalog,
-    handleBulkDeleteConfirm,
-    handleBulkRestoreConfirm,
-    handleBulkPermanentDeleteConfirm,
-    runAIAnalysis,
-  } = useDraftBulkOperations();
 
   return {
     // Data

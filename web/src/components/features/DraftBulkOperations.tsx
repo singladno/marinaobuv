@@ -39,22 +39,14 @@ export function DraftBulkOperations({
 }: DraftBulkOperationsProps) {
   const selectedCount = selectedIds.length;
 
-  if (selectedCount === 0) {
-    return null;
-  }
-
   return (
     <div className="flex items-center space-x-2">
-      <span className="text-sm text-gray-700 dark:text-gray-300">
-        Выбрано: {selectedCount}
-      </span>
-
       {/* Черновики - одобрить, удалить */}
       {status === 'draft' && (
         <>
           <button
             onClick={onApprove}
-            disabled={isRunningAI || isProcessing}
+            disabled={selectedCount === 0 || isRunningAI || isProcessing}
             className="rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700 disabled:opacity-50"
           >
             Одобрить
@@ -62,7 +54,7 @@ export function DraftBulkOperations({
 
           <button
             onClick={onBulkDelete}
-            disabled={isRunningAI || isProcessing}
+            disabled={selectedCount === 0 || isRunningAI || isProcessing}
             className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 disabled:opacity-50"
           >
             Удалить
@@ -75,7 +67,7 @@ export function DraftBulkOperations({
         <>
           <button
             onClick={onRunAIScript}
-            disabled={isRunningAI || isProcessing}
+            disabled={selectedCount === 0 || isRunningAI || isProcessing}
             className="flex items-center rounded bg-purple-600 px-3 py-1 text-sm text-white hover:bg-purple-700 disabled:opacity-50"
           >
             {isRunningAI ? (
@@ -90,7 +82,7 @@ export function DraftBulkOperations({
 
           <button
             onClick={onConvertToCatalog}
-            disabled={isRunningAI || isProcessing}
+            disabled={selectedCount === 0 || isRunningAI || isProcessing}
             className="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
           >
             В каталог
@@ -98,7 +90,7 @@ export function DraftBulkOperations({
 
           <button
             onClick={onBulkDelete}
-            disabled={isRunningAI || isProcessing}
+            disabled={selectedCount === 0 || isRunningAI || isProcessing}
             className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 disabled:opacity-50"
           >
             Удалить
@@ -111,7 +103,7 @@ export function DraftBulkOperations({
         <>
           <button
             onClick={onBulkRestore}
-            disabled={isRunningAI || isProcessing}
+            disabled={selectedCount === 0 || isRunningAI || isProcessing}
             className="rounded bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700 disabled:opacity-50"
           >
             Восстановить
@@ -119,7 +111,7 @@ export function DraftBulkOperations({
 
           <button
             onClick={onBulkPermanentDelete}
-            disabled={isRunningAI || isProcessing}
+            disabled={selectedCount === 0 || isRunningAI || isProcessing}
             className="rounded bg-red-800 px-3 py-1 text-sm text-white hover:bg-red-900 disabled:opacity-50"
           >
             Удалить навсегда
@@ -127,11 +119,29 @@ export function DraftBulkOperations({
         </>
       )}
 
+      <span className="text-sm text-gray-700 dark:text-gray-300">
+        {selectedCount > 0
+          ? `Выбрано: ${selectedCount}`
+          : 'Выберите товары для действий'}
+      </span>
+
+      {/* AI Status - Always visible when processing */}
       {isProcessing && currentProcessingDraft && (
-        <span className="text-xs text-gray-500">
-          Обрабатывается:{' '}
-          {currentProcessingDraft.name || 'AI анализ запущен...'}
-        </span>
+        <div className="ml-4 flex items-center space-x-2">
+          <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
+          <span className="text-xs text-gray-500">
+            Обрабатывается:{' '}
+            {currentProcessingDraft.name || 'AI анализ запущен...'}
+          </span>
+        </div>
+      )}
+
+      {/* AI Status - Show when running but no specific draft */}
+      {isRunningAI && !currentProcessingDraft && (
+        <div className="ml-4 flex items-center space-x-2">
+          <div className="h-2 w-2 animate-pulse rounded-full bg-purple-500"></div>
+          <span className="text-xs text-gray-500">AI анализ запущен...</span>
+        </div>
       )}
     </div>
   );
