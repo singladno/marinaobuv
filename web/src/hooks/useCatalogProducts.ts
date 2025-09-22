@@ -14,6 +14,7 @@ interface Product {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  colorOptions?: Array<{ color: string; imageUrl: string }>;
 }
 
 interface UseCatalogProductsReturn {
@@ -54,6 +55,7 @@ export function useCatalogProducts(): UseCatalogProductsReturn {
           isActive?: boolean;
           createdAt: string;
           updatedAt: string;
+          colorOptions?: Array<{ color: string; imageUrl: string }>;
         }) => ({
           id: product.id,
           name: product.name,
@@ -65,6 +67,7 @@ export function useCatalogProducts(): UseCatalogProductsReturn {
           isActive: product.isActive ?? true,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
+          colorOptions: product.colorOptions || [],
         })
       );
 

@@ -18,19 +18,35 @@ export async function GET() {
         },
         images: {
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
-          take: 1,
           select: {
             url: true,
+            color: true,
+            isPrimary: true,
           },
         },
       },
     });
 
     // Transform the data to include primaryImageUrl
-    const transformedProducts = products.map(product => ({
-      ...product,
-      primaryImageUrl: product.images[0]?.url || null,
-    }));
+    const transformedProducts = products.map(product => {
+      const primaryImageUrl = product.images[0]?.url || null;
+      const seen = new Set<string>();
+      const colorOptions = product.images
+        .filter(img => !!img.color)
+        .filter(img => {
+          const key = (img.color || '').toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map(img => ({ color: img.color as string, imageUrl: img.url }));
+
+      return {
+        ...product,
+        primaryImageUrl,
+        colorOptions,
+      };
+    });
 
     return NextResponse.json({ products: transformedProducts });
   } catch (error) {

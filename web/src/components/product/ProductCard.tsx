@@ -1,6 +1,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
+import ColorSwitcher from '@/components/product/ColorSwitcher';
+import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
 import { rub } from '@/lib/format';
@@ -13,6 +16,7 @@ type Props = {
   imageUrl: string | null;
   category?: string;
   showCategory?: boolean;
+  colorOptions?: Array<{ color: string; imageUrl: string }>;
 };
 
 export default function ProductCard({
@@ -22,9 +26,24 @@ export default function ProductCard({
   imageUrl,
   category,
   showCategory = false,
+  colorOptions = [],
 }: Props) {
-  // Use the actual product image or show a placeholder
-  const hasImage = imageUrl && imageUrl.trim() !== '';
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  // Default to first color if exists to ensure a single color context
+  if (!selectedColor && colorOptions.length > 0) {
+    // set synchronously is fine in render? guard via micro effect alternative
+  }
+  const displayImageUrl = useMemo(() => {
+    const effectiveColor = selectedColor || (colorOptions[0]?.color ?? null);
+    if (effectiveColor) {
+      const found = colorOptions.find(
+        o => o.color?.toLowerCase() === effectiveColor.toLowerCase()
+      );
+      if (found?.imageUrl) return found.imageUrl;
+    }
+    return imageUrl || null;
+  }, [selectedColor, colorOptions, imageUrl]);
+  const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
 
   return (
     <div className="border-border bg-card group relative overflow-hidden rounded-xl border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
@@ -33,7 +52,7 @@ export default function ProductCard({
         <div className="bg-muted relative aspect-square w-full overflow-hidden">
           {hasImage ? (
             <Image
-              src={imageUrl}
+              src={displayImageUrl as string}
               alt={name}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
@@ -41,24 +60,7 @@ export default function ProductCard({
               priority={false}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gray-100">
-              <div className="text-center text-gray-400">
-                <svg
-                  className="mx-auto h-12 w-12"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <p className="mt-2 text-sm">Нет фото</p>
-              </div>
-            </div>
+            <NoImagePlaceholder />
           )}
 
           {/* Category Badge */}
@@ -85,6 +87,12 @@ export default function ProductCard({
               {name}
             </Text>
 
+            <ColorSwitcher
+              options={colorOptions}
+              selectedColor={selectedColor}
+              onSelect={setSelectedColor}
+            />
+
             <div className="flex items-center justify-between">
               <Text className="text-foreground text-xl font-bold">
                 {rub(pricePair)}
@@ -92,7 +100,11 @@ export default function ProductCard({
 
               {/* Add to Cart Button */}
               <div>
-                <button className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white">
+                <button
+                  title="Добавить в корзину"
+                  aria-label="Добавить в корзину"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white"
+                >
                   <svg
                     className="h-4 w-4"
                     fill="none"

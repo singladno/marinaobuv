@@ -14,6 +14,7 @@ export interface Product {
   currency: string;
   imageUrl: string | null;
   category?: string;
+  colorOptions?: Array<{ color: string; imageUrl: string }>;
 }
 
 interface ProductGridProps {
@@ -89,6 +90,7 @@ export default function ProductGrid({
             imageUrl={product.imageUrl}
             category={product.category}
             showCategory={showCategories}
+            colorOptions={product.colorOptions}
           />
         ))}
       </div>

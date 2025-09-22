@@ -287,6 +287,7 @@ export default function CatalogPage() {
                       imageUrl={product.primaryImageUrl}
                       category={product.category?.name || product.category}
                       showCategory={true}
+                      colorOptions={product.colorOptions}
                     />
                   ) : (
                     <Card key={product.id} className="hover-elevate p-4">

@@ -1,12 +1,10 @@
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { ArrowLeft } from 'lucide-react';
-
 import ProductDetails from '@/components/product/ProductDetails';
-import ProductGallery from '@/components/product/ProductGallery';
+import ProductGalleryWithColors from '@/components/product/ProductGalleryWithColors';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { prisma } from '@/lib/server/db';
 
 export default async function ProductPage({
@@ -26,8 +24,13 @@ export default async function ProductPage({
     },
   });
   if (!product) return notFound();
-  const images: { url: string }[] = product.images.length
-    ? product.images.map(i => ({ url: i.url }))
+  const images: { url: string; alt?: string; color?: string | null }[] = product
+    .images.length
+    ? product.images.map(i => ({
+        url: i.url,
+        alt: i.alt ?? undefined,
+        color: i.color,
+      }))
     : [{ url: '/images/demo/1.jpg' }];
 
   return (
@@ -53,7 +56,10 @@ export default async function ProductPage({
         <div className="grid gap-12 lg:grid-cols-2">
           {/* Product Image */}
           <div>
-            <ProductGallery images={images} productName={product.name} />
+            <ProductGalleryWithColors
+              images={images}
+              productName={product.name}
+            />
           </div>
 
           {/* Product Info */}
@@ -62,13 +68,15 @@ export default async function ProductPage({
               productId={product.id}
               name={product.name}
               article={product.article}
-              pricePair={product.pricePair}
+              pricePair={Number(product.pricePair)}
               description={product.description}
               material={product.material}
               gender={product.gender}
               season={product.season}
               packPairs={product.packPairs}
-              priceBox={product.priceBox}
+              priceBox={
+                product.priceBox != null ? Number(product.priceBox) : null
+              }
               availabilityCheckedAt={product.availabilityCheckedAt ?? undefined}
               sizes={product.sizes}
             />

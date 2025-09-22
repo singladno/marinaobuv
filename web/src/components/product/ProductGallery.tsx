@@ -62,7 +62,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
             alt={safeImages[currentIndex].alt || productName}
             width={448}
             height={336}
-            className="h-auto w-full object-cover"
+            className="h-auto w-full object-contain"
             priority
           />
         </div>
@@ -73,6 +73,8 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
           size="icon"
           className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 opacity-0 transition-opacity hover:bg-white group-hover:opacity-100"
           onClick={goToPrevious}
+          title="Предыдущее фото"
+          aria-label="Предыдущее фото"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -81,6 +83,8 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
           size="icon"
           className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 opacity-0 transition-opacity hover:bg-white group-hover:opacity-100"
           onClick={goToNext}
+          title="Следующее фото"
+          aria-label="Следующее фото"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -99,6 +103,8 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
+                title={`Показать фото ${index + 1}`}
+                aria-label={`Показать фото ${index + 1}`}
                 className={`relative aspect-square overflow-hidden rounded-md border-2 transition-colors ${
                   index === currentIndex
                     ? 'border-foreground ring-foreground ring-2'
@@ -110,7 +116,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                   alt={image.alt || productName}
                   width={100}
                   height={100}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               </button>
             ))}
