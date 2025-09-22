@@ -17,7 +17,7 @@ type ButtonProps = CommonProps & React.ButtonHTMLAttributes<HTMLButtonElement>;
 type AnchorProps = CommonProps & { href: string };
 
 const base =
-  'inline-flex items-center justify-center gap-1.5 rounded-md transition outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] disabled:opacity-50 disabled:pointer-events-none';
+  'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md transition outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] disabled:opacity-50 disabled:pointer-events-none';
 const sizes: Record<Size, string> = {
   sm: 'px-3 py-1.5 text-sm',
   md: 'px-4 py-2 text-sm',

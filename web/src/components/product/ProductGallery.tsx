@@ -38,13 +38,13 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   if (safeImages.length === 1) {
     return (
       <Card className="mx-auto max-w-md overflow-hidden border-0 shadow-sm">
-        <div className="w-full">
+        <div className="relative aspect-[4/3] w-full bg-white">
           <Image
             src={safeImages[0].url}
             alt={safeImages[0].alt || productName}
-            width={448}
-            height={336}
-            className="h-auto w-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 448px"
+            className="object-contain"
             priority
           />
         </div>
@@ -56,13 +56,13 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
     <Card className="mx-auto max-w-md overflow-hidden border-0 shadow-sm">
       {/* Main Image Container */}
       <div className="group relative">
-        <div className="w-full">
+        <div className="relative aspect-[4/3] w-full bg-white">
           <Image
             src={safeImages[currentIndex].url}
             alt={safeImages[currentIndex].alt || productName}
-            width={448}
-            height={336}
-            className="h-auto w-full object-contain"
+            fill
+            sizes="(max-width: 768px) 100vw, 448px"
+            className="object-contain"
             priority
           />
         </div>
@@ -111,13 +111,15 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                     : 'border-muted hover:border-muted-foreground'
                 }`}
               >
-                <Image
-                  src={image.url}
-                  alt={image.alt || productName}
-                  width={100}
-                  height={100}
-                  className="h-full w-full object-contain"
-                />
+                <div className="relative h-full w-full">
+                  <Image
+                    src={image.url}
+                    alt={image.alt || productName}
+                    fill
+                    sizes="100px"
+                    className="object-contain"
+                  />
+                </div>
               </button>
             ))}
           </div>

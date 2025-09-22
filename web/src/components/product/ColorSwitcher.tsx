@@ -78,7 +78,7 @@ export default function ColorSwitcher({
   const dirClass = direction === 'col' ? 'flex-col' : 'flex-row flex-wrap';
 
   return (
-    <div className={`flex ${dirClass} items-center gap-2`}>
+    <div className={`flex ${dirClass} items-center gap-3`}>
       {options.map(opt => {
         const isSelected =
           selectedColor?.toLowerCase() === opt.color.toLowerCase();
@@ -94,9 +94,9 @@ export default function ColorSwitcher({
             }}
             title={`Цвет: ${opt.color}`}
             aria-label={`Цвет: ${opt.color}`}
-            className={`relative inline-flex h-6 w-6 items-center justify-center rounded-full border transition-shadow ${
+            className={`hover:ring-foreground/10 relative inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border transition-shadow transition-transform duration-150 hover:scale-105 hover:ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 ${
               isSelected
-                ? 'border-foreground ring-foreground ring-2'
+                ? 'border-purple-400 ring-1 ring-purple-300'
                 : 'border-muted'
             }`}
           >

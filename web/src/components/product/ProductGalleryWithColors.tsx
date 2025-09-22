@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 import ProductGallery from '@/components/product/ProductGallery';
+import ProductGalleryVertical from '@/components/product/ProductGalleryVertical';
 
 type ImageWithColor = { url: string; alt?: string; color?: string | null };
 
@@ -49,15 +50,19 @@ export default function ProductGalleryWithColors({
   }, [selectedColor, colorOptions, images]);
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-4">
       <div className="flex-1">
-        <ProductGallery images={filteredImages} productName={productName} />
+        <ProductGalleryVertical
+          images={filteredImages}
+          productName={productName}
+          height={560}
+        />
       </div>
       {colorOptions.length > 1 && (
-        <div className="pt-2">
+        <div className="flex h-[560px] items-center">
           <ColorSwitcher
             options={colorOptions}
-            selectedColor={selectedColor}
+            selectedColor={selectedColor || colorOptions[0]?.color || null}
             onSelect={setSelectedColor}
             direction="col"
           />

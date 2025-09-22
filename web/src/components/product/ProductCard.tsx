@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
@@ -29,10 +29,12 @@ export default function ProductCard({
   colorOptions = [],
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  // Default to first color if exists to ensure a single color context
-  if (!selectedColor && colorOptions.length > 0) {
-    // set synchronously is fine in render? guard via micro effect alternative
-  }
+  // Default to first color if exists so the active style is visible
+  useEffect(() => {
+    if (!selectedColor && colorOptions.length > 0) {
+      setSelectedColor(colorOptions[0]?.color ?? null);
+    }
+  }, [selectedColor, colorOptions]);
   const displayImageUrl = useMemo(() => {
     const effectiveColor = selectedColor || (colorOptions[0]?.color ?? null);
     if (effectiveColor) {
@@ -46,7 +48,7 @@ export default function ProductCard({
   const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
 
   return (
-    <div className="border-border bg-card group relative overflow-hidden rounded-xl border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+    <div className="bg-surface group relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
       <Link href={`/product/${slug}`} className="block">
         {/* Image Container */}
         <div className="bg-muted relative aspect-square w-full overflow-hidden">
@@ -89,7 +91,7 @@ export default function ProductCard({
 
             <ColorSwitcher
               options={colorOptions}
-              selectedColor={selectedColor}
+              selectedColor={selectedColor || colorOptions[0]?.color || null}
               onSelect={setSelectedColor}
             />
 
