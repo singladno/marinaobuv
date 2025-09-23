@@ -133,7 +133,6 @@ export default function CatalogPage() {
     filters.priceRange[0] > 0 ||
     filters.priceRange[1] < 100000 ||
     filters.minRating > 0 ||
-    filters.inStock ||
     searchQuery.length > 0;
 
   if (loading) {
@@ -178,21 +177,8 @@ export default function CatalogPage() {
             Каталог обуви
           </Text>
 
-          {/* Search and View Controls */}
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="max-w-md flex-1">
-              <div className="relative">
-                <MagnifyingGlassIcon className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  type="search"
-                  placeholder="Поиск товаров..."
-                  value={searchQuery}
-                  onChange={e => handleSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
+          {/* View Controls (search removed) */}
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               {/* View Toggle */}
               <div className="flex items-center rounded-md border">

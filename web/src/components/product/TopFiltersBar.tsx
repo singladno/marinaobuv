@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import SortControl from '@/components/product/filters/SortControl';
+
 import CategoryControl from '@/components/product/filters/CategoryControl';
 import PriceControl from '@/components/product/filters/PriceControl';
+import SortControl from '@/components/product/filters/SortControl';
 import type { FilterOptions } from '@/components/product/ProductFilters';
 
 type TopFiltersBarProps = {
@@ -29,8 +30,7 @@ export default function TopFiltersBar({
     return (
       filters.categories.length > 0 ||
       filters.priceRange[0] > 0 ||
-      filters.priceRange[1] < 100000 ||
-      filters.inStock
+      filters.priceRange[1] < 100000
     );
   }, [filters]);
 
@@ -51,18 +51,6 @@ export default function TopFiltersBar({
         value={filters.priceRange}
         onChange={range => onChange({ priceRange: range })}
       />
-
-      {/* In stock */}
-      <button
-        className={`h-9 rounded-xl px-3 text-sm shadow-sm transition-colors ${
-          filters.inStock
-            ? 'bg-gray-900 text-white hover:bg-black'
-            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-        }`}
-        onClick={() => onChange({ inStock: !filters.inStock })}
-      >
-        В наличии
-      </button>
 
       {/* Clear */}
       {hasActive && (

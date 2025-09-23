@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select';
+import FilterPill from './FilterPill';
 import type { FilterOptions } from '@/components/product/ProductFilters';
 
 const SORT_OPTIONS = [
@@ -24,17 +18,33 @@ type Props = {
 
 export default function SortControl({ value, onChange }: Props) {
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-9 min-w-[180px] rounded-xl bg-gray-50 text-gray-700 shadow-sm hover:bg-gray-100">
-        <SelectValue placeholder="Сортировка" />
-      </SelectTrigger>
-      <SelectContent>
+    <FilterPill label="Сортировка" contentClassName="w-64 p-2">
+      <div className="max-h-80 overflow-auto">
         {SORT_OPTIONS.map(opt => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </SelectItem>
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 ${
+              value === opt.value ? 'bg-gray-100 font-medium' : ''
+            }`}
+          >
+            <span>{opt.label}</span>
+            {value === opt.value && (
+              <svg
+                viewBox="0 0 20 20"
+                className="h-4 w-4 text-gray-700"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </button>
         ))}
-      </SelectContent>
-    </Select>
+      </div>
+    </FilterPill>
   );
 }
