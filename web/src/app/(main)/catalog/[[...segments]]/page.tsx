@@ -177,8 +177,15 @@ export default function CatalogPage() {
             Каталог обуви
           </Text>
 
-          {/* View Controls (search removed) */}
+          {/* Filters row with view switcher on the right */}
           <div className="flex items-center justify-between gap-4">
+            <TopFiltersBar
+              filters={filters}
+              onChange={partial =>
+                setFilters(prev => ({ ...prev, ...partial }))
+              }
+              onClear={handleClearFilters}
+            />
             <div className="flex items-center gap-2">
               {/* View Toggle */}
               <div className="flex items-center rounded-md border">
@@ -227,13 +234,6 @@ export default function CatalogPage() {
               </Sheet>
             </div>
           </div>
-
-          {/* Top Filters Bar */}
-          <TopFiltersBar
-            filters={filters}
-            onChange={partial => setFilters(prev => ({ ...prev, ...partial }))}
-            onClear={handleClearFilters}
-          />
         </div>
 
         <div className="flex gap-8">
