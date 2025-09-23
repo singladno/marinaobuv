@@ -12,6 +12,7 @@ type CartContextValue = {
   totalQty: number;
   add: (slug: string, qty?: number) => void;
   remove: (slug: string) => void;
+  updateQuantity: (slug: string, qty: number) => void;
   clear: () => void;
 };
 
@@ -37,6 +38,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       },
       remove: (slug: string) => {
         setItems(prev => prev.filter(i => i.slug !== slug));
+      },
+      updateQuantity: (slug: string, qty: number) => {
+        setItems(prev => {
+          if (qty <= 0) {
+            return prev.filter(i => i.slug !== slug);
+          }
+          return prev.map(i => (i.slug === slug ? { ...i, qty } : i));
+        });
       },
       clear: () => setItems([]),
     };

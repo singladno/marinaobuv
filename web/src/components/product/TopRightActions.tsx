@@ -17,7 +17,7 @@ export default function TopRightActions() {
         asChild
         className="hover:bg-transparent"
       >
-        <Link href="/cart" aria-label="Корзина" className="relative">
+        <Link href="/basket" aria-label="Корзина" className="relative">
           <ShoppingCartIcon className="h-4 w-4" />
           {totalQty > 0 && (
             <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white">
