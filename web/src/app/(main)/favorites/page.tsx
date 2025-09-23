@@ -4,24 +4,24 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 
 import ProductCard from '@/components/product/ProductCard';
+import SortControl from '@/components/product/filters/SortControl';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import SearchBar from '@/components/ui/SearchBar';
 import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useCatalogProducts } from '@/hooks/useCatalogProducts';
 
 type SortBy =
-  | 'added-desc'
-  | 'price-asc'
-  | 'price-desc'
+  | 'featured'
+  | 'price-low'
+  | 'price-high'
   | 'name-asc'
   | 'name-desc';
 
 export default function FavoritesPage() {
   const { favorites } = useFavorites();
   const { products, loading, error } = useCatalogProducts();
-  const [sortBy, setSortBy] = useState<SortBy>('added-desc');
+  const [sortBy, setSortBy] = useState<SortBy>('featured');
   const [search, setSearch] = useState('');
 
   const favoriteProducts = useMemo(() => {
@@ -37,10 +37,10 @@ export default function FavoritesPage() {
       : base;
     const arr = [...searched];
     switch (sortBy) {
-      case 'price-asc':
+      case 'price-low':
         arr.sort((a, b) => a.pricePair - b.pricePair);
         break;
-      case 'price-desc':
+      case 'price-high':
         arr.sort((a, b) => b.pricePair - a.pricePair);
         break;
       case 'name-asc':
@@ -49,7 +49,7 @@ export default function FavoritesPage() {
       case 'name-desc':
         arr.sort((a, b) => b.name.localeCompare(a.name));
         break;
-      default:
+      default: // featured
         arr.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -73,25 +73,16 @@ export default function FavoritesPage() {
 
           <div className="flex w-full items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">Сортировка:</span>
-              <Select
+              <SortControl
                 value={sortBy}
                 onChange={v => setSortBy(v as SortBy)}
-                options={[
-                  { label: 'По дате добавления', value: 'added-desc' },
-                  { label: 'Цена: по возрастанию', value: 'price-asc' },
-                  { label: 'Цена: по убыванию', value: 'price-desc' },
-                  { label: 'Название: A→Я', value: 'name-asc' },
-                  { label: 'Название: Я→A', value: 'name-desc' },
-                ]}
               />
             </div>
 
-            <div className="w-full max-w-xs">
-              <Input
-                placeholder="Поиск в избранном..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+            <div className="w-full max-w-md">
+              <SearchBar
+                placeholder="Название, бренд, артикул, цвет"
+                onSearch={q => setSearch(q)}
               />
             </div>
           </div>

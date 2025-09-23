@@ -21,9 +21,10 @@ export default function SortControl({ value, onChange }: Props) {
     <span className="flex items-center gap-1.5">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="14"
-        height="12"
+        width="16"
+        height="14"
         fill="none"
+        viewBox="0 0 16 14"
       >
         <path
           fill="#242424"

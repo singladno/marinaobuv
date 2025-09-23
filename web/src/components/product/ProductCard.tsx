@@ -112,12 +112,6 @@ export default function ProductCard({
               {name}
             </Text>
 
-            <ColorSwitcher
-              options={colorOptions}
-              selectedColor={selectedColor || colorOptions[0]?.color || null}
-              onSelect={setSelectedColor}
-            />
-
             <div className="flex items-center justify-between">
               <Text className="text-foreground text-xl font-bold">
                 {rub(pricePair)}
@@ -132,7 +126,7 @@ export default function ProductCard({
                     e.preventDefault();
                     add(slug, 1);
                   }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white"
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white"
                 >
                   <svg
                     className="h-4 w-4"
@@ -150,6 +144,12 @@ export default function ProductCard({
                 </button>
               </div>
             </div>
+
+            <ColorSwitcher
+              options={colorOptions}
+              selectedColor={selectedColor || colorOptions[0]?.color || null}
+              onSelect={setSelectedColor}
+            />
           </div>
         </div>
       </Link>
