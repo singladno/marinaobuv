@@ -45,9 +45,31 @@ export default async function ProductPage({
                 Назад
               </Link>
             </Button>
-            <span className="text-muted-foreground text-sm">
-              Каталог / {product.category?.name || 'Обувь'} / {product.name}
-            </span>
+            <nav className="text-muted-foreground text-sm">
+              <Link
+                href="/catalog"
+                className="text-muted-foreground/80 hover:text-foreground transition-colors"
+              >
+                Каталог
+              </Link>
+              <span className="text-muted-foreground/50 mx-1">/</span>
+              {product.category?.name ? (
+                <Link
+                  href={`/catalog?category=${encodeURIComponent(
+                    product.category.name
+                  )}`}
+                  className="text-muted-foreground/80 hover:text-foreground transition-colors"
+                >
+                  {product.category.name}
+                </Link>
+              ) : (
+                <span>Обувь</span>
+              )}
+              <span className="text-muted-foreground/50 mx-1">/</span>
+              <span aria-current="page" className="cursor-default select-none">
+                {product.name}
+              </span>
+            </nav>
           </div>
         </div>
       </div>

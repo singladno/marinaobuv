@@ -2,8 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
@@ -23,6 +23,18 @@ export default function ProductGalleryVertical({
     images?.length > 0
       ? images
       : [{ url: '/images/demo/1.jpg', alt: productName }];
+
+  // Ensure currentIndex is always valid when images change
+  useEffect(() => {
+    if (currentIndex > safeImages.length - 1) {
+      setCurrentIndex(0);
+    }
+  }, [safeImages.length, currentIndex]);
+
+  const clampedIndex = Math.min(
+    currentIndex,
+    Math.max(0, safeImages.length - 1)
+  );
 
   const goToSlide = (index: number) => setCurrentIndex(index);
   const goToPrevious = () =>
@@ -64,8 +76,8 @@ export default function ProductGalleryVertical({
       <Card className="group relative flex-1 overflow-hidden rounded-xl shadow-sm">
         <div className="relative w-full" style={{ height: `${height}px` }}>
           <Image
-            src={safeImages[currentIndex].url}
-            alt={safeImages[currentIndex].alt || productName}
+            src={safeImages[clampedIndex]?.url || '/images/demo/1.jpg'}
+            alt={safeImages[clampedIndex]?.alt || productName}
             fill
             sizes="(max-width: 768px) 100vw, 640px"
             className="object-contain"

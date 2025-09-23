@@ -17,6 +17,7 @@ import ProductCard from '@/components/product/ProductCard';
 import ProductFilters, {
   FilterOptions,
 } from '@/components/product/ProductFilters';
+import TopFiltersBar from '@/components/product/TopFiltersBar';
 import { useCatalogProducts } from '@/hooks/useCatalogProducts';
 
 export default function CatalogPage() {
@@ -241,30 +242,16 @@ export default function CatalogPage() {
             </div>
           </div>
 
-          {/* Results Info */}
-          <div className="text-muted-foreground mt-4 flex items-center justify-between text-sm">
-            <span>
-              {filteredProducts.length} товар
-              {filteredProducts.length !== 1 ? 'ов' : ''} найдено
-            </span>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={handleClearFilters}>
-                Очистить все фильтры
-              </Button>
-            )}
-          </div>
+          {/* Top Filters Bar */}
+          <TopFiltersBar
+            filters={filters}
+            onChange={partial => setFilters(prev => ({ ...prev, ...partial }))}
+            onClear={handleClearFilters}
+          />
         </div>
 
         <div className="flex gap-8">
-          {/* Desktop Filters Sidebar */}
-          <aside className="hidden w-64 flex-shrink-0 lg:block">
-            <div className="sticky top-8">
-              <ProductFilters
-                onFiltersChange={handleFiltersChange}
-                onClearFilters={handleClearFilters}
-              />
-            </div>
-          </aside>
+          {/* Desktop Filters Sidebar removed in favor of top filters */}
 
           {/* Products Grid */}
           <main className="flex-1">
