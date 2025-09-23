@@ -80,7 +80,12 @@ export default function Header({ onSearch }: HeaderProps) {
         {/* Right Actions */}
         <div className="ml-auto flex items-center gap-2">
           {/* Theme Toggle */}
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="hover:bg-transparent"
+          >
             {theme === 'light' ? (
               <MoonIcon className="h-4 w-4" />
             ) : (
@@ -89,7 +94,12 @@ export default function Header({ onSearch }: HeaderProps) {
           </Button>
 
           {/* Favorites */}
-          <Button variant="ghost" size="icon" asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="hover:bg-transparent"
+          >
             <Link href="/favorites" aria-label="Избранное">
               <HeartIcon className="h-4 w-4" />
             </Link>
@@ -100,17 +110,18 @@ export default function Header({ onSearch }: HeaderProps) {
             variant="ghost"
             size="icon"
             onClick={() => handleMenuClick('account')}
+            className="hover:bg-transparent"
           >
             <UserIcon className="h-4 w-4" />
           </Button>
 
           {/* Favorites + Cart */}
           <TopRightActions />
+        </div>
 
-          {/* Mobile Menu */}
-          <div className="md:hidden">
-            <MobileMenu />
-          </div>
+        {/* Mobile Menu */}
+        <div className="md:hidden">
+          <MobileMenu />
         </div>
       </div>
     </header>
