@@ -17,31 +17,51 @@ type Props = {
 };
 
 export default function SortControl({ value, onChange }: Props) {
+  const pillLabel = (
+    <span className="flex items-center gap-1.5">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="12"
+        fill="none"
+      >
+        <path
+          fill="#242424"
+          fillRule="evenodd"
+          d="M12 .5c.406 0 .735.332.735.74v9.732l2.01-2.027a.73.73 0 0 1 1.04 0 .745.745 0 0 1 0 1.047l-3.265 3.291a.73.73 0 0 1-1.033.007l-.007-.007-3.265-3.291a.745.745 0 0 1 0-1.047.73.73 0 0 1 1.04 0l2.01 2.027V1.24c0-.41.33-.741.735-.741ZM4 13.5a.738.738 0 0 0 .735-.74V3.027l2.01 2.027a.73.73 0 0 0 1.04 0 .745.745 0 0 0 0-1.047L4.52.717a.73.73 0 0 0-1.04 0L.215 4.008a.745.745 0 0 0 0 1.047.73.73 0 0 0 1.04 0l2.01-2.027v9.731c0 .41.33.741.735.741Z"
+          clipRule="evenodd"
+        />
+      </svg>
+      <span>Сортировка</span>
+    </span>
+  );
+
   return (
-    <FilterPill label="Сортировка" contentClassName="w-64 p-2">
+    <FilterPill label={pillLabel} contentClassName="w-64 p-2">
       <div className="max-h-80 overflow-auto">
         {SORT_OPTIONS.map(opt => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 ${
-              value === opt.value ? 'bg-gray-100 font-medium' : ''
+            className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-gray-50 ${
+              value === opt.value
+                ? 'bg-purple-50 font-medium text-purple-700'
+                : 'text-gray-800'
             }`}
           >
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+                value === opt.value ? 'border-purple-600' : 'border-gray-300'
+              }`}
+              aria-hidden="true"
+            >
+              <span
+                className={`h-3 w-3 rounded-full ${
+                  value === opt.value ? 'bg-purple-600' : 'bg-transparent'
+                }`}
+              />
+            </span>
             <span>{opt.label}</span>
-            {value === opt.value && (
-              <svg
-                viewBox="0 0 20 20"
-                className="h-4 w-4 text-gray-700"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
           </button>
         ))}
       </div>

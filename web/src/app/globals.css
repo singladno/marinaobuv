@@ -203,17 +203,17 @@
 }
 @media (min-width: 640px) {
   .container {
-    max-width: clamp(640px, 85vw, 768px);
+    max-width: clamp(640px, 92vw, 768px);
   }
 }
 @media (min-width: 768px) {
   .container {
-    max-width: clamp(768px, 88vw, 1024px);
+    max-width: clamp(768px, 95vw, 1280px);
   }
 }
 @media (min-width: 1024px) {
   .container {
-    max-width: clamp(1024px, 92vw, 1280px);
+    max-width: clamp(1024px, 96vw, 1440px);
   }
 }
 

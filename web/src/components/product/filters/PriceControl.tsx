@@ -30,8 +30,13 @@ export default function PriceControl({ value, onChange }: Props) {
   };
 
   return (
-    <FilterPill label="Цена, ₽" contentClassName="w-80">
-      <div className="space-y-3 p-2">
+    <FilterPill
+      label="Цена, ₽"
+      contentClassName="w-80"
+      isActive={value[0] > 0 || value[1] < 100000}
+      onClear={() => onChange([0, 100000])}
+    >
+      <div className="space-y-3 p-3">
         <div className="text-sm font-semibold">Диапазон цены</div>
         <div className="grid grid-cols-2 gap-2">
           <input
@@ -40,7 +45,7 @@ export default function PriceControl({ value, onChange }: Props) {
             value={min}
             onChange={e => setMin(e.target.value)}
             placeholder="От"
-            className="h-10 rounded-xl border border-transparent bg-gray-100 px-3 text-sm text-gray-900 outline-none ring-0 transition-shadow focus:border-purple-500 focus:bg-white"
+            className="h-11 rounded-xl border border-transparent bg-gray-100 px-3 text-sm text-gray-900 outline-none ring-0 transition-shadow focus:border-purple-500 focus:bg-white"
           />
           <input
             type="number"
@@ -48,12 +53,12 @@ export default function PriceControl({ value, onChange }: Props) {
             value={max}
             onChange={e => setMax(e.target.value)}
             placeholder="До"
-            className="h-10 rounded-xl border border-transparent bg-gray-100 px-3 text-sm text-gray-900 outline-none ring-0 transition-shadow focus:border-purple-500 focus:bg-white"
+            className="h-11 rounded-xl border border-transparent bg-gray-100 px-3 text-sm text-gray-900 outline-none ring-0 transition-shadow focus:border-purple-500 focus:bg-white"
           />
         </div>
         <Button
           onClick={apply}
-          className="h-10 w-full rounded-xl bg-purple-600 text-white hover:bg-purple-600/90"
+          className="h-11 w-full rounded-xl bg-purple-600 text-white hover:bg-purple-600/90"
         >
           Готово
         </Button>

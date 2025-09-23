@@ -10,10 +10,12 @@ import {
 } from '@/components/ui/Popover';
 
 type Props = {
-  label: string;
+  label: React.ReactNode;
   badgeCount?: number;
   children: React.ReactNode;
   contentClassName?: string;
+  isActive?: boolean;
+  onClear?: () => void;
 };
 
 export default function FilterPill({
@@ -21,6 +23,8 @@ export default function FilterPill({
   badgeCount,
   children,
   contentClassName,
+  isActive = false,
+  onClear,
 }: Props) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<NodeJS.Timeout | null>(null);
@@ -39,16 +43,37 @@ export default function FilterPill({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="group h-9 rounded-xl bg-gray-50 text-gray-700 shadow-sm hover:bg-gray-100"
+          className={`group h-9 rounded-xl shadow-sm hover:bg-gray-100 ${
+            isActive
+              ? 'border-purple-300 bg-purple-100 text-purple-700'
+              : 'bg-gray-50 text-gray-700'
+          }`}
           onMouseEnter={openNow}
           onMouseLeave={scheduleClose}
         >
-          {label}
-          {(badgeCount ?? 0) > 0 && (
-            <Badge variant="secondary" className="ml-2">
-              {badgeCount}
-            </Badge>
-          )}
+          <span className="flex items-center gap-2">
+            {badgeCount && badgeCount > 0 ? (
+              <>
+                <span>
+                  {label}: {badgeCount}
+                </span>
+                {onClear && (
+                  <span
+                    onClick={e => {
+                      e.stopPropagation();
+                      onClear();
+                    }}
+                    className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-sm hover:bg-purple-200/60"
+                    aria-label="Очистить"
+                  >
+                    ×
+                  </span>
+                )}
+              </>
+            ) : (
+              <span>{label}</span>
+            )}
+          </span>
           <svg
             className={`ml-2 h-4 w-4 text-gray-400 transition-colors transition-transform duration-200 group-hover:rotate-180 group-hover:text-black ${open ? 'rotate-180 text-black' : ''}`}
             viewBox="0 0 20 20"
