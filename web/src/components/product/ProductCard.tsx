@@ -1,3 +1,4 @@
+import { Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
@@ -6,6 +7,8 @@ import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
+import { useCart } from '@/contexts/CartContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import { rub } from '@/lib/format';
 
 type Props = {
@@ -29,6 +32,8 @@ export default function ProductCard({
   colorOptions = [],
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { add } = useCart();
   // Default to first color if exists so the active style is visible
   useEffect(() => {
     if (!selectedColor && colorOptions.length > 0) {
@@ -49,6 +54,22 @@ export default function ProductCard({
 
   return (
     <div className="bg-surface group relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+      {/* Heart overlay outside the Link to avoid navigation */}
+      <button
+        type="button"
+        aria-label="Добавить в избранное"
+        onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleFavorite(slug);
+        }}
+        className="absolute right-3 top-3 z-10 inline-flex cursor-pointer items-center justify-center text-white transition-transform hover:scale-110"
+      >
+        <Heart
+          className={`h-5 w-5 ${isFavorite(slug) ? 'fill-red-500 text-red-500' : ''}`}
+        />
+      </button>
+
       <Link href={`/product/${slug}`} className="block">
         {/* Image Container */}
         <div className="bg-muted relative aspect-square w-full overflow-hidden">
@@ -74,6 +95,8 @@ export default function ProductCard({
               {category}
             </Badge>
           )}
+
+          {/* Favorite overlay is rendered outside the Link */}
 
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
@@ -105,6 +128,10 @@ export default function ProductCard({
                 <button
                   title="Добавить в корзину"
                   aria-label="Добавить в корзину"
+                  onClick={e => {
+                    e.preventDefault();
+                    add(slug, 1);
+                  }}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white"
                 >
                   <svg

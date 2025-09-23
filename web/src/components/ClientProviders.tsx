@@ -2,6 +2,8 @@
 
 import { HighlightedProductsProvider } from '@/contexts/HighlightedProductsContext';
 import { NotificationProvider } from '@/components/ui/NotificationProvider';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
+import { CartProvider } from '@/contexts/CartContext';
 
 interface ClientProvidersProps {
   children: React.ReactNode;
@@ -10,7 +12,11 @@ interface ClientProvidersProps {
 export function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <NotificationProvider>
-      <HighlightedProductsProvider>{children}</HighlightedProductsProvider>
+      <HighlightedProductsProvider>
+        <FavoritesProvider>
+          <CartProvider>{children}</CartProvider>
+        </FavoritesProvider>
+      </HighlightedProductsProvider>
     </NotificationProvider>
   );
 }

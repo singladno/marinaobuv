@@ -8,6 +8,7 @@ import Footer from '@/components/ui/Footer';
 import Header from '@/components/ui/Header';
 import { defaultMetadata } from '@/lib/seo';
 import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
+import { ClientProviders } from '@/components/ClientProviders';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -36,7 +37,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

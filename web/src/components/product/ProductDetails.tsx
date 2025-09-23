@@ -1,26 +1,22 @@
 'use client';
-import { useState } from 'react';
-
+/* eslint-disable max-lines */
 import {
-  Heart,
   ShoppingCart,
-  Star,
   Minus,
   Plus,
   Share,
-  Truck,
+  Heart,
   User,
   Users,
   Package,
   Calendar,
 } from 'lucide-react';
+import { useState } from 'react';
 
 import ProductReviews from '@/components/product/ProductReviews';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { Separator } from '@/components/ui/Separator';
-import { Text } from '@/components/ui/Text';
 import { genderRu, rub, seasonRu } from '@/lib/format';
 
 type Size = {
@@ -49,15 +45,12 @@ export default function ProductDetails(props: Props) {
   const {
     productId,
     name,
-    article,
     pricePair,
     description,
     material,
     gender,
     season,
     packPairs,
-    priceBox,
-    availabilityCheckedAt,
     sizes,
   } = props;
 
@@ -98,6 +91,7 @@ export default function ProductDetails(props: Props) {
               variant="ghost"
               size="icon"
               onClick={() => setIsWishlisted(!isWishlisted)}
+              aria-label="Добавить в избранное"
             >
               <Heart
                 className={`h-5 w-5 ${isWishlisted ? 'fill-red-500 text-red-500' : ''}`}

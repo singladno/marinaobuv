@@ -1,7 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { MoonIcon, SunIcon, UserIcon } from '@heroicons/react/24/outline';
+import {
+  HeartIcon,
+  MoonIcon,
+  SunIcon,
+  UserIcon,
+} from '@heroicons/react/24/outline';
 
 import { Button } from '@/components/ui/Button';
 import MobileMenu from '@/components/ui/MobileMenu';
@@ -9,6 +14,7 @@ import { SearchBar } from '@/components/ui/SearchBar';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { site } from '@/lib/site';
+import TopRightActions from '@/components/product/TopRightActions';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -82,6 +88,13 @@ export default function Header({ onSearch }: HeaderProps) {
             )}
           </Button>
 
+          {/* Favorites */}
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/favorites" aria-label="Избранное">
+              <HeartIcon className="h-4 w-4" />
+            </Link>
+          </Button>
+
           {/* Account */}
           <Button
             variant="ghost"
@@ -90,6 +103,9 @@ export default function Header({ onSearch }: HeaderProps) {
           >
             <UserIcon className="h-4 w-4" />
           </Button>
+
+          {/* Favorites + Cart */}
+          <TopRightActions />
 
           {/* Mobile Menu */}
           <div className="md:hidden">

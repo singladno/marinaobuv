@@ -185,7 +185,7 @@ export default function CatalogPage() {
               }
               onClear={handleClearFilters}
             />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {/* Grid columns toggle: 4 or 5 per row */}
               <div className="flex items-center rounded-md border">
                 <Button
@@ -229,6 +229,8 @@ export default function CatalogPage() {
                   </svg>
                 </Button>
               </div>
+
+              {/* Favorites + Cart removed (already in global header) */}
 
               {/* Mobile Filter Toggle */}
               <Sheet>
