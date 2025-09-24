@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Text } from '@/components/ui/Text';
+import TransportCompanySelector from '@/components/features/TransportCompanySelector';
+import { popularTransportCompanies } from '@/lib/shipping';
 import {
   MinusIcon,
   PlusIcon,
@@ -44,6 +46,13 @@ export default function BasketPage() {
   const [phone, setPhone] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [selectedTransportId, setSelectedTransportId] = useState<string | null>(
+    null
+  );
+  const [isEditingTransport, setIsEditingTransport] = useState(false);
+  const selectedTransport = popularTransportCompanies.find(
+    c => c.id === selectedTransportId
+  );
 
   // Check authentication status
   useEffect(() => {
@@ -286,6 +295,7 @@ export default function BasketPage() {
                   className="text-purple-600 hover:text-purple-700"
                   aria-label="Редактировать выбор ТК"
                   title="Редактировать выбор ТК"
+                  onClick={() => setIsEditingTransport(prev => !prev)}
                 >
                   <svg
                     className="h-5 w-5"
@@ -302,44 +312,54 @@ export default function BasketPage() {
                   </svg>
                 </button>
               </div>
-
-              <div className="space-y-3">
-                <div className="rounded-lg border border-gray-200 p-4">
+              {isEditingTransport ? (
+                <TransportCompanySelector
+                  value={selectedTransportId || undefined}
+                  onChange={id => {
+                    setSelectedTransportId(id);
+                    setIsEditingTransport(false);
+                  }}
+                />
+              ) : selectedTransport ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTransport(true)}
+                  className="w-full rounded-lg border border-gray-200 p-4 text-left hover:border-gray-300"
+                >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium">СДЭК</h3>
-                      <p className="text-sm text-gray-600">
-                        Москва, Люблинская улица 179/1
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Ежедневно: 08:00-22:00
-                      </p>
+                      <h3 className="font-medium">{selectedTransport.name}</h3>
+                      {selectedTransport.address && (
+                        <p className="text-sm text-gray-600">
+                          {selectedTransport.address}
+                        </p>
+                      )}
+                      {selectedTransport.workingHours && (
+                        <p className="text-sm text-gray-500">
+                          {selectedTransport.workingHours}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-green-600">Бесплатно</p>
-                      <p className="text-sm text-gray-500">Послезавтра</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-gray-200 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Почта России</h3>
-                      <p className="text-sm text-gray-600">
-                        Москва, Люблинская улица 179/1
+                      <p className="font-medium text-green-600">
+                        {selectedTransport.priceLabel}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Ежедневно: 08:00-22:00
+                        {selectedTransport.eta}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium text-green-600">Бесплатно</p>
-                      <p className="text-sm text-gray-500">Послезавтра</p>
-                    </div>
                   </div>
+                </button>
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
+                  <p className="mb-3 text-gray-600">
+                    Транспортная компания не выбрана
+                  </p>
+                  <Button onClick={() => setIsEditingTransport(true)}>
+                    Выбрать компанию
+                  </Button>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Мои данные Section */}
@@ -417,12 +437,14 @@ export default function BasketPage() {
             <div className="rounded-lg bg-white p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  Доставка СДЭК
+                  Доставка{' '}
+                  {selectedTransport ? selectedTransport.name : '— не выбрана'}
                 </h2>
                 <button
                   className="text-purple-600 hover:text-purple-700"
                   aria-label="Редактировать доставку"
                   title="Редактировать доставку"
+                  onClick={() => setIsEditingTransport(true)}
                 >
                   <svg
                     className="h-5 w-5"
@@ -439,10 +461,22 @@ export default function BasketPage() {
                   </svg>
                 </button>
               </div>
-              <p className="text-sm text-gray-600">
-                Москва, Люблинская улица 179/1
-              </p>
-              <p className="text-sm text-gray-500">Послезавтра</p>
+              {selectedTransport ? (
+                <>
+                  {selectedTransport.address && (
+                    <p className="text-sm text-gray-600">
+                      {selectedTransport.address}
+                    </p>
+                  )}
+                  <p className="text-sm text-gray-500">
+                    {selectedTransport.eta}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Выберите транспортную компанию
+                </p>
+              )}
             </div>
 
             {/* Order Total */}
