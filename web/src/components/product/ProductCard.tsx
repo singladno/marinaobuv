@@ -8,7 +8,6 @@ import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
-import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { rub } from '@/lib/format';
 
@@ -16,6 +15,8 @@ type Props = {
   slug: string;
   name: string;
   pricePair: number;
+  packPairs?: number | null;
+  priceBox?: number | null;
   currency: string;
   imageUrl: string | null;
   category?: string;
@@ -27,6 +28,8 @@ export default function ProductCard({
   slug,
   name,
   pricePair,
+  packPairs = null,
+  priceBox = null,
   imageUrl,
   category,
   showCategory = false,
@@ -34,8 +37,6 @@ export default function ProductCard({
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
-  // keep cart context available if needed for future extensions
-  const { add } = useCart();
   // Default to first color if exists so the active style is visible
   useEffect(() => {
     if (!selectedColor && colorOptions.length > 0) {
@@ -53,6 +54,18 @@ export default function ProductCard({
     return imageUrl || null;
   }, [selectedColor, colorOptions, imageUrl]);
   const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
+  const computedBoxPrice = useMemo(() => {
+    if (priceBox != null) return priceBox;
+    if (pricePair != null && packPairs != null && packPairs > 0)
+      return pricePair * packPairs;
+    return null;
+  }, [priceBox, pricePair, packPairs]);
+  const computedPairPrice = useMemo(() => {
+    if (pricePair != null) return pricePair;
+    if (priceBox != null && packPairs != null && packPairs > 0)
+      return Math.round(priceBox / packPairs);
+    return null;
+  }, [pricePair, priceBox, packPairs]);
 
   return (
     <div className="bg-surface group relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
@@ -115,9 +128,16 @@ export default function ProductCard({
             </Text>
 
             <div className="flex items-center justify-between">
-              <Text className="text-foreground text-xl font-bold">
-                {rub(pricePair)}
-              </Text>
+              <div className="flex flex-col">
+                <Text className="text-foreground text-xl font-bold">
+                  {rub(computedBoxPrice ?? 0)}
+                </Text>
+                {computedPairPrice != null && (
+                  <Text className="text-muted-foreground text-xs">
+                    {rub(computedPairPrice)} за пару
+                  </Text>
+                )}
+              </div>
 
               {/* Add to Cart / In Cart */}
               <div>

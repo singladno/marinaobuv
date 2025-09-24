@@ -74,7 +74,13 @@ export default function ProductDetails(props: Props) {
     if (priceBox != null && packPairs != null && packPairs > 0)
       return Math.round(Number(priceBox) / Number(packPairs));
     return null;
-  }, [pricePair, packPairs]);
+  }, [pricePair, packPairs, priceBox]);
+  const boxPrice = useMemo(() => {
+    if (priceBox != null) return Number(priceBox);
+    if (pricePair != null && packPairs != null && packPairs > 0)
+      return Math.round(Number(pricePair) * Number(packPairs));
+    return null;
+  }, [priceBox, pricePair, packPairs]);
   const isWishlisted = isFavorite(slug);
 
   // Initialize size selection
@@ -122,13 +128,14 @@ export default function ProductDetails(props: Props) {
         {/* Price */}
         <div className="space-y-1">
           <div className="flex items-baseline gap-3">
-            <div className="text-4xl font-bold">{rub(pairPrice ?? 0)}</div>
-            <span className="text-muted-foreground text-sm">за пару</span>
+            <div className="text-4xl font-bold">{rub(boxPrice ?? 0)}</div>
+            <span className="text-muted-foreground text-sm">
+              за коробку{packPairs ? ` (${packPairs} пар)` : ''}
+            </span>
           </div>
-          {priceBox != null && (
+          {pairPrice != null && (
             <div className="text-muted-foreground text-sm">
-              {rub(Number(priceBox))} за коробку
-              {packPairs ? ` (${packPairs} пар)` : ''}
+              {rub(pairPrice)} за пару
             </div>
           )}
         </div>

@@ -282,6 +282,8 @@ export default function CatalogPage() {
                     slug={product.slug}
                     name={product.name}
                     pricePair={product.pricePair}
+                    packPairs={(product as any).packPairs ?? null}
+                    priceBox={(product as any).priceBox ?? null}
                     currency={product.currency}
                     imageUrl={product.primaryImageUrl}
                     category={product.category?.name || product.category}
