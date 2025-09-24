@@ -56,6 +56,7 @@ export default function ProductDetails(props: Props) {
     gender,
     season,
     packPairs,
+    priceBox,
     sizes,
   } = props;
 
@@ -68,6 +69,12 @@ export default function ProductDetails(props: Props) {
 
   // Check if product is in cart
   const inCart = useMemo(() => items.some(i => i.slug === slug), [items, slug]);
+  const pairPrice = useMemo(() => {
+    if (pricePair != null) return Number(pricePair);
+    if (priceBox != null && packPairs != null && packPairs > 0)
+      return Math.round(Number(priceBox) / Number(packPairs));
+    return null;
+  }, [pricePair, packPairs]);
   const isWishlisted = isFavorite(slug);
 
   // Initialize size selection
@@ -113,8 +120,17 @@ export default function ProductDetails(props: Props) {
         </div>
 
         {/* Price */}
-        <div className="space-y-2">
-          <div className="text-4xl font-bold">{rub(pricePair)}</div>
+        <div className="space-y-1">
+          <div className="flex items-baseline gap-3">
+            <div className="text-4xl font-bold">{rub(pairPrice ?? 0)}</div>
+            <span className="text-muted-foreground text-sm">за пару</span>
+          </div>
+          {priceBox != null && (
+            <div className="text-muted-foreground text-sm">
+              {rub(Number(priceBox))} за коробку
+              {packPairs ? ` (${packPairs} пар)` : ''}
+            </div>
+          )}
         </div>
       </div>
 

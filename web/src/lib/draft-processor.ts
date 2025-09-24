@@ -34,12 +34,29 @@ export function extractTextContent(messages: any[]): {
  * Convert GPT response to product data
  */
 export function convertToProductData(productDraft: any): DraftProductData {
+  // Normalize prices: ensure both pair and box prices are populated when possible
+  const packPairs = productDraft.packPairs || null;
+  const pricePairRaw =
+    productDraft.pricePair != null ? Number(productDraft.pricePair) : null;
+  const priceBoxRaw =
+    productDraft.priceBox != null ? Number(productDraft.priceBox) : null;
+
+  let pricePair: number | null = pricePairRaw;
+  let priceBox: number | null = priceBoxRaw;
+
+  if (pricePair == null && priceBox != null && packPairs) {
+    pricePair = Math.round(priceBox / packPairs);
+  }
+  if (priceBox == null && pricePair != null && packPairs) {
+    priceBox = pricePair * packPairs;
+  }
+
   return {
     name: productDraft.name || null,
-    pricePair: productDraft.pricePair || null,
+    pricePair: pricePair,
     currency: 'RUB',
-    packPairs: productDraft.packPairs || null,
-    priceBox: productDraft.priceBox || null,
+    packPairs: packPairs,
+    priceBox: priceBox,
     material: productDraft.material || null,
     gender: productDraft.gender
       ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
