@@ -138,8 +138,7 @@ export default function BasketPage() {
     (sum, item) => sum + getBoxPrice(item.product) * item.qty,
     0
   );
-  const discount = Math.floor(subtotal * 0.21); // 21% discount
-  const total = subtotal - discount;
+  const total = subtotal;
 
   if (loading) {
     return (
@@ -256,12 +255,6 @@ export default function BasketPage() {
                       <div className="mb-2 flex items-center gap-2">
                         <span className="text-lg font-semibold text-purple-600">
                           {getBoxPrice(item.product) * item.qty} ₽
-                        </span>
-                        <span className="text-sm text-gray-400 line-through">
-                          {Math.floor(
-                            getBoxPrice(item.product) * item.qty * 1.28
-                          )}{' '}
-                          ₽
                         </span>
                       </div>
 
@@ -495,14 +488,6 @@ export default function BasketPage() {
                 <div className="flex justify-between text-sm">
                   <span>Товары, {totalItems} шт.</span>
                   <span>{subtotal} ₽</span>
-                </div>
-                <div className="flex justify-between text-sm text-green-600">
-                  <span>Моя скидка</span>
-                  <span>-{discount} ₽</span>
-                </div>
-                <div className="flex justify-between text-sm text-green-600">
-                  <span>Скидка при оплате</span>
-                  <span>-{Math.floor(discount * 0.05)} ₽</span>
                 </div>
                 <hr className="my-3" />
                 <div className="flex justify-between text-lg font-semibold">
