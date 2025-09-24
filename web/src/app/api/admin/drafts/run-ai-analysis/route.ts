@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { broadcastAIEvent } from '@/app/api/ai-events/route';
 import { getCategoryTree } from '@/lib/catalog';
 import { prisma } from '@/lib/db-node';
 import {
@@ -7,7 +8,6 @@ import {
   markDraftsAsProcessing,
   type AnalysisResult,
 } from '@/lib/second-analysis-helpers';
-import { broadcastAIEvent } from '@/app/api/ai-events/route';
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,10 +72,13 @@ async function getApprovedDrafts(draftIds: string[]) {
       id: { in: draftIds },
       status: 'approved',
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
       images: {
         where: { isActive: true },
         orderBy: { sort: 'asc' },
+        select: { url: true, id: true, sort: true },
       },
     },
   });
@@ -89,10 +92,11 @@ async function getCategoryTreeJson(): Promise<string> {
 async function processDrafts(
   drafts: Array<{
     id: string;
+    name: string | null;
     images: Array<{ url: string; id: string; sort: number }>;
   }>,
   categoryTreeJson: string,
-  draftIds: string[]
+  _draftIds: string[]
 ): Promise<AnalysisResult[]> {
   const results: AnalysisResult[] = [];
 
@@ -112,6 +116,17 @@ async function processDrafts(
 
     const result = await analyzeDraft(draft, categoryTreeJson);
     results.push(result);
+
+    // Broadcast per-draft completion update so UI can patch the row
+    broadcastAIEvent({
+      type: 'ai_progress',
+      draftId: draft.id,
+      draftName: draft.name || undefined,
+      status: result.success ? 'completed' : 'failed',
+      currentDraft: i + 1,
+      totalDrafts: drafts.length,
+      timestamp: Date.now(),
+    });
 
     // Add a small delay between requests to avoid overwhelming the API
     if (i < drafts.length - 1) {

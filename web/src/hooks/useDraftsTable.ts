@@ -317,6 +317,13 @@ export function useDraftsTable({
       columnVisibility: finalColumnVisibility,
     },
     onColumnVisibilityChange: setColumnVisibility,
+    meta: {
+      onLocalPatch: (id: string, patch: Partial<Draft>) => {
+        setLocalData(prev =>
+          prev.map(d => (d.id === id ? { ...d, ...patch } : d))
+        );
+      },
+    },
   });
 
   const handleToggleColumn = React.useCallback(
@@ -342,6 +349,16 @@ export function useDraftsTable({
     resetColumnVisibility();
   }, [resetColumnVisibility]);
 
+  // Expose a local patch helper to allow external SSE handlers to update a row without network/reload
+  const applyLocalPatch = React.useCallback(
+    (id: string, patch: Partial<Draft>) => {
+      setLocalData(prev =>
+        prev.map(d => (d.id === id ? { ...d, ...patch } : d))
+      );
+    },
+    []
+  );
+
   return {
     table,
     columnVisibility: finalColumnVisibility,
@@ -352,5 +369,6 @@ export function useDraftsTable({
     allSelected,
     someSelected,
     tableKey, // Add tableKey to force re-renders
+    applyLocalPatch,
   };
 }

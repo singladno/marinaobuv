@@ -7,6 +7,9 @@ import type {
 export function useApprovalEventsConnection(draftIds: string[]) {
   const [approvalStates, setApprovalStates] = useState<ApprovalState>({});
   const [isConnected, setIsConnected] = useState(false);
+  const [rowEvents, setRowEvents] = useState<Array<{ id: string; patch: any }>>(
+    []
+  );
   const eventSourceRef = useRef<EventSource | null>(null);
   const draftIdsRef = useRef<string[]>([]);
 
@@ -101,6 +104,31 @@ export function useApprovalEventsConnection(draftIds: string[]) {
                 status: data.success ? 'completed' : 'failed',
                 lastEvent: data,
               };
+              // Emit a lightweight row patch event for UI to update without reload
+              setRowEvents(prev => [
+                ...prev,
+                {
+                  id: data.draftId!,
+                  patch: {
+                    aiStatus: data.success ? 'completed' : 'failed',
+                    aiProcessedAt: new Date().toISOString(),
+                  },
+                },
+              ]);
+              break;
+            case 'ai_progress':
+              // If progress message contains draftName/status, patch row fields as we go
+              if (data.draftId) {
+                const patch: any = {};
+                if (data.draftName) patch.name = data.draftName;
+                if (data.status === 'completed' || data.status === 'failed') {
+                  patch.aiStatus = data.status;
+                  patch.aiProcessedAt = new Date().toISOString();
+                }
+                if (Object.keys(patch).length > 0) {
+                  setRowEvents(prev => [...prev, { id: data.draftId!, patch }]);
+                }
+              }
               break;
           }
 
@@ -126,5 +154,6 @@ export function useApprovalEventsConnection(draftIds: string[]) {
     };
   }, [draftIds]); // Only recreate when draftIds change
 
-  return { approvalStates, isConnected };
+  // Consumer can read approvalStates and rowEvents. rowEvents will accumulate; consumer should clear it after handling.
+  return { approvalStates, isConnected, rowEvents, setRowEvents };
 }
