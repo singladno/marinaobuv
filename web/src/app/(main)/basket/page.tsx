@@ -51,6 +51,13 @@ export default function BasketPage() {
     null
   );
   const [isEditingTransport, setIsEditingTransport] = useState(false);
+  const [isEditingUserData, setIsEditingUserData] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [orderPhone, setOrderPhone] = useState('');
+  const [validationErrors, setValidationErrors] = useState<{
+    transport?: boolean;
+    userData?: boolean;
+  }>({});
   const selectedTransport = popularTransportCompanies.find(
     c => c.id === selectedTransportId
   );
@@ -71,6 +78,19 @@ export default function BasketPage() {
     };
     checkAuth();
   }, []);
+
+  // Clear validation errors when user fixes issues
+  useEffect(() => {
+    if (isLoggedIn && validationErrors.userData) {
+      setValidationErrors(prev => ({ ...prev, userData: false }));
+    }
+  }, [isLoggedIn, validationErrors.userData]);
+
+  useEffect(() => {
+    if (selectedTransportId && validationErrors.transport) {
+      setValidationErrors(prev => ({ ...prev, transport: false }));
+    }
+  }, [selectedTransportId, validationErrors.transport]);
 
   // Fetch product details for cart items
   useEffect(() => {
@@ -124,6 +144,34 @@ export default function BasketPage() {
 
   const handleUpdateQuantity = (slug: string, newQty: number) => {
     updateQuantity(slug, newQty);
+  };
+
+  const handleOrderClick = () => {
+    const errors: { transport?: boolean; userData?: boolean } = {};
+
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      errors.userData = true;
+    }
+
+    // Check if transport is selected
+    if (!selectedTransportId) {
+      errors.transport = true;
+    }
+
+    setValidationErrors(errors);
+
+    // If no errors, proceed with order
+    if (Object.keys(errors).length === 0) {
+      // TODO: Implement order submission
+      console.log('Order submitted:', {
+        items,
+        transport: selectedTransportId,
+        user: user,
+        email: userEmail,
+        orderPhone: orderPhone || user?.phone,
+      });
+    }
   };
 
   const getBoxPrice = (p: Product): number => {
@@ -289,7 +337,9 @@ export default function BasketPage() {
             </div>
 
             {/* ТК Selection Section */}
-            <div className="rounded-lg bg-white p-6">
+            <div
+              className={`rounded-lg bg-white p-6 ${validationErrors.transport ? 'border-2 border-purple-500' : ''}`}
+            >
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
                   Выбор транспортной компании
@@ -367,56 +417,111 @@ export default function BasketPage() {
 
             {/* Мои данные Section */}
             <div className="rounded-lg bg-white p-6">
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">
                   Мои данные
                 </h2>
-                {isLoggedIn && (
-                  <button
-                    className="text-purple-600 hover:text-purple-700"
-                    aria-label="Редактировать данные"
-                    title="Редактировать данные"
-                  >
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </button>
-                )}
               </div>
 
               {isLoggedIn ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
-                    <svg
-                      className="h-5 w-5 text-purple-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {user?.name || 'Пользователь'}
-                    </p>
-                    <p className="text-sm text-gray-600">{user?.phone}</p>
-                  </div>
+                <div
+                  className={`rounded-lg p-4 ${validationErrors.userData ? 'border-2 border-purple-500' : 'border border-gray-200'}`}
+                >
+                  {!isEditingUserData ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
+                          <svg
+                            className="h-5 w-5 text-purple-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {user?.name || 'Пользователь'}
+                          </p>
+                          <p className="text-sm text-gray-600">{user?.phone}</p>
+                          {userEmail && (
+                            <p className="text-sm text-gray-600">{userEmail}</p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setIsEditingUserData(true)}
+                        className="text-purple-600 hover:text-purple-700"
+                        aria-label="Редактировать данные"
+                        title="Редактировать данные"
+                      >
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                          Телефон для заказа
+                        </label>
+                        <input
+                          type="tel"
+                          value={orderPhone || user?.phone}
+                          onChange={e => setOrderPhone(e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          placeholder="+7 (999) 123-45-67"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                          Email (необязательно)
+                        </label>
+                        <input
+                          type="email"
+                          value={userEmail}
+                          onChange={e => setUserEmail(e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          placeholder="example@email.com"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setIsEditingUserData(false)}
+                          className="rounded-md bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+                        >
+                          Сохранить
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingUserData(false);
+                            setUserEmail('');
+                            setOrderPhone('');
+                          }}
+                          className="rounded-md bg-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-400"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -496,7 +601,10 @@ export default function BasketPage() {
                 </div>
               </div>
 
-              <Button className="mt-6 w-full bg-purple-600 text-white hover:bg-purple-700">
+              <Button
+                onClick={handleOrderClick}
+                className="mt-6 w-full bg-purple-600 text-white hover:bg-purple-700"
+              >
                 Заказать
               </Button>
 

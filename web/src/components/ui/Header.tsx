@@ -15,6 +15,7 @@ import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { site } from '@/lib/site';
 import TopRightActions from '@/components/product/TopRightActions';
+import AccountMenu from '@/components/ui/AccountMenu';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -106,14 +107,7 @@ export default function Header({ onSearch }: HeaderProps) {
           </Button>
 
           {/* Account */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleMenuClick('account')}
-            className="hover:bg-transparent"
-          >
-            <UserIcon className="h-4 w-4" />
-          </Button>
+          <AccountMenu />
 
           {/* Favorites + Cart */}
           <TopRightActions />

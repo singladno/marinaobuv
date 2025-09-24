@@ -10,9 +10,8 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Temporarily bypass authentication for testing
-  // const session = await getSession();
-  // if (!session || session.role !== 'ADMIN') redirect('/');
+  const session = await getSession();
+  if (!session || session.role !== 'ADMIN') redirect('/');
 
   return (
     <ClientProviders>

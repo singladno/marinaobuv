@@ -20,20 +20,27 @@ type CartContextValue = {
   remove: (slug: string) => void;
   updateQuantity: (slug: string, qty: number) => void;
   clear: () => void;
+  userId: string | null;
+  setUserId: (userId: string | null) => void;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Load from localStorage once on mount
+  // Get cart storage key based on user
+  const getCartKey = (uid: string | null) => {
+    return uid ? `cart_items_${uid}` : 'cart_items_anonymous';
+  };
+
+  // Load from localStorage based on current user
   useEffect(() => {
     try {
+      const key = getCartKey(userId);
       const raw =
-        typeof window !== 'undefined'
-          ? window.localStorage.getItem('cart_items')
-          : null;
+        typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
       if (raw) {
         const parsed = JSON.parse(raw) as CartItem[];
         if (Array.isArray(parsed)) {
@@ -43,23 +50,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             .map(i => ({ slug: i.slug, qty: Math.max(1, Number(i.qty) || 1) }));
           setItems(sanitized);
         }
+      } else {
+        setItems([]);
       }
-    } catch {}
-  }, []);
+    } catch {
+      setItems([]);
+    }
+  }, [userId]);
 
   // Persist to localStorage on changes
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem('cart_items', JSON.stringify(items));
+        const key = getCartKey(userId);
+        window.localStorage.setItem(key, JSON.stringify(items));
       }
     } catch {}
-  }, [items]);
+  }, [items, userId]);
 
   const value = useMemo<CartContextValue>(() => {
     return {
       items,
       totalQty: items.reduce((sum, i) => sum + i.qty, 0),
+      userId,
+      setUserId,
       add: (slug: string, qty: number = 1) => {
         if (!slug || typeof slug !== 'string' || slug.trim() === '') return;
         setItems(prev => {
@@ -85,7 +99,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       },
       clear: () => setItems([]),
     };
-  }, [items]);
+  }, [items, userId]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
