@@ -26,6 +26,7 @@ interface Product {
   article: string | null;
   pricePair: number;
   priceBox: number | null;
+  packPairs?: number | null;
   images: Array<{ url: string; alt?: string }>;
   category: {
     name: string;
@@ -125,9 +126,16 @@ export default function BasketPage() {
     updateQuantity(slug, newQty);
   };
 
+  const getBoxPrice = (p: Product): number => {
+    if (p.priceBox != null) return Number(p.priceBox);
+    if (p.pricePair != null && p.packPairs != null && p.packPairs > 0)
+      return Math.round(Number(p.pricePair) * Number(p.packPairs));
+    return Number(p.pricePair);
+  };
+
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
   const subtotal = products.reduce(
-    (sum, item) => sum + item.product.pricePair * item.qty,
+    (sum, item) => sum + getBoxPrice(item.product) * item.qty,
     0
   );
   const discount = Math.floor(subtotal * 0.21); // 21% discount
@@ -247,10 +255,12 @@ export default function BasketPage() {
                     <div className="text-right">
                       <div className="mb-2 flex items-center gap-2">
                         <span className="text-lg font-semibold text-purple-600">
-                          {item.product.pricePair * item.qty} ₽
+                          {getBoxPrice(item.product) * item.qty} ₽
                         </span>
                         <span className="text-sm text-gray-400 line-through">
-                          {Math.floor(item.product.pricePair * item.qty * 1.28)}{' '}
+                          {Math.floor(
+                            getBoxPrice(item.product) * item.qty * 1.28
+                          )}{' '}
                           ₽
                         </span>
                       </div>
