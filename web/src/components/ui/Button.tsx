@@ -2,7 +2,15 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import React from 'react';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'subtle' | 'ghost';
+type Variant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'subtle'
+  | 'ghost'
+  | 'success'
+  | 'danger'
+  | 'warning';
 type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 type CommonProps = {
@@ -25,15 +33,17 @@ const sizes: Record<Size, string> = {
   icon: 'h-9 w-9 p-0',
 };
 const variants: Record<Variant, string> = {
-  primary:
-    'bg-primary text-white shadow-sm hover:bg-[color-mix(in_oklab,var(--color-primary),#000_10%)]',
+  // Unified brand color: purple
+  primary: 'bg-purple-600 text-white shadow-sm hover:bg-purple-700',
   secondary:
-    'bg-surface text-foreground border border-border shadow-sm hover:bg-[color-mix(in_oklab,var(--color-background),#000_3%)]',
+    'bg-white text-gray-900 border border-gray-200 shadow-sm hover:bg-gray-50',
   outline:
-    'bg-transparent text-foreground border border-border hover:bg-[color-mix(in_oklab,var(--color-background),#000_4%)]',
-  subtle:
-    'bg-[color-mix(in_oklab,var(--color-primary),transparent_85%)] text-[color-mix(in_oklab,var(--color-primary),#000_20%)] hover:bg-[color-mix(in_oklab,var(--color-primary),transparent_78%)]',
-  ghost: 'bg-transparent text-foreground hover-elevate',
+    'bg-transparent text-gray-900 border border-gray-300 hover:bg-gray-50',
+  subtle: 'bg-purple-100 text-purple-700 hover:bg-purple-200',
+  ghost: 'bg-transparent text-gray-900 hover:bg-gray-50',
+  success: 'bg-green-600 text-white shadow-sm hover:bg-green-700',
+  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
+  warning: 'bg-yellow-600 text-white shadow-sm hover:bg-yellow-700',
 };
 
 export function Button({

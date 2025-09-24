@@ -11,12 +11,15 @@ import {
   Package,
   Calendar,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
 
 import ProductReviews from '@/components/product/ProductReviews';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Separator } from '@/components/ui/Separator';
+import { useCart } from '@/contexts/CartContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import { genderRu, rub, seasonRu } from '@/lib/format';
 
 type Size = {
@@ -28,6 +31,7 @@ type Size = {
 
 type Props = {
   productId: string;
+  slug: string;
   name: string;
   article?: string | null;
   pricePair: number;
@@ -44,6 +48,7 @@ type Props = {
 export default function ProductDetails(props: Props) {
   const {
     productId,
+    slug,
     name,
     pricePair,
     description,
@@ -54,11 +59,16 @@ export default function ProductDetails(props: Props) {
     sizes,
   } = props;
 
+  const router = useRouter();
+  const { add, items } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
+
   const [quantity, setQuantity] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string>('');
 
-  // Rating will be displayed in the reviews section
+  // Check if product is in cart
+  const inCart = useMemo(() => items.some(i => i.slug === slug), [items, slug]);
+  const isWishlisted = isFavorite(slug);
 
   // Initialize size selection
   if (!selectedSize && sizes.length > 0) {
@@ -66,13 +76,12 @@ export default function ProductDetails(props: Props) {
   }
 
   const handleAddToCart = () => {
-    // TODO: Implement add to cart functionality
-    console.log('Add to cart:', { name, quantity, selectedSize });
+    add(slug, quantity);
   };
 
   const handleBuyNow = () => {
-    // TODO: Implement buy now functionality
-    console.log('Buy now:', { name, quantity, selectedSize });
+    add(slug, quantity);
+    router.push('/basket');
   };
 
   return (
@@ -90,7 +99,7 @@ export default function ProductDetails(props: Props) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsWishlisted(!isWishlisted)}
+              onClick={() => toggleFavorite(slug)}
               aria-label="Добавить в избранное"
             >
               <Heart
@@ -175,16 +184,30 @@ export default function ProductDetails(props: Props) {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <Button
-            onClick={handleAddToCart}
-            className="h-12 flex-1 gap-2 text-base font-medium"
-          >
-            <ShoppingCart className="h-5 w-5" />В корзину
-          </Button>
+          {inCart ? (
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => router.push('/basket')}
+              className="flex-1 gap-2"
+            >
+              <ShoppingCart className="h-5 w-5" />В корзине
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={handleAddToCart}
+              className="flex-1 gap-2"
+            >
+              <ShoppingCart className="h-5 w-5" />В корзину
+            </Button>
+          )}
           <Button
             variant="outline"
+            size="lg"
             onClick={handleBuyNow}
-            className="h-12 px-8 text-base font-medium"
+            className="px-8"
           >
             Купить сейчас
           </Button>

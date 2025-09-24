@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import CartActionButton from '@/components/product/CartActionButton';
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
 import { Badge } from '@/components/ui/Badge';
@@ -33,6 +34,7 @@ export default function ProductCard({
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
+  // keep cart context available if needed for future extensions
   const { add } = useCart();
   // Default to first color if exists so the active style is visible
   useEffect(() => {
@@ -117,31 +119,9 @@ export default function ProductCard({
                 {rub(pricePair)}
               </Text>
 
-              {/* Add to Cart Button */}
+              {/* Add to Cart / In Cart */}
               <div>
-                <button
-                  title="Добавить в корзину"
-                  aria-label="Добавить в корзину"
-                  onClick={e => {
-                    e.preventDefault();
-                    add(slug, 1);
-                  }}
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white"
-                >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="8" cy="21" r="1"></circle>
-                    <circle cx="19" cy="21" r="1"></circle>
-                    <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
-                  </svg>
-                </button>
+                <CartActionButton slug={slug} />
               </div>
             </div>
 

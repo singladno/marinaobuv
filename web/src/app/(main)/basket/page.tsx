@@ -73,16 +73,26 @@ export default function BasketPage() {
 
       try {
         const productPromises = items.map(async item => {
-          const res = await fetch(`/api/products/by-slug/${item.slug}`);
-          if (!res.ok) throw new Error('Product not found');
-          const data = await res.json();
-          return {
-            ...item,
-            product: data.product,
-          };
+          if (!item.slug) return null;
+          try {
+            const res = await fetch(
+              `/api/products/by-slug/${encodeURIComponent(item.slug)}`
+            );
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (!data?.product) return null;
+            return {
+              ...item,
+              product: data.product,
+            } as CartItemWithProduct;
+          } catch {
+            return null;
+          }
         });
 
-        const productsWithData = await Promise.all(productPromises);
+        const productsWithData = (await Promise.all(productPromises)).filter(
+          (p): p is CartItemWithProduct => p !== null
+        );
         setProducts(productsWithData);
       } catch (error) {
         console.error('Failed to fetch products:', error);
@@ -166,7 +176,11 @@ export default function BasketPage() {
                     key={item.slug}
                     className="flex gap-4 rounded-lg border border-gray-200 p-4"
                   >
-                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                    <Link
+                      href={`/product/${item.product.slug}`}
+                      className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100"
+                      aria-label={`${item.product.name}`}
+                    >
                       <Image
                         src={
                           item.product.images[0]?.url || '/images/demo/1.jpg'
@@ -176,11 +190,16 @@ export default function BasketPage() {
                         height={80}
                         className="h-full w-full object-cover"
                       />
-                    </div>
+                    </Link>
 
                     <div className="flex-1">
                       <h3 className="mb-1 font-medium text-gray-900">
-                        {item.product.name}
+                        <Link
+                          href={`/product/${item.product.slug}`}
+                          className="hover:underline"
+                        >
+                          {item.product.name}
+                        </Link>
                       </h3>
                       <p className="mb-2 text-sm text-gray-600">
                         {item.product.article &&

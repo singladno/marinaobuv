@@ -88,6 +88,7 @@ export default async function ProductPage({
           <div className="space-y-6">
             <ProductDetails
               productId={product.id}
+              slug={product.slug}
               name={product.name}
               article={product.article}
               pricePair={Number(product.pricePair)}
