@@ -57,38 +57,81 @@ Rules:
         ],
       };
 
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [{ role: 'system', content: systemPrompt }, userMessage],
-        temperature: 0.2,
-        response_format: { type: 'json_object' },
-      });
+      // Retry logic for image analysis
+      const maxRetries = 2;
+      let lastError: any = null;
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No content in OpenAI response');
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(
+            `   🔄 Color analysis attempt ${attempt}/${maxRetries}...`
+          );
+
+          // Create a timeout promise
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(
+              () => reject(new Error('Request timeout after 60 seconds')),
+              60000
+            );
+          });
+
+          // Race between the API call and timeout
+          const response = (await Promise.race([
+            this.openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                userMessage,
+              ],
+              temperature: 0.2,
+              response_format: { type: 'json_object' },
+            }),
+            timeoutPromise,
+          ])) as any;
+
+          const content = response.choices[0]?.message?.content;
+          if (!content) {
+            throw new Error('No content in OpenAI response');
+          }
+
+          const result = JSON.parse(content) as {
+            images?: Array<{ url?: string; color?: string | null }>;
+          };
+
+          // Map results back to original URLs in order
+          const colorResults: ImageColorResult[] = imageUrls.map(
+            (url, index) => {
+              const imageResult = result.images?.[index];
+              return {
+                url,
+                color:
+                  imageResult?.color && imageResult.color.trim()
+                    ? imageResult.color.trim()
+                    : null,
+              };
+            }
+          );
+
+          console.log(
+            `   ✅ Color analysis completed for ${imageUrls.length} images`
+          );
+          return colorResults;
+        } catch (error) {
+          lastError = error;
+          console.error(
+            `   ❌ Color analysis attempt ${attempt} failed:`,
+            error
+          );
+
+          if (attempt < maxRetries) {
+            console.log(`   🔄 Retrying color analysis...`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+          }
+        }
       }
 
-      const result = JSON.parse(content) as {
-        images?: Array<{ url?: string; color?: string | null }>;
-      };
-
-      // Map results back to original URLs in order
-      const colorResults: ImageColorResult[] = imageUrls.map((url, index) => {
-        const imageResult = result.images?.[index];
-        return {
-          url,
-          color:
-            imageResult?.color && imageResult.color.trim()
-              ? imageResult.color.trim()
-              : null,
-        };
-      });
-
-      console.log(
-        `   ✅ Color analysis completed for ${imageUrls.length} images`
-      );
-      return colorResults;
+      // If all attempts failed, throw the last error
+      throw lastError;
     } catch (error) {
       console.error('Error analyzing image colors:', error);
 

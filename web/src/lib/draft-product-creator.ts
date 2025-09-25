@@ -95,6 +95,7 @@ export async function createDraftProduct(
           sha256: img.sha256,
           width: img.width,
           height: img.height,
+          color: img.color || null,
         },
       });
       console.log(`  ✓ Image record created successfully`);

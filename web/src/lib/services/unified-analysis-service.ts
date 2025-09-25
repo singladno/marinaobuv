@@ -23,6 +23,7 @@ export interface AnalysisResult {
     parentCategoryId: string;
   };
   packPairs?: number;
+  providerDiscount?: number;
 }
 
 /**
@@ -115,7 +116,17 @@ export class UnifiedAnalysisService {
       const result = JSON.parse(content);
 
       // Analyze each image individually for color detection
-      const imageColors = await this.colorService.analyzeImageColors(imageUrls);
+      let imageColors: Array<{ url: string; color: string | null }> = [];
+      try {
+        imageColors = await this.colorService.analyzeImageColors(imageUrls);
+        console.log(
+          `   🎨 Color analysis results: ${imageColors.filter(ic => ic.color).length}/${imageColors.length} images with colors`
+        );
+      } catch (colorError) {
+        console.error('   ❌ Color analysis failed:', colorError);
+        // Fallback: create empty color results
+        imageColors = imageUrls.map(url => ({ url, color: null }));
+      }
 
       // Add per-image colors to the result
       result.imageColors = imageColors;

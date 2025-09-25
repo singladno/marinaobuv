@@ -258,6 +258,24 @@ export function createDraftTableColumns(
 
     columns.push(
       columnHelper.display({
+        id: 'description',
+        header: () => 'Описание',
+        cell: info => (
+          <MemoizedEditableCell
+            value={info.row.original.description}
+            onBlur={value =>
+              onPatch(info.row.original.id, { description: value })
+            }
+            placeholder="Введите описание"
+            aria-label="Описание"
+            disabled={(info as any).isProcessing}
+          />
+        ),
+      })
+    );
+
+    columns.push(
+      columnHelper.display({
         id: 'gender',
         header: () => 'Пол',
         size: 180,

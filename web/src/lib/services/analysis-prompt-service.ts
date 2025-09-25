@@ -57,6 +57,13 @@ export class AnalysisPromptService {
           - If no suitable category is found, use "newCategory" field to create a new one
           - For newCategory: provide name (Russian), slug (Latin), parentCategoryId (ID from tree)
           
+          Provider Discount Extraction (CRITICAL):
+          - Look for discount patterns like "С КОРОБКИ 500Р СКИДКА", "скидка 500", "скидка 400"
+          - Also look for simple negative numbers like "-500", "-400", "—500" (these are discount amounts)
+          - Store discount amounts in rubles (no conversion needed)
+          - Only extract if discount is explicitly mentioned
+          - Examples: "500Р СКИДКА" = 500 rubles, "-500" = 500 rubles, "—500" = 500 rubles
+          
           Return only valid JSON with the following structure:
           {
             "name": "Название продукта на русском",
@@ -74,7 +81,8 @@ export class AnalysisPromptService {
               "slug": "new-category-slug",
               "parentCategoryId": "parent_category_id"
             },
-            "packPairs": 2
+            "packPairs": 2,
+            "providerDiscount": 500
           }`;
   }
 
@@ -133,6 +141,13 @@ export class AnalysisPromptService {
             - If no suitable category is found, use "newCategory" field to create a new one
             - For newCategory: provide name (Russian), slug (Latin), parentCategoryId (ID from tree)
             
+            Provider Discount Extraction (CRITICAL):
+            - Look for discount patterns like "С КОРОБКИ 500Р СКИДКА", "скидка 500", "скидка 400"
+            - Also look for simple negative numbers like "-500", "-400", "—500" (these are discount amounts)
+            - Store discount amounts in rubles (no conversion needed)
+            - Only extract if discount is explicitly mentioned
+            - Examples: "500Р СКИДКА" = 500 rubles, "-500" = 500 rubles, "—500" = 500 rubles
+            
             Return only valid JSON with the following structure:
             {
               "name": "Название продукта на русском",
@@ -150,7 +165,8 @@ export class AnalysisPromptService {
                 "slug": "new-category-slug",
                 "parentCategoryId": "parent_category_id"
               },
-              "packPairs": 2
+              "packPairs": 2,
+              "providerDiscount": 500
             }`;
   }
 }

@@ -98,7 +98,11 @@ export class ProductCreationService {
 
       // Handle new category creation if needed
       let finalCategoryId = analysis.categoryId;
-      if (analysis.newCategory && !analysis.categoryId) {
+      console.log(
+        `   🔍 Category analysis: categoryId=${analysis.categoryId}, newCategory=${JSON.stringify(analysis.newCategory)}`
+      );
+
+      if (analysis.newCategory) {
         try {
           finalCategoryId = await this.createNewCategory(analysis.newCategory);
           console.log(
@@ -107,6 +111,28 @@ export class ProductCreationService {
         } catch (error) {
           console.error(
             `   ❌ Failed to create new category: ${analysis.newCategory.name}`,
+            error
+          );
+          finalCategoryId = null;
+        }
+      }
+
+      // Validate categoryId exists if provided
+      if (finalCategoryId) {
+        try {
+          const categoryExists = await prisma.category.findUnique({
+            where: { id: finalCategoryId },
+            select: { id: true },
+          });
+          if (!categoryExists) {
+            console.log(
+              `   ⚠️  Category ID ${finalCategoryId} not found, setting to null`
+            );
+            finalCategoryId = null;
+          }
+        } catch (error) {
+          console.error(
+            `   ❌ Error validating category ID ${finalCategoryId}:`,
             error
           );
           finalCategoryId = null;
@@ -130,6 +156,7 @@ export class ProductCreationService {
             analysis.colors && analysis.colors.length > 0
               ? analysis.colors[0]
               : null,
+          providerDiscount: analysis.providerDiscount || null,
           categoryId: finalCategoryId,
           status: 'PENDING',
           aiStatus: 'PROCESSED',
@@ -146,13 +173,37 @@ export class ProductCreationService {
       );
 
       // Create draft product images with individual colors
+      console.log(
+        `   🎨 Available image colors: ${JSON.stringify(analysis.imageColors, null, 2)}`
+      );
+
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
+        console.log(
+          `   🔍 Looking for color for image ${i}: ${image.url.substring(0, 50)}...`
+        );
+
         // Find the color for this specific image URL from per-image analysis
-        const imageColorResult = analysis.imageColors?.find(
+        // Try exact match first
+        let imageColorResult = analysis.imageColors?.find(
           ic => ic.url === image.url
         );
+
+        // If no exact match, try to match by index (since images are processed in order)
+        if (
+          !imageColorResult &&
+          analysis.imageColors &&
+          i < analysis.imageColors.length
+        ) {
+          imageColorResult = analysis.imageColors[i];
+          console.log(
+            `   🔄 Using color by index ${i}: ${imageColorResult.color}`
+          );
+        }
+
         const imageColor = imageColorResult?.color || null;
+
+        console.log(`   🎨 Found color: '${imageColor}' for image ${i}`);
 
         await prisma.waDraftProductImage.create({
           data: {
@@ -184,6 +235,10 @@ export class ProductCreationService {
     slug: string;
     parentCategoryId: string;
   }): Promise<string> {
+    console.log(
+      `   🔍 Creating new category: ${newCategory.name} under parent ${newCategory.parentCategoryId}`
+    );
+
     // First, verify the parent category exists
     const parentCategory = await prisma.category.findUnique({
       where: { id: newCategory.parentCategoryId },
@@ -191,9 +246,69 @@ export class ProductCreationService {
     });
 
     if (!parentCategory) {
-      throw new Error(
-        `Parent category with ID ${newCategory.parentCategoryId} not found`
+      console.error(
+        `   ❌ Parent category with ID ${newCategory.parentCategoryId} not found`
       );
+
+      // Try to find a root category to use as parent
+      const rootCategory = await prisma.category.findFirst({
+        where: { parentId: null },
+        select: { id: true, path: true },
+      });
+
+      if (rootCategory) {
+        console.log(
+          `   🔄 Using root category as parent: ${rootCategory.path} (${rootCategory.id})`
+        );
+        newCategory.parentCategoryId = rootCategory.id;
+
+        // Re-fetch the parent category after updating the ID
+        const updatedParentCategory = await prisma.category.findUnique({
+          where: { id: newCategory.parentCategoryId },
+          select: { id: true, path: true },
+        });
+
+        if (!updatedParentCategory) {
+          throw new Error(`Failed to find root category after update`);
+        }
+
+        // Create the new category path
+        const newPath = `${updatedParentCategory.path}/${newCategory.slug}`;
+
+        // Check if category with this path already exists
+        const existingCategory = await prisma.category.findUnique({
+          where: { path: newPath },
+        });
+
+        if (existingCategory) {
+          console.log(
+            `Category with path ${newPath} already exists, using existing ID: ${existingCategory.id}`
+          );
+          return existingCategory.id;
+        }
+
+        // Create the new category
+        const newCategoryRecord = await prisma.category.create({
+          data: {
+            name: newCategory.name,
+            slug: newCategory.slug,
+            path: newPath,
+            parentId: newCategory.parentCategoryId,
+            isActive: true,
+            sort: 500, // Default sort value
+          },
+        });
+
+        console.log(
+          `Created new category: ${newCategoryRecord.name} (${newCategoryRecord.id}) under parent ${updatedParentCategory.path}`
+        );
+
+        return newCategoryRecord.id;
+      } else {
+        throw new Error(
+          `Parent category with ID ${newCategory.parentCategoryId} not found and no root category available`
+        );
+      }
     }
 
     // Create the new category path

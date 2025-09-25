@@ -289,6 +289,24 @@ export function createOptimisticDraftTableColumns(
 
     columns.push(
       columnHelper.display({
+        id: 'description',
+        header: () => 'Описание',
+        cell: info => (
+          <MemoizedOptimisticEditableCell
+            value={info.row.original.description}
+            onSave={value =>
+              onPatch(info.row.original.id, { description: value })
+            }
+            placeholder="Введите описание"
+            aria-label="Описание"
+            disabled={isRowDisabled(info.row.original.id)}
+          />
+        ),
+      })
+    );
+
+    columns.push(
+      columnHelper.display({
         id: 'gender',
         header: () => 'Пол',
         size: 180,
