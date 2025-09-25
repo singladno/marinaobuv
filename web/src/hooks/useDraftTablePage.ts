@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useCategories } from '@/hooks/useCategories';
-import { useAIStatus } from '@/hooks/useAIStatus';
 import { useDraftBulkOperations } from '@/hooks/useDraftBulkOperations';
 import { useDraftsTableNew } from '@/hooks/useDraftsTableNew';
 import type { Draft } from '@/types/admin';
@@ -38,16 +37,10 @@ export function useDraftTablePage(initialStatus: string) {
     handleBulkDeleteConfirm,
     handleBulkRestoreConfirm,
     handleBulkPermanentDeleteConfirm,
-    runAIAnalysis,
-    cancelAIAnalysis,
   } = useDraftBulkOperations();
 
-  const {
-    currentProcessingDraft,
-    isProcessing,
-    data: aiStatusData,
-    refetch: refetchAIStatus,
-  } = useAIStatus(status, false); // Disable polling since we use WebSocket events
+  const currentProcessingDraft = null;
+  const isProcessing = false;
 
   // Set initial status from URL params only on mount
   React.useEffect(() => {
@@ -56,24 +49,10 @@ export function useDraftTablePage(initialStatus: string) {
     }
   }, [initialStatus, setStatus, status]);
 
-  // Merge AI status data with main data
+  // Use data directly since AI status functionality was removed
   const mergedData = React.useMemo(() => {
-    if (!aiStatusData?.drafts || isTabChanging) {
-      return data;
-    }
-
-    return data.map(draft => {
-      const aiDraft = aiStatusData.drafts.find(ad => ad.id === draft.id);
-      if (aiDraft) {
-        return {
-          ...draft,
-          aiStatus: aiDraft.aiStatus,
-          aiProcessedAt: aiDraft.aiProcessedAt,
-        };
-      }
-      return draft;
-    });
-  }, [data, aiStatusData, isTabChanging]);
+    return data;
+  }, [data]);
 
   const inlinePatch = React.useCallback(
     async (id: string, patch: Partial<Draft>) => {
@@ -162,10 +141,9 @@ export function useDraftTablePage(initialStatus: string) {
     table,
     selectedIds: newSelectedIds,
 
-    // AI Status
+    // Status
     currentProcessingDraft,
     isProcessing,
-    refetchAIStatus,
 
     // Bulk Operations
     showDeleteModal,
@@ -182,11 +160,8 @@ export function useDraftTablePage(initialStatus: string) {
     handleBulkDeleteConfirm,
     handleBulkRestoreConfirm,
     handleBulkPermanentDeleteConfirm,
-    runAIAnalysis,
-
     // Actions
     reload,
     clearSelection,
-    cancelAIAnalysis,
   };
 }

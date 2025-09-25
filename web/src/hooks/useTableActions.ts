@@ -6,18 +6,9 @@ interface UseTableActionsProps {
   onBulkDelete?: () => void;
   onBulkRestore?: () => void;
   onBulkPermanentDelete?: () => void;
-  onRunAIScript?: () => void;
   onReload?: () => void;
   selectedCount?: number;
   status?: string;
-  isRunningAI?: boolean;
-  currentProcessingDraft?: {
-    id: string;
-    name: string | null;
-    aiStatus: string | null;
-    aiProcessedAt: string | null;
-    updatedAt: string;
-  } | null;
 }
 
 export function useTableActions({
@@ -26,31 +17,16 @@ export function useTableActions({
   onBulkDelete,
   onBulkRestore,
   onBulkPermanentDelete,
-  onRunAIScript,
   onReload,
   selectedCount = 0,
   status,
-  isRunningAI = false,
-  currentProcessingDraft,
 }: UseTableActionsProps) {
-  const isProcessing =
-    isRunningAI ||
-    (currentProcessingDraft &&
-      currentProcessingDraft.aiStatus === 'ai_processing');
+  const isProcessing = false;
 
   const getDraftActions = useCallback(() => {
     if (status === 'approved') {
       return {
         primary: {
-          label: isProcessing
-            ? `Обрабатывается: ${currentProcessingDraft?.name || 'AI анализ запущен...'}`
-            : `🤖 Запустить AI анализ (${selectedCount})`,
-          onClick: onRunAIScript,
-          disabled: !selectedCount || isProcessing,
-          loading: isProcessing,
-          variant: 'warning' as const,
-        },
-        secondary: {
           label: `Добавить в каталог (${selectedCount})`,
           onClick: onConvertToCatalog,
           disabled: !selectedCount,
@@ -91,13 +67,10 @@ export function useTableActions({
   }, [
     status,
     selectedCount,
-    isProcessing,
-    currentProcessingDraft,
     onApprove,
     onConvertToCatalog,
     onBulkRestore,
     onBulkPermanentDelete,
-    onRunAIScript,
   ]);
 
   const getDeleteAction = useCallback(() => {

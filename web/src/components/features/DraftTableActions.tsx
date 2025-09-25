@@ -10,7 +10,6 @@ interface DraftTableActionsProps {
   onBulkPermanentDelete?: () => void;
   onReload?: () => void;
   onOpenSettings: () => void;
-  onRunAIScript?: () => void;
   showBottomBorder?: boolean;
   savingStatus?: {
     isSaving: boolean;
@@ -36,7 +35,6 @@ export function DraftTableActions({
   onBulkPermanentDelete,
   onReload,
   onOpenSettings,
-  onRunAIScript,
   showBottomBorder = true,
   savingStatus,
   isRunningAI = false,

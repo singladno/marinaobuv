@@ -1,12 +1,10 @@
 import * as React from 'react';
 
 import { useNotifications } from '@/components/ui/NotificationProvider';
-import { useAIOperations } from '@/hooks/useAIOperations';
 import { useBulkDeleteOperations } from '@/hooks/useBulkDeleteOperations';
 
 export function useDraftBulkOperations() {
   const { addNotification } = useNotifications();
-  const { isRunningAI, runAIAnalysis, cancelAIAnalysis } = useAIOperations();
   const {
     showDeleteModal,
     setShowDeleteModal,
@@ -119,15 +117,11 @@ export function useDraftBulkOperations() {
     isDeleting,
     isRestoring,
     isPermanentlyDeleting,
-    isRunningAI,
-
     // Actions
     approve,
     convertToCatalog,
     handleBulkDeleteConfirm,
     handleBulkRestoreConfirm,
     handleBulkPermanentDeleteConfirm,
-    runAIAnalysis,
-    cancelAIAnalysis,
   };
 }

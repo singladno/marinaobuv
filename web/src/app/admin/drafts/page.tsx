@@ -9,8 +9,8 @@ export default function AdminDraftsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Get initial status from URL params, default to 'draft'
-  const initialStatus = searchParams.get('tab') || 'draft';
+  // Get initial status from URL params, default to 'approved'
+  const initialStatus = searchParams.get('tab') || 'approved';
 
   // Handle tab change with URL update
   const handleStatusChange = React.useCallback(

@@ -4,6 +4,11 @@ import * as React from 'react';
 import type { Draft } from '@/types/admin';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 
+import {
+  calculateTotalPairs,
+  calculateBoxPrice,
+} from '@/utils/sizeCalculations';
+
 import { ImagesCell } from './DraftTableCells';
 import { SizesCell } from './SizesCell';
 import { ProviderCell } from './ProviderCell';
@@ -85,6 +90,13 @@ export function createDraftTableColumns(
           id={info.row.original.id}
           selected={Boolean(info.row.original.selected)}
           onToggle={onToggle}
+          approvalState={{
+            isProcessing: false,
+            currentImage: 0,
+            totalImages: 0,
+            progress: 0,
+            status: 'idle',
+          }}
         />
       ),
     }),
@@ -175,16 +187,18 @@ export function createDraftTableColumns(
     columnHelper.display({
       id: 'packPairs',
       header: () => 'Пар в упаковке',
-      cell: info => (
-        <MemoizedEditableNumberCell
-          value={info.row.original.packPairs}
-          onBlur={value => onPatch(info.row.original.id, { packPairs: value })}
-          placeholder="Введите количество"
-          aria-label="Пар в упаковке"
-          min={1}
-          disabled={(info as any).isProcessing}
-        />
-      ),
+      cell: info => {
+        const { sizes } = info.row.original;
+        const totalPairs = calculateTotalPairs(sizes);
+
+        return (
+          <div className="flex items-center justify-center">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {totalPairs}
+            </span>
+          </div>
+        );
+      },
     })
   );
 
@@ -193,14 +207,9 @@ export function createDraftTableColumns(
       id: 'priceBoxRub',
       header: () => 'Цена коробки (₽)',
       cell: info => {
-        const { pricePair, packPairs, providerDiscount } = info.row.original;
-
-        // Calculate box price: pair price × pairs count in box
-        let calculatedBoxPrice: number | null = null;
-
-        if (pricePair !== null && packPairs !== null) {
-          calculatedBoxPrice = pricePair * packPairs;
-        }
+        const { pricePair, sizes } = info.row.original;
+        const totalPairs = calculateTotalPairs(sizes);
+        const calculatedBoxPrice = calculateBoxPrice(pricePair, totalPairs);
 
         return (
           <PriceCell

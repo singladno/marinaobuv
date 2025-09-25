@@ -21,7 +21,9 @@
     "draft:view": "cd web && npx tsx src/scripts/view-draft-products.ts",
     "prisma:seed": "cd web && npm run prisma:seed",
     "make-hash": "node web/scripts/make-hash.js",
-    "genWA": "cd web && npm run cron:hourly",
+    "fetchMessages": "cd web && npx tsx src/scripts/fetch-recent-messages.ts",
+    "processDraft": "cd web && npx tsx src/scripts/process-draft-products-unified.ts",
+    "genWA": "cd web && npx tsx src/scripts/fetch-recent-messages.ts && npx tsx src/scripts/process-draft-products-unified.ts",
     "messages:clear": "cd web && npm run messages:clear"
   },
   "engines": {

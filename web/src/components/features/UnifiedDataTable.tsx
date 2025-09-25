@@ -38,17 +38,8 @@ interface UnifiedDataTableProps<TData, TValue> {
   onBulkDelete?: () => void;
   onBulkRestore?: () => void;
   onBulkPermanentDelete?: () => void;
-  onRunAIScript?: () => void;
   selectedCount?: number;
   categories?: CategoryNode[];
-  isRunningAI?: boolean;
-  currentProcessingDraft?: {
-    id: string;
-    name: string | null;
-    aiStatus: string | null;
-    aiProcessedAt: string | null;
-    updatedAt: string;
-  } | null;
   onReload?: () => void;
   onPatch?: (id: string, patch: Partial<TData>) => Promise<void>;
 
@@ -90,11 +81,8 @@ export function UnifiedDataTable<TData, TValue>({
   onBulkDelete,
   onBulkRestore,
   onBulkPermanentDelete,
-  onRunAIScript,
   selectedCount,
   categories,
-  isRunningAI,
-  currentProcessingDraft,
   onReload,
   onPatch,
 
@@ -114,15 +102,12 @@ export function UnifiedDataTable<TData, TValue>({
     isProductTable,
     status,
     selectedCount,
-    isRunningAI,
-    currentProcessingDraft,
     filters,
     onApprove,
     onConvertToCatalog,
     onBulkDelete,
     onBulkRestore,
     onBulkPermanentDelete,
-    onRunAIScript,
     onReload,
     onFiltersChange,
   });
@@ -135,11 +120,10 @@ export function UnifiedDataTable<TData, TValue>({
       {isDraftTable && (
         <div className="flex-shrink-0 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
           <Tabs
-            value={status ?? 'draft'}
+            value={status ?? 'approved'}
             onChange={value => onStatusChange?.(value)}
           >
-            <Tab value="draft">Черновики</Tab>
-            <Tab value="approved">Одобрено</Tab>
+            <Tab value="approved">Обработано</Tab>
             <Tab value="deleted">Удаленные</Tab>
           </Tabs>
         </div>

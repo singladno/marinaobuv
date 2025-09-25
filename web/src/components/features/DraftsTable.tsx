@@ -25,7 +25,6 @@ export function DraftsTable({
   onBulkDelete,
   onBulkRestore,
   onBulkPermanentDelete,
-  onRunAIScript,
   selectedCount,
   loading = false,
   error,
@@ -46,7 +45,6 @@ export function DraftsTable({
   onBulkDelete?: () => void;
   onBulkRestore?: () => void;
   onBulkPermanentDelete?: () => void;
-  onRunAIScript?: () => void;
   selectedCount?: number;
   loading?: boolean;
   error?: string | null;
@@ -113,7 +111,7 @@ export function DraftsTable({
           onChange={value => onStatusChange?.(value)}
         >
           <Tab value="draft">Черновики</Tab>
-          <Tab value="approved">Одобрено</Tab>
+          <Tab value="approved">Обработано</Tab>
           <Tab value="deleted">Удаленные</Tab>
         </Tabs>
       </div>
@@ -127,7 +125,6 @@ export function DraftsTable({
         onBulkRestore={onBulkRestore}
         onBulkPermanentDelete={onBulkPermanentDelete}
         onReload={onReload}
-        onRunAIScript={onRunAIScript}
         onOpenSettings={() => setIsSettingsOpen(true)}
         showBottomBorder={hasData}
         savingStatus={savingStatus}

@@ -67,6 +67,19 @@ const schema = z
         }
         return parsed;
       }),
+
+    // Processing Configuration
+    PROCESSING_BATCH_SIZE: z
+      .string()
+      .optional()
+      .transform(val => {
+        if (!val) return 300; // Default to 300 messages
+        const parsed = parseInt(val, 10);
+        if (isNaN(parsed) || parsed <= 0) {
+          throw new Error('PROCESSING_BATCH_SIZE must be a positive integer');
+        }
+        return parsed;
+      }),
   })
   .refine(
     data => data.YC_IAM_TOKEN || data.YC_API_KEY,
@@ -113,6 +126,9 @@ const raw = {
 
   // Message Fetch Configuration
   MESSAGE_FETCH_HOURS: process.env.MESSAGE_FETCH_HOURS,
+
+  // Processing Configuration
+  PROCESSING_BATCH_SIZE: process.env.PROCESSING_BATCH_SIZE,
 };
 
 const parsed = schema.safeParse(raw);

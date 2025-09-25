@@ -45,9 +45,26 @@ async function fetchRecentMessages(chatId: string): Promise<WhatsAppMessage[]> {
 }
 
 /**
+ * Check if message contains product information
+ */
+function isProductMessage(message: WhatsAppMessage): boolean {
+  const raw = message as any;
+  const type = raw.type;
+
+  // Only save messages that could contain product information
+  const productTypes = ['text', 'image', 'video'];
+
+  return productTypes.includes(type);
+}
+
+/**
  * Save message to database with only rawPayload
  */
 async function saveMessage(message: WhatsAppMessage): Promise<void> {
+  // Skip non-product messages
+  if (!isProductMessage(message)) {
+    return;
+  }
   const raw = message as any;
 
   // Extract common fields from WHAPI payload
@@ -158,11 +175,16 @@ async function main() {
     // Process each message
     let processedCount = 0;
     let errorCount = 0;
+    let filteredCount = 0;
 
     for (const message of messages) {
       try {
-        await saveMessage(message);
-        processedCount++;
+        if (isProductMessage(message)) {
+          await saveMessage(message);
+          processedCount++;
+        } else {
+          filteredCount++;
+        }
 
         // Log message details
         const rawPayload = message as any;
@@ -184,6 +206,7 @@ async function main() {
     console.log('\nProcessing complete!');
     console.log(`Total messages: ${messages.length}`);
     console.log(`Successfully processed: ${processedCount}`);
+    console.log(`Filtered out (non-product): ${filteredCount}`);
     console.log(`Errors: ${errorCount}`);
   } catch (error) {
     console.error('Fatal error during message fetching:', error);

@@ -125,6 +125,8 @@ model WaDraftProduct {
   categoryId       String?
   status           String                @default("draft")
   aiStatus         String?
+  aiConfidence     Float?
+  aiContext        String?
   aiProcessedAt    DateTime?
   isDeleted        Boolean               @default(false)
   createdAt        DateTime              @default(now())
@@ -184,6 +186,7 @@ model WhatsAppMessage {
   mediaUrl       String?
   providerId     String?
   processed      Boolean         @default(false)
+  aiGroupId      String?
   rawPayload     Json
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt

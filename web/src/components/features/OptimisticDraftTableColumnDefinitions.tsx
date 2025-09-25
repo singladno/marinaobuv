@@ -4,8 +4,12 @@ import * as React from 'react';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import type { Draft } from '@/types/admin';
 
+import {
+  calculateTotalPairs,
+  calculateBoxPrice,
+} from '@/utils/sizeCalculations';
+
 import { ApprovalSelectionCellWithEvents } from './ApprovalSelectionCellWithEvents';
-import { AISelectionCellWithEvents } from './AISelectionCellWithEvents';
 import { CategoryCell } from './CategoryCell';
 import { GenderSelectCell } from './GenderSelectCell';
 import { GptRequestCell } from './GptRequestCell';
@@ -94,14 +98,21 @@ export function createOptimisticDraftTableColumns(
         );
       },
       cell: ({ row }) => {
-        // Use AI selection cell for approved status, approval cell for other statuses
+        // Use simple checkbox for approved status, approval cell for other statuses
         if (isApproved) {
           return (
-            <AISelectionCellWithEvents
-              id={row.original.id}
-              selected={row.getIsSelected()}
-              onToggle={onToggle || (() => {})}
-            />
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={row.getIsSelected()}
+                onChange={e => row.toggleSelected(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 accent-blue-600 focus:ring-blue-500"
+                title={row.getIsSelected() ? 'Снять выделение' : 'Выделить'}
+                aria-label={
+                  row.getIsSelected() ? 'Снять выделение' : 'Выделить'
+                }
+              />
+            </div>
           );
         }
 
@@ -205,17 +216,18 @@ export function createOptimisticDraftTableColumns(
     columnHelper.display({
       id: 'packPairs',
       header: () => 'Пар в упаковке',
-      cell: info => (
-        <MemoizedOptimisticEditableCell
-          value={info.row.original.packPairs}
-          onSave={value => onPatch(info.row.original.id, { packPairs: value })}
-          placeholder="Введите количество"
-          aria-label="Пар в упаковке"
-          type="number"
-          min={1}
-          disabled={isRowDisabled(info.row.original.id)}
-        />
-      ),
+      cell: info => {
+        const { sizes } = info.row.original;
+        const totalPairs = calculateTotalPairs(sizes);
+
+        return (
+          <div className="flex items-center justify-center">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {totalPairs}
+            </span>
+          </div>
+        );
+      },
     })
   );
 
@@ -224,14 +236,9 @@ export function createOptimisticDraftTableColumns(
       id: 'priceBoxRub',
       header: () => 'Цена коробки (₽)',
       cell: info => {
-        const { pricePair, packPairs, providerDiscount } = info.row.original;
-
-        // Calculate box price: pair price × pairs count in box
-        let calculatedBoxPrice: number | null = null;
-
-        if (pricePair !== null && packPairs !== null) {
-          calculatedBoxPrice = pricePair * packPairs;
-        }
+        const { pricePair, sizes } = info.row.original;
+        const totalPairs = calculateTotalPairs(sizes);
+        const calculatedBoxPrice = calculateBoxPrice(pricePair, totalPairs);
 
         return (
           <PriceCell

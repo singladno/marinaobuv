@@ -4,7 +4,6 @@ import * as React from 'react';
 import type { Draft } from '@/types/admin';
 import { Loader } from '@/components/ui/Loader';
 import { useApprovalEvents } from '@/contexts/ApprovalEventsContext';
-import { useAIEvents } from '@/contexts/AIEventsContext';
 
 interface DraftBulkOperationsProps {
   selectedIds: string[];
@@ -14,8 +13,6 @@ interface DraftBulkOperationsProps {
   onBulkDelete: () => void;
   onBulkRestore: () => void;
   onBulkPermanentDelete: () => void;
-  onRunAIScript: () => Promise<void>;
-  onCancelAI?: () => Promise<void>;
   isProcessing: boolean;
   currentProcessingDraft?: {
     id: string;
@@ -34,16 +31,12 @@ export function DraftBulkOperations({
   onBulkDelete,
   onBulkRestore,
   onBulkPermanentDelete,
-  onRunAIScript,
-  onCancelAI,
   isProcessing,
   currentProcessingDraft,
 }: DraftBulkOperationsProps) {
   const selectedCount = selectedIds.length;
   const { isAnyDraftApproving, getApprovingDrafts, getApprovalState } =
     useApprovalEvents();
-  const { aiState } = useAIEvents();
-
   // Check if any selected drafts are currently being approved
   const isApproving = isAnyDraftApproving(selectedIds);
   const approvingDrafts = getApprovingDrafts(selectedIds);
@@ -54,9 +47,6 @@ export function DraftBulkOperations({
     ? getApprovalState(firstApprovingDraft)
     : null;
 
-  // Use AI events state instead of polling-based isRunningAI
-  const isAIActuallyRunning = aiState.isRunning;
-
   return (
     <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">
       <div className="flex items-center space-x-3">
@@ -65,12 +55,7 @@ export function DraftBulkOperations({
           <>
             <button
               onClick={onApprove}
-              disabled={
-                selectedCount === 0 ||
-                isAIActuallyRunning ||
-                isProcessing ||
-                isApproving
-              }
+              disabled={selectedCount === 0 || isProcessing || isApproving}
               className="flex items-center rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isApproving ? (
@@ -85,9 +70,7 @@ export function DraftBulkOperations({
 
             <button
               onClick={onBulkDelete}
-              disabled={
-                selectedCount === 0 || isAIActuallyRunning || isProcessing
-              }
+              disabled={selectedCount === 0 || isProcessing}
               className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Удалить
@@ -95,41 +78,12 @@ export function DraftBulkOperations({
           </>
         )}
 
-        {/* Одобрено - Запустить AI, добавить в каталог, удалить */}
+        {/* Одобрено - добавить в каталог, удалить */}
         {status === 'approved' && (
           <>
             <button
-              onClick={onRunAIScript}
-              disabled={
-                selectedCount === 0 || isAIActuallyRunning || isProcessing
-              }
-              className="flex items-center rounded-lg bg-purple-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isAIActuallyRunning ? (
-                <>
-                  <Loader size="sm" className="mr-2" />
-                  Запуск AI...
-                </>
-              ) : (
-                'Запустить AI'
-              )}
-            </button>
-
-            {/* Cancel AI Analysis Button - Only show when AI is running */}
-            {isAIActuallyRunning && onCancelAI && (
-              <button
-                onClick={onCancelAI}
-                className="flex items-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600"
-              >
-                Отменить AI
-              </button>
-            )}
-
-            <button
               onClick={onConvertToCatalog}
-              disabled={
-                selectedCount === 0 || isAIActuallyRunning || isProcessing
-              }
+              disabled={selectedCount === 0 || isProcessing}
               className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               В каталог
@@ -137,9 +91,7 @@ export function DraftBulkOperations({
 
             <button
               onClick={onBulkDelete}
-              disabled={
-                selectedCount === 0 || isAIActuallyRunning || isProcessing
-              }
+              disabled={selectedCount === 0 || isProcessing}
               className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Удалить
@@ -152,9 +104,7 @@ export function DraftBulkOperations({
           <>
             <button
               onClick={onBulkRestore}
-              disabled={
-                selectedCount === 0 || isAIActuallyRunning || isProcessing
-              }
+              disabled={selectedCount === 0 || isProcessing}
               className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Восстановить
@@ -162,9 +112,7 @@ export function DraftBulkOperations({
 
             <button
               onClick={onBulkPermanentDelete}
-              disabled={
-                selectedCount === 0 || isAIActuallyRunning || isProcessing
-              }
+              disabled={selectedCount === 0 || isProcessing}
               className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Удалить навсегда
@@ -178,28 +126,6 @@ export function DraftBulkOperations({
           ? `Выбрано: ${selectedCount}`
           : 'Выберите товары для действий'}
       </div>
-
-      {/* AI Status - Show when AI is running */}
-      {isAIActuallyRunning && (
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-purple-500"></div>
-            <span className="text-sm text-blue-900 dark:text-blue-100">
-              {aiState.totalDrafts > 0
-                ? `AI анализ: ${aiState.currentDraft}/${aiState.totalDrafts} (${aiState.progress}%)`
-                : 'AI анализ запущен...'}
-            </span>
-          </div>
-          {onCancelAI && (
-            <button
-              onClick={onCancelAI}
-              className="rounded-lg bg-orange-500 px-3 py-1 text-sm font-medium text-white shadow-sm hover:bg-orange-600"
-            >
-              Отменить
-            </button>
-          )}
-        </div>
-      )}
 
       {/* Approval Status - Show when drafts are being approved */}
       {isApproving && (

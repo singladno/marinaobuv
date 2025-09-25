@@ -1,7 +1,15 @@
 import { useCallback } from 'react';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
-import { FilterBar, SearchFilter, FilterActions } from '@/components/ui/FilterBar';
-import { ActionButtonGroup, BulkActionButton, RefreshButton } from '@/components/ui/ActionButtons';
+import {
+  FilterBar,
+  SearchFilter,
+  FilterActions,
+} from '@/components/ui/FilterBar';
+import {
+  ActionButtonGroup,
+  BulkActionButton,
+  RefreshButton,
+} from '@/components/ui/ActionButtons';
 import { useTableActions } from './useTableActions';
 
 interface UseTableRenderersProps {
@@ -9,14 +17,6 @@ interface UseTableRenderersProps {
   isProductTable?: boolean;
   status?: string;
   selectedCount?: number;
-  isRunningAI?: boolean;
-  currentProcessingDraft?: {
-    id: string;
-    name: string | null;
-    aiStatus: string | null;
-    aiProcessedAt: string | null;
-    updatedAt: string;
-  } | null;
   filters?: {
     search: string;
     categoryId: string;
@@ -26,7 +26,6 @@ interface UseTableRenderersProps {
   onBulkDelete?: () => void;
   onBulkRestore?: () => void;
   onBulkPermanentDelete?: () => void;
-  onRunAIScript?: () => void;
   onReload?: () => void;
   onFiltersChange?: (filters: { search?: string; categoryId?: string }) => void;
 }
@@ -36,15 +35,12 @@ export function useTableRenderers({
   isProductTable = false,
   status,
   selectedCount,
-  isRunningAI,
-  currentProcessingDraft,
   filters,
   onApprove,
   onConvertToCatalog,
   onBulkDelete,
   onBulkRestore,
   onBulkPermanentDelete,
-  onRunAIScript,
   onReload,
   onFiltersChange,
 }: UseTableRenderersProps) {
@@ -54,12 +50,9 @@ export function useTableRenderers({
     onBulkDelete,
     onBulkRestore,
     onBulkPermanentDelete,
-    onRunAIScript,
     onReload,
     selectedCount,
     status,
-    isRunningAI,
-    currentProcessingDraft,
   });
 
   const renderDraftActions = useCallback(() => {

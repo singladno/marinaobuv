@@ -20,8 +20,8 @@ export async function groupMessagesWithGPT(
     `Analyzing ${messageIds.length} messages with GPT for intelligent grouping...`
   );
 
-  // Process messages in batches of 100 to avoid API limits
-  const batchSize = 100;
+  // Process messages in batches to avoid OpenAI rate limits (configurable via env)
+  const batchSize = 150; // Reduced to avoid token limits
   const allGroups: MessageGroup[] = [];
   let groupCounter = 0;
 

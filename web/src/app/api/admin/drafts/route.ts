@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/server/db';
-import { requireRole } from '@/lib/auth';
 import type { Role } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/server/db';
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +15,9 @@ export async function GET(req: NextRequest) {
     const where =
       status === 'deleted'
         ? { isDeleted: true }
-        : { status: status as string | undefined, isDeleted: false };
+        : status === 'approved'
+          ? { isDeleted: false } // Show all non-deleted draft products
+          : { status: status as string | undefined, isDeleted: false };
 
     const [drafts, total] = await Promise.all([
       prisma.waDraftProduct.findMany({
@@ -128,6 +131,14 @@ export async function GET(req: NextRequest) {
                 };
               })
               .filter(Boolean)
+              .sort((a, b) => {
+                // Sort by timestamp first, then by createdAt
+                const aTime =
+                  a?.timestamp || new Date(a?.createdAt || 0).getTime();
+                const bTime =
+                  b?.timestamp || new Date(b?.createdAt || 0).getTime();
+                return aTime - bTime;
+              })
           : null,
     }));
 
@@ -138,10 +149,10 @@ export async function GET(req: NextRequest) {
       pageSize: take,
       totalPages: Math.ceil(total / take),
     });
-  } catch (e: any) {
-    const status = e?.status ?? 500;
+  } catch (e: unknown) {
+    const status = (e as { status?: number })?.status ?? 500;
     return NextResponse.json(
-      { error: e?.message ?? 'Unexpected error' },
+      { error: (e as { message?: string })?.message ?? 'Unexpected error' },
       { status }
     );
   }
@@ -152,7 +163,7 @@ export async function PATCH(req: NextRequest) {
     requireRole(req, ['ADMIN' as Role]);
     const body = await req.json();
     // body: { id: string, data: Partial<WaDraftProduct> }
-    const { id, data } = body as { id: string; data: Record<string, any> };
+    const { id, data } = body as { id: string; data: Record<string, unknown> };
     if (!id || !data)
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
@@ -162,10 +173,10 @@ export async function PATCH(req: NextRequest) {
     });
 
     return NextResponse.json({ draft: updated });
-  } catch (e: any) {
-    const status = e?.status ?? 500;
+  } catch (e: unknown) {
+    const status = (e as { status?: number })?.status ?? 500;
     return NextResponse.json(
-      { error: e?.message ?? 'Unexpected error' },
+      { error: (e as { message?: string })?.message ?? 'Unexpected error' },
       { status }
     );
   }
