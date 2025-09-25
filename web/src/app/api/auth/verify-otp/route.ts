@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/server/db';
 import { createSession } from '@/lib/server/session';
+import { env } from '@/lib/env';
 
 const cookieName = 'mo_otp';
 const secret = new TextEncoder().encode(
@@ -35,8 +36,17 @@ export async function POST(req: NextRequest) {
     const phone = payload.phone as string;
     let user = await prisma.user.findUnique({ where: { phone } });
     if (!user) {
+      const role =
+        env.ADMIN_PHONE && env.ADMIN_PHONE === phone ? 'ADMIN' : 'CLIENT';
       user = await prisma.user.create({
-        data: { phone, role: 'CLIENT', passwordHash: 'otp-login' as any },
+        data: { phone, role, passwordHash: 'otp-login' as any },
+      });
+    }
+    // If existing user matches admin phone, ensure role is ADMIN
+    if (env.ADMIN_PHONE && env.ADMIN_PHONE === phone && user.role !== 'ADMIN') {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'ADMIN' },
       });
     }
 

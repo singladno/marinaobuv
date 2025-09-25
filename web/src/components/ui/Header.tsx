@@ -64,6 +64,13 @@ export default function Header({ onSearch }: HeaderProps) {
           </Button>
           <Button
             variant="ghost"
+            onClick={() => handleMenuClick('orders')}
+            asChild
+          >
+            <Link href={site.links.orders}>Заказы</Link>
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => handleMenuClick('about')}
             asChild
           >
@@ -79,7 +86,10 @@ export default function Header({ onSearch }: HeaderProps) {
         </div>
 
         {/* Right Actions */}
-        <div className="ml-auto flex items-center gap-2">
+        <div
+          id="header-icons"
+          className="relative ml-auto flex items-center gap-6 px-8 py-3"
+        >
           {/* Theme Toggle */}
           <Button
             variant="ghost"

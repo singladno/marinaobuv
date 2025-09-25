@@ -3,11 +3,12 @@ import { prisma } from '@/lib/server/db';
 
 export async function GET(
   _: Request,
-  { params }: { params: { slug: string } }
+  ctx: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { slug } = await ctx.params;
     const product = await prisma.product.findUnique({
-      where: { slug: params.slug },
+      where: { slug },
       include: {
         images: {
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],

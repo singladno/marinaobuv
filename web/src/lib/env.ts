@@ -20,6 +20,8 @@ const schema = z
       .string()
       .min(32, 'WHAPI_WEBHOOK_SECRET must be at least 32 characters'),
     WHAPI_VERIFY_TOKEN: z.string().optional(),
+    // Admin phone that gets ADMIN role on OTP login
+    ADMIN_PHONE: z.string().optional(),
 
     // S3 Configuration
     S3_ENDPOINT: z.string().url('S3_ENDPOINT must be a valid URL'),
@@ -85,6 +87,7 @@ const raw = {
   WHAPI_TOKEN: process.env.WHAPI_TOKEN,
   WHAPI_WEBHOOK_SECRET: process.env.WHAPI_WEBHOOK_SECRET,
   WHAPI_VERIFY_TOKEN: process.env.WHAPI_VERIFY_TOKEN,
+  ADMIN_PHONE: process.env.ADMIN_PHONE,
 
   // S3 Configuration
   S3_ENDPOINT: process.env.S3_ENDPOINT,

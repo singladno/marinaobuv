@@ -5,6 +5,7 @@ export const site = {
     home: '/',
     catalog: '/catalog',
     about: '/about',
+    orders: '/orders',
   },
   socials: {
     instagram: '#',

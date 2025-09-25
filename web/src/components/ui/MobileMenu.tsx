@@ -26,6 +26,7 @@ export default function MobileMenu() {
 
   const menuItems = [
     { name: 'Каталог', href: site.links.catalog, icon: null },
+    { name: 'Заказы', href: site.links.orders, icon: null },
     { name: 'О нас', href: site.links.about, icon: null },
   ];
 

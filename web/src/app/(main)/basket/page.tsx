@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Text } from '@/components/ui/Text';
 import TransportCompanySelector from '@/components/features/TransportCompanySelector';
 import { popularTransportCompanies } from '@/lib/shipping';
+import { useNotifications } from '@/components/ui/NotificationProvider';
 import {
   MinusIcon,
   PlusIcon,
@@ -40,11 +41,16 @@ interface CartItemWithProduct {
 }
 
 export default function BasketPage() {
-  const { items, add, remove, updateQuantity, clear } = useCart();
+  const { items, add, remove, updateQuantity, clear, setUserId } = useCart();
+  const { addNotification } = useNotifications();
   const [products, setProducts] = useState<CartItemWithProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [phone, setPhone] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [selectedTransportId, setSelectedTransportId] = useState<string | null>(
@@ -54,6 +60,8 @@ export default function BasketPage() {
   const [isEditingUserData, setIsEditingUserData] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [orderPhone, setOrderPhone] = useState('');
+  const [userFullName, setUserFullName] = useState('');
+  const [userAddress, setUserAddress] = useState('');
   const [validationErrors, setValidationErrors] = useState<{
     transport?: boolean;
     userData?: boolean;
@@ -61,6 +69,10 @@ export default function BasketPage() {
   const selectedTransport = popularTransportCompanies.find(
     c => c.id === selectedTransportId
   );
+
+  // Local persistence helpers
+  const getUserDataStorageKey = (uid: string | null | undefined) =>
+    uid ? `basket_user_data_${uid}` : 'basket_user_data_anonymous';
 
   // Check authentication status
   useEffect(() => {
@@ -78,6 +90,57 @@ export default function BasketPage() {
     };
     checkAuth();
   }, []);
+
+  // Load saved basket data (per user) on mount and when user changes
+  useEffect(() => {
+    try {
+      const key = getUserDataStorageKey(user?.userId);
+      const raw =
+        typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        orderPhone?: string;
+        userEmail?: string;
+        userFullName?: string;
+        userAddress?: string;
+        selectedTransportId?: string | null;
+      };
+      if (typeof saved.orderPhone === 'string') setOrderPhone(saved.orderPhone);
+      if (typeof saved.userEmail === 'string') setUserEmail(saved.userEmail);
+      if (typeof saved.userFullName === 'string')
+        setUserFullName(saved.userFullName);
+      if (typeof saved.userAddress === 'string')
+        setUserAddress(saved.userAddress);
+      if (saved.selectedTransportId)
+        setSelectedTransportId(saved.selectedTransportId);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.userId]);
+
+  // Persist basket data to localStorage when any field changes
+  useEffect(() => {
+    try {
+      const key = getUserDataStorageKey(user?.userId);
+      const toSave = {
+        orderPhone,
+        userEmail,
+        userFullName,
+        userAddress,
+        selectedTransportId,
+        timestamp: Date.now(),
+      };
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(toSave));
+      }
+    } catch {}
+  }, [
+    orderPhone,
+    userEmail,
+    userFullName,
+    userAddress,
+    selectedTransportId,
+    user?.userId,
+  ]);
 
   // Clear validation errors when user fixes issues
   useEffect(() => {
@@ -136,10 +199,48 @@ export default function BasketPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For now, just simulate login - in real implementation, this would send SMS
-    setIsLoggedIn(true);
-    setUser({ phone, name: 'User' });
-    setIsLoginModalOpen(false);
+    setLoginError(null);
+    setLoginLoading(true);
+    try {
+      if (!otpSent) {
+        const res = await fetch('/api/auth/request-otp', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j.error || 'Не удалось отправить код');
+        }
+        setOtpSent(true);
+        return;
+      }
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code: otpCode }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || 'Неверный код');
+      }
+      const data = await res.json();
+      setIsLoggedIn(true);
+      setUser({
+        userId: data.user.id,
+        phone: data.user.phone,
+        name: data.user.name,
+        role: data.user.role,
+      });
+      setUserId(data.user.id);
+      setIsLoginModalOpen(false);
+      setOtpCode('');
+      setOtpSent(false);
+    } catch (err: any) {
+      setLoginError(err?.message || 'Ошибка входа');
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
   const handleUpdateQuantity = (slug: string, newQty: number) => {
@@ -163,14 +264,45 @@ export default function BasketPage() {
 
     // If no errors, proceed with order
     if (Object.keys(errors).length === 0) {
-      // TODO: Implement order submission
-      console.log('Order submitted:', {
-        items,
-        transport: selectedTransportId,
-        user: user,
-        email: userEmail,
-        orderPhone: orderPhone || user?.phone,
-      });
+      const payload = {
+        items: items.map(i => ({ slug: i.slug, qty: i.qty })),
+        phone: (orderPhone || user?.phone || '').trim(),
+        email: userEmail || undefined,
+        fullName: userFullName || undefined,
+        address: userAddress || undefined,
+        transportId: selectedTransportId,
+        transportName: selectedTransport?.name || undefined,
+      };
+
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(async res => {
+          if (!res.ok) {
+            const j = await res.json().catch(() => ({}));
+            throw new Error(j.error || 'Ошибка оформления заказа');
+          }
+          return res.json();
+        })
+        .then(data => {
+          // Clear cart and keep user data persisted
+          clear();
+          setIsEditingUserData(false);
+          addNotification({
+            type: 'success',
+            title: 'Заказ создан',
+            message: `Номер заказа: ${data.orderNumber}`,
+          });
+        })
+        .catch(err => {
+          addNotification({
+            type: 'error',
+            title: 'Ошибка оформления заказа',
+            message: err?.message || 'Попробуйте ещё раз',
+          });
+        });
     }
   };
 
@@ -416,7 +548,9 @@ export default function BasketPage() {
             </div>
 
             {/* Мои данные Section */}
-            <div className="rounded-lg bg-white p-6">
+            <div
+              className={`rounded-lg bg-white p-6 ${validationErrors.userData ? 'border-2 border-purple-500' : ''}`}
+            >
               <div className="mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">
                   Мои данные
@@ -450,8 +584,18 @@ export default function BasketPage() {
                             {user?.name || 'Пользователь'}
                           </p>
                           <p className="text-sm text-gray-600">{user?.phone}</p>
+                          {userFullName && (
+                            <p className="text-sm text-gray-600">
+                              {userFullName}
+                            </p>
+                          )}
                           {userEmail && (
                             <p className="text-sm text-gray-600">{userEmail}</p>
+                          )}
+                          {userAddress && (
+                            <p className="text-sm text-gray-600">
+                              {userAddress}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -480,6 +624,18 @@ export default function BasketPage() {
                     <div className="space-y-4">
                       <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">
+                          ФИО (необязательно)
+                        </label>
+                        <input
+                          type="text"
+                          value={userFullName}
+                          onChange={e => setUserFullName(e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          placeholder="Иванов Иван Иванович"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
                           Телефон для заказа
                         </label>
                         <input
@@ -502,6 +658,18 @@ export default function BasketPage() {
                           placeholder="example@email.com"
                         />
                       </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                          Адрес (необязательно)
+                        </label>
+                        <input
+                          type="text"
+                          value={userAddress}
+                          onChange={e => setUserAddress(e.target.value)}
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          placeholder="Город, улица, дом, офис"
+                        />
+                      </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setIsEditingUserData(false)}
@@ -514,6 +682,8 @@ export default function BasketPage() {
                             setIsEditingUserData(false);
                             setUserEmail('');
                             setOrderPhone('');
+                            setUserFullName('');
+                            setUserAddress('');
                           }}
                           className="rounded-md bg-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-400"
                         >
@@ -681,11 +851,37 @@ export default function BasketPage() {
               </div>
             </div>
 
+            {otpSent && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Код из SMS
+                </label>
+                <Input
+                  value={otpCode}
+                  onChange={e => setOtpCode(e.target.value)}
+                  placeholder="123456"
+                  required
+                />
+              </div>
+            )}
+
+            {loginError && (
+              <div className="rounded bg-red-50 p-2 text-sm text-red-700">
+                {loginError}
+              </div>
+            )}
+
             <Button
               type="submit"
               className="w-full bg-purple-600 text-white hover:bg-purple-700"
             >
-              Войти
+              {loginLoading
+                ? otpSent
+                  ? 'Проверяем…'
+                  : 'Отправляем…'
+                : otpSent
+                  ? 'Войти'
+                  : 'Отправить код'}
             </Button>
 
             <div className="flex items-start gap-2">

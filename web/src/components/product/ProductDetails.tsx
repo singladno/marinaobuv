@@ -128,14 +128,12 @@ export default function ProductDetails(props: Props) {
         {/* Price */}
         <div className="space-y-1">
           <div className="flex items-baseline gap-3">
-            <div className="text-4xl font-bold">{rub(boxPrice ?? 0)}</div>
-            <span className="text-muted-foreground text-sm">
-              за коробку{packPairs ? ` (${packPairs} пар)` : ''}
-            </span>
+            <div className="text-4xl font-bold">{rub(pairPrice ?? 0)}</div>
+            <span className="text-muted-foreground text-sm">за пару</span>
           </div>
-          {pairPrice != null && (
+          {boxPrice != null && (
             <div className="text-muted-foreground text-sm">
-              {rub(pairPrice)} за пару
+              {rub(boxPrice)} за коробку{packPairs ? ` (${packPairs} пар)` : ''}
             </div>
           )}
         </div>

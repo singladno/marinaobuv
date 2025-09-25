@@ -3,13 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/Popover';
 import { UserIcon } from '@heroicons/react/24/outline';
 import { useCart } from '@/contexts/CartContext';
+import ProfileMenuContent from '@/components/ui/ProfileMenuContent';
 
 type CurrentUser = {
   userId: string;
@@ -21,6 +17,12 @@ type CurrentUser = {
 
 export default function AccountMenu() {
   const [open, setOpen] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [user, setUser] = useState<CurrentUser>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,43 +67,74 @@ export default function AccountMenu() {
     }
   };
 
+  // Measure header icons container to align dropdown width and position
+  useEffect(() => {
+    function measure() {
+      const el = document.getElementById('header-icons');
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setAnchorRect({
+        left: rect.left,
+        top: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      });
+    }
+    if (open) {
+      measure();
+      window.addEventListener('resize', measure);
+      window.addEventListener('scroll', measure, { passive: true });
+    }
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure as any);
+    };
+  }, [open]);
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="hover:bg-transparent">
-          <UserIcon className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-52 p-2" align="end">
-        {error && (
-          <div className="mb-2 rounded bg-red-50 p-2 text-xs text-red-700">
-            {error}
+    <div
+      className="group relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <Button variant="ghost" size="icon" className="hover:bg-transparent">
+        <UserIcon className="h-4 w-4" />
+      </Button>
+      {open && anchorRect && (
+        // Fixed-position wrapper with a 5px hover buffer around the menu
+        <div
+          className="fixed z-40"
+          style={{
+            left: anchorRect.left - 5,
+            top: anchorRect.top - 5,
+            width: anchorRect.width + 10,
+          }}
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+        >
+          <div
+            className="pointer-events-none select-none"
+            style={{ height: 5 }}
+          />
+          <div
+            className="w-full"
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+          >
+            {error ? (
+              <div className="w-full rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 shadow-xl">
+                {error}
+              </div>
+            ) : (
+              <ProfileMenuContent
+                user={user}
+                onLogout={logout}
+                loading={loading}
+              />
+            )}
           </div>
-        )}
-        {user ? (
-          <div className="space-y-2">
-            <div className="text-muted-foreground px-1 text-sm">
-              {user.name || user.phone || 'Аккаунт'}
-            </div>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={logout}
-              disabled={loading}
-            >
-              {loading ? 'Выходим…' : 'Выйти'}
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <Link href="/login" onClick={() => setOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start">
-                Войти
-              </Button>
-            </Link>
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
+        </div>
+      )}
+    </div>
   );
 }

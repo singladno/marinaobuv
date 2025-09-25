@@ -47,6 +47,7 @@ model Product {
   images                ProductImage[]
   sizes                 ProductSize[]
   reviews               Review[]
+  orderItems            OrderItem[]
 
   @@index([categoryId])
   @@index([season])
@@ -210,6 +211,7 @@ model User {
   updatedAt    DateTime  @updatedAt
   reviews      Review[]
   provider     Provider? @relation(fields: [providerId], references: [id])
+  orders       Order[]
 
   @@index([role])
   @@index([providerId])
@@ -235,6 +237,48 @@ model Review {
   @@index([rating])
   @@index([isPublished])
   @@index([createdAt])
+}
+
+// Orders
+model Order {
+  id                 String      @id @default(cuid())
+  orderNumber        String      @unique
+  userId             String?
+  fullName           String?
+  phone              String
+  email              String?
+  address            String?
+  transportId        String?
+  transportName      String?
+  subtotal           Decimal     @default(0)
+  total              Decimal     @default(0)
+  status             String      @default("new")
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  user               User?       @relation(fields: [userId], references: [id])
+  items              OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String
+  slug        String
+  name        String
+  article     String?
+  priceBox    Decimal
+  qty         Int
+  createdAt   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 enum Role {
