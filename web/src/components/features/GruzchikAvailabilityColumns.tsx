@@ -248,6 +248,32 @@ export function createGruzchikAvailabilityColumns(
       ),
     },
     {
+      id: 'itemCodes',
+      header: 'Коды товаров',
+      cell: ({ row }) => (
+        <RowWrapper orderId={row.original.id} updatingOrders={updatingOrders}>
+          <div className="space-y-1">
+            {row.original.items.slice(0, 2).map((item, index) => (
+              <div key={index} className="text-xs">
+                {item.itemCode ? (
+                  <div className="font-mono text-blue-600 dark:text-blue-400">
+                    {item.itemCode}
+                  </div>
+                ) : (
+                  <div className="italic text-gray-400">Нет кода</div>
+                )}
+              </div>
+            ))}
+            {row.original.items.length > 2 && (
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                +{row.original.items.length - 2} еще
+              </div>
+            )}
+          </div>
+        </RowWrapper>
+      ),
+    },
+    {
       id: 'total',
       header: 'Сумма',
       cell: ({ row }) => (

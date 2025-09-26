@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { getSession } from '@/lib/server/session';
 import { generateOrderNumber } from '@/lib/order-number-generator';
+import { generateItemCodes } from '@/lib/itemCodeGenerator';
 
 interface CreateOrderItem {
   slug: string;
@@ -138,6 +139,9 @@ export async function POST(req: NextRequest) {
     // Generate human-readable order number
     const orderNumber = await generateOrderNumber();
 
+    // Generate unique item codes for each item
+    const itemCodes = generateItemCodes(orderItemsData.length);
+
     const order = await prisma.order.create({
       data: {
         orderNumber,
@@ -152,13 +156,14 @@ export async function POST(req: NextRequest) {
         total,
         items: {
           createMany: {
-            data: orderItemsData.map(oi => ({
+            data: orderItemsData.map((oi, index) => ({
               productId: oi.productId,
               slug: oi.slug,
               name: oi.name,
               article: oi.article,
               priceBox: oi.priceBox,
               qty: oi.qty,
+              itemCode: itemCodes[index],
             })),
           },
         },

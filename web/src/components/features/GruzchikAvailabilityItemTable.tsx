@@ -1,0 +1,163 @@
+'use client';
+
+import { useMemo } from 'react';
+import { DataTable } from '@/components/ui/DataTable';
+import { DataTablePagination } from '@/components/ui/DataTablePagination';
+import { useGruzchikOrders } from '@/hooks/useGruzchikOrders';
+import { createGruzchikAvailabilityItemColumns } from './GruzchikAvailabilityItemColumns';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+
+export function GruzchikAvailabilityItemTable() {
+  const {
+    orders,
+    itemRows,
+    loading,
+    error,
+    pagination,
+    onPageChange,
+    onPageSizeChange,
+    reload,
+    updateOrderOptimistically,
+    updatingOrders,
+  } = useGruzchikOrders('Наличие');
+
+  const columns = useMemo(
+    () =>
+      createGruzchikAvailabilityItemColumns(
+        updateOrderOptimistically,
+        updatingOrders
+      ),
+    [updateOrderOptimistically, updatingOrders]
+  );
+
+  // Group items by order
+  const ordersWithItems = useMemo(() => {
+    const grouped = new Map<string, typeof itemRows>();
+
+    itemRows.forEach(item => {
+      if (!grouped.has(item.orderId)) {
+        grouped.set(item.orderId, []);
+      }
+      grouped.get(item.orderId)!.push(item);
+    });
+
+    return Array.from(grouped.entries()).map(([orderId, items]) => {
+      const order = orders.find(o => o.id === orderId);
+      return {
+        order,
+        items,
+        orderNumber: items[0]?.orderNumber || 'Unknown',
+        orderDate: items[0]?.orderDate || '',
+        customerName: items[0]?.customerName || 'Не указано',
+        customerPhone: items[0]?.customerPhone || '',
+        orderTotal: items[0]?.orderTotal || 0,
+        orderStatus: items[0]?.orderStatus || '',
+      };
+    });
+  }, [itemRows, orders]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+        <p className="text-red-800 dark:text-red-200">{error}</p>
+        <button
+          onClick={reload}
+          className="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
+        >
+          Попробовать снова
+        </button>
+      </div>
+    );
+  }
+
+  if (ordersWithItems.length === 0) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800">
+        <p className="text-gray-600 dark:text-gray-400">
+          Нет заказов для управления наличием
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {ordersWithItems.map(orderGroup => (
+        <div key={orderGroup.orderId} className="space-y-4">
+          {/* Order Header */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Заказ #{orderGroup.orderNumber}
+                </h3>
+                <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                  <span>
+                    {format(
+                      new Date(orderGroup.orderDate),
+                      'dd.MM.yyyy HH:mm',
+                      {
+                        locale: ru,
+                      }
+                    )}
+                  </span>
+                  <span>•</span>
+                  <span>{orderGroup.customerName}</span>
+                  <span>•</span>
+                  <span>{orderGroup.customerPhone}</span>
+                  <span>•</span>
+                  <span className="font-medium">
+                    {orderGroup.orderTotal.toLocaleString('ru-RU')} ₽
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {orderGroup.items.length} товар
+                  {orderGroup.items.length === 1
+                    ? ''
+                    : orderGroup.items.length < 5
+                      ? 'а'
+                      : 'ов'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700">
+            <DataTable
+              data={orderGroup.items}
+              columns={columns}
+              loading={loading}
+              error={error}
+            />
+          </div>
+        </div>
+      ))}
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="mt-6">
+          <DataTablePagination
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            total={pagination.total}
+            totalPages={pagination.totalPages}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
