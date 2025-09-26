@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
-// Load environment variables from .env.local FIRST
+// Load environment variables from .env.local FIRST (override any existing shell vars)
 import { config } from 'dotenv';
-config({ path: '.env.local' });
+config({ path: '.env.local', override: true });
 
 // Now import other modules after env is loaded
 import { prisma } from '../lib/db-node';

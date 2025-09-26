@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { slugify } from '@/utils/slugify';
-import { processDraftProductImages } from '@/lib/draft-to-product-image-processor';
+// Note: We now reuse existing S3 images from draft records directly
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,20 +12,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No IDs provided' }, { status: 400 });
     }
 
-    // Get approved drafts with their images
+    // Get drafts with their images (allow any status)
     const drafts = await prisma.waDraftProduct.findMany({
       where: {
         id: { in: ids },
-        status: 'approved', // Only convert approved drafts
+        // status filter removed: we allow converting any status
       },
       include: { images: true },
     });
 
     if (drafts.length === 0) {
-      return NextResponse.json(
-        { error: 'No approved drafts found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'No drafts found' }, { status: 404 });
     }
 
     const results: { draftId: string; productId?: string; error?: string }[] =
@@ -37,11 +34,18 @@ export async function POST(req: NextRequest) {
           `Processing draft ${d.id} (${d.name}) for catalog conversion...`
         );
 
-        // Process images and upload to S3
+        // Reuse existing S3 images from draft (no re-upload)
+        const processedImages = (d.images || [])
+          .filter(img => img.isActive !== false)
+          .sort(
+            (a, b) =>
+              Number(b.isPrimary) - Number(a.isPrimary) ||
+              (a.sort ?? 0) - (b.sort ?? 0)
+          );
+
         console.log(
-          `  📸 Processing ${d.images.length} images for draft ${d.id}...`
+          `  📸 Using ${processedImages.length} existing images for draft ${d.id} (no upload)`
         );
-        const processedImages = await processDraftProductImages(d.id);
 
         if (processedImages.length === 0) {
           console.log(
@@ -99,49 +103,48 @@ export async function POST(req: NextRequest) {
 
         // Create Product record and update draft status
         const product = await prisma.$transaction(async tx => {
-          const created = await tx.product.create({
-            data: {
-              slug,
-              name: d.name,
-              categoryId: d.categoryId,
-              pricePair: pricePairFinal ?? 0,
-              currency: d.currency ?? 'RUB',
-              packPairs: d.packPairs ?? null,
-              priceBox: priceBoxFinal ?? null,
-              material: d.material ?? null,
-              gender: d.gender ?? null,
-              season: d.season ?? null,
-              description: d.description ?? null,
-              images: {
-                create: processedImages.map(img => ({
-                  url: img.url,
-                  key: img.key,
-                  alt: img.alt,
-                  sort: img.sort,
-                  isPrimary: img.isPrimary,
-                  color: img.color,
-                  width: img.width,
-                  height: img.height,
-                })),
-              },
-              sizes: {
-                create:
-                  d.sizes && Array.isArray(d.sizes)
-                    ? d.sizes.map((size: any) => ({
-                        size: size.size || size.name || 'Unknown',
-                        perBox: size.count || size.perBox || null,
-                        stock: size.stock || null,
-                        sku: size.sku || null,
-                      }))
-                    : [],
-              },
+          const baseData: any = {
+            slug,
+            name: d.name || 'Без названия',
+            pricePair: pricePairFinal ?? 0,
+            currency: d.currency ?? 'RUB',
+            packPairs: d.packPairs ?? null,
+            priceBox: priceBoxFinal ?? null,
+            material: d.material ?? null,
+            gender: d.gender ?? null,
+            season: d.season ?? null,
+            description: d.description ?? null,
+            images: {
+              create: processedImages.map(img => ({
+                url: img.url,
+                key: img.key,
+                alt: (img as any).alt ?? null,
+                sort: img.sort ?? 0,
+                isPrimary: Boolean(img.isPrimary),
+                color: img.color ?? null,
+                width: (img as any).width ?? null,
+                height: (img as any).height ?? null,
+              })),
             },
-          });
+            sizes: {
+              create:
+                d.sizes && Array.isArray(d.sizes)
+                  ? d.sizes.map((size: any) => ({
+                      size: size.size || size.name || 'Unknown',
+                      perBox: size.count || size.perBox || null,
+                      stock: size.stock || null,
+                      sku: size.sku || null,
+                    }))
+                  : [],
+            },
+          };
+          if (d.categoryId) baseData.categoryId = d.categoryId;
+          const created = await tx.product.create({ data: baseData });
 
-          // Update draft status to 'processed'
+          // Update draft: mark processed and hide from active lists
           await tx.waDraftProduct.update({
             where: { id: d.id },
-            data: { status: 'processed' },
+            data: { status: 'processed', isDeleted: true },
           });
 
           return created;

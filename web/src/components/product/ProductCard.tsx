@@ -130,13 +130,8 @@ export default function ProductCard({
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
                 <Text className="text-foreground text-xl font-bold">
-                  {rub(computedBoxPrice ?? 0)}
+                  {rub(computedPairPrice ?? 0)}
                 </Text>
-                {computedPairPrice != null && (
-                  <Text className="text-muted-foreground text-xs">
-                    {rub(computedPairPrice)} за пару
-                  </Text>
-                )}
               </div>
 
               {/* Add to Cart / In Cart */}

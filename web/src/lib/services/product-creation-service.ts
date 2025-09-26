@@ -45,6 +45,49 @@ export class ProductCreationService {
   }
 
   /**
+   * Map AI gender response to valid Prisma enum values
+   */
+  private mapGender(
+    aiGender: string | undefined | null
+  ): 'MALE' | 'FEMALE' | 'UNISEX' {
+    if (!aiGender) return 'UNISEX';
+    const gender = aiGender.toUpperCase();
+
+    // Handle common English variants
+    if (
+      gender === 'MALE' ||
+      gender.includes('MEN') ||
+      gender.includes('MAN') ||
+      gender === 'M'
+    ) {
+      return 'MALE';
+    }
+    if (
+      gender === 'FEMALE' ||
+      gender.includes('WOMEN') ||
+      gender.includes('WOMAN') ||
+      gender === 'F'
+    ) {
+      return 'FEMALE';
+    }
+
+    // Handle Russian variants
+    if (gender.includes('МУЖ')) {
+      return 'MALE';
+    }
+    if (gender.includes('ЖЕН')) {
+      return 'FEMALE';
+    }
+    if (gender.includes('ЮНИСЕКС') || gender.includes('UNISEX')) {
+      return 'UNISEX';
+    }
+
+    // Default
+    console.log(`   ⚠️  Unknown gender "${aiGender}", defaulting to UNISEX`);
+    return 'UNISEX';
+  }
+
+  /**
    * Get or create provider for phone number
    */
   private async getOrCreateProvider(
@@ -147,7 +190,7 @@ export class ProductCreationService {
           name: analysis.name,
           pricePair: analysis.price,
           currency: analysis.currency,
-          gender: analysis.gender,
+          gender: this.mapGender(analysis.gender),
           season: this.mapSeason(analysis.season),
           description: analysis.description,
           material: analysis.material,

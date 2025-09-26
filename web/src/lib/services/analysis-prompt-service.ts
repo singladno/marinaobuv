@@ -10,6 +10,10 @@ export class AnalysisPromptService {
           Extract product details including name, price, gender, season, sizes, colors, category, and description.
           
           CRITICAL REQUIREMENTS:
+          - STRICT ENUMS:
+            - gender MUST be EXACTLY one of: "MALE", "FEMALE", "UNISEX" (uppercase only)
+            - season MUST be EXACTLY one of: "SPRING", "SUMMER", "AUTUMN", "WINTER" (uppercase only)
+            - If gender is unclear → use "UNISEX". If season unclear → use "AUTUMN".
           - ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
           - ALWAYS calculate packPairs from sizes (sum of all count values)
           - ALWAYS provide a proper product name in RUSSIAN based on images and text
@@ -69,8 +73,8 @@ export class AnalysisPromptService {
             "name": "Название продукта на русском",
             "price": 100,
             "currency": "RUB",
-            "gender": "UNISEX",
-            "season": "AUTUMN",
+            "gender": "UNISEX",  // one of: MALE | FEMALE | UNISEX
+            "season": "AUTUMN",   // one of: SPRING | SUMMER | AUTUMN | WINTER
             "sizes": [{"size": "36", "count": 1}, {"size": "37", "count": 1}],
             "colors": ["черный", "коричневый"],
             "description": "Подробное описание продукта на русском языке",
@@ -94,6 +98,10 @@ export class AnalysisPromptService {
             Extract product details including name, price, gender, season, sizes, colors, category, and description.
             
             CRITICAL REQUIREMENTS:
+            - STRICT ENUMS:
+              - gender MUST be EXACTLY one of: "MALE", "FEMALE", "UNISEX" (uppercase only)
+              - season MUST be EXACTLY one of: "SPRING", "SUMMER", "AUTUMN", "WINTER" (uppercase only)
+              - If gender is unclear → use "UNISEX". If season unclear → use "AUTUMN".
             - ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
             - ALWAYS calculate packPairs from sizes (sum of all count values)
             - ALWAYS provide a proper product name in RUSSIAN based on text
@@ -153,8 +161,8 @@ export class AnalysisPromptService {
               "name": "Название продукта на русском",
               "price": 100,
               "currency": "RUB",
-              "gender": "UNISEX",
-              "season": "AUTUMN",
+              "gender": "UNISEX",  // one of: MALE | FEMALE | UNISEX
+              "season": "AUTUMN",   // one of: SPRING | SUMMER | AUTUMN | WINTER
               "sizes": [{"size": "36", "count": 1}, {"size": "37", "count": 1}],
               "colors": ["черный", "коричневый"],
               "description": "Подробное описание продукта на русском языке",
