@@ -6,8 +6,6 @@ export interface Product {
   categoryId: string;
   pricePair: number; // in rubles
   currency: string;
-  packPairs: number | null;
-  priceBox: number | null; // in rubles
   material: string | null;
   gender: 'FEMALE' | 'MALE' | 'UNISEX' | null;
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
@@ -45,8 +43,6 @@ export interface ProductUpdateData {
   categoryId?: string;
   pricePair?: number; // in rubles
   currency?: string;
-  packPairs?: number | null;
-  priceBox?: number | null; // in rubles
   material?: string | null;
   gender?: 'FEMALE' | 'MALE' | 'UNISEX' | null;
   season?: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;

@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { SidebarToggle } from './SidebarToggle';
+
 type AdminSidebarProps = {
   isCollapsed: boolean;
   setIsCollapsed: (v: boolean | ((v: boolean) => boolean)) => void;
@@ -27,49 +29,59 @@ export default function AdminSidebar({
         />
       )}
       <aside
-        className={`flex h-full flex-col overflow-y-auto bg-white px-4 py-8 transition-all duration-200 ease-in-out dark:bg-gray-900 ${
+        className={`flex h-full flex-col overflow-y-auto bg-white px-4 py-8 transition-all duration-300 ease-in-out dark:bg-gray-900 ${
           isCollapsed ? 'w-16' : 'w-64'
         } fixed inset-y-0 left-0 z-50 -translate-x-full md:static md:translate-x-0`}
         data-state={isMobileOpen ? 'open' : 'closed'}
       >
         <div
-          className={`h-full w-full transform transition-transform duration-200 ease-in-out ${
+          className={`h-full w-full transform transition-transform duration-300 ease-in-out ${
             isMobileOpen
               ? 'translate-x-0'
               : '-translate-x-full md:translate-x-0'
           }`}
         >
-          {/* Logo */}
-          <Link href="/admin" className="flex items-center">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white sm:h-7 sm:w-7">
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+          {/* Header with Logo and Toggle */}
+          <div className="flex items-center justify-between">
+            <Link href="/admin" className="flex items-center">
+              <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white sm:h-7 sm:w-7">
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              {!isCollapsed && (
+                <span className="ml-2 text-lg font-semibold text-gray-800 dark:text-white">
+                  Администратор
+                </span>
+              )}
+            </Link>
+
+            {/* Desktop Toggle Button */}
+            <div className="hidden md:block">
+              <SidebarToggle
+                isCollapsed={isCollapsed}
+                onToggle={() => setIsCollapsed(!isCollapsed)}
+              />
             </div>
-            {!isCollapsed && (
-              <span className="ml-2 text-lg font-semibold text-gray-800 dark:text-white">
-                Администратор
-              </span>
-            )}
-          </Link>
+          </div>
 
           {/* Navigation */}
           <div className="mt-6 flex flex-1 flex-col justify-between">
@@ -139,6 +151,28 @@ export default function AdminSidebar({
                 }
                 collapsed={isCollapsed}
               />
+
+              <AdminSidebarLink
+                href="/admin/orders"
+                label="Заказы"
+                icon={
+                  <svg
+                    className="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                }
+                collapsed={isCollapsed}
+              />
             </nav>
           </div>
         </div>
@@ -164,14 +198,18 @@ function AdminSidebarLink({
   return (
     <Link
       href={href}
-      className={`mt-5 flex transform items-center rounded-md px-4 py-2 text-gray-600 transition-colors duration-300 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 ${
+      className={`mt-5 flex transform items-center rounded-md px-4 py-2 text-gray-600 transition-all duration-300 hover:scale-105 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 ${
         isActive
           ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200'
           : ''
       }`}
     >
-      {icon}
-      {!collapsed && <span className="mx-4 font-medium">{label}</span>}
+      <div className="flex items-center justify-center">{icon}</div>
+      {!collapsed && (
+        <span className="mx-4 font-medium transition-opacity duration-300">
+          {label}
+        </span>
+      )}
       {collapsed && <span className="sr-only">{label}</span>}
     </Link>
   );

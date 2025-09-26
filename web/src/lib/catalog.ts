@@ -70,8 +70,6 @@ export type ProductCardDTO = {
   slug: string;
   name: string;
   pricePair: number;
-  packPairs: number | null;
-  priceBox: number | null;
   currency: string;
   primaryImageUrl: string | null;
 };
@@ -132,8 +130,6 @@ export async function listProductsByCategoryPath(opts: {
         slug: true,
         name: true,
         pricePair: true,
-        packPairs: true,
-        priceBox: true,
         currency: true,
         images: {
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
@@ -150,8 +146,6 @@ export async function listProductsByCategoryPath(opts: {
     slug: p.slug,
     name: p.name,
     pricePair: p.pricePair,
-    packPairs: (p as any).packPairs ?? null,
-    priceBox: (p as any).priceBox ?? null,
     currency: p.currency,
     primaryImageUrl: p.images[0]?.url ?? null,
   }));

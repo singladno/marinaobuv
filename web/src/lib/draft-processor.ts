@@ -55,8 +55,7 @@ export function convertToProductData(productDraft: any): DraftProductData {
     name: productDraft.name || null,
     pricePair: pricePair,
     currency: 'RUB',
-    packPairs: packPairs,
-    priceBox: priceBox,
+
     material: productDraft.material || null,
     gender: productDraft.gender
       ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')

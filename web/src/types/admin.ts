@@ -18,8 +18,6 @@ export type Draft = {
   } | null;
   pricePair: number | null; // rubles
   currency: string;
-  packPairs: number | null;
-  priceBox: number | null; // rubles
   material: string | null;
   gender: string | null;
   season: string | null;

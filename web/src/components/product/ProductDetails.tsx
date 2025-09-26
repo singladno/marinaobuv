@@ -39,8 +39,7 @@ type Props = {
   material?: string | null;
   gender?: keyof typeof genderRu | null;
   season?: keyof typeof seasonRu | null;
-  packPairs?: number | null;
-  priceBox?: number | null;
+  // removed from DB; compute from sizes
   availabilityCheckedAt?: Date | string | null;
   sizes: Size[];
 };
@@ -55,8 +54,6 @@ export default function ProductDetails(props: Props) {
     material,
     gender,
     season,
-    packPairs,
-    priceBox,
     sizes,
   } = props;
 
@@ -69,18 +66,19 @@ export default function ProductDetails(props: Props) {
 
   // Check if product is in cart
   const inCart = useMemo(() => items.some(i => i.slug === slug), [items, slug]);
+  const packPairs = useMemo(() => {
+    if (!Array.isArray(sizes)) return null;
+    const total = sizes.reduce((sum, s) => sum + Number(s.stock ?? 0), 0);
+    return total > 0 ? total : null;
+  }, [sizes]);
   const pairPrice = useMemo(() => {
-    if (pricePair != null) return Number(pricePair);
-    if (priceBox != null && packPairs != null && packPairs > 0)
-      return Math.round(Number(priceBox) / Number(packPairs));
-    return null;
-  }, [pricePair, packPairs, priceBox]);
+    return pricePair != null ? Number(pricePair) : null;
+  }, [pricePair]);
   const boxPrice = useMemo(() => {
-    if (priceBox != null) return Number(priceBox);
-    if (pricePair != null && packPairs != null && packPairs > 0)
-      return Math.round(Number(pricePair) * Number(packPairs));
+    if (pairPrice != null && packPairs != null && packPairs > 0)
+      return Math.round(Number(pairPrice) * Number(packPairs));
     return null;
-  }, [priceBox, pricePair, packPairs]);
+  }, [pairPrice, packPairs]);
   const isWishlisted = isFavorite(slug);
 
   // Initialize size selection

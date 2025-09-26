@@ -1,0 +1,79 @@
+import { useCallback, useEffect, useState } from 'react';
+
+export type AdminOrderItem = {
+  id: string;
+  productId: string;
+  slug: string;
+  name: string;
+  article: string | null;
+  priceBox: number;
+  qty: number;
+};
+
+export type AdminOrder = {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  status: string;
+  phone: string;
+  fullName: string | null;
+  transportName: string | null;
+  subtotal: number;
+  total: number;
+  label: string | null;
+  payment: number;
+  gruzchikId: string | null;
+  gruzchik?: { id: string; name: string | null } | null;
+  user?: { id: string; name: string | null; phone: string | null } | null;
+  items: AdminOrderItem[];
+};
+
+export type Gruzchik = {
+  id: string;
+  name: string | null;
+  phone: string | null;
+};
+
+export function useOrders() {
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [gruzchiks, setGruzchiks] = useState<Gruzchik[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/orders', { cache: 'no-store' });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Failed to load orders');
+      setOrders(j.orders || []);
+      setGruzchiks(j.gruzchiks || []);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const update = useCallback(
+    async (id: string, data: Partial<AdminOrder>) => {
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, ...data }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Update failed');
+      await load();
+      return j.order as AdminOrder;
+    },
+    [load]
+  );
+
+  return { orders, gruzchiks, loading, error, reload: load, update };
+}

@@ -76,30 +76,20 @@ export async function POST(req: NextRequest) {
           slug = `${baseSlug}-${i}`;
         }
 
-        // Normalize prices: ensure pricePair and priceBox are correctly populated
+        // Compute derived values from sizes array
         const draftPricePair = d.pricePair != null ? Number(d.pricePair) : null;
-        const draftPriceBox = d.priceBox != null ? Number(d.priceBox) : null;
-        const pairsPerBox = d.packPairs != null ? Number(d.packPairs) : null;
+        const pairsPerBox = Array.isArray(d.sizes)
+          ? (
+              d.sizes as Array<{ size: string; count?: number; stock?: number }>
+            ).reduce((sum, s) => sum + Number(s?.count ?? s?.stock ?? 0), 0) ||
+            null
+          : null;
 
         let pricePairFinal: number | null = draftPricePair;
-        let priceBoxFinal: number | null = draftPriceBox;
-
-        if (
-          pricePairFinal == null &&
-          priceBoxFinal != null &&
-          pairsPerBox &&
-          pairsPerBox > 0
-        ) {
-          pricePairFinal = Math.round(priceBoxFinal / pairsPerBox);
-        }
-        if (
-          priceBoxFinal == null &&
-          pricePairFinal != null &&
-          pairsPerBox &&
-          pairsPerBox > 0
-        ) {
-          priceBoxFinal = pricePairFinal * pairsPerBox;
-        }
+        const priceBoxFinal: number | null =
+          pricePairFinal != null && pairsPerBox && pairsPerBox > 0
+            ? pricePairFinal * pairsPerBox
+            : null;
 
         // Create Product record and update draft status
         const product = await prisma.$transaction(async tx => {
@@ -108,8 +98,6 @@ export async function POST(req: NextRequest) {
             name: d.name || 'Без названия',
             pricePair: pricePairFinal ?? 0,
             currency: d.currency ?? 'RUB',
-            packPairs: d.packPairs ?? null,
-            priceBox: priceBoxFinal ?? null,
             material: d.material ?? null,
             gender: d.gender ?? null,
             season: d.season ?? null,

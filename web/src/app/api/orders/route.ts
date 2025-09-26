@@ -8,15 +8,11 @@ interface CreateOrderItem {
   qty: number;
 }
 
-function getBoxPrice(p: {
-  priceBox: any;
-  pricePair: any;
-  packPairs: any;
-}): number {
-  if (p.priceBox && Number(p.priceBox) > 0) {
-    return Number(p.priceBox);
-  }
-  return Number(p.pricePair);
+function getBoxPriceFromPair(pricePair: any, sizes: any[]): number {
+  const pairs = Array.isArray(sizes)
+    ? sizes.reduce((sum, s) => sum + Number(s?.stock ?? 0), 0)
+    : 0;
+  return Number(pricePair) * (pairs > 0 ? pairs : 1);
 }
 
 export async function GET(req: NextRequest) {
@@ -94,6 +90,7 @@ export async function POST(req: NextRequest) {
     const slugs = items.map(i => i.slug).filter(Boolean);
     const products = await prisma.product.findMany({
       where: { slug: { in: slugs } },
+      include: { sizes: true },
     });
 
     if (products.length === 0)
@@ -107,11 +104,7 @@ export async function POST(req: NextRequest) {
       .map(i => {
         const p = products.find(pp => pp.slug === i.slug);
         if (!p) return null;
-        const priceBox = getBoxPrice({
-          priceBox: p.priceBox,
-          pricePair: p.pricePair,
-          packPairs: p.packPairs,
-        });
+        const priceBox = getBoxPriceFromPair(p.pricePair, p.sizes as any[]);
         return {
           productId: p.id,
           slug: p.slug,

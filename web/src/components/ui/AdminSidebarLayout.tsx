@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 import AdminSidebar from './AdminSidebar';
+import { SidebarToggle } from './SidebarToggle';
+import { useSidebarToggle } from '@/hooks/useSidebarToggle';
 
 type AdminSidebarLayoutProps = {
   children: React.ReactNode;
@@ -11,55 +11,57 @@ type AdminSidebarLayoutProps = {
 export default function AdminSidebarLayout({
   children,
 }: AdminSidebarLayoutProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('adminSidebarCollapsed');
-      if (saved) setIsCollapsed(saved === '1');
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('adminSidebarCollapsed', isCollapsed ? '1' : '0');
-    } catch {}
-  }, [isCollapsed]);
+  const {
+    isCollapsed,
+    isMobileOpen,
+    toggleCollapse,
+    toggleMobile,
+    closeMobile,
+    setCollapsed,
+  } = useSidebarToggle();
 
   return (
     <>
       {/* Sidebar - Left column */}
       <AdminSidebar
         isCollapsed={isCollapsed}
-        setIsCollapsed={setIsCollapsed}
+        setIsCollapsed={setCollapsed}
         isMobileOpen={isMobileOpen}
-        setIsMobileOpen={setIsMobileOpen}
+        setIsMobileOpen={closeMobile}
       />
 
       {/* Main content area - Right column */}
-      <div className="flex flex-1 flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
+      <div
+        className={`flex flex-1 flex-col overflow-hidden bg-gray-50 transition-all duration-300 ease-in-out dark:bg-gray-900 ${
+          isCollapsed ? 'md:ml-0' : 'md:ml-0'
+        }`}
+      >
         {/* Mobile header */}
-        <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 md:hidden dark:border-gray-700 dark:bg-gray-900">
-          <button
-            type="button"
-            aria-label="Open sidebar"
-            onClick={() => setIsMobileOpen(true)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:hover:bg-gray-800"
-          >
-            <span className="sr-only">Open sidebar</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="h-5 w-5"
+        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Open sidebar"
+              onClick={toggleMobile}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:hover:bg-gray-800"
             >
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Меню
-          </span>
+              <span className="sr-only">Open sidebar</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-5 w-5"
+              >
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Меню
+            </span>
+          </div>
+
+          {/* Mobile Toggle Button */}
+          <SidebarToggle isCollapsed={isCollapsed} onToggle={toggleCollapse} />
         </div>
 
         {/* Main content - No scroll here */}

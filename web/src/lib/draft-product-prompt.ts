@@ -125,8 +125,7 @@ export const DRAFT_PRODUCT_PROMPT = `Ты - эксперт по анализу �
 export interface DraftProductData {
   pricePair: number | null;
   currency: string | null;
-  packPairs: number | null;
-  priceBox: number | null;
+
   description: string | null;
   sizes: Array<{ size: string; stock: number }> | null;
 }

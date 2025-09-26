@@ -26,8 +26,7 @@ interface Product {
   name: string;
   article: string | null;
   pricePair: number;
-  priceBox: number | null;
-  packPairs?: number | null;
+  // priceBox and packPairs removed from DB; compute from sizes when needed
   images: Array<{ url: string; alt?: string }>;
   category: {
     name: string;
@@ -307,8 +306,7 @@ export default function BasketPage() {
   };
 
   const getBoxPrice = (p: Product): number => {
-    if (p.priceBox != null) return Number(p.priceBox);
-    // Only use box price, no fallback to pair price
+    // Box price now derived on FE if needed elsewhere
     return 0;
   };
 

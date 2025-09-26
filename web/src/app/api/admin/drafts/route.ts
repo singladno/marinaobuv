@@ -45,8 +45,6 @@ export async function GET(req: NextRequest) {
           },
           pricePair: true,
           currency: true,
-          packPairs: true,
-          priceBox: true,
           material: true,
           gender: true,
           season: true,

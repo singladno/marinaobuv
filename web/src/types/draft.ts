@@ -32,16 +32,7 @@ export const ProductDraftSchema = z.object({
     .nullable()
     .optional()
     .transform(val => (val === null ? undefined : val)),
-  packPairs: z.coerce
-    .number()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
-  priceBox: z.coerce
-    .number()
-    .nullable()
-    .optional()
-    .transform(val => (val === null ? undefined : val)),
+  // packPairs and priceBox are derived from sizes on FE
   material: z
     .string()
     .nullable()

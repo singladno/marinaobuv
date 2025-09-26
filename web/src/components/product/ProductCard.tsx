@@ -15,8 +15,7 @@ type Props = {
   slug: string;
   name: string;
   pricePair: number;
-  packPairs?: number | null;
-  priceBox?: number | null;
+  // removed from DB; compute from sizes
   currency: string;
   imageUrl: string | null;
   category?: string;
@@ -28,8 +27,7 @@ export default function ProductCard({
   slug,
   name,
   pricePair,
-  packPairs = null,
-  priceBox = null,
+  // removed
   imageUrl,
   category,
   showCategory = false,
@@ -54,18 +52,8 @@ export default function ProductCard({
     return imageUrl || null;
   }, [selectedColor, colorOptions, imageUrl]);
   const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
-  const computedBoxPrice = useMemo(() => {
-    if (priceBox != null) return priceBox;
-    if (pricePair != null && packPairs != null && packPairs > 0)
-      return pricePair * packPairs;
-    return null;
-  }, [priceBox, pricePair, packPairs]);
-  const computedPairPrice = useMemo(() => {
-    if (pricePair != null) return pricePair;
-    if (priceBox != null && packPairs != null && packPairs > 0)
-      return Math.round(priceBox / packPairs);
-    return null;
-  }, [pricePair, priceBox, packPairs]);
+  const computedBoxPrice = useMemo(() => null, []);
+  const computedPairPrice = useMemo(() => pricePair ?? null, [pricePair]);
 
   return (
     <div className="bg-surface group relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">

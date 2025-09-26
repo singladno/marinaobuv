@@ -33,8 +33,6 @@ model Product {
   categoryId            String
   pricePair             Decimal
   currency              String         @default("RUB")
-  packPairs             Int?
-  priceBox              Decimal?
   material              String?
   gender                Gender?
   season                Season?
@@ -108,8 +106,6 @@ model WaDraftProduct {
   article          String?
   pricePair        Decimal?
   currency         String                @default("RUB")
-  packPairs        Int?
-  priceBox         Decimal?
   material         String?
   gender           Gender?
   season           Season?
@@ -215,6 +211,7 @@ model User {
   reviews      Review[]
   provider     Provider? @relation(fields: [providerId], references: [id])
   orders       Order[]
+  gruzchikOrders Order[] @relation("OrderGruzchik")
 
   @@index([role])
   @@index([providerId])
@@ -247,6 +244,7 @@ model Order {
   id                 String      @id @default(cuid())
   orderNumber        String      @unique
   userId             String?
+  gruzchikId         String?
   fullName           String?
   phone              String
   email              String?
@@ -256,15 +254,19 @@ model Order {
   subtotal           Decimal     @default(0)
   total              Decimal     @default(0)
   status             String      @default("new")
+  label              String?
+  payment            Decimal     @default(0)
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   user               User?       @relation(fields: [userId], references: [id])
+  gruzchik           User?       @relation("OrderGruzchik", fields: [gruzchikId], references: [id])
   items              OrderItem[]
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
   @@index([orderNumber])
+  @@index([gruzchikId])
 }
 
 model OrderItem {
