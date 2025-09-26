@@ -131,9 +131,9 @@ export async function POST(req: NextRequest) {
                 d.sizes && Array.isArray(d.sizes)
                   ? d.sizes.map((size: any) => ({
                       size: size.size || size.name || 'Unknown',
-                      perBox: size.count || size.perBox || null,
-                      stock: size.stock || null,
-                      sku: size.sku || null,
+                      perBox: size.perBox || null, // perBox should be how many pairs fit in a box, not stock count
+                      stock: size.count || size.stock || null, // stock count for this size
+                      sku: null, // SKU not used in this system
                     }))
                   : [],
             },

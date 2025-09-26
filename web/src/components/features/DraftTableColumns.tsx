@@ -166,6 +166,15 @@ export function createDraftTableColumns(
     })
   );
 
+  // Add source column
+  columns.push(
+    columnHelper.display({
+      id: 'source',
+      header: () => 'Источник',
+      cell: info => <MemoizedSourceCell source={info.row.original.source} />,
+    })
+  );
+
   // Add price columns
   columns.push(
     columnHelper.display({
@@ -176,7 +185,7 @@ export function createDraftTableColumns(
           value={info.row.original.pricePair}
           onBlur={value => onPatch(info.row.original.id, { pricePair: value })}
           placeholder="Введите цену"
-          aria-label="Цена за пару"
+          aria-label="Цена"
           disabled={(info as any).isProcessing}
         />
       ),

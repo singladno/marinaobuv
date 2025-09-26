@@ -82,6 +82,12 @@ export function createColumnConfigs(
     },
     { id: 'source', label: 'Источник', visible: true, required: true },
     {
+      id: 'sourceOptimistic',
+      label: 'Источник (Оптимистичный)',
+      visible: true,
+      required: true,
+    },
+    {
       id: 'gptRequest',
       label: 'GPT Запрос',
       visible: columnVisibility.gptRequest ?? false,

@@ -7,7 +7,6 @@ import {
   processDraftImagesForApprovalById,
   updateDraftImagesWithS3Urls,
 } from '@/lib/draft-approval-image-processor';
-import { broadcastApprovalEvent } from '@/app/api/approval-events/route';
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,33 +59,6 @@ export async function POST(req: NextRequest) {
           );
         });
 
-        // Wait a moment for SSE connections to be established
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Emit approval start event
-        const activeImages = d.images.filter(img => img.isActive);
-        broadcastApprovalEvent(d.id, {
-          type: 'approval_start',
-          draftId: d.id,
-          totalImages: activeImages.length,
-          timestamp: Date.now(),
-        });
-
-        // If no active images, send a progress event immediately
-        if (activeImages.length === 0) {
-          console.log(`📡 No active images, sending immediate progress event`);
-          broadcastApprovalEvent(d.id, {
-            type: 'approval_progress',
-            draftId: d.id,
-            currentImage: 0,
-            totalImages: 0,
-            status: 'uploaded',
-            timestamp: Date.now(),
-          });
-          // Add a small delay to make the progress visible
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
         // Process and upload images to S3 before approval
         console.log(`\n📸 Processing images for draft ${d.id}...`);
         const processedImages = await processDraftImagesForApprovalById(d.id);
@@ -108,20 +80,6 @@ export async function POST(req: NextRequest) {
           });
         } else {
           console.log(`⚠️  No images were processed for draft ${d.id}`);
-
-          // Send progress event even if no images were processed
-          const activeImages = d.images.filter(img => img.isActive);
-          if (activeImages.length === 0) {
-            console.log(`📡 No active images, sending progress event`);
-            broadcastApprovalEvent(d.id, {
-              type: 'approval_progress',
-              draftId: d.id,
-              currentImage: 0,
-              totalImages: 0,
-              status: 'uploaded',
-              timestamp: Date.now(),
-            });
-          }
         }
 
         // Update the draft status to 'approved' after S3 upload
@@ -136,31 +94,9 @@ export async function POST(req: NextRequest) {
 
         console.log(`🎉 Draft ${d.id} successfully approved!`);
 
-        // Emit approval complete event
-        broadcastApprovalEvent(d.id, {
-          type: 'approval_complete',
-          draftId: d.id,
-          success: true,
-          totalProcessed: processedImages.length,
-          totalFailed: 0,
-          newS3Urls: processedImages.map(img => img.url),
-          timestamp: Date.now(),
-        });
-
         results.push({ draftId: d.id });
       } catch (err: unknown) {
         console.error(`❌ Error processing draft ${d.id}:`, err);
-
-        // Emit approval complete event - failed
-        broadcastApprovalEvent(d.id, {
-          type: 'approval_complete',
-          draftId: d.id,
-          success: false,
-          totalProcessed: 0,
-          totalFailed: 1,
-          newS3Urls: [],
-          timestamp: Date.now(),
-        });
 
         results.push({
           draftId: d.id,

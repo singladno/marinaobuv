@@ -2,7 +2,6 @@ import * as React from 'react';
 
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import { Tabs, Tab } from '@/components/ui/Tabs';
-import { useApprovalEventsConnection } from '@/hooks/useApprovalEventsConnection';
 import { useDraftsTable } from '@/hooks/useDraftsTable';
 import type { Draft } from '@/types/admin';
 import { createColumnConfigs } from '@/utils/columnConfigs';
@@ -61,8 +60,6 @@ export function DraftsTable({
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
   const draftIds = React.useMemo(() => data.map(draft => draft.id), [data]);
-  const { isConnected, rowEvents, setRowEvents } =
-    useApprovalEventsConnection(draftIds);
 
   const {
     table,
@@ -91,17 +88,6 @@ export function DraftsTable({
 
   const columnConfigs = createColumnConfigs(columnVisibility, status);
   const hasData = !loading && !error && table.getRowModel().rows.length > 0;
-
-  React.useEffect(() => {
-    if (!isConnected || rowEvents.length === 0) return;
-    // Apply incoming patches to visible rows via optimistic handler
-    rowEvents.forEach(evt => {
-      if (!draftIds.includes(evt.id)) return;
-      applyLocalPatch(evt.id, evt.patch);
-    });
-    // Clear queue
-    setRowEvents([]);
-  }, [isConnected, rowEvents, draftIds, setRowEvents, table, applyLocalPatch]);
 
   return (
     <div className="flex h-full flex-col rounded-lg bg-gray-50 dark:bg-gray-800">

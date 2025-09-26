@@ -129,7 +129,6 @@ export default function ProductDetails(props: Props) {
         <div className="space-y-1">
           <div className="flex items-baseline gap-3">
             <div className="text-4xl font-bold">{rub(pairPrice ?? 0)}</div>
-            <span className="text-muted-foreground text-sm">за пару</span>
           </div>
           {boxPrice != null && (
             <div className="text-muted-foreground text-sm">

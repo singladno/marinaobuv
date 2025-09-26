@@ -9,7 +9,7 @@ import {
   calculateBoxPrice,
 } from '@/utils/sizeCalculations';
 
-import { ApprovalSelectionCellWithEvents } from './ApprovalSelectionCellWithEvents';
+import { ApprovalSelectionCell } from './ApprovalSelectionCell';
 import { CategoryCell } from './CategoryCell';
 import { GenderSelectCell } from './GenderSelectCell';
 import { GptRequestCell } from './GptRequestCell';
@@ -28,6 +28,7 @@ const columnHelper = createColumnHelper<DraftWithSelected>();
 
 // Memoized cell components to prevent re-renders
 const MemoizedOptimisticEditableCell = React.memo(OptimisticEditableCell);
+const MemoizedSourceCell = React.memo(SourceCell);
 const MemoizedOptimisticSizesCell = React.memo(OptimisticSizesCell);
 const MemoizedCategoryCell = React.memo(CategoryCell);
 const MemoizedProviderCell = React.memo(ProviderCell);
@@ -117,10 +118,11 @@ export function createOptimisticDraftTableColumns(
         }
 
         return (
-          <ApprovalSelectionCellWithEvents
+          <ApprovalSelectionCell
             id={row.original.id}
             selected={row.getIsSelected()}
             onToggle={onToggle || (() => {})}
+            approvalState={null} // No longer using approval events
           />
         );
       },
@@ -194,6 +196,15 @@ export function createOptimisticDraftTableColumns(
     })
   );
 
+  // Add source column
+  columns.push(
+    columnHelper.display({
+      id: 'sourceOptimistic',
+      header: () => 'Источник',
+      cell: info => <MemoizedSourceCell source={info.row.original.source} />,
+    })
+  );
+
   // Add price columns
   columns.push(
     columnHelper.display({
@@ -204,7 +215,7 @@ export function createOptimisticDraftTableColumns(
           value={info.row.original.pricePair}
           onSave={value => onPatch(info.row.original.id, { pricePair: value })}
           placeholder="Введите цену"
-          aria-label="Цена за пару"
+          aria-label="Цена"
           type="price"
           disabled={isRowDisabled(info.row.original.id)}
         />

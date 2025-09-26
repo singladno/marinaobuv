@@ -3,7 +3,6 @@
 import * as React from 'react';
 import type { Draft } from '@/types/admin';
 import { Loader } from '@/components/ui/Loader';
-import { useApprovalEvents } from '@/contexts/ApprovalEventsContext';
 
 interface DraftBulkOperationsProps {
   selectedIds: string[];
@@ -35,17 +34,13 @@ export function DraftBulkOperations({
   currentProcessingDraft,
 }: DraftBulkOperationsProps) {
   const selectedCount = selectedIds.length;
-  const { isAnyDraftApproving, getApprovingDrafts, getApprovalState } =
-    useApprovalEvents();
   // Check if any selected drafts are currently being approved
-  const isApproving = isAnyDraftApproving(selectedIds);
-  const approvingDrafts = getApprovingDrafts(selectedIds);
+  const isApproving = false; // No longer using approval events
+  const approvingDrafts: Draft[] = [];
 
   // Get detailed approval state for the first approving draft
   const firstApprovingDraft = approvingDrafts[0];
-  const approvalState = firstApprovingDraft
-    ? getApprovalState(firstApprovingDraft)
-    : null;
+  const approvalState = null; // No longer using approval events
 
   return (
     <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">

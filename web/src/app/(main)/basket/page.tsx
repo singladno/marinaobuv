@@ -308,9 +308,8 @@ export default function BasketPage() {
 
   const getBoxPrice = (p: Product): number => {
     if (p.priceBox != null) return Number(p.priceBox);
-    if (p.pricePair != null && p.packPairs != null && p.packPairs > 0)
-      return Math.round(Number(p.pricePair) * Number(p.packPairs));
-    return Number(p.pricePair);
+    // Only use box price, no fallback to pair price
+    return 0;
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
@@ -432,7 +431,7 @@ export default function BasketPage() {
                     </div>
 
                     <div className="text-right">
-                      <div className="mb-2 flex items-center gap-2">
+                      <div className="mb-2 flex flex-col items-end gap-1">
                         <span className="text-lg font-semibold text-purple-600">
                           {getBoxPrice(item.product) * item.qty} ₽
                         </span>
@@ -761,7 +760,7 @@ export default function BasketPage() {
             <div className="rounded-lg bg-white p-6">
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span>Товары, {totalItems} шт.</span>
+                  <span>Товары, {totalItems} кор.</span>
                   <span>{subtotal} ₽</span>
                 </div>
                 <hr className="my-3" />

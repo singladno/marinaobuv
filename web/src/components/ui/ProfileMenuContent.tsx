@@ -17,6 +17,22 @@ export default function ProfileMenuContent({
   onLogout,
   loading,
 }: ProfileMenuContentProps) {
+  // If user is not logged in, only show the login button
+  if (!user) {
+    return (
+      <div className="w-full rounded-2xl bg-white p-0 text-gray-900 shadow-xl">
+        <div className="p-2">
+          <Link href="/login">
+            <Button variant="ghost" className="w-full justify-start">
+              Войти
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is logged in, show full profile menu
   return (
     <div className="w-full rounded-2xl bg-white p-0 text-gray-900 shadow-xl">
       <div className="flex items-center gap-3 border-b border-gray-100 p-4">
@@ -49,22 +65,14 @@ export default function ProfileMenuContent({
       </nav>
 
       <div className="border-t border-gray-100 p-2">
-        {user ? (
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={onLogout}
-            disabled={loading}
-          >
-            {loading ? 'Выходим…' : 'Выйти'}
-          </Button>
-        ) : (
-          <Link href="/login">
-            <Button variant="ghost" className="w-full justify-start">
-              Войти
-            </Button>
-          </Link>
-        )}
+        <Button
+          variant="ghost"
+          className="w-full justify-start"
+          onClick={onLogout}
+          disabled={loading}
+        >
+          {loading ? 'Выходим…' : 'Выйти'}
+        </Button>
       </div>
     </div>
   );

@@ -41,6 +41,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const key = getCartKey(userId);
       const raw =
         typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+
       if (raw) {
         const parsed = JSON.parse(raw) as CartItem[];
         if (Array.isArray(parsed)) {
@@ -49,6 +50,57 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             .filter(i => typeof i?.slug === 'string' && i.slug.trim() !== '')
             .map(i => ({ slug: i.slug, qty: Math.max(1, Number(i.qty) || 1) }));
           setItems(sanitized);
+        }
+      } else if (userId) {
+        // If user just logged in and has no saved cart, merge with anonymous/legacy carts
+        const anonymousKey = getCartKey(null);
+        const legacyKey = 'cart_items'; // legacy storage key used previously
+
+        const readList = (storageKey: string): CartItem[] => {
+          try {
+            const rawVal =
+              typeof window !== 'undefined'
+                ? window.localStorage.getItem(storageKey)
+                : null;
+            if (!rawVal) return [];
+            const parsed = JSON.parse(rawVal) as CartItem[];
+            if (!Array.isArray(parsed)) return [];
+            return parsed
+              .filter(i => typeof i?.slug === 'string' && i.slug.trim() !== '')
+              .map(i => ({
+                slug: i.slug,
+                qty: Math.max(1, Number(i.qty) || 1),
+              }));
+          } catch {
+            return [];
+          }
+        };
+
+        const anonymousList = readList(anonymousKey);
+        const legacyList = readList(legacyKey);
+        const merged = [...anonymousList, ...legacyList];
+
+        if (merged.length > 0) {
+          // Deduplicate by slug and sum quantities
+          const slugToQty = new Map<string, number>();
+          for (const item of merged) {
+            slugToQty.set(
+              item.slug,
+              (slugToQty.get(item.slug) || 0) + item.qty
+            );
+          }
+          const result: CartItem[] = Array.from(slugToQty.entries()).map(
+            ([slug, qty]) => ({ slug, qty })
+          );
+          setItems(result);
+
+          // Clear old storages after merging
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem(anonymousKey);
+            window.localStorage.removeItem(legacyKey);
+          }
+        } else {
+          setItems([]);
         }
       } else {
         setItems([]);

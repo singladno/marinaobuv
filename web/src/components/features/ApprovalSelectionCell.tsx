@@ -14,19 +14,19 @@ interface ApprovalSelectionCellProps {
   id: string;
   selected: boolean;
   onToggle: (id: string) => void;
-  approvalState: ApprovalState;
+  approvalState: ApprovalState | null;
 }
 
 export const ApprovalSelectionCell = React.memo(
   ({ id, selected, onToggle, approvalState }: ApprovalSelectionCellProps) => {
     const handleChange = React.useCallback(() => {
-      if (!approvalState.isProcessing) {
+      if (!approvalState?.isProcessing) {
         onToggle(id);
       }
-    }, [id, onToggle, approvalState.isProcessing]);
+    }, [id, onToggle, approvalState?.isProcessing]);
 
     // If processing, show loader instead of checkbox
-    if (approvalState.isProcessing) {
+    if (approvalState?.isProcessing) {
       return (
         <div className="flex h-full items-center justify-center">
           <ApprovalLoader
