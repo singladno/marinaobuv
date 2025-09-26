@@ -62,17 +62,34 @@ export function useOrders() {
 
   const update = useCallback(
     async (id: string, data: Partial<AdminOrder>) => {
-      const res = await fetch('/api/admin/orders', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id, ...data }),
-      });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || 'Update failed');
-      await load();
-      return j.order as AdminOrder;
+      // Store original state for rollback
+      const originalOrders = [...orders];
+
+      // Apply optimistic update immediately
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === id ? { ...order, ...data } : order
+        )
+      );
+
+      try {
+        const res = await fetch('/api/admin/orders', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id, ...data }),
+        });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || 'Update failed');
+
+        // No need to reload - optimistic update already shows correct state
+        return j.order as AdminOrder;
+      } catch (error) {
+        // Rollback on error
+        setOrders(originalOrders);
+        throw error;
+      }
     },
-    [load]
+    [orders]
   );
 
   return { orders, gruzchiks, loading, error, reload: load, update };

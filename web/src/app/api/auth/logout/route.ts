@@ -3,7 +3,7 @@ import { clearSession } from '@/lib/server/session';
 
 export async function POST() {
   try {
-    clearSession();
+    await clearSession();
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unexpected error';

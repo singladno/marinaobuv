@@ -19,19 +19,19 @@ export async function createSession(payload: SessionPayload) {
     .setIssuedAt()
     .setExpirationTime('7d')
     .sign(secret);
-  cookies().set(cookieName, token, {
+  (await cookies()).set(cookieName, token, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
   });
 }
 
-export function clearSession() {
-  cookies().delete(cookieName);
+export async function clearSession() {
+  (await cookies()).delete(cookieName);
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const jar = await Promise.resolve(cookies());
+  const jar = await cookies();
   const token = jar.get(cookieName)?.value;
   if (!token) return null;
   try {

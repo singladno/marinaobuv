@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     if (!/^[0-9]{4,6}$/.test(code))
       return NextResponse.json({ error: 'Некорректный код' }, { status: 400 });
 
-    const token = cookies().get(cookieName)?.value;
+    const token = (await cookies()).get(cookieName)?.value;
     if (!token)
       return NextResponse.json({ error: 'Код не запрошен' }, { status: 400 });
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       role: user.role,
       providerId: user.providerId,
     });
-    cookies().delete(cookieName);
+    (await cookies()).delete(cookieName);
 
     return NextResponse.json({
       ok: true,

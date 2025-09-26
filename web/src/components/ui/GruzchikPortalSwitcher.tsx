@@ -12,9 +12,9 @@ type CurrentUser = {
   name?: string | null;
 } | null;
 
-export function PortalSwitcher() {
+export function GruzchikPortalSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isGruzchik, setIsGruzchik] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [user, setUser] = useState<CurrentUser>(null);
   const pathname = usePathname();
@@ -27,10 +27,10 @@ export function PortalSwitcher() {
         const json = await res.json();
         const userData = json.user ?? null;
         setUser(userData);
-        setIsAdmin(userData?.role === 'ADMIN');
+        setIsGruzchik(userData?.role === 'GRUZCHIK');
       } catch {
         setUser(null);
-        setIsAdmin(false);
+        setIsGruzchik(false);
       }
     };
 
@@ -51,8 +51,8 @@ export function PortalSwitcher() {
   // Don't render until visible to prevent flash
   if (!isVisible) return null;
 
-  // Show for admin users (both in admin portal and customer portal)
-  if (!isAdmin) return null;
+  // Show for gruzchik users (both in gruzchik portal and customer portal)
+  if (!isGruzchik) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6">
@@ -77,7 +77,7 @@ export function PortalSwitcher() {
           href="/"
           onClick={closeMenu}
           className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 shadow-lg transition-all duration-200 hover:scale-105 sm:px-4 sm:py-3 ${
-            !isAdmin
+            !isGruzchik
               ? 'bg-blue-600 text-white shadow-blue-500/25'
               : 'bg-white text-gray-700 hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
           }`}
@@ -107,19 +107,19 @@ export function PortalSwitcher() {
           </div>
         </Link>
 
-        {/* Admin Portal */}
+        {/* Gruzchik Portal */}
         <Link
-          href="/admin"
+          href="/gruzchik"
           onClick={closeMenu}
           className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 shadow-lg transition-all duration-200 hover:scale-105 sm:px-4 sm:py-3 ${
-            isAdmin
-              ? 'bg-purple-600 text-white shadow-purple-500/25'
-              : 'bg-white text-gray-700 hover:bg-purple-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
+            isGruzchik
+              ? 'bg-orange-600 text-white shadow-orange-500/25'
+              : 'bg-white text-gray-700 hover:bg-orange-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
           }`}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 group-hover:bg-purple-200 sm:h-10 sm:w-10 dark:bg-purple-900/30 dark:group-hover:bg-purple-900/50">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 group-hover:bg-orange-200 sm:h-10 sm:w-10 dark:bg-orange-900/30 dark:group-hover:bg-orange-900/50">
             <svg
-              className="h-4 w-4 text-purple-600 sm:h-5 sm:w-5 dark:text-purple-400"
+              className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5 dark:text-orange-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -128,22 +128,16 @@ export function PortalSwitcher() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
               />
             </svg>
           </div>
           <div className="text-left">
             <div className="text-sm font-semibold sm:text-base">
-              Админ панель
+              Грузчик панель
             </div>
             <div className="text-xs opacity-80 sm:text-sm">
-              Управление товарами
+              Управление заказами
             </div>
           </div>
         </Link>
@@ -153,8 +147,8 @@ export function PortalSwitcher() {
       <button
         onClick={toggleMenu}
         className={`group relative flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-offset-2 sm:h-14 sm:w-14 ${
-          isAdmin
-            ? 'bg-purple-600 text-white shadow-purple-500/25 focus:ring-purple-500'
+          isGruzchik
+            ? 'bg-orange-600 text-white shadow-orange-500/25 focus:ring-orange-500'
             : 'bg-blue-600 text-white shadow-blue-500/25 focus:ring-blue-500'
         }`}
         aria-label="Переключить портал"
@@ -203,17 +197,17 @@ export function PortalSwitcher() {
         <div
           className={`absolute inset-0 animate-ping rounded-full ${
             isOpen ? 'opacity-0' : 'opacity-20'
-          } ${isAdmin ? 'bg-purple-400' : 'bg-blue-400'}`}
+          } ${isGruzchik ? 'bg-orange-400' : 'bg-blue-400'}`}
         />
       </button>
 
       {/* Current Portal Indicator */}
       <div
         className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white shadow-lg sm:-right-2 sm:-top-2 sm:h-6 sm:w-6 ${
-          isAdmin ? 'bg-purple-500' : 'bg-blue-500'
+          isGruzchik ? 'bg-orange-500' : 'bg-blue-500'
         }`}
       >
-        {isAdmin ? 'A' : 'C'}
+        {isGruzchik ? 'Г' : 'К'}
       </div>
     </div>
   );

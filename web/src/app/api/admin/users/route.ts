@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
-import bcrypt from 'bcryptjs';
+import { normalizePhoneToE164 } from '@/lib/server/sms';
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,9 +87,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize phone number to ensure consistent format
+    const normalizedPhone = normalizePhoneToE164(phone);
+
     // Check if user with this phone already exists
     const existingUser = await prisma.user.findUnique({
-      where: { phone },
+      where: { phone: normalizedPhone },
     });
 
     if (existingUser) {
@@ -102,7 +105,7 @@ export async function POST(request: NextRequest) {
     // Create user without password (login by phone number)
     const user = await prisma.user.create({
       data: {
-        phone,
+        phone: normalizedPhone,
         name,
         role,
         providerId: providerId || null,

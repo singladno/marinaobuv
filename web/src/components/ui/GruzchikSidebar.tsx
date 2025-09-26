@@ -6,19 +6,19 @@ import { useState } from 'react';
 
 import { SidebarToggle } from './SidebarToggle';
 
-type AdminSidebarProps = {
+type GruzchikSidebarProps = {
   isCollapsed: boolean;
   setIsCollapsed: (v: boolean | ((v: boolean) => boolean)) => void;
   isMobileOpen: boolean;
   setIsMobileOpen: (v: boolean | ((v: boolean) => boolean)) => void;
 };
 
-export default function AdminSidebar({
+export default function GruzchikSidebar({
   isCollapsed,
   setIsCollapsed,
   isMobileOpen,
   setIsMobileOpen,
-}: AdminSidebarProps) {
+}: GruzchikSidebarProps) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -60,8 +60,8 @@ export default function AdminSidebar({
         >
           {/* Header with Logo and Toggle */}
           <div className="flex items-center justify-between">
-            <Link href="/admin" className="flex items-center">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
+            <Link href="/gruzchik" className="flex items-center">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-600 text-white">
                 <svg
                   className="h-5 w-5"
                   viewBox="0 0 24 24"
@@ -86,7 +86,7 @@ export default function AdminSidebar({
               </div>
               {!isCollapsed && (
                 <span className="ml-3 text-lg font-semibold text-gray-800 dark:text-white">
-                  Админ
+                  Грузчик
                 </span>
               )}
             </Link>
@@ -104,8 +104,8 @@ export default function AdminSidebar({
           {/* Navigation */}
           <div className="mt-6 flex flex-1 flex-col justify-between">
             <nav>
-              <AdminSidebarLink
-                href="/admin"
+              <GruzchikSidebarLink
+                href="/gruzchik"
                 label="Главная"
                 icon={
                   <svg
@@ -126,9 +126,9 @@ export default function AdminSidebar({
                 collapsed={isCollapsed}
               />
 
-              <AdminSidebarLink
-                href="/admin/drafts"
-                label="Черновики"
+              <GruzchikSidebarLink
+                href="/gruzchik/purchase"
+                label="Закупка"
                 icon={
                   <svg
                     className="h-5 w-5"
@@ -137,7 +137,7 @@ export default function AdminSidebar({
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
-                      d="M9 12h6M9 16h6M7 20h10a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
@@ -148,9 +148,9 @@ export default function AdminSidebar({
                 collapsed={isCollapsed}
               />
 
-              <AdminSidebarLink
-                href="/admin/products"
-                label="Товары"
+              <GruzchikSidebarLink
+                href="/gruzchik/availability"
+                label="Наличие"
                 icon={
                   <svg
                     className="h-5 w-5"
@@ -159,58 +159,7 @@ export default function AdminSidebar({
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                }
-                collapsed={isCollapsed}
-              />
-
-              <AdminSidebarLink
-                href="/admin/orders"
-                label="Заказы"
-                icon={
-                  <svg
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                }
-                collapsed={isCollapsed}
-              />
-
-              <AdminSidebarLink
-                href="/admin/users"
-                label="Пользователи"
-                icon={
-                  <svg
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
@@ -273,7 +222,7 @@ export default function AdminSidebar({
   );
 }
 
-function AdminSidebarLink({
+function GruzchikSidebarLink({
   href,
   label,
   icon,
@@ -294,7 +243,7 @@ function AdminSidebarLink({
         collapsed ? 'justify-center px-3 py-3' : 'px-4 py-3'
       } ${
         isActive
-          ? 'bg-blue-50 text-blue-700 shadow-sm dark:bg-blue-900/20 dark:text-blue-400'
+          ? 'bg-orange-50 text-orange-700 shadow-sm dark:bg-orange-900/20 dark:text-orange-400'
           : 'text-gray-600 dark:text-gray-400'
       }`}
       title={collapsed ? label : undefined}

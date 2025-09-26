@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       .setExpirationTime('10m')
       .sign(secret);
 
-    cookies().set(cookieName, token, {
+    (await cookies()).set(cookieName, token, {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',

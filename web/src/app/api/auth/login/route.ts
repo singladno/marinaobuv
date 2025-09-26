@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { verifyPassword } from '@/lib/server/password';
 import { createSession } from '@/lib/server/session';
+import { normalizePhoneToE164 } from '@/lib/server/sms';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +11,10 @@ export async function POST(req: NextRequest) {
     if (!phone || !password)
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
-    const user = await prisma.user.findUnique({ where: { phone } });
+    // Normalize phone number to handle different formats
+    const normalizedPhone = normalizePhoneToE164(phone);
+    
+    const user = await prisma.user.findUnique({ where: { phone: normalizedPhone } });
     if (!user || !verifyPassword(password, user.passwordHash)) {
       return NextResponse.json(
         { error: 'Invalid credentials' },

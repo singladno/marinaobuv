@@ -1,6 +1,8 @@
 import Footer from '@/components/ui/Footer';
 import Header from '@/components/ui/Header';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
+import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
+import { GruzchikSwitcher } from '@/components/ui/GruzchikSwitcher';
 
 export default function MainLayout({
   children,
@@ -21,6 +23,9 @@ export default function MainLayout({
           <div id="main-content">{children}</div>
         </main>
         <Footer />
+        {/* Portal Switchers for role-based access */}
+        <AdminSwitcher />
+        <GruzchikSwitcher />
       </div>
     </ThemeProvider>
   );

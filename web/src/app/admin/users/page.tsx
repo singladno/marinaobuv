@@ -247,7 +247,7 @@ export default function AdminUsersPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     Загрузка...
@@ -256,7 +256,7 @@ export default function AdminUsersPage() {
               ) : users.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     Пользователи не найдены
