@@ -92,5 +92,42 @@ export function useOrders() {
     [orders]
   );
 
-  return { orders, gruzchiks, loading, error, reload: load, update };
+  const deleteOrders = useCallback(
+    async (orderIds: string[]) => {
+      // Store original state for rollback
+      const originalOrders = [...orders];
+
+      // Apply optimistic update immediately - remove deleted orders
+      setOrders(prevOrders =>
+        prevOrders.filter(order => !orderIds.includes(order.id))
+      );
+
+      try {
+        const res = await fetch('/api/admin/orders/bulk-delete', {
+          method: 'DELETE',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ orderIds }),
+        });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || 'Delete failed');
+
+        return j;
+      } catch (error) {
+        // Rollback on error
+        setOrders(originalOrders);
+        throw error;
+      }
+    },
+    [orders]
+  );
+
+  return {
+    orders,
+    gruzchiks,
+    loading,
+    error,
+    reload: load,
+    update,
+    deleteOrders,
+  };
 }
