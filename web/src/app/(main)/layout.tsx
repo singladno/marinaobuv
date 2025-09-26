@@ -1,7 +1,6 @@
 import Footer from '@/components/ui/Footer';
 import Header from '@/components/ui/Header';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
-import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
 
 export default function MainLayout({
   children,
@@ -22,7 +21,6 @@ export default function MainLayout({
           <div id="main-content">{children}</div>
         </main>
         <Footer />
-        <AdminSwitcher />
       </div>
     </ThemeProvider>
   );

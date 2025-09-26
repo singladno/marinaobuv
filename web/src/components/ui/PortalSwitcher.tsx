@@ -4,14 +4,37 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+type CurrentUser = {
+  userId?: string;
+  role?: string;
+  providerId?: string | null;
+  phone?: string;
+  name?: string | null;
+} | null;
+
 export function PortalSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [user, setUser] = useState<CurrentUser>(null);
   const pathname = usePathname();
 
   useEffect(() => {
-    setIsAdmin(pathname.startsWith('/admin'));
+    // Check user role from session
+    const checkUserRole = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        const json = await res.json();
+        const userData = json.user ?? null;
+        setUser(userData);
+        setIsAdmin(userData?.role === 'ADMIN');
+      } catch {
+        setUser(null);
+        setIsAdmin(false);
+      }
+    };
+
+    checkUserRole();
     // Show switcher after a short delay for better UX
     const timer = setTimeout(() => setIsVisible(true), 500);
     return () => clearTimeout(timer);
@@ -27,6 +50,9 @@ export function PortalSwitcher() {
 
   // Don't render until visible to prevent flash
   if (!isVisible) return null;
+
+  // Only show for admin users
+  if (!isAdmin) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6">

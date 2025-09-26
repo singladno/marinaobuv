@@ -19,21 +19,24 @@ export function SidebarToggle({
       onClick={onToggle}
       aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       className={cn(
-        'group relative inline-flex h-9 w-9 items-center justify-center rounded-md',
-        'transition-all duration-200 ease-in-out',
-        'hover:scale-105 hover:bg-gray-100',
-        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+        'group relative inline-flex items-center justify-center rounded-lg',
+        'transition-all duration-300 ease-in-out',
+        'hover:scale-105 hover:bg-gray-100 hover:shadow-md',
+        'focus:outline-none',
         'dark:hover:bg-gray-800',
         'active:scale-95',
-        className
+        'bg-white dark:bg-gray-800',
+        'shadow-sm',
+        className || 'h-9 w-9'
       )}
       title={`${isCollapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}
     >
       <svg
         className={cn(
-          'h-5 w-5 transition-all duration-200 ease-in-out',
+          'transition-all duration-300 ease-in-out',
           'group-hover:scale-110',
-          isCollapsed ? 'rotate-180' : 'rotate-0'
+          isCollapsed ? 'rotate-0' : 'rotate-180',
+          'h-4 w-4'
         )}
         viewBox="0 0 24 24"
         fill="none"
@@ -42,7 +45,7 @@ export function SidebarToggle({
         <path
           d="M9 18L15 12L9 6"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />

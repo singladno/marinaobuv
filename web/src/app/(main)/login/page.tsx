@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import { Text } from '@/components/ui/Text';
 import { useCart } from '@/contexts/CartContext';
 
@@ -88,9 +89,9 @@ export default function LoginPage() {
       <form onSubmit={submit} className="space-y-3">
         <div>
           <label className="mb-1 block text-sm">Телефон</label>
-          <Input
+          <PhoneInput
             value={phone}
-            onChange={e => setPhone(e.target.value)}
+            onChange={phone => setPhone(phone)}
             required
           />
         </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import { Modal } from '@/components/ui/Modal';
 import { Text } from '@/components/ui/Text';
 import TransportCompanySelector from '@/components/features/TransportCompanySelector';
@@ -635,12 +636,10 @@ export default function BasketPage() {
                         <label className="mb-1 block text-sm font-medium text-gray-700">
                           Телефон для заказа
                         </label>
-                        <input
-                          type="tel"
-                          value={orderPhone || user?.phone}
-                          onChange={e => setOrderPhone(e.target.value)}
+                        <PhoneInput
+                          value={orderPhone || user?.phone || ''}
+                          onChange={phone => setOrderPhone(phone)}
                           className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="+7 (999) 123-45-67"
                         />
                       </div>
                       <div>
@@ -822,11 +821,9 @@ export default function BasketPage() {
                     />
                   </svg>
                 </div>
-                <Input
-                  type="tel"
+                <PhoneInput
                   value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="+7 996 366-36-60"
+                  onChange={phone => setPhone(phone)}
                   className="pl-10"
                   required
                 />

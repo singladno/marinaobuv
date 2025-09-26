@@ -61,7 +61,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
       >
-        <div className="flex h-[80vh] flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-900">
+        <div className="flex max-h-[80vh] flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-900">
           {/* Header */}
           <div className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-900">
             <div className="flex items-center justify-between">
@@ -94,7 +94,7 @@ export function Modal({
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto">{children}</div>
+          <div className="overflow-y-auto">{children}</div>
         </div>
       </div>
     </div>

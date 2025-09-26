@@ -31,11 +31,7 @@ export default function AdminSidebarLayout({
       />
 
       {/* Main content area - Right column */}
-      <div
-        className={`flex flex-1 flex-col overflow-hidden bg-gray-50 transition-all duration-300 ease-in-out dark:bg-gray-900 ${
-          isCollapsed ? 'md:ml-0' : 'md:ml-0'
-        }`}
-      >
+      <div className="flex flex-1 flex-col overflow-hidden bg-gray-50 transition-all duration-300 ease-in-out dark:bg-gray-900">
         {/* Mobile header */}
         <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden dark:border-gray-700 dark:bg-gray-900">
           <div className="flex items-center gap-3">

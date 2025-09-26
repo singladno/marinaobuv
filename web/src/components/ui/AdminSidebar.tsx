@@ -29,9 +29,10 @@ export default function AdminSidebar({
         />
       )}
       <aside
-        className={`flex h-full flex-col overflow-y-auto bg-white px-4 py-8 transition-all duration-300 ease-in-out dark:bg-gray-900 ${
-          isCollapsed ? 'w-16' : 'w-64'
-        } fixed inset-y-0 left-0 z-50 -translate-x-full md:static md:translate-x-0`}
+        className={`flex h-full flex-col overflow-y-auto bg-white transition-all duration-300 ease-in-out dark:bg-gray-900 ${
+          isCollapsed ? 'w-20 px-2' : 'w-56 px-3'
+        } fixed inset-y-0 left-0 z-50 -translate-x-full py-8 md:relative md:translate-x-0`}
+        style={{ overflowX: 'visible' }}
         data-state={isMobileOpen ? 'open' : 'closed'}
       >
         <div
@@ -44,9 +45,9 @@ export default function AdminSidebar({
           {/* Header with Logo and Toggle */}
           <div className="flex items-center justify-between">
             <Link href="/admin" className="flex items-center">
-              <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white sm:h-7 sm:w-7">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
                 <svg
-                  className="h-4 w-4"
+                  className="h-5 w-5"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -68,17 +69,18 @@ export default function AdminSidebar({
                 </svg>
               </div>
               {!isCollapsed && (
-                <span className="ml-2 text-lg font-semibold text-gray-800 dark:text-white">
-                  Администратор
+                <span className="ml-3 text-lg font-semibold text-gray-800 dark:text-white">
+                  Админ
                 </span>
               )}
             </Link>
 
-            {/* Desktop Toggle Button */}
-            <div className="hidden md:block">
+            {/* Toggle Button - Always visible */}
+            <div className="relative z-10 -mr-3">
               <SidebarToggle
                 isCollapsed={isCollapsed}
                 onToggle={() => setIsCollapsed(!isCollapsed)}
+                className={isCollapsed ? 'h-8 w-8' : ''}
               />
             </div>
           </div>
@@ -173,6 +175,35 @@ export default function AdminSidebar({
                 }
                 collapsed={isCollapsed}
               />
+
+              <AdminSidebarLink
+                href="/admin/users"
+                label="Пользователи"
+                icon={
+                  <svg
+                    className="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                }
+                collapsed={isCollapsed}
+              />
             </nav>
           </div>
         </div>
@@ -198,19 +229,34 @@ function AdminSidebarLink({
   return (
     <Link
       href={href}
-      className={`mt-5 flex transform items-center rounded-md px-4 py-2 text-gray-600 transition-all duration-300 hover:scale-105 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 ${
+      className={`group relative mt-3 flex transform items-center rounded-lg transition-all duration-300 hover:scale-105 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 ${
+        collapsed ? 'justify-center px-3 py-3' : 'px-4 py-3'
+      } ${
         isActive
-          ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200'
-          : ''
+          ? 'bg-blue-50 text-blue-700 shadow-sm dark:bg-blue-900/20 dark:text-blue-400'
+          : 'text-gray-600 dark:text-gray-400'
       }`}
+      title={collapsed ? label : undefined}
     >
-      <div className="flex items-center justify-center">{icon}</div>
+      <div
+        className={`flex items-center justify-center ${collapsed ? 'h-6 w-6' : ''}`}
+      >
+        {icon}
+      </div>
       {!collapsed && (
-        <span className="mx-4 font-medium transition-opacity duration-300">
+        <span className="ml-3 font-medium transition-opacity duration-300">
           {label}
         </span>
       )}
       {collapsed && <span className="sr-only">{label}</span>}
+
+      {/* Tooltip for collapsed state */}
+      {collapsed && (
+        <div className="absolute left-full ml-2 hidden rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:block group-hover:opacity-100 dark:bg-gray-700">
+          {label}
+          <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 bg-gray-900 dark:bg-gray-700"></div>
+        </div>
+      )}
     </Link>
   );
 }
