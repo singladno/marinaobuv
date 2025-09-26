@@ -3,12 +3,13 @@ import { prisma } from '@/lib/server/db';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const data = await req.json();
   const created = await prisma.productImage.create({
     data: {
-      productId: params.id,
+      productId: id,
       url: data.url,
       alt: data.alt ?? null,
       sort: data.sort ?? 0,

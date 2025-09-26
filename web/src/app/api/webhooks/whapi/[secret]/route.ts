@@ -14,11 +14,12 @@ import { WebhookPayloadSchema, isMessagesUpsert } from '@/types/whapi';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { secret: string } }
+  { params }: { params: Promise<{ secret: string }> }
 ) {
   try {
+    const { secret } = await params;
     // Verify webhook secret
-    if (params.secret !== env.WHAPI_WEBHOOK_SECRET) {
+    if (secret !== env.WHAPI_WEBHOOK_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

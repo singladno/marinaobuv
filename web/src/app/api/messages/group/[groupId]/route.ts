@@ -3,10 +3,10 @@ import { prisma } from '@/lib/server/db';
 
 export async function GET(
   request: Request,
-  { params }: { params: { groupId: string } }
+  { params }: { params: Promise<{ groupId: string }> }
 ) {
   try {
-    const { groupId } = params;
+    const { groupId } = await params;
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters

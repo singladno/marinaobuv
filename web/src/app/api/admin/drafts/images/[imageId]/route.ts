@@ -3,10 +3,10 @@ import { prisma } from '@/lib/server/db';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { imageId: string } }
+  { params }: { params: Promise<{ imageId: string }> }
 ) {
   try {
-    const { imageId } = params;
+    const { imageId } = await params;
     const { isActive } = await request.json();
 
     if (typeof isActive !== 'boolean') {

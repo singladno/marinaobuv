@@ -3,10 +3,10 @@ import { prisma } from '@/lib/server/db';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productId = params.id;
+    const { id: productId } = await params;
 
     // Get reviews with pagination
     const page = parseInt(request.nextUrl.searchParams.get('page') || '1');
