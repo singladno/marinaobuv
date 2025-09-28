@@ -1,6 +1,6 @@
 'use client';
 
-import clsx from 'clsx';
+// import clsx from 'clsx';
 import React from 'react';
 
 type Props = Omit<
@@ -15,7 +15,7 @@ type Props = Omit<
 };
 
 export function Slider({
-  className,
+  // className,
   value,
   onValueChange,
   min = 0,

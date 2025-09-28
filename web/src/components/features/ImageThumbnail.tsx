@@ -1,10 +1,9 @@
+import Image from 'next/image';
 import * as React from 'react';
 
 import {
   getThumbnailUrl,
-  isWAParserImage,
-  isS3Image,
-  sanitizeImageUrl,
+  // isWAParserImage,
 } from '@/lib/image-security';
 
 interface ImageThumbnailProps {
@@ -31,13 +30,13 @@ interface ImageThumbnailProps {
 export function ImageThumbnail({
   image,
   onImageClick,
-  onImageToggle,
-  isUpdating,
+  // onImageToggle,
+  // isUpdating,
   index,
 }: ImageThumbnailProps) {
   const thumbnailUrl = getThumbnailUrl(image.url);
-  const isS3 = isS3Image(image.url);
-  const sanitizedUrl = sanitizeImageUrl(image.url);
+  // const isS3 = isS3Image(image.url);
+  // const sanitizedUrl = sanitizeImageUrl(image.url);
 
   const isActive = image.isActive === true;
   const imageOpacity = isActive ? 'opacity-100' : 'opacity-30';
@@ -69,9 +68,11 @@ export function ImageThumbnail({
         className={`relative h-full w-full overflow-hidden rounded-md border transition-colors hover:border-blue-300 dark:hover:border-blue-600 ${borderClasses}`}
         title="Нажмите для просмотра в полном размере"
       >
-        <img
+        <Image
           src={thumbnailUrl}
           alt={image.alt || `Изображение ${(image.sort || 0) + 1}`}
+          width={150}
+          height={150}
           className={`h-full w-full object-cover transition-opacity ${imageOpacity}`}
           loading="lazy"
           onError={e => {

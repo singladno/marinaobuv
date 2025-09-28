@@ -1,7 +1,8 @@
 'use client';
 
-import * as React from 'react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import * as React from 'react';
+
 import { cn } from '@/lib/utils';
 
 const Select = React.forwardRef<
@@ -88,7 +89,7 @@ const SelectValue = React.forwardRef<
     value?: string;
     placeholder?: string;
   }
->(({ className, children, value, placeholder, ...props }, ref) => (
+>(({ className, children, placeholder, ...props }, ref) => (
   <span ref={ref} className={cn('block truncate', className)} {...props}>
     {children || placeholder}
   </span>

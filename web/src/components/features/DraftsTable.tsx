@@ -1,14 +1,11 @@
 import * as React from 'react';
 
 import type { CategoryNode } from '@/components/ui/CategorySelector';
-import { Tabs, Tab } from '@/components/ui/Tabs';
 import { useDraftsTable } from '@/hooks/useDraftsTable';
 import type { Draft } from '@/types/admin';
-import { createColumnConfigs } from '@/utils/columnConfigs';
 
-import { ColumnSettingsModal } from './ColumnSettingsModal';
-import { DraftTableActions } from './DraftTableActions';
 import { DraftTableContent } from './DraftTableContent';
+import { DraftTableHeader } from './DraftTableHeader';
 
 export function DraftsTable({
   data,
@@ -28,7 +25,6 @@ export function DraftsTable({
   loading = false,
   error,
   categories,
-  isRunningAI = false,
   currentProcessingDraft,
 }: {
   data: Draft[];
@@ -48,7 +44,6 @@ export function DraftsTable({
   loading?: boolean;
   error?: string | null;
   categories: CategoryNode[];
-  isRunningAI?: boolean;
   currentProcessingDraft?: {
     id: string;
     name: string | null;
@@ -59,15 +54,12 @@ export function DraftsTable({
 }) {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
-  const draftIds = React.useMemo(() => data.map(draft => draft.id), [data]);
+  // const draftIds = React.useMemo(() => data.map(draft => draft.id), [data]);
 
   const {
     table,
-    columnVisibility,
-    handleToggleColumn,
-    handleResetColumns,
     savingStatus,
-    applyLocalPatch,
+    // applyLocalPatch,
   } = useDraftsTable({
     data,
     selected,
@@ -86,36 +78,27 @@ export function DraftsTable({
     status,
   });
 
-  const columnConfigs = createColumnConfigs(columnVisibility, status);
   const hasData = !loading && !error && table.getRowModel().rows.length > 0;
 
   return (
     <div className="flex h-full flex-col rounded-lg bg-gray-50 dark:bg-gray-800">
-      <div className="flex-shrink-0 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-        <Tabs
-          value={status ?? 'draft'}
-          onChange={value => onStatusChange?.(value)}
-        >
-          <Tab value="draft">Черновики</Tab>
-          <Tab value="approved">Обработано</Tab>
-          <Tab value="deleted">Удаленные</Tab>
-        </Tabs>
-      </div>
-
-      <DraftTableActions
-        status={status}
+      <DraftTableHeader
+        status={status ?? 'draft'}
+        onStatusChange={onStatusChange}
         selectedCount={selectedCount}
-        onApprove={onApprove}
-        onConvertToCatalog={onConvertToCatalog}
+        onSelectAll={onSelectAll}
         onBulkDelete={onBulkDelete}
         onBulkRestore={onBulkRestore}
         onBulkPermanentDelete={onBulkPermanentDelete}
+        onApprove={onApprove}
+        onConvertToCatalog={onConvertToCatalog}
+        loading={loading}
+        error={error}
+        categories={categories}
         onReload={onReload}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        showBottomBorder={hasData}
-        savingStatus={savingStatus}
-        isRunningAI={isRunningAI}
-        currentProcessingDraft={currentProcessingDraft}
+        onColumnSettings={() => setIsSettingsOpen(true)}
+        showColumnSettings={isSettingsOpen}
+        onCloseColumnSettings={() => setIsSettingsOpen(false)}
       />
 
       <div className="min-h-0 flex-1">
@@ -130,14 +113,6 @@ export function DraftsTable({
           currentProcessingDraft={currentProcessingDraft}
         />
       </div>
-
-      <ColumnSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        columns={columnConfigs}
-        onToggleColumn={handleToggleColumn}
-        onReset={handleResetColumns}
-      />
     </div>
   );
 }

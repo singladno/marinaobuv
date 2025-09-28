@@ -1,5 +1,7 @@
 import * as React from 'react';
-import type { Product, ProductUpdateData } from '@/types/product';
+
+import type { ProductUpdateData } from '@/types/product';
+
 import { useProductStateManager } from './useProductStateManager';
 
 export interface ProductOperation {

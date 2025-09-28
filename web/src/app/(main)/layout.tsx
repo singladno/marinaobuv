@@ -1,8 +1,8 @@
+import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
 import Footer from '@/components/ui/Footer';
+import { GruzchikSwitcher } from '@/components/ui/GruzchikSwitcher';
 import Header from '@/components/ui/Header';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
-import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
-import { GruzchikSwitcher } from '@/components/ui/GruzchikSwitcher';
 
 export default function MainLayout({
   children,

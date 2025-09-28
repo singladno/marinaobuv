@@ -1,12 +1,5 @@
-import { prisma } from './db-node';
-import { fetchMediaBuffer } from './whapi';
-import {
-  putBuffer,
-  buildKey,
-  getExtensionFromMime,
-  computeSha256,
-} from './s3u';
-import { env } from './env';
+// This file contains utility functions for draft image processing
+// Currently unused but kept for future functionality
 
 export interface ImageData {
   url: string;

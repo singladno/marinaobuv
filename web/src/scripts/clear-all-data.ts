@@ -33,7 +33,7 @@ async function clearAllData() {
       const productImageCount = await prisma.productImage.count();
       await prisma.productImage.deleteMany();
       console.log(`✓ Deleted ${productImageCount} product images`);
-    } catch (error) {
+    } catch {
       console.log('No product images table found or already empty');
     }
 
@@ -43,7 +43,7 @@ async function clearAllData() {
       const productCount = await prisma.product.count();
       await prisma.product.deleteMany();
       console.log(`✓ Deleted ${productCount} products`);
-    } catch (error) {
+    } catch {
       console.log('No products table found or already empty');
     }
 

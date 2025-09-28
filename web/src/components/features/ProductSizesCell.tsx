@@ -1,8 +1,9 @@
 import * as React from 'react';
 
-import { OptimisticSizesCell } from './OptimisticSizesCell';
-import type { ProductSize } from '@/types/product';
 import type { DraftSize } from '@/types/admin';
+import type { ProductSize } from '@/types/product';
+
+import { OptimisticSizesCell } from './OptimisticSizesCell';
 
 interface ProductSizesCellProps {
   sizes: ProductSize[];

@@ -1,8 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import FilterPill from './FilterPill';
+
 import { Checkbox } from '@/components/ui/Checkbox';
+
+import FilterPill from './FilterPill';
 
 type Props = {
   value: string[];

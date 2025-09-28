@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 
 import { ClientProviders } from '@/components/ClientProviders';
-import GruzchikSidebarLayout from '@/components/ui/GruzchikSidebarLayout';
 import { GruzchikPortalSwitcher } from '@/components/ui/GruzchikPortalSwitcher';
+import GruzchikSidebarLayout from '@/components/ui/GruzchikSidebarLayout';
 import { getSession } from '@/lib/server/session';
 
 export default async function GruzchikLayout({

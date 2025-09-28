@@ -34,7 +34,7 @@ export async function processTextWithAI(
           pricePair: draft.pricePair,
           gender,
           sizes: draft.sizes || undefined,
-          rawGptResponse: gptResult.rawResponse as any,
+          rawGptResponse: gptResult.rawResponse as string,
         },
         create: {
           messageId,
@@ -44,7 +44,7 @@ export async function processTextWithAI(
           pricePair: draft.pricePair,
           gender,
           sizes: draft.sizes || undefined,
-          rawGptResponse: gptResult.rawResponse as any,
+          rawGptResponse: gptResult.rawResponse as string,
         },
       });
 

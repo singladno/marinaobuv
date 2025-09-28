@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { prisma } from '@/lib/server/db';
 import { getSession } from '@/lib/server/session';
 
@@ -17,7 +18,10 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause for грузчик's orders
-    const where: any = {
+    const where: {
+      gruzchikId: string;
+      status?: string;
+    } = {
       gruzchikId: session.userId,
     };
 

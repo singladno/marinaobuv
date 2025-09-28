@@ -4,13 +4,9 @@
 import './load-env';
 
 import { prisma } from '../lib/db-node';
+import { DraftProductData } from '../lib/draft-product-prompt';
+import { putFromUrl, getExtensionFromMime } from '../lib/s3u';
 import { normalizeTextToDraft } from '../lib/yagpt';
-import {
-  DRAFT_PRODUCT_PROMPT,
-  DraftProductData,
-} from '../lib/draft-product-prompt';
-import { processMediaUpload } from '../lib/message-processor-extended';
-import { putFromUrl, buildKey, getExtensionFromMime } from '../lib/s3u';
 
 /**
  * Process and upload images from messages to Yandex Cloud
@@ -349,6 +345,7 @@ async function processMessageGroupToDraft(
 /**
  * Process a single message to create a draft product (legacy function)
  */
+/*
 async function processMessageToDraft(messageId: string): Promise<void> {
   try {
     console.log(`Processing message ${messageId}...`);
@@ -466,7 +463,7 @@ async function processMessageToDraft(messageId: string): Promise<void> {
     }
 
     // Process images if present
-    let imageData: Array<{
+    const imageData: Array<{
       url: string;
       key: string;
       width?: number;
@@ -588,6 +585,7 @@ async function processMessageToDraft(messageId: string): Promise<void> {
     console.error(`Error processing message ${messageId}:`, error);
   }
 }
+*/
 
 /**
  * Get or create provider from message data
@@ -636,6 +634,7 @@ async function getOrCreateProvider(
 /**
  * Update provider information for messages that don't have it
  */
+/*
 async function updateMessageProviders(): Promise<void> {
   console.log('Updating provider information for messages...');
 
@@ -676,6 +675,7 @@ async function updateMessageProviders(): Promise<void> {
     }
   }
 }
+*/
 
 /**
  * Get messages that need draft product processing
@@ -701,6 +701,7 @@ async function getMessagesForProcessing(limit: number = 50): Promise<string[]> {
 /**
  * Get messages from the last N hours using WhatsApp timestamp field
  */
+/*
 async function getMessagesFromLastHours(hours: number = 4): Promise<string[]> {
   // Convert hours to seconds and create BigInt timestamp
   const hoursAgoSeconds = Math.floor(
@@ -744,6 +745,7 @@ async function getMessagesFromLastHours(hours: number = 4): Promise<string[]> {
 
   return messages.map(msg => msg.id);
 }
+*/
 
 /**
  * Main function to process messages into draft products
@@ -772,7 +774,7 @@ async function main() {
 
     // Process each message group to create draft products with images
     let processed = 0;
-    let skipped = 0;
+    const skipped = 0;
     let errors = 0;
 
     for (const [groupKey, groupMessageIds] of Object.entries(messageGroups)) {

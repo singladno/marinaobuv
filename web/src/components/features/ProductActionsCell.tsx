@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import type { Product } from '@/types/product';
 
 interface ProductActionsCellProps {

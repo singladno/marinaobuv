@@ -1,12 +1,13 @@
 'use client';
 
+import { FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
-import { Card } from '@/components/ui/Card';
+
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Label } from '@/components/ui/Label';
-import { Slider } from '@/components/ui/Slider';
-import { Badge } from '@/components/ui/Badge';
 import {
   Select,
   SelectContent,
@@ -14,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select';
+import { Slider } from '@/components/ui/Slider';
 import { Text } from '@/components/ui/Text';
-import { FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export interface FilterOptions {
   categories: string[];

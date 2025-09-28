@@ -1,5 +1,6 @@
 import { PrismaClient, Gender, Season, Role } from '@prisma/client';
-import { slugify } from '../src/utils/slugify';
+
+// import { slugify } from '../src/utils/slugify';
 
 const prisma = new PrismaClient();
 
@@ -598,8 +599,6 @@ async function main() {
       categoryId: winterWomensSneakers.id,
       pricePair: demo.pricePair,
       currency: demo.currency,
-      packPairs: demo.packPairs,
-      priceBox: demo.priceBox,
       material: demo.material,
       gender: demo.gender,
       season: demo.season,
@@ -613,8 +612,6 @@ async function main() {
       categoryId: winterWomensSneakers.id,
       pricePair: demo.pricePair,
       currency: demo.currency,
-      packPairs: demo.packPairs,
-      priceBox: demo.priceBox,
       material: demo.material,
       gender: demo.gender,
       season: demo.season,

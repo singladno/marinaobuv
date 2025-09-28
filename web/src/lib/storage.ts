@@ -7,13 +7,20 @@ const requiredEnv = (key: string) => {
 
 // For now, let's create a simple working solution
 // We'll implement a basic upload that works with your current setup
-async function uploadToYandex(key: string, imageBuffer: Buffer, contentType: string): Promise<boolean> {
+async function uploadToYandex(
+  key: string,
+  imageBuffer: Buffer,
+  contentType: string
+): Promise<boolean> {
   try {
     const bucket = requiredEnv('YANDEX_BUCKET_NAME');
 
     // For development, let's create a simple test that simulates successful upload
     // In production, you would implement proper S3 signature generation
-    console.log('Simulating upload to:', `https://storage.yandexcloud.net/${bucket}/${key}`);
+    console.log(
+      'Simulating upload to:',
+      `https://storage.yandexcloud.net/${bucket}/${key}`
+    );
     console.log('Image size:', imageBuffer.length, 'bytes');
     console.log('Content type:', contentType);
 
@@ -43,13 +50,21 @@ export function getPublicUrl(key: string): string {
 }
 
 // For Yandex Cloud, we'll use direct upload instead of presigned URLs
-export async function presignPut(key: string, contentType: string, expiresSec = 600): Promise<string> {
+export async function presignPut(
+  key: string,
+  /* contentType: string, */
+  /* expiresSec = 600 */
+): Promise<string> {
   // Return a placeholder URL - the actual upload will be handled by the uploadImage function
   const bucket = requiredEnv('YANDEX_BUCKET_NAME');
   return `https://storage.yandexcloud.net/${bucket}/${key}`;
 }
 
 // Direct upload function for Yandex Cloud
-export async function uploadImage(key: string, imageBuffer: Buffer, contentType: string): Promise<boolean> {
+export async function uploadImage(
+  key: string,
+  imageBuffer: Buffer,
+  contentType: string
+): Promise<boolean> {
   return await uploadToYandex(key, imageBuffer, contentType);
 }

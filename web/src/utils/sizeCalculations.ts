@@ -1,10 +1,12 @@
-import type { DraftSize } from '@/types/admin';
+// import type { DraftSize } from '@/types/admin';
 
 /**
  * Calculate total pairs from sizes array
  * Handles both DraftSize format (with isActive) and Draft.sizes format (without isActive)
  */
-export function calculateTotalPairs(sizes: any): number {
+export function calculateTotalPairs(
+  sizes: Array<{ size: string; count: number; isActive?: boolean }>
+): number {
   if (!sizes || sizes.length === 0) {
     return 0;
   }

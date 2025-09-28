@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { prisma } from '@/lib/server/db';
 import { getSession } from '@/lib/server/session';
 
@@ -52,7 +53,12 @@ export async function POST(req: NextRequest) {
     if (!id)
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-    const data: any = {};
+    const data: {
+      status?: string;
+      label?: string;
+      payment?: number;
+      gruzchikId?: string;
+    } = {};
     if (typeof status === 'string') data.status = status;
     if (label !== undefined) data.label = label;
     if (payment !== undefined && payment !== null)

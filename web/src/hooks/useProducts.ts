@@ -6,6 +6,7 @@ import type {
   ProductsFilters,
   ProductUpdateData,
 } from '@/types/product';
+
 import { useProductOperations } from './useProductOperations';
 
 interface UseProductsReturn {
@@ -122,7 +123,7 @@ export function useProducts(): UseProductsReturn {
         setLoading(false);
       }
     },
-    [filters]
+    [filters, actions]
   );
 
   const reload = useCallback(() => fetchProducts(false), [fetchProducts]);

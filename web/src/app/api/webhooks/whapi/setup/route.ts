@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { setWebhook } from '@/lib/whapi';
-import { env } from '@/lib/env';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+import { env } from '@/lib/env';
+import { setWebhook } from '@/lib/whapi';
+
+export async function GET() {
   try {
     // Build webhook URL
     const webhookUrl = `${env.NEXT_PUBLIC_SITE_URL}/api/webhooks/whapi/${env.WHAPI_WEBHOOK_SECRET}`;
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     const result = await setWebhook(webhookUrl, [
       'messages.upsert',
       'messages.update',
-      'messages.delete'
+      'messages.delete',
     ]);
 
     if (result.success) {
@@ -24,18 +25,24 @@ export async function GET(request: NextRequest) {
         data: result.data,
       });
     } else {
-      return NextResponse.json({
-        success: false,
-        message: result.message || 'Failed to configure webhook',
-        webhookUrl,
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          success: false,
+          message: result.message || 'Failed to configure webhook',
+          webhookUrl,
+        },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error('Webhook setup error:', error);
-    return NextResponse.json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }
 

@@ -1,7 +1,8 @@
 'use client';
 
-import FilterPill from './FilterPill';
 import type { FilterOptions } from '@/components/product/ProductFilters';
+
+import FilterPill from './FilterPill';
 
 const SORT_OPTIONS = [
   { value: 'featured', label: 'По популярности' },

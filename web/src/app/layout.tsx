@@ -4,11 +4,11 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 
 import './globals.css';
-import Footer from '@/components/ui/Footer';
-import Header from '@/components/ui/Header';
-import { defaultMetadata } from '@/lib/seo';
-import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
 import { ClientProviders } from '@/components/ClientProviders';
+// import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
+// import Footer from '@/components/ui/Footer';
+// import Header from '@/components/ui/Header';
+import { defaultMetadata } from '@/lib/seo';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

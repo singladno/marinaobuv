@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { prisma } from '@/lib/server/db';
 import { verifyPassword } from '@/lib/server/password';
 import { createSession } from '@/lib/server/session';
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     // Normalize phone number to handle different formats
     const normalizedPhone = normalizePhoneToE164(phone);
-    
+
     const user = await prisma.user.findUnique({ where: { phone: normalizedPhone } });
     if (!user || !verifyPassword(password, user.passwordHash)) {
       return NextResponse.json(

@@ -2,11 +2,11 @@ import type { Role } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
-import { prisma } from '@/lib/server/db';
 import {
   processDraftImagesForApprovalById,
   updateDraftImagesWithS3Urls,
 } from '@/lib/draft-approval-image-processor';
+import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
   try {
@@ -123,9 +123,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ results });
   } catch (e: unknown) {
-    const status = (e as any)?.status ?? 500;
+    const error = e as Error & { status?: number };
+    const status = error?.status ?? 500;
     return NextResponse.json(
-      { error: (e as any)?.message ?? 'Unexpected error' },
+      { error: error?.message ?? 'Unexpected error' },
       { status }
     );
   }

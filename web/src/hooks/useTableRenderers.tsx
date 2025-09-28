@@ -1,15 +1,16 @@
 import { useCallback } from 'react';
-import type { CategoryNode } from '@/components/ui/CategorySelector';
-import {
-  FilterBar,
-  SearchFilter,
-  FilterActions,
-} from '@/components/ui/FilterBar';
+
 import {
   ActionButtonGroup,
   BulkActionButton,
   RefreshButton,
 } from '@/components/ui/ActionButtons';
+import {
+  FilterBar,
+  SearchFilter,
+  FilterActions,
+} from '@/components/ui/FilterBar';
+
 import { useTableActions } from './useTableActions';
 
 interface UseTableRenderersProps {

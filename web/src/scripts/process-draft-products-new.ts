@@ -1,11 +1,11 @@
-import { prisma } from '../lib/server/db';
-import { groupMessagesForProductContext } from '../lib/message-grouping';
 import { processImagesFromMessages } from '../lib/draft-image-processor';
 import {
   createDraftProduct,
   getOrCreateProvider,
   DraftProductData,
 } from '../lib/draft-product-creator';
+import { groupMessagesForProductContext } from '../lib/message-grouping';
+import { prisma } from '../lib/server/db';
 import { normalizeTextToDraft } from '../lib/yagpt';
 
 /**

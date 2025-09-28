@@ -1,6 +1,10 @@
-import React from 'react';
 import { flexRender } from '@tanstack/react-table';
 import type { Table } from '@tanstack/react-table';
+import React from 'react';
+
+interface ColumnMeta {
+  frozen?: 'left' | 'right';
+}
 
 interface DataTableHeaderProps<TData> {
   table: Table<TData>;
@@ -12,10 +16,9 @@ export function DataTableHeader<TData>({ table }: DataTableHeaderProps<TData>) {
       {table.getHeaderGroups().map(headerGroup => (
         <tr key={headerGroup.id}>
           {headerGroup.headers.map(header => {
-            const isFrozenLeft =
-              (header.column.columnDef.meta as any)?.frozen === 'left';
-            const isFrozenRight =
-              (header.column.columnDef.meta as any)?.frozen === 'right';
+            const meta = header.column.columnDef.meta as ColumnMeta;
+            const isFrozenLeft = meta?.frozen === 'left';
+            const isFrozenRight = meta?.frozen === 'right';
 
             return (
               <th

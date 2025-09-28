@@ -1,9 +1,9 @@
 'use client';
 
-import { HighlightedProductsProvider } from '@/contexts/HighlightedProductsContext';
 import { NotificationProvider } from '@/components/ui/NotificationProvider';
-import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { CartProvider } from '@/contexts/CartContext';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
+import { HighlightedProductsProvider } from '@/contexts/HighlightedProductsContext';
 
 interface ClientProvidersProps {
   children: React.ReactNode;

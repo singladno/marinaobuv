@@ -35,11 +35,11 @@ const eslintConfig = [
       'eol-last': ['error', 'always'],
       'prettier/prettier': 'off', // Let Prettier handle formatting
 
-      // Component size limit rule
+      // Component size limit rule - enforce 120 line limit
       'max-lines': [
         'error',
         {
-          max: 150,
+          max: 120,
           skipBlankLines: true,
           skipComments: true,
         },
@@ -49,7 +49,7 @@ const eslintConfig = [
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
 
-      // Import organization
+      // Import organization - enforce organized imports
       'import/order': [
         'error',
         {
@@ -69,10 +69,13 @@ const eslintConfig = [
         },
       ],
 
-      // Component complexity
+      // Component complexity - enforce code quality
       complexity: ['warn', 10],
       'max-depth': ['warn', 4],
       'max-params': ['warn', 5],
+
+      // TypeScript rules - enforce type safety
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 ];

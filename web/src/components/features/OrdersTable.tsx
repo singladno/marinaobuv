@@ -2,10 +2,10 @@
 
 import * as React from 'react';
 
-import { useOrders } from '@/hooks/useOrders';
-import type { AdminOrder, Gruzchik } from '@/hooks/useOrders';
-import { useNotifications } from '@/components/ui/NotificationProvider';
 import { BulkDeleteModal } from '@/components/ui/BulkDeleteModal';
+import { useNotifications } from '@/components/ui/NotificationProvider';
+import { useOrders } from '@/hooks/useOrders';
+import type { AdminOrder } from '@/hooks/useOrders';
 
 import { OrdersTableActions } from './OrdersTableActions';
 import { OrdersTableContent } from './OrdersTableContent';
@@ -49,7 +49,7 @@ export function OrdersTable() {
 
   const handleConfirmDelete = React.useCallback(async () => {
     const selectedOrderIds = Object.entries(selected)
-      .filter(([_, isSelected]) => isSelected)
+      .filter(([, isSelected]) => isSelected)
       .map(([id]) => id);
 
     if (selectedOrderIds.length === 0) return;
@@ -61,7 +61,7 @@ export function OrdersTable() {
         type: 'success',
         message: `Успешно удалено ${selectedOrderIds.length} заказ${selectedOrderIds.length === 1 ? '' : selectedOrderIds.length < 5 ? 'а' : 'ов'}`,
       });
-    } catch (error) {
+    } catch {
       addNotification({
         type: 'error',
         message: 'Ошибка при удалении заказов',

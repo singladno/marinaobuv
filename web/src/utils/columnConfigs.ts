@@ -1,11 +1,12 @@
-import type { ColumnConfig } from '@/components/features/ColumnSettingsModal';
 import type { VisibilityState } from '@tanstack/react-table';
+
+import type { ColumnConfig } from '@/components/features/ColumnSettingsModal';
 
 export function createColumnConfigs(
   columnVisibility: VisibilityState,
   status?: string
 ): ColumnConfig[] {
-  const isDraft = status === 'draft' || !status;
+  // const isDraft = status === 'draft' || !status;
   const isApproved = status === 'approved';
 
   return [

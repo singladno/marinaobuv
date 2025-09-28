@@ -20,7 +20,7 @@ async function backfillProviders(batchSize = 200) {
         const providerId = await processProviderFromMessage({
           from: m.from,
           fromName: m.fromName,
-          pushName: (m.rawPayload as any)?.from_name ?? null,
+          pushName: (m.rawPayload as { from_name?: string })?.from_name ?? null,
         });
         if (providerId) {
           await prisma.whatsAppMessage.update({

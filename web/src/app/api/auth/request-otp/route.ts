@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { SignJWT, jwtVerify } from 'jose';
+import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
 import { getSmsProvider, normalizePhoneToE164 } from '@/lib/server/sms';
 
 const cookieName = 'mo_otp';

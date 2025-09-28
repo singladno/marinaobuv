@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import Image from 'next/image';
+// import { useState } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { useNotifications } from '@/components/ui/NotificationProvider';
+// import { useNotifications } from '@/components/ui/NotificationProvider';
 import type { GruzchikOrderItemRow } from '@/hooks/useGruzchikOrders';
 
 // Loading indicator component
@@ -100,9 +101,11 @@ export function createGruzchikAvailabilityItemColumns(
         >
           <div className="flex items-center space-x-2">
             {row.original.itemImage && (
-              <img
+              <Image
                 src={row.original.itemImage}
                 alt={row.original.itemName}
+                width={32}
+                height={32}
                 className="h-8 w-8 rounded object-cover"
               />
             )}

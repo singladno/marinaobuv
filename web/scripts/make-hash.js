@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 const password = process.argv[2];
 if (!password) {

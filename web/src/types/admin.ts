@@ -24,6 +24,9 @@ export type Draft = {
   description: string | null;
   providerDiscount: number | null; // rubles
   status: string;
+  // Add missing properties
+  packPairs?: number | null;
+  priceBox?: number | null;
   images: {
     id: string;
     url: string;
@@ -49,9 +52,9 @@ export type Draft = {
     quantity?: number;
   }> | null;
   gptRequest?: string | null;
-  rawGptResponse?: any;
+  rawGptResponse?: string;
   gptRequest2?: string | null;
-  rawGptResponse2?: any;
+  rawGptResponse2?: string;
   aiStatus?: string | null;
   aiProcessedAt?: string | null;
   source?: Array<{

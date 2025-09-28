@@ -1,7 +1,6 @@
-import { prisma } from './db-node';
-import { normalizeTextToDraft } from './yagpt';
-import { ImageData } from './draft-image-processor';
 import { generateArticleNumber } from './article-generator';
+import { prisma } from './db-node';
+import { ImageData } from './draft-image-processor';
 
 export interface DraftProductData {
   name: string | null;
@@ -42,15 +41,25 @@ export async function getOrCreateProvider(
 /**
  * Create draft product from processed data
  */
-export async function createDraftProduct(
-  messageId: string,
-  providerId: string,
-  productData: DraftProductData,
-  gptRequest: string,
-  rawGptResponse: any,
-  sourceMessageIds: string[],
-  imageData: ImageData[]
-): Promise<{ id: string }> {
+interface CreateDraftProductParams {
+  messageId: string;
+  providerId: string;
+  productData: DraftProductData;
+  gptRequest: string;
+  rawGptResponse: unknown;
+  sourceMessageIds: string[];
+  imageData: ImageData[];
+}
+
+export async function createDraftProduct({
+  messageId,
+  providerId,
+  productData,
+  gptRequest,
+  rawGptResponse,
+  sourceMessageIds,
+  imageData,
+}: CreateDraftProductParams): Promise<{ id: string }> {
   // Generate unique article number
   const article = await generateArticleNumber();
 

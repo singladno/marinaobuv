@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { env } from '@/lib/env';
 import { prisma } from '@/lib/server/db';
 import { createSession } from '@/lib/server/session';
-import { env } from '@/lib/env';
 
 const cookieName = 'mo_otp';
 const secret = new TextEncoder().encode(
@@ -21,10 +22,10 @@ export async function POST(req: NextRequest) {
     if (!token)
       return NextResponse.json({ error: 'Код не запрошен' }, { status: 400 });
 
-    let payload: any;
+    let payload: { code: string; phone: string };
     try {
       const verified = await jwtVerify(token, secret);
-      payload = verified.payload as any;
+      payload = verified.payload as { code: string; phone: string };
     } catch {
       return NextResponse.json({ error: 'Код истёк' }, { status: 400 });
     }
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
       const role =
         env.ADMIN_PHONE && env.ADMIN_PHONE === phone ? 'ADMIN' : 'CLIENT';
       user = await prisma.user.create({
-        data: { phone, role, passwordHash: 'otp-login' as any },
+        data: { phone, role, passwordHash: 'otp-login' },
       });
     }
     // If existing user matches admin phone, ensure role is ADMIN

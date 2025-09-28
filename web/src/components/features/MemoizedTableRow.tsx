@@ -15,7 +15,7 @@ interface MemoizedTableRowProps {
 
 export const MemoizedTableRow = ({
   row,
-  onToggle,
+  // onToggle,
   currentProcessingDraft,
 }: MemoizedTableRowProps) => {
   const isProcessing =

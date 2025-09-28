@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import ColorSwitcher from '@/components/product/ColorSwitcher';
-import ProductGallery from '@/components/product/ProductGallery';
+// import ProductGallery from '@/components/product/ProductGallery';
 import ProductGalleryVertical from '@/components/product/ProductGalleryVertical';
 
 type ImageWithColor = { url: string; alt?: string; color?: string | null };

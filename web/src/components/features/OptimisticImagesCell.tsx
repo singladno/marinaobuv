@@ -1,16 +1,12 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
-import type { DraftImage } from '@/types/admin';
+import React, { useState, useRef } from 'react';
+
 import { ImageModal } from '@/components/ui/ImageModal';
-import { ImageThumbnail } from './ImageThumbnail';
-import { ImageActionButton } from './ImageActionButton';
-import {
-  isWAParserImage,
-  isS3Image,
-  sanitizeImageUrl,
-} from '@/lib/image-security';
-import { useImageHandling } from '@/hooks/useImageHandling';
+import { sanitizeImageUrl } from '@/lib/image-security';
+import type { DraftImage } from '@/types/admin';
+
+import { OptimisticImageGrid } from './OptimisticImageGrid';
 
 interface OptimisticImagesCellProps {
   draftId: string;
@@ -25,135 +21,57 @@ export function OptimisticImagesCell({
   onImageToggle,
   onReload,
 }: OptimisticImagesCellProps) {
-  const [togglingImages, setTogglingImages] = useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [hoveredImages, setHoveredImages] = useState<Set<string>>(new Set());
-  const imageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  const { handleBulkDelete, handleBulkSplit } = useImageHandling({
-    draftId,
-    onImageToggle,
-    onReload,
-  });
+  const activeImages = images.filter(img => img.isActive !== false);
 
-  const handleImageToggle = useCallback(
-    async (imageId: string, isActive: boolean, event: React.MouseEvent) => {
-      event.stopPropagation();
-      setTogglingImages(prev => new Set(prev).add(imageId));
-
-      try {
-        await onImageToggle(imageId, isActive);
-      } catch (error) {
-        console.error('Failed to toggle image:', error);
-      } finally {
-        setTogglingImages(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(imageId);
-          return newSet;
-        });
-      }
-    },
-    [onImageToggle]
-  );
-
-  const handleImageClick = useCallback((index: number) => {
+  const openModal = (index: number) => {
     setSelectedImageIndex(index);
     setIsModalOpen(true);
-  }, []);
+  };
 
-  const setImageRef = useCallback((imageId: string) => {
-    return (el: HTMLDivElement | null) => {
-      imageRefs.current[imageId] = el;
-    };
-  }, []);
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
 
-  const sortedImages = (images || []).sort(
-    (a, b) => (a.sort || 0) - (b.sort || 0)
-  );
+  const nextImage = () => {
+    setSelectedImageIndex(prev =>
+      prev < activeImages.length - 1 ? prev + 1 : 0
+    );
+  };
 
-  if (!sortedImages.length) {
-    return <span className="text-gray-400 dark:text-gray-500">—</span>;
-  }
+  const prevImage = () => {
+    setSelectedImageIndex(prev =>
+      prev > 0 ? prev - 1 : activeImages.length - 1
+    );
+  };
 
   return (
     <>
-      <div className="flex gap-1 overflow-x-auto overflow-y-visible py-2">
-        {sortedImages.map((img, index) => {
-          // Always display the image, regardless of source
-
-          return (
-            <div
-              key={img.id}
-              ref={setImageRef(img.id)}
-              onMouseEnter={() =>
-                setHoveredImages(prev => new Set(prev).add(img.id))
-              }
-              onMouseLeave={() =>
-                setHoveredImages(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete(img.id);
-                  return newSet;
-                })
-              }
-            >
-              <ImageThumbnail
-                image={img}
-                onImageClick={handleImageClick}
-                onImageToggle={handleImageToggle}
-                isUpdating={togglingImages.has(img.id)}
-                index={index}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      <ImageModal
-        images={sortedImages.map(img => ({
-          id: img.id,
-          url: sanitizeImageUrl(img.url),
-          alt: img.alt,
-          color: img.color || null,
-          isActive: img.isActive,
-        }))}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        initialIndex={selectedImageIndex}
-        onImageToggle={handleImageToggle}
-        onBulkDelete={handleBulkDelete}
-        onBulkSplit={handleBulkSplit}
-        isUpdating={Array.from(togglingImages)[0] || null}
+      <OptimisticImageGrid
+        draftId={draftId}
+        images={images}
+        onImageToggle={onImageToggle}
+        onReload={onReload}
+        onImageClick={openModal}
       />
 
-      {Array.from(hoveredImages).map(hoveredImageId => {
-        const imageRef = imageRefs.current[hoveredImageId];
-        if (!imageRef) return null;
-
-        return (
-          <ImageActionButton
-            key={hoveredImageId}
-            imageId={hoveredImageId}
-            isActive={
-              sortedImages.find(img => img.id === hoveredImageId)?.isActive ||
-              false
-            }
-            isUpdating={togglingImages.has(hoveredImageId)}
-            onToggle={handleImageToggle}
-            onMouseEnter={() =>
-              setHoveredImages(prev => new Set(prev).add(hoveredImageId))
-            }
-            onMouseLeave={() =>
-              setHoveredImages(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(hoveredImageId);
-                return newSet;
-              })
-            }
-            imageRef={imageRef}
+      {isModalOpen && activeImages.length > 0 && (
+        <div ref={modalRef}>
+          <ImageModal
+            images={activeImages.map(img => ({
+              url: sanitizeImageUrl(img.url),
+              alt: img.alt || '',
+            }))}
+            currentIndex={selectedImageIndex}
+            onClose={closeModal}
+            onNext={nextImage}
+            onPrev={prevImage}
           />
-        );
-      })}
+        </div>
+      )}
     </>
   );
 }

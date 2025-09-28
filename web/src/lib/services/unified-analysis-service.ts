@@ -1,4 +1,4 @@
-import { getCategoryTree } from '../catalog';
+import { getCategoryTree } from '../catalog-categories';
 import { env } from '../env';
 
 import { AnalysisPromptService } from './analysis-prompt-service';
@@ -30,7 +30,7 @@ export interface AnalysisResult {
  * Service for unified text and image analysis using OpenAI
  */
 export class UnifiedAnalysisService {
-  private openai: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private openai: any;
   private validationService: AnalysisValidationService;
   private promptService: AnalysisPromptService;
   private colorService: PerImageColorService;

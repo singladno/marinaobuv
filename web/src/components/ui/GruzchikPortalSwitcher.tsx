@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
 
 type CurrentUser = {
   userId?: string;
@@ -16,7 +16,7 @@ export function GruzchikPortalSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [isGruzchik, setIsGruzchik] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [user, setUser] = useState<CurrentUser>(null);
+  const [, setUser] = useState<CurrentUser>(null);
   const pathname = usePathname();
 
   useEffect(() => {

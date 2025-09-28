@@ -27,18 +27,18 @@ interface DraftTableActionsProps {
 
 export function DraftTableActions({
   status,
-  selectedCount,
-  onApprove,
-  onConvertToCatalog,
-  onBulkDelete,
-  onBulkRestore,
-  onBulkPermanentDelete,
+  // selectedCount,
+  // onApprove,
+  // onConvertToCatalog,
+  // onBulkDelete,
+  // onBulkRestore,
+  // onBulkPermanentDelete,
   onReload,
   onOpenSettings,
   showBottomBorder = true,
-  savingStatus,
-  isRunningAI = false,
-  currentProcessingDraft,
+  // savingStatus,
+  // isRunningAI = false,
+  // currentProcessingDraft,
 }: DraftTableActionsProps) {
   return (
     <div

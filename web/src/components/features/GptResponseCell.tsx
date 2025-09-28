@@ -76,7 +76,6 @@ export function GptResponseCell({ rawGptResponse }: GptResponseCellProps) {
 
   // Handle both string and object responses
   let parsedResponse;
-  let displayText;
   let modalContent;
 
   if (typeof rawGptResponse === 'string') {
@@ -95,7 +94,7 @@ export function GptResponseCell({ rawGptResponse }: GptResponseCellProps) {
     modalContent = String(rawGptResponse);
   }
 
-  displayText = parsedResponse.error
+  const displayText = parsedResponse.error
     ? 'Ошибка парсинга'
     : parsedResponse.name || 'Без названия';
 

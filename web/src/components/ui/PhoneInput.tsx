@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
 import { formatPhoneNumber, getCleanPhoneNumber } from '@/utils/phoneMask';
+
 import { Input } from './Input';
 
 interface PhoneInputProps

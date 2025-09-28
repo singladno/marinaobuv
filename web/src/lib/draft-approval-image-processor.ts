@@ -31,7 +31,7 @@ export async function processDraftImagesForApproval(
     width: number | null;
     height: number | null;
   }>,
-  draftId?: string
+  // draftId?: string
 ): Promise<ApprovalImageData[]> {
   const processedImages: ApprovalImageData[] = [];
 

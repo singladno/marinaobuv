@@ -41,12 +41,14 @@ export async function PATCH(
       // Create new sizes
       if (sizes.length > 0) {
         await tx.productSize.createMany({
-          data: sizes.map((size: any) => ({
-            productId: id,
-            size: size.size,
-            stock: size.stock,
-            sku: size.sku || null,
-          })),
+          data: sizes.map(
+            (size: { size: string; stock: number; sku?: string }) => ({
+              productId: id,
+              size: size.size,
+              stock: size.stock,
+              sku: size.sku || null,
+            })
+          ),
         });
       }
 

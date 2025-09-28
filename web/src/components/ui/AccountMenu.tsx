@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
 import { UserIcon } from '@heroicons/react/24/outline';
-import { useCart } from '@/contexts/CartContext';
+// import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+
+import { Button } from '@/components/ui/Button';
 import ProfileMenuContent from '@/components/ui/ProfileMenuContent';
+import { useCart } from '@/contexts/CartContext';
 
 type CurrentUser = {
   userId: string;
@@ -159,11 +160,9 @@ export default function AccountMenu() {
         <div
           ref={menuRef}
           className="fixed z-40"
-          // eslint-disable-next-line react/forbid-dom-props
-          // eslint-disable-next-line react/no-unknown-property
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore - Dynamic positioning requires inline styles
-          // eslint-disable-next-line react/no-unknown-property
+
           style={{
             left: isNaN(anchorRect.left) ? 0 : anchorRect.left,
             top: isNaN(anchorRect.top) ? 0 : anchorRect.top + 8, // 8px gap between trigger and menu

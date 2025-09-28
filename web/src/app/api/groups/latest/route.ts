@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { prisma } from '@/lib/server/db';
 
 export async function GET() {
@@ -33,11 +34,11 @@ export async function GET() {
         acc[groupId].messageCount++;
         return acc;
       },
-      {} as Record<string, any>
+      {} as Record<string, { id: string; name: string; latestTime: string }>
     );
 
     const groupList = Object.values(groups).sort(
-      (a: any, b: any) =>
+      (a: { latestTime: string }, b: { latestTime: string }) =>
         new Date(b.latestTime).getTime() - new Date(a.latestTime).getTime()
     );
 

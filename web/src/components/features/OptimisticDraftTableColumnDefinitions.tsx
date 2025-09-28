@@ -3,7 +3,6 @@ import * as React from 'react';
 
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import type { Draft } from '@/types/admin';
-
 import {
   calculateTotalPairs,
   calculateBoxPrice,
@@ -35,16 +34,27 @@ const MemoizedProviderCell = React.memo(ProviderCell);
 const MemoizedGenderSelectCell = React.memo(GenderSelectCell);
 const MemoizedSeasonSelectCell = React.memo(SeasonSelectCell);
 
-export function createOptimisticDraftTableColumns(
-  onPatch: (id: string, patch: Partial<Draft>) => Promise<void>,
-  onDelete: (id: string) => Promise<void>,
-  onImageToggle: (imageId: string, isActive: boolean) => Promise<void>,
-  categories: CategoryNode[],
-  onReload?: () => void,
-  status?: string,
-  onToggle?: (id: string) => void,
-  getApprovalState?: (id: string) => { isProcessing: boolean }
-) {
+interface CreateOptimisticDraftTableColumnsParams {
+  onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onImageToggle: (imageId: string, isActive: boolean) => Promise<void>;
+  categories: CategoryNode[];
+  onReload?: () => void;
+  status?: string;
+  onToggle?: (id: string) => void;
+  getApprovalState?: (id: string) => { isProcessing: boolean };
+}
+
+export function createOptimisticDraftTableColumns({
+  onPatch,
+  onDelete,
+  onImageToggle,
+  categories,
+  onReload,
+  status,
+  onToggle,
+  getApprovalState,
+}: CreateOptimisticDraftTableColumnsParams) {
   const isApproved = status === 'approved';
 
   // Helper function to check if a row is disabled (being approved)

@@ -69,3 +69,22 @@ export const ProductDraftSchema = z.object({
 });
 
 export type ProductDraft = z.infer<typeof ProductDraftSchema>;
+
+// Extended type for draft product data with all properties
+export interface DraftProductData {
+  name?: string | null;
+  pricePair?: number | null;
+  currency?: string | null;
+  material?: string | null;
+  gender?: string | null;
+  season?: string | null;
+  sizes?: Array<{
+    size: string;
+    stock: number;
+  }> | null;
+  packPairs?: number | null;
+  priceBox?: number | null;
+  notes?: string | null;
+  providerDiscount?: number | null;
+  typeSlug?: string | null;
+}

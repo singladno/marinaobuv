@@ -3,9 +3,9 @@
 // Load environment variables from .env.local BEFORE any other imports
 import './load-env';
 
+import { prisma } from '../lib/db-node';
 import { processMessageGroupToDraft } from '../lib/draft-processor';
 import { groupMessagesWithGPT } from '../lib/gpt-grouping';
-import { prisma } from '../lib/db-node';
 
 /**
  * Get messages that need processing (all unprocessed messages)

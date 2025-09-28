@@ -27,7 +27,7 @@ interface MobileDataTableProps<TData, TValue> {
 }
 
 export function MobileDataTable<TData, TValue>({
-  table: providedTable,
+  table,
   columns,
   data,
   loading = false,

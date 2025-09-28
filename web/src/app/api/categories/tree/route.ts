@@ -53,8 +53,8 @@ export async function GET() {
   } catch (error) {
     console.error('Categories tree API error:', error);
     return NextResponse.json(
-      { 
-        ok: false, 
+      {
+        ok: false,
         error: 'Failed to fetch categories tree',
         details: error instanceof Error ? error.message : String(error)
       },

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+import { generateItemCodes } from '@/lib/itemCodeGenerator';
+import { generateOrderNumber } from '@/lib/order-number-generator';
 import { prisma } from '@/lib/server/db';
 import { getSession } from '@/lib/server/session';
-import { generateOrderNumber } from '@/lib/order-number-generator';
-import { generateItemCodes } from '@/lib/itemCodeGenerator';
 
 interface CreateOrderItem {
   slug: string;
@@ -16,7 +17,7 @@ function getBoxPriceFromPair(pricePair: any, sizes: any[]): number {
   return Number(pricePair) * (pairs > 0 ? pairs : 1);
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getSession();
 

@@ -1,116 +1,66 @@
-'use client';
-
-import { useState } from 'react';
-
 import ProductCard from '@/components/product/ProductCard';
-import { Button } from '@/components/ui/Button';
-import { Text } from '@/components/ui/Text';
 
-export interface Product {
+interface Product {
   id: string;
   slug: string;
   name: string;
+  article: string | null;
   pricePair: number;
-  currency: string;
-  imageUrl: string | null;
-  category?: string;
-  colorOptions?: Array<{ color: string; imageUrl: string }>;
+  images: Array<{ url: string; alt?: string }>;
+  category: {
+    id: string;
+    name: string;
+  };
+  reviews: Array<{ rating: number }>;
+  sizes: Array<{ stock: number }>;
+  createdAt: string;
 }
 
 interface ProductGridProps {
   products: Product[];
-  title?: string;
-  showCategories?: boolean;
-  categories?: string[];
-  onCategoryChange?: (category: string) => void;
-  selectedCategory?: string;
+  gridCols: 4 | 5;
+  loading: boolean;
 }
 
-export default function ProductGrid({
-  products,
-  title = 'Товары',
-  showCategories = true,
-  categories = [],
-  onCategoryChange,
-  selectedCategory = 'Все',
-}: ProductGridProps) {
-  const [localSelectedCategory, setLocalSelectedCategory] =
-    useState(selectedCategory);
+export function ProductGrid({ products, gridCols, loading }: ProductGridProps) {
+  if (loading) {
+    return (
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div key={index} className="animate-pulse">
+            <div className="h-64 rounded-lg bg-gray-200 dark:bg-gray-700"></div>
+            <div className="mt-4 space-y-2">
+              <div className="h-4 rounded bg-gray-200 dark:bg-gray-700"></div>
+              <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700"></div>
+              <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-gray-700"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
-  // Get unique categories from products if not provided
-  const availableCategories =
-    categories.length > 0
-      ? categories
-      : [
-          'Все',
-          ...Array.from(new Set(products.map(p => p.category).filter(Boolean))),
-        ];
+  if (products.length === 0) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-lg text-gray-500">Товары не найдены</p>
+        <p className="mt-2 text-sm text-gray-400">
+          Попробуйте изменить параметры поиска или фильтры
+        </p>
+      </div>
+    );
+  }
 
-  // Filter products by category
-  const filteredProducts =
-    localSelectedCategory === 'Все'
-      ? products
-      : products.filter(p => p.category === localSelectedCategory);
-
-  const handleCategoryChange = (category: string) => {
-    setLocalSelectedCategory(category);
-    onCategoryChange?.(category);
+  const gridClasses = {
+    4: 'grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+    5: 'grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
   };
 
   return (
-    <div className="space-y-6">
-      {/* Category Filters */}
-      {showCategories && availableCategories.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {availableCategories.map(category => (
-            <Button
-              key={category}
-              variant={
-                localSelectedCategory === category ? 'primary' : 'outline'
-              }
-              size="sm"
-              onClick={() => handleCategoryChange(category)}
-              className="transition-all duration-200 hover:scale-105"
-            >
-              {category}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredProducts.map(product => (
-          <ProductCard
-            key={product.id}
-            slug={product.slug}
-            name={product.name}
-            pricePair={product.pricePair}
-            packPairs={(product as any).packPairs ?? null}
-            priceBox={(product as any).priceBox ?? null}
-            currency={product.currency}
-            imageUrl={product.imageUrl}
-            category={product.category}
-            showCategory={showCategories}
-            colorOptions={product.colorOptions}
-          />
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filteredProducts.length === 0 && (
-        <div className="py-16 text-center">
-          <div className="mx-auto max-w-md">
-            <div className="mb-4 text-5xl">🔍</div>
-            <Text variant="h3" as="h3" className="mb-2 text-lg font-semibold">
-              Товары не найдены
-            </Text>
-            <Text className="text-muted-foreground">
-              В категории "{localSelectedCategory}" пока нет товаров
-            </Text>
-          </div>
-        </div>
-      )}
+    <div className={gridClasses[gridCols]}>
+      {products.map(product => (
+        <ProductCard key={product.id} product={product} />
+      ))}
     </div>
   );
 }

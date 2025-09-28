@@ -18,7 +18,7 @@ export function SizeDisplay({
   index,
   isSaving,
   onEdit,
-  onDelete,
+  // onDelete,
   onMouseEnter,
   onMouseLeave,
   sizeRef,

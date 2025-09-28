@@ -1,17 +1,20 @@
-import * as React from 'react';
 import type { VisibilityState } from '@tanstack/react-table';
+import * as React from 'react';
 
 export function useDraftColumnVisibility(status?: string) {
-  const defaultColumnVisibility: VisibilityState = {
-    article: true, // Always visible
-    category: status === 'approved',
-    gptRequest: false,
-    gptResponse: false,
-    gptRequest2: false,
-    gptResponse2: false,
-    createdAt: false,
-    updatedAt: false,
-  };
+  const defaultColumnVisibility: VisibilityState = React.useMemo(
+    () => ({
+      article: true, // Always visible
+      category: status === 'approved',
+      gptRequest: false,
+      gptResponse: false,
+      gptRequest2: false,
+      gptResponse2: false,
+      createdAt: false,
+      updatedAt: false,
+    }),
+    [status]
+  );
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>(defaultColumnVisibility);
@@ -45,7 +48,7 @@ export function useDraftColumnVisibility(status?: string) {
 
   const resetColumnVisibility = React.useCallback(() => {
     setColumnVisibility(defaultColumnVisibility);
-  }, []);
+  }, [defaultColumnVisibility]);
 
   return {
     columnVisibility: finalColumnVisibility,

@@ -1,10 +1,6 @@
 import { prisma } from './db-node';
-import { extractMessageText, mediaInfo, fetchMediaBuffer } from './whapi';
-import { normalizeTextToDraft } from './yagpt';
-import { processProviderFromMessage } from './provider-utils';
-import { putBuffer, buildKey } from './s3u';
-import { env } from './env';
 import { WhatsAppMessage } from './message-fetcher';
+import { normalizeTextToDraft } from './yagpt';
 
 /**
  * Process media upload for a message

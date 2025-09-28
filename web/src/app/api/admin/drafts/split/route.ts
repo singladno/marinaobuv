@@ -81,13 +81,17 @@ export async function POST(request: NextRequest) {
           gender: originalDraft.gender,
           season: originalDraft.season,
           description: originalDraft.description,
-          sizes: originalDraft.sizes as any,
+          sizes: originalDraft.sizes as Array<{
+            size: string;
+            stock: number;
+            perBox?: number;
+          }>,
           providerDiscount: originalDraft.providerDiscount,
-          rawGptResponse: originalDraft.rawGptResponse as any,
+          rawGptResponse: originalDraft.rawGptResponse as string | null,
           gptRequest: originalDraft.gptRequest,
-          rawGptResponse2: originalDraft.rawGptResponse2 as any,
+          rawGptResponse2: originalDraft.rawGptResponse2 as string | null,
           gptRequest2: originalDraft.gptRequest2,
-          source: originalDraft.source as any,
+          source: originalDraft.source as string | null,
           color: originalDraft.color,
           categoryId: originalDraft.categoryId,
           status: originalDraft.status,

@@ -29,7 +29,18 @@ async function checkMessages() {
         acc[msg.from].push(msg);
         return acc;
       },
-      {} as Record<string, any[]>
+      {} as Record<
+        string,
+        Array<{
+          id: string;
+          from: string;
+          fromName: string | null;
+          text: string | null;
+          type: string;
+          createdAt: Date;
+          providerId: string | null;
+        }>
+      >
     );
 
     console.log('\nMessages by sender:');

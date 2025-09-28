@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { normalizePhoneToE164 } from '@/lib/server/sms';
@@ -16,7 +17,12 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: {
+      OR?: Array<{
+        name?: { contains: string; mode: string };
+        phone?: { contains: string; mode: string };
+      }>;
+    } = {};
 
     if (search) {
       where.OR = [
@@ -122,7 +128,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Remove password hash from response
-    const { passwordHash: _, ...userWithoutPassword } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...userWithoutPassword } = user;
 
     return NextResponse.json(userWithoutPassword, { status: 201 });
   } catch (error) {

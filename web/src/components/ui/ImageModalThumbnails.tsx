@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import * as React from 'react';
 
 interface ImageModalThumbnailsProps {
@@ -41,9 +42,11 @@ export function ImageModalThumbnails({
                   : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
               } ${isSelected ? 'ring-2 ring-green-500' : ''}`}
             >
-              <img
+              <Image
                 src={img.url}
                 alt={img.alt || `Миниатюра ${index + 1}`}
+                width={80}
+                height={80}
                 className={`h-full w-full object-cover transition-opacity ${imageOpacity}`}
               />
               {img.color && (

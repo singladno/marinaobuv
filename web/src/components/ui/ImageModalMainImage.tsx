@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import * as React from 'react';
 
 interface ImageModalMainImageProps {
@@ -31,9 +32,11 @@ export function ImageModalMainImage({
   return (
     <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-800">
       <div className="relative flex items-center">
-        <img
+        <Image
           src={currentImage.url}
           alt={currentImage.alt || `Изображение ${currentIndex + 1}`}
+          width={800}
+          height={600}
           className={`max-h-[70vh] max-w-full object-contain transition-opacity ${imageOpacity} ${
             selectedImages.has(currentImage.id) ? 'ring-4 ring-blue-500' : ''
           }`}

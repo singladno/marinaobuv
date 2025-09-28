@@ -31,7 +31,7 @@ export function Tabs({ value, onChange, children, className = '' }: TabsProps) {
 }
 
 export function Tab({
-  value,
+  // value,
   children,
   isActive = false,
   onClick,

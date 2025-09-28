@@ -1,21 +1,22 @@
 'use client';
 
+import { Star, MessageSquare, ThumbsUp, User } from 'lucide-react';
 import { useState } from 'react';
-import { Star, MessageSquare, ThumbsUp, User, Calendar } from 'lucide-react';
+
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Text } from '@/components/ui/Text';
+// import { Text } from '@/components/ui/Text';
 import { useProductReviews } from '@/hooks/useProductReviews';
 
-interface Review {
-  id: string;
-  rating: number;
-  title?: string;
-  comment?: string;
-  name?: string;
-  isVerified: boolean;
-  createdAt: string;
-}
+// interface Review {
+//   id: string;
+//   rating: number;
+//   title?: string;
+//   comment?: string;
+//   name?: string;
+//   isVerified: boolean;
+//   createdAt: string;
+// }
 
 interface ProductReviewsProps {
   productId: string;

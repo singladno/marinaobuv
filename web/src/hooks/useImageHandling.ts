@@ -1,7 +1,8 @@
 import * as React from 'react';
 
+// import type { Draft } from '@/types/admin';
+
 import { useProductSplit } from './useProductSplit';
-import type { Draft } from '@/types/admin';
 
 interface UseImageHandlingProps {
   draftId: string;

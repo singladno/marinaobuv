@@ -13,7 +13,7 @@ interface CategoryCellProps {
 }
 
 export function CategoryCell({
-  category,
+  // category,
   categoryId,
   onCategoryChange,
   categories,

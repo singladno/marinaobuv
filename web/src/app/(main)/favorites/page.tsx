@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
-import ProductCard from '@/components/product/ProductCard';
 import SortControl from '@/components/product/filters/SortControl';
+import ProductCard from '@/components/product/ProductCard';
 import { Button } from '@/components/ui/Button';
 import SearchBar from '@/components/ui/SearchBar';
 import { Text } from '@/components/ui/Text';

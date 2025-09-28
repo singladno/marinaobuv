@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { EditableProductCell } from '@/components/features/EditableProductCell';
 import type { Product } from '@/types/product';
 

@@ -1,8 +1,9 @@
 'use client';
 
+import { useSidebarToggle } from '@/hooks/useSidebarToggle';
+
 import AdminSidebar from './AdminSidebar';
 import { SidebarToggle } from './SidebarToggle';
-import { useSidebarToggle } from '@/hooks/useSidebarToggle';
 
 type AdminSidebarLayoutProps = {
   children: React.ReactNode;

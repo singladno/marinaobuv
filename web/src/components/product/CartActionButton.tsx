@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 
 import { useCart } from '@/contexts/CartContext';
 

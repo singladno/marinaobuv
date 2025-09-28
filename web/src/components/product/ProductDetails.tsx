@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable max-lines */
+// /* eslint-disable max-lines */
 import {
   ShoppingCart,
   Minus,

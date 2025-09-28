@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server';
-import { getSession } from '@/lib/server/session';
 import type { Role } from '@prisma/client';
+import { NextRequest } from 'next/server';
+
+import { getSession } from '@/lib/server/session';
 
 export type AppRole = Role;
 

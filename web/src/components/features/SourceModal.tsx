@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import * as React from 'react';
 
 import { Modal } from '@/components/ui/Modal';
@@ -68,7 +69,7 @@ export function SourceModal({ isOpen, onClose, source }: SourceModalProps) {
       size="xl"
     >
       <div className="space-y-4 p-6">
-        {source.map((message, index) => (
+        {source.map(message => (
           <div
             key={message.id}
             className="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
@@ -97,9 +98,11 @@ export function SourceModal({ isOpen, onClose, source }: SourceModalProps) {
 
             {message.type === 'image' && message.mediaUrl && (
               <div className="mt-2">
-                <img
+                <Image
                   src={message.mediaUrl}
                   alt="Изображение из сообщения"
+                  width={400}
+                  height={192}
                   className="max-h-48 max-w-full rounded border object-contain"
                   loading="lazy"
                 />

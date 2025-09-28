@@ -8,7 +8,7 @@
  */
 export function getThumbnailUrl(
   originalUrl: string,
-  size: number = 150
+  /* size: number = 150 */
 ): string {
   // For WA parser images, we'll use the original URL for now
   // TODO: Implement image resizing service if needed

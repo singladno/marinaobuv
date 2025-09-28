@@ -1,14 +1,16 @@
+// import { createHash } from 'crypto';
+
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
-import { prisma } from '@/lib/server/db';
+
 import { env } from '@/lib/env';
+import { buildKey, putBuffer, publicUrl, computeSha256 } from '@/lib/s3u';
+import { prisma } from '@/lib/server/db';
 import {
   isGroupJid,
   extractMessageText,
   mediaInfo,
   fetchMediaBuffer,
 } from '@/lib/whapi';
-import { buildKey, putBuffer, publicUrl, computeSha256 } from '@/lib/s3u';
 import { normalizeTextToDraft } from '@/lib/yagpt';
 import { WebhookPayloadSchema, isMessagesUpsert } from '@/types/whapi';
 
@@ -51,7 +53,7 @@ export async function POST(
       return NextResponse.json({ ok: true, message: 'Event not processed' });
     }
 
-    const { key, message, pushName, timestamp, media } = payload.data;
+    const { key, message, pushName } = payload.data;
 
     // Ignore messages from self
     if (key.fromMe) {

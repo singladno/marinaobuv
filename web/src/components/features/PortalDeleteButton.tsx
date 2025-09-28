@@ -23,7 +23,7 @@ export function PortalDeleteButton({
   return createPortal(
     <div
       className="fixed z-50 p-1"
-      // eslint-disable-next-line react/forbid-dom-props
+
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,

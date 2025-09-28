@@ -5,12 +5,14 @@ import {
   getOrCreateProvider,
   DraftProductData,
 } from './draft-product-creator';
-import { normalizeTextToDraft, validateDraftWithImages } from './yagpt';
+import { normalizeTextToDraft } from './yagpt';
 
 /**
  * Extract text content from messages
  */
-export function extractTextContent(messages: any[]): {
+export function extractTextContent(
+  messages: Array<{ text?: string; media?: { type: string; url: string } }>
+): {
   textContents: string[];
   mediaInfo: string[];
 } {
@@ -56,7 +58,7 @@ export function convertToProductData(productDraft: any): DraftProductData {
     pricePair: pricePair,
     currency: 'RUB',
 
-    material: productDraft.material || null,
+    // material: productDraft.material || null, // Commented out as it's not in DraftProductData
     gender: productDraft.gender
       ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
       : null,
@@ -134,7 +136,7 @@ export async function processMessageGroupToDraft(
     console.log(`Combined text for group ${groupKey}:`, combinedText);
 
     // Process with YandexGPT
-    let productDraft = await normalizeTextToDraft(combinedText);
+    const productDraft = await normalizeTextToDraft(combinedText);
 
     if (!productDraft) {
       throw new Error(
@@ -173,7 +175,7 @@ export async function processMessageGroupToDraft(
     }
 
     // Create the draft product
-    const created = await createDraftProduct(
+    await createDraftProduct(
       firstMessage.id,
       providerId,
       productData,
@@ -188,7 +190,7 @@ export async function processMessageGroupToDraft(
     // Mark all messages in the group as processed
     await prisma.whatsAppMessage.updateMany({
       where: { id: { in: messageIds } },
-      data: { processed: true } as any,
+      data: { processed: true },
     });
 
     console.log(`Successfully processed group ${groupKey}`);

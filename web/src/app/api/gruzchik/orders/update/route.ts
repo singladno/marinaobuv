@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { prisma } from '@/lib/server/db';
 import { getSession } from '@/lib/server/session';
 
@@ -40,7 +41,11 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: {
+      label?: string;
+      payment?: number;
+      status?: string;
+    } = {};
     if (label !== undefined) updateData.label = label;
     if (payment !== undefined) updateData.payment = payment;
     if (status !== undefined) updateData.status = status;

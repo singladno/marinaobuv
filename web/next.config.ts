@@ -47,6 +47,16 @@ const nextConfig: NextConfig = {
     remotePatterns: computeRemotePatterns(),
     formats: ['image/avif', 'image/webp'],
   },
+  eslint: {
+    // Enable ESLint during builds and development
+    ignoreDuringBuilds: false,
+    // Show ESLint errors and warnings in the console during development
+    dirs: ['src'],
+  },
+  typescript: {
+    // Enable TypeScript checking during builds and development
+    ignoreBuildErrors: false,
+  },
 };
 
 export default nextConfig;

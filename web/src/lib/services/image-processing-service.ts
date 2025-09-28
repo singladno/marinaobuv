@@ -1,4 +1,3 @@
-import { prisma } from '../db-node';
 import { putFromUrl, buildKey } from '../s3u';
 
 export interface ImageData {

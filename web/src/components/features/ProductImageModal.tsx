@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { ProductImage } from '@/types/product';
-import { Modal } from '@/components/ui/Modal';
-import { ImageModalNavigation } from '@/components/ui/ImageModalNavigation';
-import { ImageModalMainImage } from '@/components/ui/ImageModalMainImage';
+
 import { ImageModalBadges } from '@/components/ui/ImageModalBadges';
+import { ImageModalMainImage } from '@/components/ui/ImageModalMainImage';
+import { ImageModalNavigation } from '@/components/ui/ImageModalNavigation';
 import { ImageModalThumbnails } from '@/components/ui/ImageModalThumbnails';
+import { Modal } from '@/components/ui/Modal';
+import type { ProductImage } from '@/types/product';
 
 interface ProductImageModalProps {
   isOpen: boolean;

@@ -13,13 +13,13 @@ export interface WhatsAppMessage {
   };
 }
 
-interface MessagesResponse {
-  success: boolean;
-  data?: {
-    messages?: WhatsAppMessage[];
-  };
-  error?: string;
-}
+// interface MessagesResponse {
+//   success: boolean;
+//   data?: {
+//     messages?: WhatsAppMessage[];
+//   };
+//   error?: string;
+// }
 
 /**
  * Fetch messages from the specified group chat using offset-based pagination

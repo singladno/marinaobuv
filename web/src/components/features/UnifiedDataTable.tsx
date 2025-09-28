@@ -1,12 +1,10 @@
 'use client';
 
-import React from 'react';
 import type { ColumnDef, Table } from '@tanstack/react-table';
-import type { CategoryNode } from '@/components/ui/CategorySelector';
+import React, { useState } from 'react';
 
-import { DataTable } from '@/components/ui/DataTable';
-import { Tabs, Tab } from '@/components/ui/Tabs';
-import { useTableRenderers } from '@/hooks/useTableRenderers';
+import { UnifiedTableContent } from './UnifiedTableContent';
+import { UnifiedTableHeader } from './UnifiedTableHeader';
 
 interface UnifiedDataTableProps<TData, TValue> {
   table?: Table<TData>;
@@ -26,129 +24,53 @@ interface UnifiedDataTableProps<TData, TValue> {
   emptyMessage?: string;
   loadingMessage?: string;
 
-  // Draft-specific props
-  isDraftTable?: boolean;
-  selected?: Record<string, boolean>;
-  onToggle?: (id: string) => void;
-  onSelectAll?: (selectAll: boolean) => void;
-  status?: string;
-  onStatusChange?: (status: string | undefined) => void;
-  onApprove?: () => void;
-  onConvertToCatalog?: () => void;
-  onBulkDelete?: () => void;
-  onBulkRestore?: () => void;
-  onBulkPermanentDelete?: () => void;
-  selectedCount?: number;
-  categories?: CategoryNode[];
-  onReload?: () => void;
-  onPatch?: (id: string, patch: Partial<TData>) => Promise<void>;
-
-  // Product-specific props
-  isProductTable?: boolean;
-  filters?: {
-    search: string;
-    categoryId: string;
-  };
-  onFiltersChange?: (filters: { search?: string; categoryId?: string }) => void;
-  onUpdateProduct?: (
-    id: string,
-    data: Record<string, unknown>
-  ) => Promise<void>;
+  onReload: () => void;
+  onColumnSettings: () => void;
 }
 
 export function UnifiedDataTable<TData, TValue>({
   table,
   columns,
   data,
-  loading = false,
-  error = null,
+  loading,
+  error,
   pagination,
   onPageChange,
   onPageSizeChange,
-  className = '',
-  emptyMessage = 'Данные не найдены',
-  loadingMessage = 'Загрузка...',
-
-  // Draft-specific
-  isDraftTable = false,
-  selected,
-  onToggle,
-  onSelectAll,
-  status,
-  onStatusChange,
-  onApprove,
-  onConvertToCatalog,
-  onBulkDelete,
-  onBulkRestore,
-  onBulkPermanentDelete,
-  selectedCount,
-  categories,
+  className,
+  emptyMessage,
+  loadingMessage,
   onReload,
-  onPatch,
-
-  // Product-specific
-  isProductTable = false,
-  filters,
-  onFiltersChange,
-  onUpdateProduct,
+  onColumnSettings,
 }: UnifiedDataTableProps<TData, TValue>) {
-  // SSE connection for real-time approval updates (only for draft table)
-  // Draft IDs calculation removed - not needed without SSE
+  const [activeTab, setActiveTab] = useState('drafts');
 
-  // SSE completely disabled to fix navigation issues
-  const isConnected = false;
-  const { renderProductFilters } = useTableRenderers({
-    isDraftTable,
-    isProductTable,
-    status,
-    selectedCount,
-    filters,
-    onApprove,
-    onConvertToCatalog,
-    onBulkDelete,
-    onBulkRestore,
-    onBulkPermanentDelete,
-    onReload,
-    onFiltersChange,
-  });
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
 
   return (
-    <div
-      className={`flex h-full flex-col rounded-lg bg-gray-50 dark:bg-gray-800 ${className}`}
-    >
-      {/* Tabs for draft table */}
-      {isDraftTable && (
-        <div className="flex-shrink-0 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-          <Tabs
-            value={status ?? 'approved'}
-            onChange={value => onStatusChange?.(value)}
-          >
-            <Tab value="approved">Обработано</Tab>
-            <Tab value="deleted">Удаленные</Tab>
-          </Tabs>
-        </div>
-      )}
+    <div className="space-y-6">
+      <UnifiedTableHeader
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onReload={onReload}
+        onColumnSettings={onColumnSettings}
+      />
 
-      {/* Actions removed - now handled by DraftBulkOperations at the top */}
-
-      {/* Filters for product table */}
-      {renderProductFilters()}
-
-      {/* Table content */}
-      <div className="min-h-0 flex-1">
-        <DataTable
-          table={table}
-          columns={columns}
-          data={data}
-          loading={loading}
-          error={error}
-          pagination={pagination}
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-          emptyMessage={emptyMessage}
-          loadingMessage={loadingMessage}
-        />
-      </div>
+      <UnifiedTableContent
+        table={table}
+        columns={columns}
+        data={data}
+        loading={loading}
+        error={error}
+        pagination={pagination}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        className={className}
+        emptyMessage={emptyMessage}
+        loadingMessage={loadingMessage}
+      />
     </div>
   );
 }

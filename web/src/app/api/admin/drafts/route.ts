@@ -2,7 +2,8 @@ import type { Role } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
-import { prisma } from '@/lib/server/db';
+
+import { getDraftById, getDrafts } from './draft-service';
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,170 +13,50 @@ export async function GET(req: NextRequest) {
     const skip = parseInt(searchParams.get('skip') || '0', 10);
     const status = searchParams.get('status') || undefined;
 
-    const where =
-      status === 'deleted'
-        ? { isDeleted: true }
-        : status === 'approved'
-          ? { isDeleted: false } // Show all non-deleted draft products
-          : { status: status as string | undefined, isDeleted: false };
-
-    const [drafts, total] = await Promise.all([
-      prisma.waDraftProduct.findMany({
-        take,
-        skip,
-        where,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          messageId: true,
-          providerId: true,
-          provider: {
-            select: { id: true, name: true, phone: true, place: true },
-          },
-          name: true,
-          article: true,
-          categoryId: true,
-          category: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              path: true,
-            },
-          },
-          pricePair: true,
-          currency: true,
-          material: true,
-          gender: true,
-          season: true,
-          description: true,
-          providerDiscount: true,
-          sizes: true,
-          status: true,
-          isDeleted: true,
-          createdAt: true,
-          updatedAt: true,
-          images: {
-            select: {
-              id: true,
-              url: true,
-              isPrimary: true,
-              sort: true,
-              alt: true,
-              isFalseImage: true,
-              isActive: true,
-              color: true,
-            },
-          },
-          gptRequest: true,
-          rawGptResponse: true,
-          gptRequest2: true,
-          rawGptResponse2: true,
-          aiStatus: true,
-          aiProcessedAt: true,
-          source: true,
-        },
-      }),
-      prisma.waDraftProduct.count({ where }),
-    ]);
-
-    // Fetch message data for all source message IDs
-    const allSourceIds = drafts
-      .filter(draft => draft.source && Array.isArray(draft.source))
-      .flatMap(draft => draft.source as string[]);
-
-    const messages = await prisma.whatsAppMessage.findMany({
-      where: { id: { in: allSourceIds } },
-      select: {
-        id: true,
-        waMessageId: true,
-        from: true,
-        fromName: true,
-        type: true,
-        text: true,
-        timestamp: true,
-        mediaUrl: true,
-        mediaMimeType: true,
-        mediaWidth: true,
-        mediaHeight: true,
-        createdAt: true,
-        provider: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    // Create a map of message ID to message data
-    const messageMap = new Map(messages.map(msg => [msg.id, msg]));
-
-    // Transform drafts to include message data in source
-    const draftsWithMessages = drafts.map(draft => ({
-      ...draft,
-      source:
-        draft.source && Array.isArray(draft.source)
-          ? (draft.source as string[])
-              .map(id => {
-                const message = messageMap.get(id);
-                if (!message) return null;
-                return {
-                  ...message,
-                  timestamp: message.timestamp
-                    ? Number(message.timestamp)
-                    : null,
-                  createdAt: message.createdAt.toISOString(),
-                };
-              })
-              .filter(Boolean)
-              .sort((a, b) => {
-                // Sort by timestamp first, then by createdAt
-                const aTime =
-                  a?.timestamp || new Date(a?.createdAt || 0).getTime();
-                const bTime =
-                  b?.timestamp || new Date(b?.createdAt || 0).getTime();
-                return aTime - bTime;
-              })
-          : null,
-    }));
+    const { drafts, total } = await getDrafts({ take, skip, status });
 
     return NextResponse.json({
-      drafts: draftsWithMessages,
-      total,
-      page: Math.floor(skip / take) + 1,
-      pageSize: take,
-      totalPages: Math.ceil(total / take),
+      drafts,
+      pagination: {
+        total,
+        take,
+        skip,
+        hasMore: skip + take < total,
+      },
     });
-  } catch (e: unknown) {
-    const status = (e as { status?: number })?.status ?? 500;
+  } catch (error) {
+    console.error('Error fetching drafts:', error);
     return NextResponse.json(
-      { error: (e as { message?: string })?.message ?? 'Unexpected error' },
-      { status }
+      { error: 'Failed to fetch drafts' },
+      { status: 500 }
     );
   }
 }
 
-export async function PATCH(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     requireRole(req, ['ADMIN' as Role]);
-    const body = await req.json();
-    // body: { id: string, data: Partial<WaDraftProduct> }
-    const { id, data } = body as { id: string; data: Record<string, unknown> };
-    if (!id || !data)
-      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    const { id } = await req.json();
 
-    const updated = await prisma.waDraftProduct.update({
-      where: { id },
-      data,
-    });
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Draft ID is required' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({ draft: updated });
-  } catch (e: unknown) {
-    const status = (e as { status?: number })?.status ?? 500;
+    const draft = await getDraftById(id);
+
+    if (!draft) {
+      return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ draft });
+  } catch (error) {
+    console.error('Error fetching draft:', error);
     return NextResponse.json(
-      { error: (e as { message?: string })?.message ?? 'Unexpected error' },
-      { status }
+      { error: 'Failed to fetch draft' },
+      { status: 500 }
     );
   }
 }

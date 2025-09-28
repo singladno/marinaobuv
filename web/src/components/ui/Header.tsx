@@ -1,21 +1,21 @@
 'use client';
 
-import Link from 'next/link';
 import {
   HeartIcon,
   MoonIcon,
   SunIcon,
-  UserIcon,
+  // UserIcon,
 } from '@heroicons/react/24/outline';
+import Link from 'next/link';
 
+import TopRightActions from '@/components/product/TopRightActions';
+import AccountMenu from '@/components/ui/AccountMenu';
 import { Button } from '@/components/ui/Button';
 import MobileMenu from '@/components/ui/MobileMenu';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { site } from '@/lib/site';
-import TopRightActions from '@/components/product/TopRightActions';
-import AccountMenu from '@/components/ui/AccountMenu';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;

@@ -96,10 +96,6 @@ export default async function ProductPage({
               material={product.material}
               gender={product.gender}
               season={product.season}
-              packPairs={product.packPairs}
-              priceBox={
-                product.priceBox != null ? Number(product.priceBox) : null
-              }
               availabilityCheckedAt={product.availabilityCheckedAt ?? undefined}
               sizes={product.sizes}
             />

@@ -1,11 +1,11 @@
 import { prisma } from './db-node';
+import { ImageProcessingService } from './services/image-processing-service';
 import {
   MessageGroupingService,
   MessageGroup,
 } from './services/message-grouping-service';
-import { UnifiedAnalysisService } from './services/unified-analysis-service';
-import { ImageProcessingService } from './services/image-processing-service';
 import { ProductCreationService } from './services/product-creation-service';
+import { UnifiedAnalysisService } from './services/unified-analysis-service';
 
 /**
  * Refactored unified OpenAI processor with clean separation of concerns

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+
 import { generateItemCode } from '../lib/itemCodeGenerator';
 
 const prisma = new PrismaClient();

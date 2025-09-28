@@ -9,7 +9,7 @@ export interface ImageColorResult {
 }
 
 export class PerImageColorService {
-  private openai: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private openai: any;
 
   constructor() {
     if (!env.OPENAI_API_KEY) {

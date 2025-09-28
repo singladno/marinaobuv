@@ -1,4 +1,5 @@
 import * as React from 'react';
+
 import type { Product } from '@/types/product';
 
 interface ProductState {

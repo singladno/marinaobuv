@@ -12,8 +12,8 @@ import { UnifiedOpenAIProcessor } from '../lib/unified-openai-processor-v2';
 let env: any;
 try {
   // Clear the module cache to force re-import
-  delete require.cache[require.resolve('../lib/env')];
-  env = require('../lib/env').env;
+  const envModule = await import('../lib/env');
+  env = envModule.env;
 } catch (error) {
   console.error('Failed to load env:', error);
   process.exit(1);

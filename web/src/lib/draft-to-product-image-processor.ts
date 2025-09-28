@@ -1,5 +1,5 @@
 import { prisma } from './db-node';
-import { putFromUrl, buildKey, getExtensionFromMime, publicUrl } from './s3u';
+import { putFromUrl, getExtensionFromMime } from './s3u';
 
 export interface ProcessedImageData {
   url: string;

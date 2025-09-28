@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import Image from 'next/image';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -222,9 +223,11 @@ export function createGruzchikAvailabilityColumns(
             {row.original.items.slice(0, 1).map((item, index) => (
               <div key={index} className="flex items-center space-x-2">
                 {item.product.image && (
-                  <img
+                  <Image
                     src={item.product.image}
                     alt={item.name}
+                    width={32}
+                    height={32}
                     className="h-6 w-6 rounded object-cover sm:h-8 sm:w-8"
                   />
                 )}

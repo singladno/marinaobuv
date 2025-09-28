@@ -64,7 +64,7 @@ function TreeNode({
   activePath?: string;
   searchParams: URLSearchParams;
 }) {
-  const p = stripPrefix(node.path);
+  // const p = stripPrefix(node.path);
   const expanded = isActive(node.path, activePath);
   const isLeaf = node.children.length === 0;
   const catalogUrl = buildCatalogUrl(node.id, searchParams);

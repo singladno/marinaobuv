@@ -62,7 +62,7 @@ export function useSidebarToggle(): SidebarState & SidebarActions {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCollapsed]);
+  }, [isCollapsed, toggleCollapse]);
 
   const toggleCollapse = useCallback(() => {
     setIsCollapsed(prev => !prev);

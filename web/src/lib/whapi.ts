@@ -10,28 +10,38 @@ export function isGroupJid(jid: string): boolean {
 /**
  * Extract text content from WhatsApp message
  */
-export function extractMessageText(message: Record<string, unknown>): string | null {
+export function extractMessageText(
+  message: Record<string, unknown>
+): string | null {
   // Try different message types in order of preference
   if (typeof message.conversation === 'string') {
     return message.conversation;
   }
 
-  const extendedText = message.extendedTextMessage as Record<string, unknown> | undefined;
+  const extendedText = message.extendedTextMessage as
+    | Record<string, unknown>
+    | undefined;
   if (extendedText && typeof extendedText.text === 'string') {
     return extendedText.text;
   }
 
-  const imageMessage = message.imageMessage as Record<string, unknown> | undefined;
+  const imageMessage = message.imageMessage as
+    | Record<string, unknown>
+    | undefined;
   if (imageMessage && typeof imageMessage.caption === 'string') {
     return imageMessage.caption;
   }
 
-  const videoMessage = message.videoMessage as Record<string, unknown> | undefined;
+  const videoMessage = message.videoMessage as
+    | Record<string, unknown>
+    | undefined;
   if (videoMessage && typeof videoMessage.caption === 'string') {
     return videoMessage.caption;
   }
 
-  const documentMessage = message.documentMessage as Record<string, unknown> | undefined;
+  const documentMessage = message.documentMessage as
+    | Record<string, unknown>
+    | undefined;
   if (documentMessage && typeof documentMessage.caption === 'string') {
     return documentMessage.caption;
   }
@@ -42,9 +52,13 @@ export function extractMessageText(message: Record<string, unknown>): string | n
 /**
  * Get media information from WhatsApp message
  */
-export function mediaInfo(message: Record<string, unknown>): { mime?: string; id?: string; url?: string } | null {
+export function mediaInfo(
+  message: Record<string, unknown>
+): { mime?: string; id?: string; url?: string } | null {
   // Check for media in the message object
-  const imageMessage = message.imageMessage as Record<string, unknown> | undefined;
+  const imageMessage = message.imageMessage as
+    | Record<string, unknown>
+    | undefined;
   if (imageMessage) {
     return {
       mime: imageMessage.mimetype as string,
@@ -53,7 +67,9 @@ export function mediaInfo(message: Record<string, unknown>): { mime?: string; id
     };
   }
 
-  const videoMessage = message.videoMessage as Record<string, unknown> | undefined;
+  const videoMessage = message.videoMessage as
+    | Record<string, unknown>
+    | undefined;
   if (videoMessage) {
     return {
       mime: videoMessage.mimetype as string,
@@ -62,7 +78,9 @@ export function mediaInfo(message: Record<string, unknown>): { mime?: string; id
     };
   }
 
-  const documentMessage = message.documentMessage as Record<string, unknown> | undefined;
+  const documentMessage = message.documentMessage as
+    | Record<string, unknown>
+    | undefined;
   if (documentMessage) {
     return {
       mime: documentMessage.mimetype as string,
@@ -104,16 +122,17 @@ export async function fetchMediaBuffer(input: {
     const headResponse = await fetch(mediaUrl, {
       method: 'HEAD',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
-    mimeType = headResponse.headers.get('content-type') || 'application/octet-stream';
+    mimeType =
+      headResponse.headers.get('content-type') || 'application/octet-stream';
   } else if (id) {
     // Media ID provided, need to get URL from Whapi
     const mediaResponse = await fetch(`${env.WHAPI_BASE_URL}/media/${id}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -123,7 +142,8 @@ export async function fetchMediaBuffer(input: {
 
     const mediaData = await mediaResponse.json();
     mediaUrl = mediaData.url || mediaData.download_url;
-    mimeType = mediaData.mime_type || mediaData.mimetype || 'application/octet-stream';
+    mimeType =
+      mediaData.mime_type || mediaData.mimetype || 'application/octet-stream';
   } else {
     throw new Error('Either url or id must be provided');
   }
@@ -132,7 +152,7 @@ export async function fetchMediaBuffer(input: {
   const response = await fetch(mediaUrl, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -161,7 +181,8 @@ function getExtensionFromMime(mimeType: string): string {
     'video/x-msvideo': 'avi',
     'application/pdf': 'pdf',
     'application/msword': 'doc',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      'docx',
   };
 
   return mimeMap[mimeType] || 'bin';
@@ -175,7 +196,11 @@ function getExtensionFromMime(mimeType: string): string {
 export async function setWebhook(
   webhookUrl: string,
   events: string[] = ['messages.upsert', 'messages.update', 'messages.delete']
-): Promise<{ success: boolean; message?: string; data?: Record<string, unknown> }> {
+): Promise<{
+  success: boolean;
+  message?: string;
+  data?: Record<string, unknown>;
+}> {
   try {
     // Try different possible endpoints
     const endpoints = [
@@ -185,7 +210,7 @@ export async function setWebhook(
       `${env.WHAPI_BASE_URL}/api/webhook`,
     ];
 
-    let lastError: Error | null = null;
+    // let lastError: Error | null = null;
 
     for (const endpoint of endpoints) {
       try {
@@ -193,7 +218,7 @@ export async function setWebhook(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.WHAPI_TOKEN}`,
+            Authorization: `Bearer ${env.WHAPI_TOKEN}`,
           },
           body: JSON.stringify({
             url: webhookUrl,
@@ -210,8 +235,8 @@ export async function setWebhook(
             data,
           };
         }
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Unknown error');
+      } catch {
+        // lastError = error instanceof Error ? error : new Error('Unknown error');
         continue;
       }
     }

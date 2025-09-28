@@ -1,5 +1,7 @@
 import * as React from 'react';
+
 import type { Draft } from '@/types/admin';
+
 import { useDraftStateManager } from './useDraftStateManager';
 
 export interface DraftOperation {
@@ -126,7 +128,7 @@ export function useDraftOperations({
   );
 
   const toggleImage = React.useCallback(
-    async (imageId: string, isActive: boolean, event?: React.MouseEvent) => {
+    async (imageId: string, isActive: boolean) => {
       // Find the draft that contains this image
       const draft = state.data.find(d =>
         d.images.some(img => img.id === imageId)

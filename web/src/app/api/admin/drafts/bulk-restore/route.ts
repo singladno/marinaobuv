@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/server/db';
-import { requireRole } from '@/lib/auth';
 import type { Role } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
   try {

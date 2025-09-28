@@ -1,7 +1,7 @@
 /**
  * System prompt for YandexGPT product extraction
  */
-export function getSystemPrompt(categoryTreeJson?: string): string {
+export function getSystemPrompt(/* categoryTreeJson?: string */): string {
   return `You are a product data extraction assistant for a shoe store.
  Extract product information from the given text and return STRICT JSON matching this schema:
  {

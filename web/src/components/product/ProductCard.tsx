@@ -52,7 +52,7 @@ export default function ProductCard({
     return imageUrl || null;
   }, [selectedColor, colorOptions, imageUrl]);
   const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
-  const computedBoxPrice = useMemo(() => null, []);
+  // const computedBoxPrice = useMemo(() => null, []);
   const computedPairPrice = useMemo(() => pricePair ?? null, [pricePair]);
 
   return (

@@ -1,6 +1,15 @@
-import React from 'react';
 import { flexRender } from '@tanstack/react-table';
 import type { Row } from '@tanstack/react-table';
+import React from 'react';
+
+interface ColumnMeta {
+  frozen?: 'left' | 'right';
+  getRowClass?: (row: Row<any>) => string;
+}
+
+interface RowData {
+  id?: string;
+}
 
 interface DataTableRowProps<TData> {
   row: Row<TData>;
@@ -8,11 +17,12 @@ interface DataTableRowProps<TData> {
 
 export function DataTableRow<TData>({ row }: DataTableRowProps<TData>) {
   // Extract product ID from row data for data-product-id attribute
-  const productId = (row.original as any)?.id;
+  const productId = (row.original as RowData)?.id;
 
   // Get custom row class from first column meta if available
   const firstColumn = row.getVisibleCells()[0]?.column;
-  const getRowClass = (firstColumn?.columnDef?.meta as any)?.getRowClass;
+  const meta = firstColumn?.columnDef?.meta as ColumnMeta;
+  const getRowClass = meta?.getRowClass;
   const customRowClass = getRowClass ? getRowClass(row) : '';
 
   return (
@@ -22,10 +32,9 @@ export function DataTableRow<TData>({ row }: DataTableRowProps<TData>) {
       className={`border-b border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 ${customRowClass}`}
     >
       {row.getVisibleCells().map(cell => {
-        const isFrozenLeft =
-          (cell.column.columnDef.meta as any)?.frozen === 'left';
-        const isFrozenRight =
-          (cell.column.columnDef.meta as any)?.frozen === 'right';
+        const cellMeta = cell.column.columnDef.meta as ColumnMeta;
+        const isFrozenLeft = cellMeta?.frozen === 'left';
+        const isFrozenRight = cellMeta?.frozen === 'right';
 
         return (
           <td

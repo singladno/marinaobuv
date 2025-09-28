@@ -59,11 +59,11 @@ export type GruzchikOrderItemRow = {
   orderLabel: string | null;
   orderPayment: number;
   orderTotal: number;
-  
+
   // Customer info
   customerName: string | null;
   customerPhone: string;
-  
+
   // Item info
   itemId: string;
   itemName: string;
@@ -72,7 +72,7 @@ export type GruzchikOrderItemRow = {
   itemPrice: number;
   itemCode: string | null;
   itemImage: string | null;
-  
+
   // WhatsApp message info
   messageId?: string;
   messageText?: string;
@@ -82,7 +82,7 @@ export type GruzchikOrderItemRow = {
 // Helper function to flatten orders into item rows
 function flattenOrdersToItems(orders: GruzchikOrder[]): GruzchikOrderItemRow[] {
   const itemRows: GruzchikOrderItemRow[] = [];
-  
+
   orders.forEach(order => {
     order.items.forEach(item => {
       itemRows.push({
@@ -94,11 +94,11 @@ function flattenOrdersToItems(orders: GruzchikOrder[]): GruzchikOrderItemRow[] {
         orderLabel: order.label,
         orderPayment: order.payment,
         orderTotal: order.total,
-        
+
         // Customer info
         customerName: order.fullName,
         customerPhone: order.phone,
-        
+
         // Item info
         itemId: item.id,
         itemName: item.name,
@@ -107,7 +107,7 @@ function flattenOrdersToItems(orders: GruzchikOrder[]): GruzchikOrderItemRow[] {
         itemPrice: item.priceBox,
         itemCode: item.itemCode,
         itemImage: item.product.image,
-        
+
         // WhatsApp message info
         messageId: item.messageId,
         messageText: item.messageText,
@@ -115,7 +115,7 @@ function flattenOrdersToItems(orders: GruzchikOrder[]): GruzchikOrderItemRow[] {
       });
     });
   });
-  
+
   return itemRows;
 }
 
@@ -170,7 +170,7 @@ export function useGruzchikOrders(status?: string) {
 
   useEffect(() => {
     fetchOrders();
-  }, [status]);
+  }, [status, fetchOrders]);
 
   const onPageChange = (page: number) => {
     fetchOrders(page, pagination.pageSize);

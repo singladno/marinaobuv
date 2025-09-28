@@ -1,8 +1,7 @@
 'use client';
 
-import * as React from 'react';
-import type { Draft } from '@/types/admin';
-import { Loader } from '@/components/ui/Loader';
+import { DraftApprovalActions } from './DraftApprovalActions';
+import { DraftDeletionActions } from './DraftDeletionActions';
 
 interface DraftBulkOperationsProps {
   selectedIds: string[];
@@ -13,13 +12,6 @@ interface DraftBulkOperationsProps {
   onBulkRestore: () => void;
   onBulkPermanentDelete: () => void;
   isProcessing: boolean;
-  currentProcessingDraft?: {
-    id: string;
-    name: string | null;
-    aiStatus: string | null;
-    aiProcessedAt: string | null;
-    updatedAt: string;
-  } | null;
 }
 
 export function DraftBulkOperations({
@@ -31,134 +23,46 @@ export function DraftBulkOperations({
   onBulkRestore,
   onBulkPermanentDelete,
   isProcessing,
-  currentProcessingDraft,
 }: DraftBulkOperationsProps) {
   const selectedCount = selectedIds.length;
-  // Check if any selected drafts are currently being approved
-  const isApproving = false; // No longer using approval events
-  const approvingDrafts: Draft[] = [];
 
-  // Get detailed approval state for the first approving draft
-  const firstApprovingDraft = approvingDrafts[0];
-  const approvalState = null; // No longer using approval events
+  if (selectedCount === 0) {
+    return null;
+  }
 
   return (
     <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">
-      <div className="flex items-center space-x-3">
-        {/* Черновики - одобрить, удалить */}
-        {status === 'draft' && (
-          <>
-            <button
-              onClick={onApprove}
-              disabled={selectedCount === 0 || isProcessing || isApproving}
-              className="flex items-center rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isApproving ? (
-                <>
-                  <Loader size="sm" className="mr-2" />
-                  Одобрение...
-                </>
-              ) : (
-                'Одобрить'
-              )}
-            </button>
+      {status === 'draft' && (
+        <DraftApprovalActions
+          selectedCount={selectedCount}
+          onApprove={onApprove}
+          onConvertToCatalog={onConvertToCatalog}
+          isProcessing={isProcessing}
+        />
+      )}
 
-            <button
-              onClick={onBulkDelete}
-              disabled={selectedCount === 0 || isProcessing}
-              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Удалить
-            </button>
-          </>
-        )}
+      {status === 'deleted' && (
+        <DraftDeletionActions
+          selectedCount={selectedCount}
+          onBulkDelete={onBulkDelete}
+          onBulkRestore={onBulkRestore}
+          onBulkPermanentDelete={onBulkPermanentDelete}
+        />
+      )}
 
-        {/* Одобрено - добавить в каталог, удалить */}
-        {status === 'approved' && (
-          <>
-            <button
-              onClick={onConvertToCatalog}
-              disabled={selectedCount === 0 || isProcessing}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              В каталог
-            </button>
-
-            <button
-              onClick={onBulkDelete}
-              disabled={selectedCount === 0 || isProcessing}
-              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Удалить
-            </button>
-          </>
-        )}
-
-        {/* Удаленные - восстановить, удалить навсегда */}
-        {status === 'deleted' && (
-          <>
-            <button
-              onClick={onBulkRestore}
-              disabled={selectedCount === 0 || isProcessing}
-              className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Восстановить
-            </button>
-
-            <button
-              onClick={onBulkPermanentDelete}
-              disabled={selectedCount === 0 || isProcessing}
-              className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Удалить навсегда
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
-        {selectedCount > 0
-          ? `Выбрано: ${selectedCount}`
-          : 'Выберите товары для действий'}
-      </div>
-
-      {/* Approval Status - Show when drafts are being approved */}
-      {isApproving && (
+      {status === 'approved' && (
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
-            <span className="text-sm text-blue-900 dark:text-blue-100">
-              Одобрение в процессе... ({approvingDrafts.length} из{' '}
-              {selectedCount})
-            </span>
+          <span className="text-sm font-medium text-green-900 dark:text-green-100">
+            {selectedCount} черновиков выбрано
+          </span>
+          <div className="flex space-x-2">
+            <button
+              onClick={onBulkDelete}
+              className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
+            >
+              Удалить
+            </button>
           </div>
-
-          {/* Detailed progress for the first approving draft */}
-          {approvalState && approvalState.isProcessing && (
-            <div className="flex items-center space-x-2">
-              <div className="text-xs text-blue-700 dark:text-blue-300">
-                {approvalState.totalImages > 0
-                  ? approvalState.currentImage > 0
-                    ? `Загрузка изображений: ${approvalState.currentImage}/${approvalState.totalImages} (${approvalState.progress}%)`
-                    : 'Подготовка к загрузке...'
-                  : 'Обработка черновика...'}
-              </div>
-              {approvalState.totalImages > 0 ? (
-                <div className="h-1 w-16 rounded-full bg-gray-200 dark:bg-gray-700">
-                  <div
-                    className="h-1 rounded-full bg-green-500 transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, Math.max(0, approvalState.progress))}%`,
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="h-1 w-16 rounded-full bg-gray-200 dark:bg-gray-700">
-                  <div className="h-1 w-full animate-pulse rounded-full bg-green-500" />
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>

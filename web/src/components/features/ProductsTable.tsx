@@ -4,9 +4,9 @@ import React from 'react';
 
 import type { Product } from '@/types/product';
 
+import { ProductsTableContent } from './ProductsTableContent';
 import { ProductsTableFilters } from './ProductsTableFilters';
 import { ProductsTableHeader } from './ProductsTableHeader';
-import { ProductsTableContent } from './ProductsTableContent';
 
 interface ProductsTableProps {
   products: Product[];

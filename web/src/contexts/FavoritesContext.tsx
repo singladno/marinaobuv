@@ -22,7 +22,7 @@ export function FavoritesProvider({
   children,
 }: {
   children: React.ReactNode;
-}): JSX.Element {
+}): React.JSX.Element {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   // Load from localStorage on mount

@@ -84,7 +84,7 @@ function MenuItem({
   label,
 }: {
   href: string;
-  icon: (props: any) => JSX.Element;
+  icon: (props: React.SVGProps<SVGSVGElement>) => React.JSX.Element;
   label: string;
 }) {
   return (
@@ -100,7 +100,7 @@ function MenuItem({
   );
 }
 
-function BoxIcon(props: any) {
+function BoxIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -120,7 +120,7 @@ function BoxIcon(props: any) {
   );
 }
 
-function HeartIcon(props: any) {
+function HeartIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       viewBox="0 0 24 24"

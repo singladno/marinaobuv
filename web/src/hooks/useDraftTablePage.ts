@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { useDrafts } from '@/hooks/useDrafts';
+
 import { useCategories } from '@/hooks/useCategories';
 import { useDraftBulkOperations } from '@/hooks/useDraftBulkOperations';
+import { useDrafts } from '@/hooks/useDrafts';
 import { useDraftsTableNew } from '@/hooks/useDraftsTableNew';
 import type { Draft } from '@/types/admin';
 
@@ -19,7 +20,7 @@ export function useDraftTablePage(initialStatus: string) {
     changePageSize,
   } = useDrafts();
   const { categories, loading: categoriesLoading } = useCategories();
-  const [isTabChanging, setIsTabChanging] = React.useState(false);
+  // const [isTabChanging, setIsTabChanging] = React.useState(false);
 
   // Use bulk operations hook first to get isRunningAI state
   const {

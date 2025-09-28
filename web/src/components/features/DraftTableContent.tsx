@@ -2,7 +2,7 @@ import { flexRender } from '@tanstack/react-table';
 import * as React from 'react';
 
 import { TableLoader } from '@/components/ui/Loader';
-import type { Draft } from '@/types/admin';
+// import type { Draft } from '@/types/admin';
 
 import { DraftEmptyState } from './DraftEmptyState';
 import { DraftErrorState } from './DraftErrorState';
@@ -34,7 +34,7 @@ export function DraftTableContent({
   error,
   status,
   hasData,
-  savingStatus,
+  // savingStatus,
   onToggle,
   currentProcessingDraft,
 }: DraftTableContentProps) {

@@ -1,53 +1,36 @@
-'use client';
+import type { Product, ProductUpdateData } from '@/types/product';
 
-import React, { useState } from 'react';
-import { EditableProductCell } from '@/components/features/EditableProductCell';
-import type { Product } from '@/types/product';
+import { EditableProductCell } from './EditableProductCell';
 
 interface ProductPriceCellProps {
   product: Product;
-  priceInKopecks: number | string | null | undefined;
-  onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
-  disabled?: boolean;
+  onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
 }
 
 export function ProductPriceCell({
   product,
-  priceInKopecks,
   onUpdateProduct,
-  disabled = false,
 }: ProductPriceCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const formattedPrice = (() => {
-    if (!priceInKopecks) return '0.00';
-    const num = Number(priceInKopecks);
-    return isNaN(num) ? '0.00' : num.toFixed(2);
-  })();
-
-  const handleSave = async (value: string) => {
-    setIsSaving(true);
-    try {
-      await onUpdateProduct(product.id, { pricePair: parseFloat(value) });
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating product price:', error);
-    } finally {
-      setIsSaving(false);
-    }
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency: 'RUB',
+    }).format(price);
   };
 
   return (
     <EditableProductCell
-      value={formattedPrice}
-      onSave={handleSave}
-      isEditing={isEditing}
-      onEdit={() => !disabled && setIsEditing(!isEditing)}
-      onCancel={() => setIsEditing(false)}
-      isSaving={isSaving}
-      type="number"
-      step="0.01"
-      disabled={disabled}
+      value={formatPrice(product.pricePair)}
+      onSave={async value => {
+        const numericValue = parseFloat(
+          value.replace(/[^\d.,]/g, '').replace(',', '.')
+        );
+        if (!isNaN(numericValue)) {
+          await onUpdateProduct(product.id, { pricePair: numericValue });
+        }
+      }}
+      type="text"
+      className="text-sm font-medium text-gray-900"
     />
   );
 }

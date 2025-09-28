@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Review {
   id: string;
@@ -23,26 +23,29 @@ export function useProductReviews(productId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchReviews = async (page = 1) => {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `/api/products/${productId}/reviews?page=${page}&limit=10`
-      );
+  const fetchReviews = useCallback(
+    async (page = 1) => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `/api/products/${productId}/reviews?page=${page}&limit=10`
+        );
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch reviews');
+        if (!response.ok) {
+          throw new Error('Failed to fetch reviews');
+        }
+
+        const reviewsData = await response.json();
+        setData(reviewsData);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
       }
-
-      const reviewsData = await response.json();
-      setData(reviewsData);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [productId]
+  );
 
   const submitReview = async (reviewData: {
     rating: number;
@@ -77,7 +80,7 @@ export function useProductReviews(productId: string) {
     if (productId) {
       fetchReviews();
     }
-  }, [productId]);
+  }, [productId, fetchReviews]);
 
   return {
     data,
