@@ -9,15 +9,10 @@ export async function GET() {
       select: {
         id: true,
         waMessageId: true,
-        remoteJid: true,
+        chatId: true,
         fromMe: true,
-        pushName: true,
-        messageType: true,
-        text: true,
-        mediaUrl: true,
-        mediaS3Key: true,
-        createdAt: true,
         rawPayload: true,
+        createdAt: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -35,17 +30,32 @@ export async function GET() {
       return {
         id: msg.id,
         waMessageId: msg.waMessageId,
-        groupId: msg.remoteJid,
-        sender: msg.pushName,
-        messageType: msg.messageType,
-        text: msg.text,
-        mediaUrl: msg.mediaUrl,
+        groupId: (msg as any).chatId,
+        sender: (msg as any).pushName,
+        messageType: (msg as any).messageType,
+        text: (msg as any).text,
+        mediaUrl: (msg as any).mediaUrl,
         timestamp: msg.createdAt,
         isRealMessage: !isTestMessage,
         source: isTestMessage ? 'TEST' : 'REAL_WHATSAPP',
         rawData: msg.rawPayload,
       };
     });
+
+    interface ChatGroup {
+      chatId: string;
+      messageCount: number;
+      messages: Array<{
+        groupId: string;
+        timestamp: string;
+        [key: string]: unknown;
+      }>;
+      latestMessage: {
+        groupId: string;
+        timestamp: string;
+        [key: string]: unknown;
+      } | null;
+    }
 
     // Group by chat
     const groupedByChat = formattedMessages.reduce(
@@ -60,22 +70,37 @@ export async function GET() {
           };
         }
         acc[chatId].messageCount++;
-        acc[chatId].messages.push(msg);
+        {
+          const ts = (msg.timestamp as any as Date).toISOString();
+          acc[chatId].messages.push({
+            ...msg,
+            groupId: chatId,
+            timestamp: ts,
+          });
+        }
         if (
           !acc[chatId].latestMessage ||
-          msg.timestamp > acc[chatId].latestMessage.timestamp
+          new Date(msg.timestamp).toISOString() >
+            acc[chatId].latestMessage.timestamp
         ) {
-          acc[chatId].latestMessage = msg;
+          {
+            const ts = (msg.timestamp as any as Date).toISOString();
+            acc[chatId].latestMessage = {
+              ...msg,
+              groupId: chatId,
+              timestamp: ts,
+            } as any;
+          }
         }
         return acc;
       },
-      {} as Record<string, any>
+      {} as Record<string, ChatGroup>
     );
 
     const chatList = Object.values(groupedByChat).sort(
-      (a: any, b: any) =>
-        new Date(b.latestMessage.timestamp).getTime() -
-        new Date(a.latestMessage.timestamp).getTime()
+      (a: ChatGroup, b: ChatGroup) =>
+        new Date(b.latestMessage!.timestamp).getTime() -
+        new Date(a.latestMessage!.timestamp).getTime()
     );
 
     return NextResponse.json({

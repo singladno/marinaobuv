@@ -16,11 +16,14 @@ export async function POST(req: NextRequest) {
     const json = await req.json();
     const body = BodySchema.safeParse(json);
     if (!body.success) {
-      return NextResponse.json({ ok: false, error: 'Invalid body', details: body.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: 'Invalid body', details: body.error.flatten() },
+        { status: 400 }
+      );
     }
     const { productId, contentType, ext, isPrimary, sort } = body.data;
     const key = getObjectKey({ productId, ext });
-    const uploadUrl = await presignPut(key, contentType);
+    const uploadUrl = await presignPut(key);
     const publicUrl = getPublicUrl(key);
 
     return NextResponse.json({
@@ -30,9 +33,12 @@ export async function POST(req: NextRequest) {
       publicUrl,
       fields: { productId, isPrimary: isPrimary ?? false, sort: sort ?? 0 },
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('presign error', e);
-    return NextResponse.json({ ok: false, error: 'Internal error' }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: 'Internal error' },
+      { status: 500 }
+    );
   }
 }
 

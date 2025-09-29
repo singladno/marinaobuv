@@ -1,6 +1,7 @@
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import type { Draft } from '@/types/admin';
 
+import { ApprovalSelectionCell } from './ApprovalSelectionCell';
 import {
   columnHelper,
   MemoizedCategoryCell,
@@ -8,7 +9,6 @@ import {
   MemoizedProviderCell,
   MemoizedSourceCell,
 } from './DraftTableColumnHelpers';
-import { ApprovalSelectionCell } from './ApprovalSelectionCell';
 
 interface CreateBasicColumnsParams {
   onToggle: (id: string) => void;
@@ -30,115 +30,92 @@ export function createBasicColumns({
   status,
 }: CreateBasicColumnsParams) {
   const isApproved = status === 'approved';
+  const columns = [];
 
-  const columns = [
-    columnHelper.display({
-      id: 'select',
-      header: () =>
-        onSelectAll ? (
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              checked={allSelected || false}
-              ref={input => {
-                if (input)
-                  input.indeterminate =
-                    (someSelected || false) && !(allSelected || false);
-              }}
-              onChange={e => onSelectAll(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              title={allSelected ? 'Снять выделение со всех' : 'Выделить все'}
-            />
-          </div>
-        ) : (
-          ''
-        ),
-      cell: info => (
-        <ApprovalSelectionCell
-          id={info.row.original.id}
-          selected={Boolean(info.row.original.selected)}
-          onToggle={onToggle}
-          approvalState={{
-            isProcessing: false,
-            currentImage: 0,
-            totalImages: 0,
-            progress: 0,
-            status: 'idle',
-          }}
-        />
-      ),
-    }),
-  ];
-
-  // Only add name column for approved status
-  if (isApproved) {
+  // Selection column
+  if (onSelectAll && allSelected !== undefined && someSelected !== undefined) {
     columns.push(
       columnHelper.display({
-        id: 'name',
-        header: () => 'Название',
-        cell: info => (
-          <MemoizedEditableCell
-            value={info.row.original.name}
-            onBlur={value => onPatch(info.row.original.id, { name: value })}
-            placeholder="Введите название"
-            aria-label="Название"
-            disabled={(info as any).isProcessing}
+        id: 'select',
+        header: () => (
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={el => {
+              if (el) el.indeterminate = someSelected && !allSelected;
+            }}
+            onChange={e => onSelectAll(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+        ),
+        cell: ({ row }) => (
+          <ApprovalSelectionCell
+            draftId={row.original.id}
+            isSelected={row.original.isSelected}
+            onToggle={onToggle}
           />
         ),
       })
     );
   }
 
-  // Add article column - always visible, non-editable
+  // Name column
   columns.push(
     columnHelper.display({
-      id: 'article',
-      header: () => 'Артикул',
-      cell: info => (
-        <div className="px-2 py-1 text-sm text-gray-900 dark:text-gray-100">
-          {info.row.original.article || '—'}
-        </div>
+      id: 'name',
+      header: 'Название',
+      cell: ({ row }) => (
+        <MemoizedEditableCell
+          value={row.original.name}
+          onSave={value => onPatch(row.original.id, { name: value })}
+          placeholder="Введите название"
+        />
       ),
     })
   );
 
-  // Add category column only for approved status
-  if (isApproved) {
-    columns.push(
-      columnHelper.display({
-        id: 'category',
-        header: () => 'Категория',
-        cell: info => (
-          <MemoizedCategoryCell
-            category={info.row.original.category}
-            categoryId={info.row.original.categoryId}
-            onCategoryChange={value =>
-              onPatch(info.row.original.id, { categoryId: value })
-            }
-            categories={categories}
-          />
-        ),
-      })
-    );
-  }
+  // Category column
+  columns.push(
+    columnHelper.display({
+      id: 'category',
+      header: 'Категория',
+      cell: ({ row }) => (
+        <MemoizedCategoryCell
+          categoryId={row.original.categoryId}
+          categories={categories}
+          onPatch={onPatch}
+          draftId={row.original.id}
+        />
+      ),
+    })
+  );
 
-  // Add provider column
+  // Provider column
   columns.push(
     columnHelper.display({
       id: 'provider',
-      header: () => 'Поставщик',
-      cell: info => (
-        <MemoizedProviderCell provider={info.row.original.provider} />
+      header: 'Поставщик',
+      cell: ({ row }) => (
+        <MemoizedProviderCell
+          providerId={row.original.providerId}
+          onPatch={onPatch}
+          draftId={row.original.id}
+        />
       ),
     })
   );
 
-  // Add source column
+  // Source column
   columns.push(
     columnHelper.display({
       id: 'source',
-      header: () => 'Источник',
-      cell: info => <MemoizedSourceCell source={info.row.original.source} />,
+      header: 'Источник',
+      cell: ({ row }) => (
+        <MemoizedSourceCell
+          source={row.original.source}
+          draftId={row.original.id}
+        />
+      ),
     })
   );
 

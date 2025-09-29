@@ -2,6 +2,10 @@ import * as React from 'react';
 
 import type { Draft } from '@/types/admin';
 
+import { useDraftDataOperations } from './useDraftDataOperations';
+import { useDraftOptimisticUpdates } from './useDraftOptimisticUpdates';
+import { useDraftState } from './useDraftState';
+
 export interface DraftState {
   data: Draft[];
   loading: boolean;
@@ -23,169 +27,62 @@ export interface DraftStateActions {
   reset: () => void;
 }
 
-const initialState: DraftState = {
-  data: [],
-  loading: false,
-  error: null,
-  optimisticUpdates: new Map(),
-  pendingOperations: new Set(),
-};
-
 export function useDraftStateManager() {
-  const [state, setState] = React.useState<DraftState>(initialState);
+  const state = useDraftState();
+  const dataOps = useDraftDataOperations();
+  const optimisticOps = useDraftOptimisticUpdates();
 
   const actions: DraftStateActions = React.useMemo(
     () => ({
-      setData: (data: Draft[]) => {
-        setState(prev => {
-          // Preserve optimistic updates when syncing external data
-          const newData = data.map(externalDraft => {
-            const optimisticUpdate = prev.optimisticUpdates.get(
-              externalDraft.id
-            );
-            if (optimisticUpdate) {
-              // Merge external data with optimistic updates
-              return { ...externalDraft, ...optimisticUpdate };
-            }
-            return externalDraft;
-          });
-
-          // Clear optimistic updates that match the external data
-          const newOptimisticUpdates = new Map(prev.optimisticUpdates);
-          data.forEach(externalDraft => {
-            const optimisticUpdate = prev.optimisticUpdates.get(
-              externalDraft.id
-            );
-            if (optimisticUpdate) {
-              // Check if the external data now matches the optimistic update
-              // For image updates, check if the images match
-              if (optimisticUpdate.images) {
-                const externalImages = externalDraft.images || [];
-                const optimisticImages = optimisticUpdate.images || [];
-                if (
-                  JSON.stringify(externalImages) ===
-                  JSON.stringify(optimisticImages)
-                ) {
-                  newOptimisticUpdates.delete(externalDraft.id);
-                }
-              } else {
-                // For non-image updates, check if the external data matches
-                const hasChanges = Object.keys(optimisticUpdate).some(key => {
-                  if (key === 'images') return false; // Already handled above
-                  return (
-                    JSON.stringify(externalDraft[key as keyof Draft]) !==
-                    JSON.stringify(optimisticUpdate[key as keyof Draft])
-                  );
-                });
-                if (!hasChanges) {
-                  newOptimisticUpdates.delete(externalDraft.id);
-                }
-              }
-            }
-          });
-
-          return {
-            ...prev,
-            data: newData,
-            optimisticUpdates: newOptimisticUpdates,
-            error: null,
-          };
-        });
-      },
-
-      setLoading: (loading: boolean) => {
-        setState(prev => ({ ...prev, loading }));
-      },
-
-      setError: (error: string | null) => {
-        setState(prev => ({ ...prev, error }));
-      },
-
-      updateDraft: (id: string, updates: Partial<Draft>) => {
-        setState(prev => ({
-          ...prev,
-          data: prev.data.map(draft =>
-            draft.id === id ? { ...draft, ...updates } : draft
-          ),
-        }));
-      },
-
-      removeDraft: (id: string) => {
-        setState(prev => ({
-          ...prev,
-          data: prev.data.filter(draft => draft.id !== id),
-        }));
-      },
-
-      addDraft: (draft: Draft) => {
-        setState(prev => ({
-          ...prev,
-          data: [...prev.data, draft],
-        }));
-      },
-
-      setOptimisticUpdate: (id: string, updates: Partial<Draft>) => {
-        setState(prev => {
-          const newOptimisticUpdates = new Map(prev.optimisticUpdates);
-          newOptimisticUpdates.set(id, updates);
-          return {
-            ...prev,
-            optimisticUpdates: newOptimisticUpdates,
-          };
-        });
-      },
-
-      clearOptimisticUpdate: (id: string) => {
-        setState(prev => {
-          const newOptimisticUpdates = new Map(prev.optimisticUpdates);
-          newOptimisticUpdates.delete(id);
-          return {
-            ...prev,
-            optimisticUpdates: newOptimisticUpdates,
-          };
-        });
-      },
-
-      setPendingOperation: (id: string, pending: boolean) => {
-        setState(prev => {
-          const newPendingOperations = new Set(prev.pendingOperations);
-          if (pending) {
-            newPendingOperations.add(id);
-          } else {
-            newPendingOperations.delete(id);
-          }
-          return {
-            ...prev,
-            pendingOperations: newPendingOperations,
-          };
-        });
-      },
-
-      reset: () => {
-        setState(initialState);
-      },
+      setData: state.setData,
+      setLoading: state.setLoading,
+      setError: state.setError,
+      updateDraft: dataOps.updateDraft,
+      removeDraft: dataOps.removeDraft,
+      addDraft: dataOps.addDraft,
+      setOptimisticUpdate: optimisticOps.setOptimisticUpdate,
+      clearOptimisticUpdate: optimisticOps.clearOptimisticUpdate,
+      setPendingOperation: optimisticOps.setPendingOperation,
+      reset: state.reset,
     }),
-    []
+    [state, dataOps, optimisticOps]
+  );
+
+  const currentState: DraftState = React.useMemo(
+    () => ({
+      data: dataOps.data,
+      loading: state.state.loading,
+      error: state.state.error,
+      optimisticUpdates: optimisticOps.optimisticUpdates,
+      pendingOperations: optimisticOps.pendingOperations,
+    }),
+    [
+      dataOps.data,
+      state.state.loading,
+      state.state.error,
+      optimisticOps.optimisticUpdates,
+      optimisticOps.pendingOperations,
+    ]
   );
 
   // Get draft with optimistic updates applied
   const getDraftWithOptimisticUpdates = React.useCallback(
     (draft: Draft): Draft => {
-      const optimisticUpdate = state.optimisticUpdates.get(draft.id);
+      const optimisticUpdate = optimisticOps.optimisticUpdates.get(draft.id);
       if (!optimisticUpdate) return draft;
       return { ...draft, ...optimisticUpdate };
     },
-    [state.optimisticUpdates]
+    [optimisticOps.optimisticUpdates]
   );
 
   // Get all drafts with optimistic updates applied
   const dataWithOptimisticUpdates = React.useMemo(
-    () => state.data.map(getDraftWithOptimisticUpdates),
-    [state.data, getDraftWithOptimisticUpdates]
+    () => dataOps.data.map(getDraftWithOptimisticUpdates),
+    [dataOps.data, getDraftWithOptimisticUpdates]
   );
 
   return {
-    state,
+    state: currentState,
     actions,
     dataWithOptimisticUpdates,
     getDraftWithOptimisticUpdates,

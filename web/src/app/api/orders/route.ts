@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { generateItemCodes } from '@/lib/itemCodeGenerator';
-import { generateOrderNumber } from '@/lib/order-number-generator';
-import { prisma } from '@/lib/server/db';
+import {
+  handleOrderCreationError,
+  validateCustomerInfo,
+  validateOrderItems,
+} from '@/lib/orders/orderValidation';
 import { getSession } from '@/lib/server/session';
-
-interface CreateOrderItem {
-  slug: string;
-  qty: number;
-}
-
-function getBoxPriceFromPair(pricePair: any, sizes: any[]): number {
-  const pairs = Array.isArray(sizes)
-    ? sizes.reduce((sum, s) => sum + Number(s?.stock ?? 0), 0)
-    : 0;
-  return Number(pricePair) * (pairs > 0 ? pairs : 1);
-}
+import { createOrder, getOrders } from '@/lib/services/order-creation-service';
 
 export async function GET() {
   try {
@@ -25,160 +16,56 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const orders = await prisma.order.findMany({
-      where: {
-        userId: session.userId,
-      },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: {
-                images: {
-                  select: {
-                    id: true,
-                    url: true,
-                    alt: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
+    const orders = await getOrders(session.userId);
     return NextResponse.json({ orders });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Unexpected error';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    const body = await req.json();
-    const {
-      items,
-      phone,
-      email,
-      fullName,
-      address,
-      transportId,
-      transportName,
-    } = body as {
-      items: CreateOrderItem[];
-      phone: string;
-      email?: string;
-      fullName?: string;
-      address?: string;
-      transportId?: string | null;
-      transportName?: string | null;
-    };
 
-    if (!items || !Array.isArray(items) || items.length === 0)
+    if (!session?.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { items, customerInfo } = body;
+
+    // Validate items
+    const itemsValidation = validateOrderItems(items);
+    if (!itemsValidation.isValid) {
       return NextResponse.json(
-        { error: 'Items are required' },
+        { error: itemsValidation.error },
         { status: 400 }
       );
-    if (!phone)
-      return NextResponse.json({ error: 'Phone is required' }, { status: 400 });
+    }
 
-    // Fetch products by slugs
-    const slugs = items.map(i => i.slug).filter(Boolean);
-    const products = await prisma.product.findMany({
-      where: { slug: { in: slugs } },
-      include: { sizes: true },
-    });
-
-    if (products.length === 0)
+    // Validate customer info
+    const customerValidation = validateCustomerInfo(customerInfo);
+    if (!customerValidation.isValid) {
       return NextResponse.json(
-        { error: 'Products not found' },
+        { error: customerValidation.error },
         { status: 400 }
       );
+    }
 
-    // Build order items and totals
-    const orderItemsData = items
-      .map(i => {
-        const p = products.find(pp => pp.slug === i.slug);
-        if (!p) return null;
-        const priceBox = getBoxPriceFromPair(p.pricePair, p.sizes as any[]);
-        return {
-          productId: p.id,
-          slug: p.slug,
-          name: p.name,
-          article: p.article ?? null,
-          priceBox,
-          qty: Math.max(1, Number(i.qty) || 1),
-        };
-      })
-      .filter(Boolean) as Array<{
-      productId: string;
-      slug: string;
-      name: string;
-      article: string | null;
-      priceBox: number;
-      qty: number;
-    }>;
-
-    if (orderItemsData.length === 0)
-      return NextResponse.json(
-        { error: 'No valid order items' },
-        { status: 400 }
-      );
-
-    const subtotal = orderItemsData.reduce(
-      (sum, it) => sum + Number(it.priceBox) * it.qty,
-      0
-    );
-    const total = subtotal;
-
-    // Generate human-readable order number
-    const orderNumber = await generateOrderNumber();
-
-    // Generate unique item codes for each item
-    const itemCodes = generateItemCodes(orderItemsData.length);
-
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        userId: session?.userId ?? null,
-        phone,
-        email: email ?? null,
-        fullName: fullName ?? null,
-        address: address ?? null,
-        transportId: transportId ?? null,
-        transportName: transportName ?? null,
-        subtotal,
-        total,
-        items: {
-          createMany: {
-            data: orderItemsData.map((oi, index) => ({
-              productId: oi.productId,
-              slug: oi.slug,
-              name: oi.name,
-              article: oi.article,
-              priceBox: oi.priceBox,
-              qty: oi.qty,
-              itemCode: itemCodes[index],
-            })),
-          },
-        },
-      },
-      select: { id: true, orderNumber: true },
-    });
+    const order = await createOrder(session.userId, items, customerInfo);
 
     return NextResponse.json({
-      ok: true,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
+      success: true,
+      order,
     });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Unexpected error';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error) {
+    console.error('Error creating order:', error);
+
+    const { status, message } = handleOrderCreationError(error);
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { createPortal } from 'react-dom';
 
 interface SizeActionButtonProps {
   isSaving: boolean;
@@ -16,51 +15,54 @@ export function SizeActionButton({
   onMouseLeave,
   sizeRef,
 }: SizeActionButtonProps) {
-  if (!sizeRef || typeof document === 'undefined') {
-    return null;
-  }
+  const [position, setPosition] = React.useState({ top: 0, left: 0 });
 
-  const rect = sizeRef.getBoundingClientRect();
+  React.useEffect(() => {
+    if (!sizeRef) return;
 
-  return createPortal(
+    const updatePosition = () => {
+      const rect = sizeRef.getBoundingClientRect();
+      setPosition({
+        top: rect.top + window.scrollY,
+        left: rect.right + window.scrollX + 8,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('scroll', updatePosition);
+    window.addEventListener('resize', updatePosition);
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [sizeRef]);
+
+  if (!sizeRef) return null;
+
+  return (
     <div
-      className="fixed z-50 flex gap-1"
-      // Dynamic positioning requires inline styles
+      className="fixed z-50 flex flex-col gap-1 rounded-lg border bg-white p-2 shadow-lg dark:bg-gray-800"
       style={{
-        left: `${rect.left + rect.width / 2 - 10}px`,
-        top: `${rect.top - 14}px`,
+        top: position.top,
+        left: position.left,
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <button
-        onClick={e => {
-          e.stopPropagation();
-          onDelete();
-        }}
+        onClick={onDelete}
         disabled={isSaving}
-        className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-colors hover:bg-red-600 disabled:opacity-50"
+        className="rounded bg-red-100 px-2 py-1 text-xs text-red-800 hover:bg-red-200 disabled:opacity-50 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800"
+        type="button"
         title="Удалить размер"
       >
         {isSaving ? (
-          <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-red-400 border-t-red-700" />
         ) : (
-          <svg
-            className="h-2.5 w-2.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
+          '🗑️ Удалить'
         )}
       </button>
-    </div>,
-    document.body
+    </div>
   );
 }

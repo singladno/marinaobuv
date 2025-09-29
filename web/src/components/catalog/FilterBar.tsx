@@ -1,9 +1,8 @@
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Text } from '@/components/ui/Text';
-import { sortLabel } from '@/lib/format';
 import type { CatalogFilters } from '@/types/filters';
+
+import { FilterActions } from './FilterActions';
+import { PriceFilter } from './PriceFilter';
+import { SortFilter } from './SortFilter';
 
 type Props = {
   path?: string;
@@ -39,62 +38,13 @@ export default function FilterBar({
       )}
 
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        {/* Price */}
-        <div className="flex items-end gap-2">
-          <div>
-            <Text as="label" className="text-muted mb-1 block text-xs">
-              Цена от, ₽
-            </Text>
-            <Input
-              type="number"
-              name="priceFrom"
-              placeholder={String(bounds.min ?? '')}
-              defaultValue={filters.priceFrom ?? ''}
-              className="w-28"
-            />
-          </div>
-          <div>
-            <Text as="label" className="text-muted mb-1 block text-xs">
-              до
-            </Text>
-            <Input
-              type="number"
-              name="priceTo"
-              placeholder={String(bounds.max ?? '')}
-              defaultValue={filters.priceTo ?? ''}
-              className="w-28"
-            />
-          </div>
-        </div>
-
-        {/* Sort */}
-        <div>
-          <Text as="label" className="text-muted mb-1 block text-xs">
-            Сортировка
-          </Text>
-          <Select name="sort" defaultValue={filters.sort ?? 'relevance'}>
-            {(['relevance', 'price-asc', 'price-desc', 'newest'] as const).map(
-              key => (
-                <option key={key} value={key}>
-                  {sortLabel(key)}
-                </option>
-              )
-            )}
-          </Select>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-3">
-          <Button type="submit" variant="primary">
-            Применить
-          </Button>
-          <a
-            href={resetHref}
-            className="text-muted hover:text-foreground underline"
-          >
-            Сбросить
-          </a>
-        </div>
+        <PriceFilter
+          bounds={bounds}
+          priceFrom={filters.priceFrom}
+          priceTo={filters.priceTo}
+        />
+        <SortFilter sort={filters.sort} />
+        <FilterActions resetHref={resetHref} />
       </div>
     </form>
   );

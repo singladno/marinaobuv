@@ -5,9 +5,6 @@ import { createAdditionalColumns } from './DraftTableAdditionalColumns';
 import { createBasicColumns } from './DraftTableBasicColumns';
 import { createPriceColumns } from './DraftTablePriceColumns';
 import { createProductColumns } from './DraftTableProductColumns';
-
-type DraftWithSelected = Draft & { selected?: boolean };
-
 interface CreateDraftTableColumnsParams {
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;

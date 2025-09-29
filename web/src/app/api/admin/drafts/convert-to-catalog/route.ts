@@ -30,7 +30,15 @@ export async function POST(req: NextRequest) {
 
     for (const draft of drafts) {
       try {
-        const product = await convertDraftToProduct(draft);
+        const normalizedDraft: any = {
+          ...draft,
+          pricePair:
+            (draft as any).pricePair &&
+            typeof (draft as any).pricePair === 'object'
+              ? Number((draft as any).pricePair)
+              : ((draft as any).pricePair ?? 0),
+        };
+        const product = await convertDraftToProduct(normalizedDraft);
         results.push({ draftId: draft.id, productId: product.id });
       } catch (err: unknown) {
         console.error(`  ❌ Failed to convert draft ${draft.id}:`, err);

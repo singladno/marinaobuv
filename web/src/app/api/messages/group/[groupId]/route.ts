@@ -27,14 +27,12 @@ export async function GET(
     }
 
     // Build select object based on includeDrafts parameter
-    const selectObject: any = {
+    const selectObject: Record<string, unknown> = {
       id: true,
       waMessageId: true,
-      remoteJid: true,
+      chatId: true,
       fromMe: true,
-      pushName: true,
-      messageType: true,
-      text: true,
+      rawPayload: true,
       mediaUrl: true,
       mediaS3Key: true,
       createdAt: true,
@@ -61,7 +59,7 @@ export async function GET(
     // Fetch messages for the specific group
     const messages = await prisma.whatsAppMessage.findMany({
       where: {
-        remoteJid: groupId,
+        chatId: groupId,
       },
       select: selectObject,
       orderBy: { createdAt: 'desc' },
@@ -72,20 +70,12 @@ export async function GET(
     // Get total count for pagination
     const totalCount = await prisma.whatsAppMessage.count({
       where: {
-        remoteJid: groupId,
+        chatId: groupId,
       },
     });
 
     // Get group statistics
-    const stats = await prisma.whatsAppMessage.groupBy({
-      by: ['messageType'],
-      where: {
-        remoteJid: groupId,
-      },
-      _count: {
-        messageType: true,
-      },
-    });
+    const stats: Record<string, number> = {};
 
     return NextResponse.json({
       success: true,
@@ -98,13 +88,7 @@ export async function GET(
       },
       statistics: {
         totalMessages: totalCount,
-        messageTypes: stats.reduce(
-          (acc, stat) => {
-            acc[stat.messageType || 'unknown'] = stat._count.messageType;
-            return acc;
-          },
-          {} as Record<string, number>
-        ),
+        messageTypes: stats,
       },
       messages,
     });

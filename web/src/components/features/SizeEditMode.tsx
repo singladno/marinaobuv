@@ -2,10 +2,10 @@ import * as React from 'react';
 
 interface SizeEditModeProps {
   draftSize: string;
-  setDraftSize: (value: string) => void;
-  draftPairs: string;
-  setDraftPairs: (value: string) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  setDraftSize: (size: string) => void;
+  draftPairs: number;
+  setDraftPairs: (pairs: number) => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
   onApply: () => void;
   onCancel: () => void;
   isSaving: boolean;
@@ -22,46 +22,46 @@ export function SizeEditMode({
   isSaving,
 }: SizeEditModeProps) {
   return (
-    <div className="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-md bg-yellow-50 px-2 py-1 text-xs text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-100">
-      <input
-        value={draftSize}
-        onChange={e => setDraftSize(e.target.value)}
-        onKeyDown={onKeyDown}
-        disabled={isSaving}
-        className="h-6 w-16 rounded border border-yellow-300 bg-white px-1 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:border-yellow-700 dark:bg-gray-800 dark:text-gray-100"
-        placeholder="Размер"
-        aria-label="Размер"
-      />
-      <input
-        value={draftPairs}
-        onChange={e => setDraftPairs(e.target.value)}
-        onKeyDown={onKeyDown}
-        disabled={isSaving}
-        className="h-6 w-12 rounded border border-yellow-300 bg-white px-1 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:border-yellow-700 dark:bg-gray-800 dark:text-gray-100"
-        placeholder="Пары"
-        aria-label="Пары"
-        inputMode="numeric"
-      />
-      <button
-        type="button"
-        className="rounded px-1 text-green-700 hover:bg-green-100 dark:text-green-300 dark:hover:bg-green-900/20"
-        onClick={onApply}
-        disabled={isSaving}
-        aria-label="Сохранить"
-        title="Сохранить"
-      >
-        ✓
-      </button>
-      <button
-        type="button"
-        className="rounded px-1 text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-600"
-        onClick={onCancel}
-        disabled={isSaving}
-        aria-label="Отменить"
-        title="Отменить"
-      >
-        ↩
-      </button>
+    <div className="flex-shrink-0 rounded border border-blue-300 bg-blue-50 p-1 dark:bg-blue-900/30">
+      <div className="flex items-center gap-1">
+        <input
+          type="text"
+          value={draftSize}
+          onChange={e => setDraftSize(e.target.value)}
+          onKeyDown={onKeyDown}
+          className="w-12 rounded border border-gray-300 px-1 py-0.5 text-sm focus:border-blue-500 focus:outline-none"
+          placeholder="Размер"
+          disabled={isSaving}
+        />
+        <span className="text-gray-500">×</span>
+        <input
+          type="number"
+          value={draftPairs}
+          onChange={e => setDraftPairs(Number(e.target.value))}
+          onKeyDown={onKeyDown}
+          className="w-16 rounded border border-gray-300 px-1 py-0.5 text-sm focus:border-blue-500 focus:outline-none"
+          placeholder="Пары"
+          disabled={isSaving}
+        />
+        <button
+          onClick={onApply}
+          disabled={isSaving}
+          className="rounded bg-green-100 px-1 py-0.5 text-xs text-green-800 hover:bg-green-200 disabled:opacity-50 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800"
+          type="button"
+          title="Применить"
+        >
+          ✓
+        </button>
+        <button
+          onClick={onCancel}
+          disabled={isSaving}
+          className="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-800 hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          type="button"
+          title="Отмена"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }

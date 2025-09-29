@@ -1,67 +1,8 @@
 import * as React from 'react';
 
+import { formatGptResponse } from '@/utils/gptResponseFormatter';
+
 import { TextModal } from './TextModal';
-
-function formatGptResponse(response: any): string {
-  // Handle OpenAI API response format
-  if (response.choices && response.choices[0] && response.choices[0].message) {
-    const message = response.choices[0].message;
-    let content = message.content;
-
-    // Try to parse the content as JSON if it's a string
-    if (typeof content === 'string') {
-      try {
-        const parsedContent = JSON.parse(content);
-        content = parsedContent;
-      } catch {
-        // Keep as string if not valid JSON
-      }
-    }
-
-    // Format the content in a readable way
-    if (typeof content === 'object' && content !== null) {
-      const lines = [];
-      lines.push('📋 РЕЗУЛЬТАТ АНАЛИЗА:');
-      lines.push('');
-
-      if (content.name) {
-        lines.push(`📝 Название: ${content.name}`);
-      }
-      if (content.imageColors && Array.isArray(content.imageColors)) {
-        lines.push(`🎨 Цвета: ${content.imageColors.join(', ')}`);
-      }
-      if (content.material) {
-        lines.push(`🧵 Материал: ${content.material}`);
-      }
-      if (content.gender) {
-        lines.push(`👤 Пол: ${content.gender}`);
-      }
-      if (content.season) {
-        lines.push(`🌤️ Сезон: ${content.season}`);
-      }
-      if (content.categoryId) {
-        lines.push(`📂 Категория ID: ${content.categoryId}`);
-      }
-
-      lines.push('');
-      lines.push('🔧 ТЕХНИЧЕСКАЯ ИНФОРМАЦИЯ:');
-      lines.push(
-        `⏰ Создано: ${new Date(response.created * 1000).toLocaleString('ru-RU')}`
-      );
-      lines.push(`🆔 ID: ${response.id}`);
-      lines.push(`🤖 Модель: ${response.model || 'Не указана'}`);
-      lines.push(`🏁 Завершение: ${message.finish_reason || 'Не указано'}`);
-
-      return lines.join('\n');
-    } else {
-      // If content is just a string, display it as is
-      return `📋 ОТВЕТ GPT:\n\n${content}`;
-    }
-  }
-
-  // Fallback to formatted JSON
-  return JSON.stringify(response, null, 2);
-}
 
 interface GptResponseCellProps {
   rawGptResponse: string | object | null | undefined;

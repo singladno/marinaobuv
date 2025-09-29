@@ -80,7 +80,10 @@ export default function BasketPage() {
         otpSent={basketState.otpSent}
         loginLoading={basketState.loginLoading}
         loginError={basketState.loginError}
-        onRequestOtp={handlers.handleRequestOtp}
+        setOtpSent={basketState.setOtpSent}
+        setLoginLoading={basketState.setLoginLoading}
+        setLoginError={basketState.setLoginError}
+        onSendOtp={handlers.handleRequestOtp}
         onLogin={handlers.handleLogin}
       />
 

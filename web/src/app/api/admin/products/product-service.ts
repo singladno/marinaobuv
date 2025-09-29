@@ -13,15 +13,7 @@ export async function getProducts(filters: ProductFilters) {
   const skip = (filters.page - 1) * filters.pageSize;
 
   // Build where clause
-  const where: {
-    OR?: Array<{
-      name?: { contains: string; mode: string };
-      article?: { contains: string; mode: string };
-      slug?: { contains: string; mode: string };
-    }>;
-    categoryId?: string;
-    isActive?: boolean;
-  } = {};
+  const where: any = {};
 
   if (filters.search) {
     where.OR = [

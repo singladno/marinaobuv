@@ -3,8 +3,8 @@
 import { ChevronRightIcon } from '@heroicons/react/24/outline';
 import * as React from 'react';
 
-import type { CategoryNode } from './CategorySelector';
 import { CategoryItemContent } from './CategoryItemContent';
+import type { CategoryNode } from './CategorySelector';
 import { CategoryTree } from './CategoryTree';
 
 type CategoryNodeProps = {

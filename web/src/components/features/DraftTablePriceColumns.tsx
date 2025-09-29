@@ -1,5 +1,4 @@
 import type { Draft } from '@/types/admin';
-
 import {
   calculateTotalPairs,
   calculateBoxPrice,

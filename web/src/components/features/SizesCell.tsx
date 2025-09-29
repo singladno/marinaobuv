@@ -1,8 +1,10 @@
 import * as React from 'react';
 
 import { useSizeManagement } from '@/hooks/useSizeManagement';
+import { useSizeMouseHandling } from '@/hooks/useSizeMouseHandling';
 import type { Draft } from '@/types/admin';
 
+import { ReadOnlySizesDisplay } from './ReadOnlySizesDisplay';
 import { SizeActionButton } from './SizeActionButton';
 import { SizeDisplay } from './SizeDisplay';
 import { SizeEditMode } from './SizeEditMode';
@@ -13,9 +15,6 @@ interface SizesCellProps {
 }
 
 export function SizesCell({ sizes, onChange }: SizesCellProps) {
-  const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
-  const sizeRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
-
   const {
     editingIndex,
     setEditingIndex,
@@ -31,142 +30,13 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
     handleKeyDown,
   } = useSizeManagement(sizes, onChange);
 
-  const setSizeRef = React.useCallback((index: number) => {
-    return (el: HTMLDivElement | null) => {
-      sizeRefs.current[index] = el;
-    };
-  }, []);
+  const { hoveredIndex, setHoveredIndex, sizeRefs, setSizeRef } =
+    useSizeMouseHandling();
 
-  const hideTimeoutRef = React.useRef<number | null>(null);
-
-  React.useEffect(() => {
-    if (hoveredIndex === null) return;
-    const handleMove = (e: MouseEvent) => {
-      const el = sizeRefs.current[hoveredIndex!];
-      if (!el) {
-        setHoveredIndex(null);
-        return;
-      }
-      const r = el.getBoundingClientRect();
-      const bufferX = 12;
-      const bufferBelow = 6;
-      const bufferAbove = 36; // cover floating action zone
-      const within =
-        e.clientX >= r.left - bufferX &&
-        e.clientX <= r.right + bufferX &&
-        e.clientY >= r.top - bufferAbove &&
-        e.clientY <= r.bottom + bufferBelow;
-
-      if (within) {
-        if (hideTimeoutRef.current) {
-          window.clearTimeout(hideTimeoutRef.current);
-          hideTimeoutRef.current = null;
-        }
-        return;
-      }
-
-      if (!hideTimeoutRef.current) {
-        hideTimeoutRef.current = window.setTimeout(() => {
-          setHoveredIndex(null);
-          hideTimeoutRef.current = null;
-        }, 120);
-      }
-    };
-    window.addEventListener('mousemove', handleMove);
-    return () => {
-      window.removeEventListener('mousemove', handleMove);
-      if (hideTimeoutRef.current) {
-        window.clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
-    };
-  }, [hoveredIndex]);
-
-  if (!sizes || sizes.length === 0) {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="text-gray-400 dark:text-gray-500">—</span>
-        {onChange && (
-          <button
-            type="button"
-            className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-200"
-            onClick={addNew}
-            aria-label="Добавить размер"
-          >
-            +
-          </button>
-        )}
-      </div>
-    );
+  if (!onChange) {
+    return <ReadOnlySizesDisplay sizes={sizes} />;
   }
 
-  // Check if we're in edit mode (any size is being edited)
-  const isInEditMode = editingIndex !== null;
-
-  if (!isInEditMode) {
-    // View mode - show table-like interface
-    return (
-      <div className="space-y-2 rounded border border-gray-300 bg-white p-2 dark:border-gray-600 dark:bg-gray-800">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-            Размеры
-          </span>
-          {onChange && (
-            <button
-              type="button"
-              className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
-              onClick={() => startEdit(sizes.length)} // Start editing by adding new size
-              aria-label="Добавить размер"
-            >
-              + Добавить
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          {sizes.map((size, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <input
-                type="text"
-                value={size.size}
-                readOnly
-                className="flex-1 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                onClick={() => onChange && startEdit(index)}
-                title="Нажмите для редактирования"
-              />
-              <input
-                type="number"
-                value={size.stock || size.count || (size as any).quantity || 0}
-                readOnly
-                className="w-16 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                onClick={() => onChange && startEdit(index)}
-                title="Нажмите для редактирования"
-              />
-              <button
-                className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-800 dark:bg-gray-900 dark:text-gray-300"
-                onClick={() => onChange && startEdit(index)}
-                title="Нажмите для редактирования"
-              >
-                ✓
-              </button>
-              {onChange && (
-                <button
-                  onClick={() => deleteItem(index)}
-                  className="rounded bg-red-100 px-2 py-1 text-xs text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800"
-                  type="button"
-                  title="Удалить размер"
-                >
-                  🗑️
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Edit mode - show individual editing interface
   return (
     <>
       <div className="flex items-center gap-1 overflow-x-auto overflow-y-visible py-2">
@@ -180,9 +50,9 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
                 size={x}
                 index={index}
                 isSaving={isSaving}
-                onEdit={() => {
-                  if (onChange && !isSaving) startEdit(index);
-                }}
+                onEdit={() =>
+                  onChange && !isSaving ? startEdit(index) : undefined
+                }
                 onDelete={() => deleteItem(index)}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
@@ -190,7 +60,6 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
               />
             );
           }
-
           return (
             <SizeEditMode
               key={index}

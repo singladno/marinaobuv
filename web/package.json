@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev:simple": "next dev --turbopack",
-    "dev": "next dev --turbopack & npm run lint:watch",
+    "dev": "next dev --turbopack & npm run lint:watch & npm run typecheck:watch",
     "lint:watch": "nodemon --watch src --ext ts,tsx,js,jsx --exec \"npm run lint\"",
     "docker:local": "docker-compose -f ../docker-compose.local.yml up -d && next dev --turbopack",
     "build": "next build --turbopack",
@@ -25,6 +25,7 @@
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "lint:check": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 0",
     "typecheck": "tsc --noEmit",
+    "typecheck:watch": "nodemon --watch src --ext ts,tsx --exec \"npm run typecheck\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",

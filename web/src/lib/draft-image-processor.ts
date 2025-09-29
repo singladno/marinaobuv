@@ -1,68 +1,156 @@
-// This file contains utility functions for draft image processing
-// Currently unused but kept for future functionality
+import { prisma } from './db-node';
+import { uploadImageToS3 } from './draft-image-uploader';
 
-export interface ImageData {
+export interface ApprovalImageData {
+  id: string;
   url: string;
-  s3Key: string;
-  mime: string;
-  sha256: string;
-  width?: number;
-  height?: number;
+  key: string;
+  alt: string | null;
+  sort: number;
+  isPrimary: boolean;
+  isActive: boolean;
+  color: string | null;
+  width: number | null;
+  height: number | null;
 }
 
 /**
- * Process images from messages and upload to S3
+ * Process a single draft image for approval
  */
-export async function processImagesFromMessages(
-  messages: Array<{
+export async function processSingleDraftImage(
+  draftImage: {
     id: string;
-    type: string | null;
-    mediaUrl: string | null;
-    mediaS3Key: string | null;
-    mediaMime: string | null;
-    mediaSha256: string | null;
+    url: string;
+    key: string | null;
+    alt: string | null;
+    sort: number;
+    isPrimary: boolean;
+    isActive: boolean;
+    color: string | null;
+    width: number | null;
+    height: number | null;
+  },
+  index: number,
+  total: number
+): Promise<ApprovalImageData | null> {
+  // Skip inactive images
+  if (!draftImage.isActive) {
+    console.log(`  ⏭️  Skipping inactive image ${index + 1}/${total}: ${draftImage.id}`);
+    return null;
+  }
+
+  console.log(`\n  📸 Processing image ${index + 1}/${total}: ${draftImage.id}`);
+  console.log(`     URL: ${draftImage.url}`);
+  console.log(`     Current key: ${draftImage.key || 'None'}`);
+  console.log(`     Is Primary: ${draftImage.isPrimary}`);
+  console.log(`     Color: ${draftImage.color || 'None'}`);
+
+  try {
+    // Check if image is already in our Yandex S3 (not wasabi or WhatsApp)
+    if (draftImage.key && draftImage.url.includes('storage.yandexcloud.net')) {
+      console.log(`  ✅ Image already in our Yandex S3: ${draftImage.key}`);
+      console.log(`     Skipping upload - already processed`);
+      return {
+        id: draftImage.id,
+        url: draftImage.url,
+        key: draftImage.key,
+        alt: draftImage.alt,
+        sort: draftImage.sort,
+        isPrimary: draftImage.isPrimary,
+        isActive: draftImage.isActive,
+        color: draftImage.color,
+        width: draftImage.width,
+        height: draftImage.height,
+      };
+    }
+
+    // Upload image to S3
+    const uploadResult = await uploadImageToS3(draftImage.url, draftImage.id);
+
+    if (uploadResult.success && uploadResult.url && uploadResult.key) {
+      return {
+        id: draftImage.id,
+        url: uploadResult.url,
+        key: uploadResult.key,
+        alt: draftImage.alt,
+        sort: draftImage.sort,
+        isPrimary: draftImage.isPrimary,
+        isActive: draftImage.isActive,
+        color: draftImage.color,
+        width: draftImage.width,
+        height: draftImage.height,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`  ❌ Error processing image ${draftImage.id}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Process draft images and upload them to S3 during approval
+ */
+export async function processDraftImagesForApproval(
+  draftImages: Array<{
+    id: string;
+    url: string;
+    key: string | null;
+    alt: string | null;
+    sort: number;
+    isPrimary: boolean;
+    isActive: boolean;
+    color: string | null;
+    width: number | null;
+    height: number | null;
   }>
-): Promise<ImageData[]> {
-  const imageData: ImageData[] = [];
+): Promise<ApprovalImageData[]> {
+  const processedImages: ApprovalImageData[] = [];
 
-  for (let i = 0; i < messages.length; i++) {
-    const message = messages[i];
-    if (message.type !== 'image' || !message.mediaUrl) continue;
+  console.log(`\n📸 Processing ${draftImages.length} draft images for approval...`);
+  console.log(`   Active images: ${draftImages.filter(img => img.isActive).length}`);
+  console.log(`   Inactive images: ${draftImages.filter(img => !img.isActive).length}`);
 
-    console.log(
-      `Processing image ${i + 1}/${messages.length} for message ${message.id}...`
-    );
-
-    try {
-      // If already uploaded to S3, use existing data
-      if (message.mediaS3Key && message.mediaMime && message.mediaSha256) {
-        console.log(`  ✓ Image already uploaded to S3: ${message.mediaS3Key}`);
-        imageData.push({
-          url: message.mediaUrl,
-          s3Key: message.mediaS3Key,
-          mime: message.mediaMime,
-          sha256: message.mediaSha256,
-        });
-        continue;
-      }
-
-      // Skip S3 upload for testing - use original WhatsApp URLs
-      console.log(
-        `  ⚡ Using original WhatsApp URL (skipping S3 upload for testing)`
-      );
-      imageData.push({
-        url: message.mediaUrl,
-        s3Key: `original-${message.id}`, // Use message ID as key for reference
-        mime: 'image/jpeg', // Assume JPEG for now
-        sha256: '', // Skip SHA256 calculation for testing
-      });
-    } catch (error) {
-      console.error(
-        `  ❌ Failed to process image for message ${message.id}:`,
-        error
-      );
+  for (let i = 0; i < draftImages.length; i++) {
+    const result = await processSingleDraftImage(draftImages[i], i, draftImages.length);
+    if (result) {
+      processedImages.push(result);
     }
   }
 
-  return imageData;
+  console.log(`\n✅ Image processing complete!`);
+  console.log(`   Total processed: ${processedImages.length} images`);
+  console.log(`   Successfully uploaded: ${processedImages.length} images`);
+  console.log(
+    `   Failed uploads: ${draftImages.filter(img => img.isActive).length - processedImages.length} images`
+  );
+
+  if (processedImages.length > 0) {
+    console.log(`\n   New S3 URLs:`);
+    processedImages.forEach((img, index) => {
+      console.log(`     ${index + 1}. ${img.url}`);
+    });
+  }
+
+  return processedImages;
+}
+
+/**
+ * Process a single draft product's images during approval
+ */
+export async function processDraftImagesForApprovalById(
+  draftId: string
+): Promise<ApprovalImageData[]> {
+  // Get draft product with images
+  const draft = await prisma.waDraftProduct.findUnique({
+    where: { id: draftId },
+    include: { images: true },
+  });
+
+  if (!draft) {
+    throw new Error(`Draft product not found: ${draftId}`);
+  }
+
+  return await processDraftImagesForApproval(draft.images);
 }

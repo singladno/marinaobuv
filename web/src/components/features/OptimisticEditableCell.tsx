@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React from 'react';
+
+import { useEditableCell } from '@/hooks/useEditableCell';
+import { formatDisplayValue, getInputProps } from '@/utils/editableCellUtils';
 
 interface OptimisticEditableCellProps {
   value: string | number | null;
@@ -25,79 +28,20 @@ export function OptimisticEditableCell({
   disabled = false,
   'aria-label': ariaLabel,
 }: OptimisticEditableCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(String(value || ''));
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleEdit = useCallback(() => {
-    if (disabled) return;
-    setIsEditing(true);
-    setEditValue(String(value || ''));
-  }, [disabled, value]);
-
-  const handleSave = useCallback(async () => {
-    if (isSaving) return;
-
-    const newValue =
-      type === 'number' || type === 'price'
-        ? editValue === ''
-          ? null
-          : Number(editValue)
-        : editValue;
-
-    // Only save if value actually changed
-    if (newValue !== value) {
-      setIsSaving(true);
-      try {
-        await onSave(newValue);
-      } catch (error) {
-        console.error('Failed to save:', error);
-        // Revert to original value on error
-        setEditValue(String(value || ''));
-      } finally {
-        setIsSaving(false);
-      }
-    }
-
-    setIsEditing(false);
-  }, [isSaving, editValue, value, type, onSave]);
-
-  const handleCancel = useCallback(() => {
-    setEditValue(String(value || ''));
-    setIsEditing(false);
-  }, [value]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleSave();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        handleCancel();
-      }
-    },
-    [handleSave, handleCancel]
-  );
-
-  const handleBlur = useCallback(() => {
-    if (isEditing) {
-      handleSave();
-    }
-  }, [isEditing, handleSave]);
-
-  const formatDisplayValue = useCallback(
-    (val: string | number | null) => {
-      if (val === null || val === '') return placeholder || '—';
-
-      if (type === 'price' && typeof val === 'number') {
-        return val.toLocaleString('ru-RU');
-      }
-
-      return String(val);
-    },
-    [type, placeholder]
-  );
+  const {
+    isEditing,
+    editValue,
+    isSaving,
+    handleEdit,
+    handleKeyDown,
+    handleBlur,
+    setEditValue,
+  } = useEditableCell({
+    value,
+    onSave,
+    type,
+    disabled,
+  });
 
   if (!isEditing) {
     return (
@@ -117,24 +61,22 @@ export function OptimisticEditableCell({
             <span className="text-xs text-gray-500">Сохранение...</span>
           </div>
         ) : (
-          formatDisplayValue(value)
+          formatDisplayValue(value, type, placeholder)
         )}
       </div>
     );
   }
 
-  const inputProps = {
-    value: editValue,
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-      setEditValue(e.target.value),
-    onBlur: handleBlur,
-    onKeyDown: handleKeyDown,
+  const inputProps = getInputProps(
+    editValue,
+    setEditValue,
+    handleBlur,
+    handleKeyDown,
     placeholder,
-    className: `w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`,
-    autoFocus: true,
-    disabled: isSaving,
-    'aria-label': ariaLabel,
-  };
+    className,
+    isSaving,
+    ariaLabel
+  );
 
   if (type === 'number' || type === 'price') {
     return (

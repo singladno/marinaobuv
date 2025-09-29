@@ -8,10 +8,7 @@ export async function GET() {
     const recentMessages = await prisma.whatsAppMessage.findMany({
       select: {
         waMessageId: true,
-        remoteJid: true,
-        pushName: true,
-        messageType: true,
-        text: true,
+        chatId: true,
         rawPayload: true,
         createdAt: true,
       },
@@ -27,10 +24,11 @@ export async function GET() {
       count: recentMessages.length,
       messages: recentMessages.map(msg => ({
         waMessageId: msg.waMessageId,
-        groupId: msg.remoteJid,
-        sender: msg.pushName,
-        messageType: msg.messageType,
-        text: msg.text?.substring(0, 100),
+        groupId: (msg as any).chatId,
+        sender: (msg as any).pushName ?? null,
+        messageType: (msg as any).messageType ?? null,
+        text:
+          ((msg as any).text as string | undefined)?.substring(0, 100) ?? null,
         timestamp: msg.createdAt,
         rawPayload: msg.rawPayload,
       })),

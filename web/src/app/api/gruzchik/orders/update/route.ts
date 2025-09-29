@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import {
+  buildOrderUpdateData,
+  validateGruzchikOrderAccess,
+} from '@/lib/gruzchik/orderValidation';
 import { prisma } from '@/lib/server/db';
 import { getSession } from '@/lib/server/session';
 
@@ -26,31 +30,19 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Verify the order belongs to this грузчик
-    const existingOrder = await prisma.order.findFirst({
-      where: {
-        id,
-        gruzchikId: session.userId,
-      },
-    });
-
-    if (!existingOrder) {
-      return NextResponse.json(
-        { error: 'Order not found or not assigned to you' },
-        { status: 404 }
-      );
+    const validation = await validateGruzchikOrderAccess(id, session.userId);
+    if (!validation.isValid) {
+      return NextResponse.json({ error: validation.error }, { status: 404 });
     }
 
     // Build update data
-    const updateData: {
-      label?: string;
-      payment?: number;
-      status?: string;
-    } = {};
-    if (label !== undefined) updateData.label = label;
-    if (payment !== undefined) updateData.payment = payment;
-    if (status !== undefined) updateData.status = status;
+    const { hasUpdates, updateData } = buildOrderUpdateData({
+      label,
+      payment,
+      status,
+    });
 
-    if (Object.keys(updateData).length === 0) {
+    if (!hasUpdates) {
       return NextResponse.json(
         { error: 'No fields to update' },
         { status: 400 }

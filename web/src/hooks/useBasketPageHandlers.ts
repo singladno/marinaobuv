@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Notification } from '@/components/ui/NotificationProvider';
 
 interface UseBasketPageHandlersProps {
   setLoginLoading: (loading: boolean) => void;
@@ -7,7 +8,7 @@ interface UseBasketPageHandlersProps {
   setUserId: (id: string) => void;
   setIsLoggedIn: (loggedIn: boolean) => void;
   setIsLoginModalOpen: (open: boolean) => void;
-  addNotification: (notification: { type: string; message: string }) => void;
+  addNotification: (notification: Omit<Notification, 'id'>) => void;
   phone: string;
 }
 

@@ -1,22 +1,13 @@
 'use client';
 
-import { FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 
-import { Badge } from '@/components/ui/Badge';
+import { ActiveFilters } from '@/components/product/ActiveFilters';
+import { CategoryFilter } from '@/components/product/CategoryFilter';
+import { PriceFilter } from '@/components/product/PriceFilter';
+import { SortFilter } from '@/components/product/SortFilter';
+import { StockFilter } from '@/components/product/StockFilter';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Label } from '@/components/ui/Label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select';
-import { Slider } from '@/components/ui/Slider';
-import { Text } from '@/components/ui/Text';
 
 export interface FilterOptions {
   categories: string[];
@@ -31,15 +22,6 @@ interface ProductFiltersProps {
   onClearFilters: () => void;
   className?: string;
 }
-
-const SORT_OPTIONS = [
-  { value: 'featured', label: 'Рекомендуемые' },
-  { value: 'price-low', label: 'Цена: по возрастанию' },
-  { value: 'price-high', label: 'Цена: по убыванию' },
-  { value: 'name-asc', label: 'Название: А-Я' },
-  { value: 'name-desc', label: 'Название: Я-А' },
-  { value: 'rating', label: 'Высокий рейтинг' },
-];
 
 export default function ProductFilters({
   onFiltersChange,
@@ -61,25 +43,33 @@ export default function ProductFilters({
   };
 
   const handleCategoryChange = (category: string, checked: boolean) => {
-    const newCategories = checked
+    const updatedCategories = checked
       ? [...filters.categories, category]
       : filters.categories.filter(c => c !== category);
-    updateFilters({ categories: newCategories });
+    updateFilters({ categories: updatedCategories });
   };
 
-  const handlePriceRangeChange = (value: number[]) => {
-    updateFilters({ priceRange: [value[0], value[1]] });
+  const handlePriceRangeChange = (range: [number, number]) => {
+    updateFilters({ priceRange: range });
   };
 
-  const handleClearAll = () => {
-    const defaultFilters: FilterOptions = {
+  const handleStockChange = (inStock: boolean) => {
+    updateFilters({ inStock });
+  };
+
+  const handleSortChange = (sortBy: string) => {
+    updateFilters({ sortBy });
+  };
+
+  const handleClearFilters = () => {
+    const clearedFilters = {
       categories: [],
       priceRange: [0, 50000],
       minRating: 0,
       inStock: false,
       sortBy: 'featured',
     };
-    setFilters(defaultFilters);
+    setFilters(clearedFilters);
     onClearFilters();
   };
 
@@ -87,170 +77,45 @@ export default function ProductFilters({
     filters.categories.length > 0 ||
     filters.priceRange[0] > 0 ||
     filters.priceRange[1] < 50000 ||
-    filters.minRating > 0 ||
     filters.inStock;
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
+    <div className={`space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FunnelIcon className="h-5 w-5" />
-          <Text variant="h3" className="text-lg font-semibold">
-            Фильтры
-          </Text>
-        </div>
+        <h2 className="text-lg font-semibold">Фильтры</h2>
         {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearAll}
-            className="gap-2"
-          >
-            <XMarkIcon className="h-4 w-4" />
-            Очистить
+          <Button variant="outline" size="sm" onClick={handleClearFilters}>
+            Очистить все
           </Button>
         )}
       </div>
 
-      {/* Sort */}
-      <Card className="p-4">
-        <div className="mb-3">
-          <Text className="text-sm font-semibold">Сортировка</Text>
-        </div>
-        <div>
-          <Select
-            value={filters.sortBy}
-            onValueChange={value => updateFilters({ sortBy: value })}
-          >
-            <SelectTrigger>
-              <SelectValue
-                value={
-                  SORT_OPTIONS.find(opt => opt.value === filters.sortBy)?.label
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </Card>
+      <CategoryFilter
+        categories={['Обувь', 'Одежда', 'Аксессуары']}
+        selectedCategories={filters.categories}
+        onCategoryChange={handleCategoryChange}
+      />
 
-      {/* Categories */}
-      <Card className="p-4">
-        <div className="mb-3">
-          <Text className="text-sm font-semibold">Категории</Text>
-        </div>
-        <div className="space-y-3">
-          {['Обувь', 'Аксессуары', 'Спорт', 'Классика', 'Повседневная'].map(
-            category => (
-              <div key={category} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`category-${category}`}
-                  checked={filters.categories.includes(category)}
-                  onCheckedChange={checked =>
-                    handleCategoryChange(category, checked as boolean)
-                  }
-                />
-                <Label
-                  htmlFor={`category-${category}`}
-                  className="text-sm font-normal"
-                >
-                  {category}
-                </Label>
-              </div>
-            )
-          )}
-        </div>
-      </Card>
+      <PriceFilter
+        priceRange={filters.priceRange}
+        onPriceRangeChange={handlePriceRangeChange}
+      />
 
-      {/* Price Range */}
-      <Card className="p-4">
-        <div className="mb-3">
-          <Text className="text-sm font-semibold">Цена</Text>
-        </div>
-        <div className="space-y-4">
-          <Slider
-            value={filters.priceRange}
-            onValueChange={handlePriceRangeChange}
-            max={100000}
-            min={0}
-            step={1000}
-            className="w-full"
-          />
-          <div className="flex justify-between text-sm font-medium text-gray-600">
-            <span>{filters.priceRange[0].toLocaleString()} ₽</span>
-            <span>{filters.priceRange[1].toLocaleString()} ₽</span>
-          </div>
-        </div>
-      </Card>
+      <StockFilter
+        inStock={filters.inStock}
+        onStockChange={handleStockChange}
+      />
 
-      {/* Stock Status */}
-      <Card className="p-4">
-        <div className="mb-3">
-          <Text className="text-sm font-semibold">Наличие</Text>
-        </div>
-        <div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="in-stock"
-              checked={filters.inStock}
-              onCheckedChange={checked =>
-                updateFilters({ inStock: checked as boolean })
-              }
-            />
-            <Label htmlFor="in-stock" className="text-sm font-normal">
-              Только в наличии
-            </Label>
-          </div>
-        </div>
-      </Card>
+      <SortFilter sortBy={filters.sortBy} onSortChange={handleSortChange} />
 
-      {/* Active Filters Summary */}
-      {hasActiveFilters && (
-        <Card className="p-4">
-          <div className="mb-3">
-            <Text className="text-sm font-semibold">Активные фильтры</Text>
-          </div>
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              {filters.categories.map(category => (
-                <Badge key={category} variant="secondary" className="gap-1">
-                  {category}
-                  <XMarkIcon
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => handleCategoryChange(category, false)}
-                  />
-                </Badge>
-              ))}
-              {(filters.priceRange[0] > 0 || filters.priceRange[1] < 50000) && (
-                <Badge variant="secondary" className="gap-1">
-                  {filters.priceRange[0].toLocaleString()} -{' '}
-                  {filters.priceRange[1].toLocaleString()} ₽
-                  <XMarkIcon
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => updateFilters({ priceRange: [0, 50000] })}
-                  />
-                </Badge>
-              )}
-              {filters.inStock && (
-                <Badge variant="secondary" className="gap-1">
-                  В наличии
-                  <XMarkIcon
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => updateFilters({ inStock: false })}
-                  />
-                </Badge>
-              )}
-            </div>
-          </div>
-        </Card>
-      )}
+      <ActiveFilters
+        categories={filters.categories}
+        priceRange={filters.priceRange}
+        inStock={filters.inStock}
+        onCategoryChange={handleCategoryChange}
+        onPriceRangeChange={handlePriceRangeChange}
+        onStockChange={handleStockChange}
+      />
     </div>
   );
 }

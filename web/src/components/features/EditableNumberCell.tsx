@@ -1,5 +1,7 @@
 import * as React from 'react';
 
+import { validateNumberInput } from '@/utils/numberValidation';
+
 interface EditableNumberCellProps {
   value: number | null;
   onBlur: (value: number | null) => void;
@@ -29,29 +31,15 @@ export function EditableNumberCell({
   }, [value]);
 
   const handleSave = () => {
-    const trimmedValue = editValue.trim();
-    if (trimmedValue === '') {
-      onBlur(null);
-    } else {
-      const num = parseInt(trimmedValue, 10);
-      if (!isNaN(num) && num >= 0) {
-        // Check min/max constraints if provided
-        if (min !== undefined && num < min) {
-          setEditValue(value !== null ? value.toString() : '');
-          setIsEditing(false);
-          return;
-        }
-        if (max !== undefined && num > max) {
-          setEditValue(value !== null ? value.toString() : '');
-          setIsEditing(false);
-          return;
-        }
-        onBlur(num);
-      } else {
-        // Invalid input, revert to original value
-        setEditValue(value !== null ? value.toString() : '');
-      }
+    const validation = validateNumberInput(editValue, min, max);
+
+    if (validation.shouldRevert) {
+      setEditValue(value !== null ? value.toString() : '');
+      setIsEditing(false);
+      return;
     }
+
+    onBlur(validation.value);
     setIsEditing(false);
   };
 

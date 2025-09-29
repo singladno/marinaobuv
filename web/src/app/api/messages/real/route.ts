@@ -9,15 +9,10 @@ export async function GET() {
       select: {
         id: true,
         waMessageId: true,
-        remoteJid: true,
+        chatId: true,
         fromMe: true,
-        pushName: true,
-        messageType: true,
-        text: true,
-        mediaUrl: true,
-        mediaS3Key: true,
-        createdAt: true,
         rawPayload: true,
+        createdAt: true,
       },
       orderBy: {
         createdAt: 'desc',

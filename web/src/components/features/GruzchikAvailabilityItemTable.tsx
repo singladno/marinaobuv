@@ -1,14 +1,14 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
 import { useMemo } from 'react';
 
 import { DataTable } from '@/components/ui/DataTable';
 import { DataTablePagination } from '@/components/ui/DataTablePagination';
 import { useGruzchikOrders } from '@/hooks/useGruzchikOrders';
+import { groupOrdersByOrder } from '@/utils/gruzchikOrderGrouping';
 
 import { createGruzchikAvailabilityItemColumns } from './GruzchikAvailabilityItemColumns';
+import { GruzchikOrderGroup } from './GruzchikOrderGroup';
 
 export function GruzchikAvailabilityItemTable() {
   const {
@@ -20,44 +20,22 @@ export function GruzchikAvailabilityItemTable() {
     onPageChange,
     onPageSizeChange,
     reload,
-    updateOrderOptimistically,
     updatingOrders,
   } = useGruzchikOrders('Наличие');
 
   const columns = useMemo(
     () =>
-      createGruzchikAvailabilityItemColumns(
-        updateOrderOptimistically,
-        updatingOrders
-      ),
-    [updateOrderOptimistically, updatingOrders]
+      createGruzchikAvailabilityItemColumns({
+        updatingItems: updatingOrders,
+      }),
+    [updatingOrders]
   );
 
   // Group items by order
-  const ordersWithItems = useMemo(() => {
-    const grouped = new Map<string, typeof itemRows>();
-
-    itemRows.forEach(item => {
-      if (!grouped.has(item.orderId)) {
-        grouped.set(item.orderId, []);
-      }
-      grouped.get(item.orderId)!.push(item);
-    });
-
-    return Array.from(grouped.entries()).map(([orderId, items]) => {
-      const order = orders.find(o => o.id === orderId);
-      return {
-        order,
-        items,
-        orderNumber: items[0]?.orderNumber || 'Unknown',
-        orderDate: items[0]?.orderDate || '',
-        customerName: items[0]?.customerName || 'Не указано',
-        customerPhone: items[0]?.customerPhone || '',
-        orderTotal: items[0]?.orderTotal || 0,
-        orderStatus: items[0]?.orderStatus || '',
-      };
-    });
-  }, [itemRows, orders]);
+  const ordersWithItems = useMemo(
+    () => groupOrdersByOrder(itemRows, orders),
+    [itemRows, orders]
+  );
 
   if (loading) {
     return (
@@ -94,57 +72,14 @@ export function GruzchikAvailabilityItemTable() {
   return (
     <div className="space-y-8">
       {ordersWithItems.map(orderGroup => (
-        <div key={orderGroup.orderId} className="space-y-4">
-          {/* Order Header */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Заказ #{orderGroup.orderNumber}
-                </h3>
-                <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                  <span>
-                    {format(
-                      new Date(orderGroup.orderDate),
-                      'dd.MM.yyyy HH:mm',
-                      {
-                        locale: ru,
-                      }
-                    )}
-                  </span>
-                  <span>•</span>
-                  <span>{orderGroup.customerName}</span>
-                  <span>•</span>
-                  <span>{orderGroup.customerPhone}</span>
-                  <span>•</span>
-                  <span className="font-medium">
-                    {orderGroup.orderTotal.toLocaleString('ru-RU')} ₽
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {orderGroup.items.length} товар
-                  {orderGroup.items.length === 1
-                    ? ''
-                    : orderGroup.items.length < 5
-                      ? 'а'
-                      : 'ов'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Items Table */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700">
-            <DataTable
-              data={orderGroup.items}
-              columns={columns}
-              loading={loading}
-              error={error}
-            />
-          </div>
-        </div>
+        <GruzchikOrderGroup key={orderGroup.orderId} orderGroup={orderGroup}>
+          <DataTable
+            data={orderGroup.items}
+            columns={columns}
+            loading={loading}
+            error={error}
+          />
+        </GruzchikOrderGroup>
       ))}
 
       {/* Pagination */}

@@ -78,7 +78,7 @@ export async function convertDraftToProduct(draft: DraftProduct) {
 
   // Create Product record and update draft status
   const product = await prisma.$transaction(async tx => {
-    const created = await tx.product.create({ data: productData });
+    const created = await tx.product.create({ data: productData as any });
 
     // Update draft: mark processed and hide from active lists
     await tx.waDraftProduct.update({

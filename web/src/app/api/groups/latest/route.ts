@@ -7,9 +7,8 @@ export async function GET() {
     // Get the most recent messages with their group IDs
     const recentMessages = await prisma.whatsAppMessage.findMany({
       select: {
-        remoteJid: true,
-        pushName: true,
-        text: true,
+        chatId: true,
+        rawPayload: true,
         createdAt: true,
       },
       orderBy: {
@@ -20,12 +19,14 @@ export async function GET() {
 
     // Group by remoteJid to get unique groups
     const groups = recentMessages.reduce(
-      (acc, message) => {
-        const groupId = message.remoteJid;
+      (acc, message: any) => {
+        const groupId = message.chatId;
         if (!acc[groupId]) {
           acc[groupId] = {
             groupId,
-            latestMessage: message.text?.substring(0, 100) || 'No text',
+            latestMessage:
+              (message.text as string | undefined)?.substring(0, 100) ||
+              'No text',
             latestSender: message.pushName || 'Unknown',
             latestTime: message.createdAt,
             messageCount: 0,
@@ -34,7 +35,16 @@ export async function GET() {
         acc[groupId].messageCount++;
         return acc;
       },
-      {} as Record<string, { id: string; name: string; latestTime: string }>
+      {} as Record<
+        string,
+        {
+          groupId: string;
+          latestMessage: string;
+          latestSender: string;
+          latestTime: string;
+          messageCount: number;
+        }
+      >
     );
 
     const groupList = Object.values(groups).sort(

@@ -1,66 +1,41 @@
-import { useCallback, useRef, useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
-export function useSizeMouseHandling(disabled: boolean) {
+export function useSizeMouseHandling() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [deleteButtonPosition, setDeleteButtonPosition] = useState<{
-    top: number;
-    left: number;
-  }>({ top: 0, left: 0 });
-  const chipRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sizeRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  const handleMouseEnter = useCallback(
-    (index: number) => {
-      if (disabled) return;
+  const setSizeRef = useCallback((index: number) => {
+    return (el: HTMLDivElement | null) => {
+      sizeRefs.current[index] = el;
+    };
+  }, []);
 
-      // Clear any pending hide timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
+  useEffect(() => {
+    if (hoveredIndex === null) return;
+    const handleMove = (e: MouseEvent) => {
+      const el = sizeRefs.current[hoveredIndex!];
+      if (!el) {
+        setHoveredIndex(null);
+        return;
       }
-
-      setHoveredIndex(index);
-
-      const chipElement = chipRefs.current[index];
-      if (chipElement) {
-        const rect = chipElement.getBoundingClientRect();
-        setDeleteButtonPosition({
-          top: rect.top - 24, // 24px above the chip for better visibility
-          left: rect.left + rect.width / 2 - 16, // Center horizontally, 16px is half of total area (32px with padding)
-        });
+      const r = el.getBoundingClientRect();
+      if (
+        e.clientX < r.left ||
+        e.clientX > r.right ||
+        e.clientY < r.top ||
+        e.clientY > r.bottom
+      ) {
+        setHoveredIndex(null);
       }
-    },
-    [disabled]
-  );
-
-  const handleMouseLeave = useCallback(() => {
-    // Set a timeout to hide the delete button
-    hideTimeoutRef.current = setTimeout(() => {
-      setHoveredIndex(null);
-    }, 150); // 150ms delay
-  }, []);
-
-  const handleDeleteButtonMouseEnter = useCallback(() => {
-    // Clear hide timeout when hovering over delete button
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-      hideTimeoutRef.current = null;
-    }
-  }, []);
-
-  const handleDeleteButtonMouseLeave = useCallback(() => {
-    // Hide immediately when leaving delete button
-    setHoveredIndex(null);
-  }, []);
+    };
+    document.addEventListener('mousemove', handleMove);
+    return () => document.removeEventListener('mousemove', handleMove);
+  }, [hoveredIndex]);
 
   return {
     hoveredIndex,
     setHoveredIndex,
-    deleteButtonPosition,
-    chipRefs,
-    handleMouseEnter,
-    handleMouseLeave,
-    handleDeleteButtonMouseEnter,
-    handleDeleteButtonMouseLeave,
+    sizeRefs,
+    setSizeRef,
   };
 }

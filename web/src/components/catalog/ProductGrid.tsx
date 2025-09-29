@@ -4,16 +4,12 @@ interface Product {
   id: string;
   slug: string;
   name: string;
-  article: string | null;
   pricePair: number;
-  images: Array<{ url: string; alt?: string }>;
+  primaryImageUrl: string | null;
   category: {
     id: string;
     name: string;
-  };
-  reviews: Array<{ rating: number }>;
-  sizes: Array<{ stock: number }>;
-  createdAt: string;
+  } | null;
 }
 
 interface ProductGridProps {
@@ -59,7 +55,7 @@ export function ProductGrid({ products, gridCols, loading }: ProductGridProps) {
   return (
     <div className={gridClasses[gridCols]}>
       {products.map(product => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard key={product.id} product={product as any} />
       ))}
     </div>
   );

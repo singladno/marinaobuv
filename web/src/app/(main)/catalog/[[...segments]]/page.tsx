@@ -57,11 +57,9 @@ export default function CatalogPage() {
         {/* Top Filters Bar */}
         <div className="mb-6">
           <TopFiltersBar
-            searchQuery={searchQuery}
-            onSearchChange={handleSearch}
-            gridCols={gridCols}
-            onGridColsChange={handleGridColsChange}
-            onClearFilters={clearFilters}
+            filters={filters}
+            onChange={handleFiltersChange}
+            onClear={clearFilters}
           />
         </div>
 
@@ -70,8 +68,8 @@ export default function CatalogPage() {
           <div className="lg:col-span-1">
             <div className="hidden lg:block">
               <ProductFilters
-                filters={filters}
                 onFiltersChange={handleFiltersChange}
+                onClearFilters={clearFilters}
               />
             </div>
 
@@ -87,8 +85,8 @@ export default function CatalogPage() {
                 <SheetContent side="left" className="w-80">
                   <div className="mt-6">
                     <ProductFilters
-                      filters={filters}
                       onFiltersChange={handleFiltersChange}
+                      onClearFilters={clearFilters}
                     />
                   </div>
                 </SheetContent>

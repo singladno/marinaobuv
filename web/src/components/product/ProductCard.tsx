@@ -35,7 +35,6 @@ export default function ProductCard({
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
-  // Default to first color if exists so the active style is visible
   useEffect(() => {
     if (!selectedColor && colorOptions.length > 0) {
       setSelectedColor(colorOptions[0]?.color ?? null);
@@ -52,9 +51,7 @@ export default function ProductCard({
     return imageUrl || null;
   }, [selectedColor, colorOptions, imageUrl]);
   const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
-  // const computedBoxPrice = useMemo(() => null, []);
   const computedPairPrice = useMemo(() => pricePair ?? null, [pricePair]);
-
   return (
     <div className="bg-surface group relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
       {/* Heart overlay outside the Link to avoid navigation */}
@@ -105,7 +102,6 @@ export default function ProductCard({
           <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
         </div>
 
-        {/* Content */}
         <div className="p-5">
           <div className="space-y-3">
             <Text
@@ -114,20 +110,12 @@ export default function ProductCard({
             >
               {name}
             </Text>
-
             <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <Text className="text-foreground text-xl font-bold">
-                  {rub(computedPairPrice ?? 0)}
-                </Text>
-              </div>
-
-              {/* Add to Cart / In Cart */}
-              <div>
-                <CartActionButton slug={slug} />
-              </div>
+              <Text className="text-foreground text-xl font-bold">
+                {rub(computedPairPrice ?? 0)}
+              </Text>
+              <CartActionButton slug={slug} />
             </div>
-
             <ColorSwitcher
               options={colorOptions}
               selectedColor={selectedColor || colorOptions[0]?.color || null}

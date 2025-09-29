@@ -1,5 +1,3 @@
-import type { Prisma } from '@prisma/client';
-
 import { prisma } from './db-node';
 
 export type CategoryNode = {

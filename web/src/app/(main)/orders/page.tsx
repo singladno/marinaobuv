@@ -71,14 +71,7 @@ export default function OrdersPage() {
         ) : (
           <div className="space-y-6">
             {orders.map(order => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                getStatusBadgeVariant={getStatusBadgeVariant}
-                getStatusText={getStatusText}
-                formatDate={formatDate}
-                formatPrice={formatPrice}
-              />
+              <OrderCard key={order.id} order={order} />
             ))}
           </div>
         )}

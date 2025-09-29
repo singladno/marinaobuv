@@ -10,22 +10,10 @@ export async function GET() {
       select: {
         id: true,
         waMessageId: true,
-        remoteJid: true,
+        chatId: true,
         fromMe: true,
-        pushName: true,
-        messageType: true,
-        text: true,
-        mediaUrl: true,
+        rawPayload: true,
         createdAt: true,
-        productDraft: {
-          select: {
-            name: true,
-            season: true,
-            pricePair: true,
-            material: true,
-            gender: true,
-          },
-        },
       },
     });
 

@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 
+import { EditableInput } from './EditableInput';
+import { EditableSelect } from './EditableSelect';
+
 interface EditableProductCellProps {
   value: string;
   onSave: (value: string) => void;
@@ -39,7 +42,6 @@ export function EditableProductCell({
     if (editValue !== value) {
       onSave(editValue);
     }
-    // Always switch back to view mode after save
     if (onCancel) {
       onCancel();
     }
@@ -68,39 +70,34 @@ export function EditableProductCell({
     );
   }
 
+  const inputClassName = `w-full min-w-[200px] rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`;
+
   if (type === 'select') {
     return (
-      <select
+      <EditableSelect
         value={editValue}
-        onChange={e => setEditValue(e.target.value)}
-        onBlur={handleSave}
+        onChange={setEditValue}
+        onSave={handleSave}
         onKeyDown={handleKeyDown}
-        className={`w-full min-w-[200px] rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`}
-        autoFocus
-        disabled={disabled || isSaving}
-        aria-label="Выберите значение"
-      >
-        {options.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        className={inputClassName}
+        disabled={disabled}
+        isSaving={isSaving}
+        options={options}
+      />
     );
   }
 
   return (
-    <input
-      type={type}
+    <EditableInput
       value={editValue}
-      onChange={e => setEditValue(e.target.value)}
-      onBlur={handleSave}
+      onChange={setEditValue}
+      onSave={handleSave}
       onKeyDown={handleKeyDown}
+      type={type}
       step={step}
-      className={`w-full min-w-[200px] rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`}
-      autoFocus
-      disabled={disabled || isSaving}
-      aria-label="Редактировать значение"
+      className={inputClassName}
+      disabled={disabled}
+      isSaving={isSaving}
     />
   );
 }
