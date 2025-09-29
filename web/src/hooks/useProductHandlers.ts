@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
 
 import { useNotifications } from '@/components/ui/NotificationProvider';
+import type { ProductUpdateData } from '@/types/product';
 
 interface UseProductHandlersParams {
-  updateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  updateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   onBulkDelete: () => Promise<void>;
   onBulkActivate: () => Promise<void>;
@@ -22,7 +23,7 @@ export function useProductHandlers({
   const { addNotification } = useNotifications();
 
   const handleUpdateProduct = useCallback(
-    async (id: string, data: Record<string, unknown>) => {
+    async (id: string, data: ProductUpdateData) => {
       try {
         await updateProduct(id, data);
         addNotification({

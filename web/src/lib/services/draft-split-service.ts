@@ -30,6 +30,8 @@ export async function splitDraft({ draftId, imageIds }: SplitDraftParams) {
   // Create the new draft with selected images
   const newDraft = await prisma.waDraftProduct.create({
     data: {
+      messageId: originalDraft.messageId,
+      providerId: originalDraft.providerId,
       name: originalDraft.name,
       article: originalDraft.article,
       pricePair: originalDraft.pricePair,
@@ -86,7 +88,7 @@ export async function splitDraft({ draftId, imageIds }: SplitDraftParams) {
     newDraft: {
       id: newDraft.id,
       name: newDraft.name,
-      images: newDraft.images || [],
+      images: (newDraft as any).images || [],
     },
   };
 }

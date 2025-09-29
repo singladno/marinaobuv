@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { UnifiedTableContent } from './UnifiedTableContent';
 import { UnifiedTableHeader } from './UnifiedTableHeader';
 
-interface UnifiedDataTableProps<TData, TValue> {
+interface UnifiedDataTableProps<TData, TValue = unknown> {
   table?: Table<TData>;
   columns?: ColumnDef<TData, TValue>[];
   data?: TData[];
@@ -28,7 +28,7 @@ interface UnifiedDataTableProps<TData, TValue> {
   onColumnSettings: () => void;
 }
 
-export function UnifiedDataTable<TData, TValue>({
+export function UnifiedDataTable<TData, TValue = unknown>({
   table,
   columns,
   data,

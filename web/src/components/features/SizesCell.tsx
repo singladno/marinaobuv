@@ -72,7 +72,7 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
             />
           );
         })}
-        {onChange && (
+        {onChange !== undefined && (
           <button
             type="button"
             className="ml-1 flex-shrink-0 rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-blue-900/30 dark:text-blue-200"
@@ -89,15 +89,17 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
         )}
       </div>
 
-      {hoveredIndex !== null && sizeRefs.current[hoveredIndex] && onChange && (
-        <SizeActionButton
-          isSaving={savingIndex === hoveredIndex}
-          onDelete={() => deleteItem(hoveredIndex)}
-          onMouseEnter={() => setHoveredIndex(hoveredIndex)}
-          onMouseLeave={() => setHoveredIndex(null)}
-          sizeRef={sizeRefs.current[hoveredIndex]}
-        />
-      )}
+      {hoveredIndex !== null &&
+        sizeRefs.current[hoveredIndex] &&
+        onChange !== undefined && (
+          <SizeActionButton
+            isSaving={savingIndex === hoveredIndex}
+            onDelete={() => deleteItem(hoveredIndex)}
+            onMouseEnter={() => setHoveredIndex(hoveredIndex)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            sizeRef={sizeRefs.current[hoveredIndex]}
+          />
+        )}
     </>
   );
 }

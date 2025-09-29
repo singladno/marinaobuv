@@ -26,7 +26,7 @@ async function checkMessages() {
     const byFrom = messages.reduce(
       (acc, msg) => {
         if (msg.from && !acc[msg.from]) acc[msg.from] = [];
-        if (msg.from) acc[msg.from].push(msg);
+        if (msg.from) acc[msg.from].push(msg as any);
         return acc;
       },
       {} as Record<
