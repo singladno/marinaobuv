@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 import { getDraftById, getDrafts } from './draft-service';
 
 export async function GET(req: NextRequest) {

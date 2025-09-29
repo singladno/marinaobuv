@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
+export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/server/db';
 
 export async function GET(req: NextRequest) {

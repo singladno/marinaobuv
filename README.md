@@ -209,3 +209,4 @@ Private project - All rights reserved.
     1. POST `/api/uploads/presign` to obtain a presigned PUT URL
     2. PUT the file to S3 with the returned `uploadUrl`
     3. POST `/api/products/:id/images` to save the image record
+# Trigger deployment test

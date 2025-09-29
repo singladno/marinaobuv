@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version-file: "web/.nvmrc"
           cache: "npm"
           cache-dependency-path: web/package-lock.json
 
@@ -36,10 +36,48 @@ jobs:
           cd web
           npm run typecheck
 
-      - name: Build application
+      - name: Build and push Docker image
         run: |
           cd web
-          npm run build
+          # Write env file for build-time variables
+          cat > .env.production << EOF
+          NODE_ENV=production
+          NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_BRAND_NAME=${{ secrets.NEXT_PUBLIC_BRAND_NAME }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+          WHAPI_BASE_URL=${{ secrets.WHAPI_BASE_URL }}
+          WHAPI_TOKEN=${{ secrets.WHAPI_TOKEN }}
+          WHAPI_WEBHOOK_SECRET=${{ secrets.WHAPI_WEBHOOK_SECRET }}
+          WHAPI_VERIFY_TOKEN=${{ secrets.WHAPI_VERIFY_TOKEN }}
+          S3_ENDPOINT=${{ secrets.S3_ENDPOINT }}
+          S3_REGION=${{ secrets.S3_REGION }}
+          S3_BUCKET=${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
+          CDN_BASE_URL=${{ secrets.CDN_BASE_URL }}
+          YC_FOLDER_ID=${{ secrets.YC_FOLDER_ID }}
+          YC_API_KEY=${{ secrets.YC_API_KEY }}
+          TARGET_GROUP_ID=${{ secrets.TARGET_GROUP_ID }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_VISION_MODEL=${{ secrets.OPENAI_VISION_MODEL }}
+          OPENAI_REQUEST_DELAY_MS=${{ secrets.OPENAI_REQUEST_DELAY_MS }}
+          MESSAGE_FETCH_HOURS=${{ secrets.MESSAGE_FETCH_HOURS }}
+          PROCESSING_BATCH_SIZE=${{ secrets.PROCESSING_BATCH_SIZE }}
+          SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+          EOF
+          # Build Docker image
+          docker build -f Dockerfile.prod -t ghcr.io/${{ github.repository }}/marinaobuv:${{ github.sha }} .
+          docker build -f Dockerfile.prod -t ghcr.io/${{ github.repository }}/marinaobuv:latest .
+
+          # Login to GitHub Container Registry
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          # Push images
+          docker push ghcr.io/${{ github.repository }}/marinaobuv:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}/marinaobuv:latest
         env:
           # Core Configuration
           NODE_ENV: production
@@ -96,6 +134,8 @@ jobs:
           key: ${{ secrets.RUSSIAN_SSH_KEY }}
           port: ${{ secrets.RUSSIAN_SSH_PORT || 22 }}
           script: |
+            set -euo pipefail
+
             # Navigate to project directory
             cd /var/www/marinaobuv
 
@@ -132,11 +172,23 @@ jobs:
             SESSION_SECRET=${{ secrets.SESSION_SECRET }}
             EOF
 
-            # Stop existing containers
-            docker-compose -f docker-compose.prod.yml down
+            # Login to GitHub Container Registry
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Build and start new containers
-            docker-compose -f docker-compose.prod.yml up -d --build
+            # Stop existing containers
+            docker-compose -f docker-compose.prod.yml down || true
+
+            # Pull and start new containers (no build needed)
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d
+
+            # Wait for web container to be ready
+            echo "Waiting for web container to start..."
+            timeout 60 bash -c 'until docker-compose -f docker-compose.prod.yml exec web curl -f http://localhost:3000/health 2>/dev/null; do sleep 2; done' || {
+              echo "Web container health check failed"
+              docker-compose -f docker-compose.prod.yml logs web
+              exit 1
+            }
 
             # Run database migrations
             docker-compose -f docker-compose.prod.yml exec web npm run prisma:migrate
