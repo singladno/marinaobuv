@@ -4,7 +4,7 @@
 import './load-env';
 
 import { prisma } from '../lib/db-node';
-import { DraftProductData } from '../lib/draft-product-prompt';
+import { DraftProductData } from '../lib/draft-product-creator';
 import { putFromUrl, getExtensionFromMime } from '../lib/s3u';
 import { normalizeTextToDraft } from '../lib/yagpt';
 
@@ -205,7 +205,6 @@ async function processMessageGroupToDraft(
         `YandexGPT failed but found ${imageData.length} images - creating basic product entry`
       );
       productDraft = {
-        name: `Товар от ${messages[0].fromName || 'Поставщика'}`,
         notes: `Товар с ${imageData.length} изображениями`,
       };
     }
@@ -214,7 +213,6 @@ async function processMessageGroupToDraft(
     if (!productDraft && textContents.length > 0) {
       console.log(`YandexGPT failed, creating basic product from text`);
       productDraft = {
-        name: `Товар от ${messages[0].fromName || 'Поставщика'}`,
         notes: `Извлечено из текста: ${textContents[0].substring(0, 100)}...`,
       };
     }
@@ -230,12 +228,9 @@ async function processMessageGroupToDraft(
 
     // Convert to our DraftProductData format
     const productData: DraftProductData = {
-      name: productDraft.name || null,
+      name: `Товар от ${messages[0].fromName || 'Поставщика'}`,
       pricePair: productDraft.pricePair || null,
       currency: 'RUB',
-      packPairs: productDraft.packPairs || null,
-      priceBox: productDraft.priceBox || null,
-      material: productDraft.material || null,
       gender: productDraft.gender
         ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
         : null,
@@ -247,6 +242,7 @@ async function processMessageGroupToDraft(
             | 'WINTER')
         : null,
       description: productDraft.notes || null,
+      providerDiscount: productDraft.providerDiscount || null,
       sizes: productDraft.sizes
         ? productDraft.sizes.map(s => ({ size: s.size, stock: s.count }))
         : null,
@@ -282,19 +278,16 @@ async function processMessageGroupToDraft(
 
     const draftProduct = await prisma.waDraftProduct.create({
       data: {
-        message: { connect: { id: firstMessage.id } },
-        provider: { connect: { id: providerId } },
-        name: productData.name,
+        messageId: firstMessage.id,
+        providerId,
+        name: `Товар от ${messages[0].fromName || 'Поставщика'}`,
         pricePair: productData.pricePair,
         currency: productData.currency,
-        packPairs: productData.packPairs,
-        priceBox: productData.priceBox,
-        material: productData.material,
         gender: productData.gender,
         season: productData.season,
         description: productData.description,
         sizes: productData.sizes,
-        rawGptResponse: productDraft as unknown as Record<string, unknown>,
+        rawGptResponse: productDraft as any,
         gptRequest: combinedText,
         source: messageIds,
         status: 'draft',

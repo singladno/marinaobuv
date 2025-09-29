@@ -71,7 +71,6 @@ export function ProductImageModal({
         <ImageModalBadges
           currentImage={{
             color: null,
-            isActive: true,
           }}
           currentIndex={safeCurrentIndex}
           totalImages={images.length}

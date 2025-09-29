@@ -33,7 +33,7 @@ export function filterCategoriesBySearch(
       }
       return null;
     })
-    .filter((category): category is CategoryNode => category !== null);
+    .filter(category => category !== null) as CategoryNode[];
 }
 
 export function getIndentationClass(level: number): string {

@@ -42,7 +42,7 @@ async function viewDraftProducts() {
       console.log(
         `Price: ${draft.pricePair ? draft.pricePair.toFixed(2) : 'N/A'} ${draft.currency}`
       );
-      console.log(`Pack: ${draft.packPairs || 'N/A'} pairs`);
+      console.log(`Pack: N/A pairs`);
       console.log(`Material: ${draft.material || 'N/A'}`);
       console.log(`Gender: ${draft.gender || 'N/A'}`);
       console.log(`Season: ${draft.season || 'N/A'}`);

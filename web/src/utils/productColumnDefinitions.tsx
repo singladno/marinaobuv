@@ -108,9 +108,7 @@ export function createProductColumnDefinitions({
       cell: ({ row }) => (
         <ProductCategoryCell
           product={row.original}
-          categories={categories}
           onUpdateProduct={onUpdateProduct}
-          disabled={row.original.isActive}
         />
       ),
     }),
@@ -123,7 +121,6 @@ export function createProductColumnDefinitions({
           product={row.original}
           priceInKopecks={getValue()}
           onUpdateProduct={onUpdateProduct}
-          disabled={row.original.isActive}
         />
       ),
       size: 200, // Twice as wide

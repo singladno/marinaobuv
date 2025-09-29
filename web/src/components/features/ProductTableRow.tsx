@@ -43,7 +43,13 @@ export function ProductTableRow({
         />
       </td>
       <td className="whitespace-nowrap px-6 py-4">
-        <ProductSizesCell product={product} onUpdateProduct={onUpdateProduct} />
+        <ProductSizesCell
+          sizes={product.sizes}
+          onChange={async sizes => {
+            // Note: sizes update might need a different API endpoint
+            console.log('Sizes update not implemented yet', sizes);
+          }}
+        />
       </td>
       <td className="whitespace-nowrap px-6 py-4">
         <ProductStatusCell

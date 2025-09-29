@@ -11,7 +11,7 @@ interface CartItemWithProduct {
     pricePair: number;
     images: Array<{ url: string; alt?: string }>;
     category: { name: string };
-    article: string;
+    article?: string;
   };
 }
 

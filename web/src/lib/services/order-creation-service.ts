@@ -80,10 +80,9 @@ export async function createOrder(
       userId,
       orderNumber,
       total,
-      customerName: customerInfo.name,
-      customerPhone: customerInfo.phone,
-      customerAddress: customerInfo.address,
-      comment: customerInfo.comment,
+      fullName: customerInfo.name,
+      phone: customerInfo.phone,
+      address: customerInfo.address,
       items: {
         create: orderItems,
       },

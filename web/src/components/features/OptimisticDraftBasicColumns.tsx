@@ -40,31 +40,22 @@ export function createBasicColumns(
     {
       id: 'images',
       header: 'Фото',
-      cell: ({ row }) => (
-        <MemoizedSourceCell
-          draft={row.original}
-          onImageToggle={async () => {}}
-        />
-      ),
+      cell: ({ row }) => <MemoizedSourceCell source={row.original.source} />,
     },
     {
       id: 'source',
       header: 'Источник',
-      cell: ({ row }) => (
-        <MemoizedSourceCell
-          draft={row.original}
-          onImageToggle={async () => {}}
-        />
-      ),
+      cell: ({ row }) => <MemoizedSourceCell source={row.original.source} />,
     },
     {
       id: 'category',
       header: 'Категория',
       cell: ({ row }) => (
         <MemoizedCategoryCell
-          draft={row.original}
+          category={row.original.category}
+          categoryId={row.original.categoryId}
+          onCategoryChange={async () => {}}
           categories={categories}
-          onPatch={async () => {}}
         />
       ),
     },
@@ -73,9 +64,20 @@ export function createBasicColumns(
       header: 'Одобрение',
       cell: ({ row }) => (
         <ApprovalSelectionCell
-          draft={row.original}
-          onToggle={onToggle}
-          getApprovalState={getApprovalState}
+          id={row.original.id}
+          selected={row.original.selected || false}
+          onToggle={onToggle || (() => {})}
+          approvalState={
+            getApprovalState
+              ? {
+                  isProcessing: getApprovalState(row.original.id).isProcessing,
+                  currentImage: 0,
+                  totalImages: 0,
+                  progress: 0,
+                  status: 'idle' as const,
+                }
+              : null
+          }
         />
       ),
     },

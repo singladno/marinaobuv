@@ -6,9 +6,12 @@ import React from 'react';
 type DraftImage = {
   id: string;
   url: string;
+  isPrimary: boolean;
+  sort: number;
   alt?: string | null;
-  color?: string | null;
+  isFalseImage?: boolean;
   isActive?: boolean;
+  color?: string | null;
 };
 
 import { ActiveImageGrid } from './ActiveImageGrid';

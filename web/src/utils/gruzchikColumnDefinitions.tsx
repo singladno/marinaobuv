@@ -27,9 +27,9 @@ export function createGruzchikAvailabilityColumns({
       header: 'Фото',
       cell: ({ row }) => (
         <GruzchikImageColumn
-          orderId={row.original.orderId}
-          imageUrl={row.original.itemImage}
-          name={row.original.itemName}
+          orderId={row.original.id}
+          imageUrl={row.original.items[0]?.product?.image || ''}
+          name={row.original.items[0]?.name || ''}
           updatingOrders={updatingOrders}
         />
       ),
@@ -39,8 +39,8 @@ export function createGruzchikAvailabilityColumns({
       header: 'Название',
       cell: ({ row }) => (
         <GruzchikNameColumn
-          orderId={row.original.orderId}
-          name={row.original.itemName}
+          orderId={row.original.id}
+          name={row.original.items[0]?.name || ''}
           onUpdate={onUpdate}
           updatingOrders={updatingOrders}
         />
@@ -50,7 +50,10 @@ export function createGruzchikAvailabilityColumns({
       id: 'label',
       header: 'Метка',
       cell: ({ row }) => (
-        <GroupRowWrapper itemId={row.original.itemId} updatingItems={new Set()}>
+        <GroupRowWrapper
+          itemId={row.original.items[0]?.id || ''}
+          updatingItems={new Set()}
+        >
           {onUpdate ? (
             <EditableLabel order={row.original} onUpdate={onUpdate} />
           ) : (
@@ -66,8 +69,8 @@ export function createGruzchikAvailabilityColumns({
       header: 'Оплата',
       cell: ({ row }) => (
         <GruzchikPaymentColumn
-          orderId={row.original.orderId}
-          payment={row.original.orderPayment}
+          orderId={row.original.id}
+          payment={row.original.payment}
           onUpdate={onUpdate}
           updatingOrders={updatingOrders}
         />
@@ -78,8 +81,8 @@ export function createGruzchikAvailabilityColumns({
       header: 'Статус',
       cell: ({ row }) => (
         <GruzchikStatusColumn
-          orderId={row.original.orderId}
-          status={row.original.orderStatus}
+          orderId={row.original.id}
+          status={row.original.status}
           updatingOrders={updatingOrders}
         />
       ),

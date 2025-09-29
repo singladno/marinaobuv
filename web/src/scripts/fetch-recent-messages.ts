@@ -127,7 +127,7 @@ async function saveMessage(message: WhatsAppMessage): Promise<void> {
       mediaHeight,
       mediaSha256,
       mediaFileSize,
-      rawPayload: message as Record<string, unknown>,
+      rawPayload: message as any,
     },
     create: {
       waMessageId: message.id,
@@ -145,7 +145,7 @@ async function saveMessage(message: WhatsAppMessage): Promise<void> {
       mediaHeight,
       mediaSha256,
       mediaFileSize,
-      rawPayload: message as Record<string, unknown>,
+      rawPayload: message as any,
     },
   });
 }

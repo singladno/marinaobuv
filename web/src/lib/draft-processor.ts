@@ -173,15 +173,15 @@ export async function processMessageGroupToDraft(
     }
 
     // Create the draft product
-    await createDraftProduct(
-      firstMessage.id,
+    await createDraftProduct({
+      messageId: firstMessage.id,
       providerId,
       productData,
-      combinedText,
-      productDraft,
-      messageIds,
-      imageData
-    );
+      gptRequest: combinedText,
+      rawGptResponse: productDraft,
+      sourceMessageIds: messageIds,
+      imageData,
+    });
 
     // Second pass disabled for now
 

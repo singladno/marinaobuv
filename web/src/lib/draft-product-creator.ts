@@ -101,7 +101,7 @@ export async function createDraftProduct({
           mimeType: img.mimeType,
           width: img.width,
           height: img.height,
-          color: img.color || null,
+          color: null,
         },
       });
       console.log(`  ✓ Image record created successfully`);

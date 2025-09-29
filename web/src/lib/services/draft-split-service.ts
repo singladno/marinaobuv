@@ -38,19 +38,20 @@ export async function splitDraft({ draftId, imageIds }: SplitDraftParams) {
       sizes: originalDraft.sizes,
       gender: originalDraft.gender,
       season: originalDraft.season,
-      providerId: originalDraft.providerId,
       gptRequest: originalDraft.gptRequest,
       rawGptResponse: originalDraft.rawGptResponse,
       aiStatus: originalDraft.aiStatus,
       aiContext: originalDraft.aiContext,
-      // isActive not present on waDraftProduct
       images: {
         create: originalDraft.images
           .filter(img => imageIds.includes(img.id))
           .map(img => ({
+            key: img.key,
             url: img.url,
-            isActive: img.isActive,
-            // waMessageId not present on waDraftProductImage
+            mimeType: img.mimeType,
+            width: img.width,
+            height: img.height,
+            color: img.color,
           })),
       },
     },

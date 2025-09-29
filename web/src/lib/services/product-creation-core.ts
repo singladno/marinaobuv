@@ -42,9 +42,10 @@ export class ProductCreationCore {
     // Create the draft product
     const draftProduct = await prisma.waDraftProduct.create({
       data: {
+        messageId,
+        providerId: from, // Assuming from is the provider ID
         name: analysis.name || 'Untitled Product',
         article: articleNumber,
-        slug,
         description: analysis.description || '',
         material: analysis.material || '',
         gender: mapGender(analysis.gender || 'UNISEX'),
@@ -52,14 +53,9 @@ export class ProductCreationCore {
         pricePair: analysis.price || 0,
         providerDiscount: analysis.providerDiscount || 0,
         sizes: analysis.sizes || [],
-        source: 'whatsapp',
-        context,
-        messageId,
-        from,
-        fromName,
-        sourceMessageIds,
+        source: sourceMessageIds,
         gptRequest: '',
-        rawGptResponse: '',
+        rawGptResponse: null,
         aiStatus: 'ai_completed',
         aiProcessedAt: new Date(),
       },
