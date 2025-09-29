@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 
 import { useImageHandling } from '@/hooks/useImageHandling';
 import type { Draft } from '@/types/admin';
@@ -51,6 +51,11 @@ export function ActiveImageGrid({
     [handleImageToggle]
   );
 
+  const containerRefs = useMemo(
+    () => images.map(() => React.createRef<HTMLDivElement>()),
+    [images]
+  );
+
   if (images.length === 0) {
     return (
       <div className="flex h-16 items-center justify-center text-sm text-gray-500">
@@ -59,16 +64,17 @@ export function ActiveImageGrid({
     );
   }
 
+  // Pre-create stable refs for each image index to avoid hooks in loops
+
   return (
     <div className="flex flex-wrap gap-1">
       {images.map((image, index) => {
-        const containerRef = useRef<HTMLDivElement | null>(null);
         const isUpdating = togglingImages.has(image.id);
         const isActive = image.isActive === true;
         return (
           <div
             key={image.id}
-            ref={containerRef}
+            ref={containerRefs[index]}
             className="relative"
             onMouseEnter={() =>
               setHoveredImages(prev => new Set(prev).add(image.id))
@@ -98,7 +104,7 @@ export function ActiveImageGrid({
                 }
                 onMouseEnter={() => {}}
                 onMouseLeave={() => {}}
-                imageRef={containerRef.current}
+                imageRef={containerRefs[index].current}
               />
             )}
           </div>

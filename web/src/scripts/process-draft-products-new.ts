@@ -1,4 +1,4 @@
-import { processImagesFromMessages } from '../lib/draft-image-processor';
+import { ImageProcessingService } from '../lib/services/image-processing-service';
 import {
   createDraftProduct,
   getOrCreateProvider,
@@ -64,7 +64,10 @@ async function processMessageGroupToDraft(
 
     // Process images from messages and upload to S3
     console.log(`Processing images for group ${groupKey}...`);
-    const imageData = await processImagesFromMessages(messages);
+    const imageService = new ImageProcessingService();
+    const imageData = await imageService.processImagesFromMessages(
+      messages as any[]
+    );
 
     // Combine all text content from messages
     const textContents: string[] = [];

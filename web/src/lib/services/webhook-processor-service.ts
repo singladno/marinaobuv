@@ -110,6 +110,7 @@ async function saveMessage(data: {
   return prisma.whatsAppMessage.create({
     data: {
       ...data,
+      rawPayload: data as any,
       provider: {
         connectOrCreate: {
           where: { name: 'WHAPI' },

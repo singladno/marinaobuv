@@ -1,5 +1,5 @@
 import { prisma } from './db-node';
-import { processImagesFromMessages } from './draft-image-processor';
+import { ImageProcessingService } from './services/image-processing-service';
 import {
   createDraftProduct,
   getOrCreateProvider,
@@ -116,15 +116,9 @@ export async function processMessageGroupToDraft(
 
     // Process images from messages and upload to S3
     console.log(`Processing images for group ${groupKey}...`);
-    const imageData = await processImagesFromMessages(
-      messages.map(msg => ({
-        id: msg.id,
-        type: msg.type,
-        mediaUrl: msg.mediaUrl,
-        mediaS3Key: msg.mediaS3Key,
-        mediaMime: msg.mediaMimeType,
-        mediaSha256: msg.mediaSha256,
-      }))
+    const imageService = new ImageProcessingService();
+    const imageData = await imageService.processImagesFromMessages(
+      messages as any[]
     );
 
     // Extract text content

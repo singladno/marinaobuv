@@ -5,9 +5,9 @@ import { EditableLabel } from '@/components/features/GruzchikEditableLabel';
 import { GruzchikImageColumn } from '@/components/features/GruzchikImageColumn';
 import { GruzchikNameColumn } from '@/components/features/GruzchikNameColumn';
 import { GruzchikPaymentColumn } from '@/components/features/GruzchikPaymentColumn';
-import GroupRowWrapper from '@/components/features/GruzchikRowWrapper';
+import { GruzchikRowWrapper as GroupRowWrapper } from '@/components/features/GruzchikRowWrapper';
 import { GruzchikStatusColumn } from '@/components/features/GruzchikStatusColumn';
-import type { GruzchikOrder } from '@/hooks/useGruzchikOrders';
+import type { GruzchikOrder } from '@/types/gruzchik';
 
 interface CreateGruzchikAvailabilityColumnsParams {
   onUpdate?: (
@@ -27,9 +27,9 @@ export function createGruzchikAvailabilityColumns({
       header: 'Фото',
       cell: ({ row }) => (
         <GruzchikImageColumn
-          orderId={row.original.id}
-          imageUrl={row.original.imageUrl}
-          name={row.original.name}
+          orderId={row.original.orderId}
+          imageUrl={row.original.itemImage}
+          name={row.original.itemName}
           updatingOrders={updatingOrders}
         />
       ),
@@ -39,8 +39,8 @@ export function createGruzchikAvailabilityColumns({
       header: 'Название',
       cell: ({ row }) => (
         <GruzchikNameColumn
-          orderId={row.original.id}
-          name={row.original.name}
+          orderId={row.original.orderId}
+          name={row.original.itemName}
           onUpdate={onUpdate}
           updatingOrders={updatingOrders}
         />
@@ -50,10 +50,7 @@ export function createGruzchikAvailabilityColumns({
       id: 'label',
       header: 'Метка',
       cell: ({ row }) => (
-        <GroupRowWrapper
-          orderId={row.original.id}
-          updatingOrders={updatingOrders}
-        >
+        <GroupRowWrapper itemId={row.original.itemId} updatingItems={new Set()}>
           {onUpdate ? (
             <EditableLabel order={row.original} onUpdate={onUpdate} />
           ) : (
@@ -69,8 +66,8 @@ export function createGruzchikAvailabilityColumns({
       header: 'Оплата',
       cell: ({ row }) => (
         <GruzchikPaymentColumn
-          orderId={row.original.id}
-          payment={row.original.payment}
+          orderId={row.original.orderId}
+          payment={row.original.orderPayment}
           onUpdate={onUpdate}
           updatingOrders={updatingOrders}
         />
@@ -81,8 +78,8 @@ export function createGruzchikAvailabilityColumns({
       header: 'Статус',
       cell: ({ row }) => (
         <GruzchikStatusColumn
-          orderId={row.original.id}
-          status={row.original.status}
+          orderId={row.original.orderId}
+          status={row.original.orderStatus}
           updatingOrders={updatingOrders}
         />
       ),

@@ -1,6 +1,6 @@
 import { generateArticleNumber } from './article-generator';
 import { prisma } from './db-node';
-import { ImageData } from './draft-image-processor';
+import type { ImageData } from './services/image-processing-service';
 
 export interface DraftProductData {
   name: string | null;
@@ -91,15 +91,14 @@ export async function createDraftProduct({
     const img = imageData[i];
     try {
       console.log(
-        `  📝 Creating image record ${i + 1}/${imageData.length}: ${img.s3Key}`
+        `  📝 Creating image record ${i + 1}/${imageData.length}: ${img.key}`
       );
       await prisma.waDraftProductImage.create({
         data: {
           draftProductId: draftProduct.id,
-          key: img.s3Key,
+          key: img.key,
           url: img.url,
-          mimeType: img.mime,
-          sha256: img.sha256,
+          mimeType: img.mimeType,
           width: img.width,
           height: img.height,
           color: img.color || null,

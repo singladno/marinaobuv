@@ -11,5 +11,8 @@ interface CreateProductColumnsOptions {
 }
 
 export function createProductColumns(options: CreateProductColumnsOptions) {
-  return createProductColumnDefinitions(options);
+  return createProductColumnDefinitions({
+    ...options,
+    categories: options.categories as any, // align to CategoryNode shape
+  });
 }
