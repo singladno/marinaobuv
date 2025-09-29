@@ -18,6 +18,10 @@ export function useSidebarToggle(): SidebarState & SidebarActions {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed(prev => !prev);
+  }, []);
+
   // Load saved state from localStorage
   useEffect(() => {
     try {
@@ -62,11 +66,7 @@ export function useSidebarToggle(): SidebarState & SidebarActions {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCollapsed, toggleCollapse]);
-
-  const toggleCollapse = useCallback(() => {
-    setIsCollapsed(prev => !prev);
-  }, []);
+  }, [toggleCollapse]);
 
   const toggleMobile = useCallback(() => {
     setIsMobileOpen(prev => !prev);

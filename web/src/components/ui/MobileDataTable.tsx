@@ -22,12 +22,13 @@ interface MobileDataTableProps<TData, TValue> {
   };
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  className?: string;
   emptyMessage?: string;
   loadingMessage?: string;
 }
 
 export function MobileDataTable<TData, TValue>({
-  table,
+  table: externalTable,
   columns,
   data,
   loading = false,
@@ -39,11 +40,13 @@ export function MobileDataTable<TData, TValue>({
   emptyMessage = 'Данные не найдены',
   loadingMessage = 'Загрузка...',
 }: MobileDataTableProps<TData, TValue>) {
-  const table = useReactTable({
+  const internalTable = useReactTable({
     data: data || [],
     columns: columns || [],
     getCoreRowModel: getCoreRowModel(),
   });
+
+  const table = externalTable || internalTable;
 
   const renderContent = () => {
     if (loading) {

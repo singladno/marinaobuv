@@ -64,7 +64,20 @@ export function useBasketCart() {
   }, [clear, addNotification]);
 
   useEffect(() => {
-    setProducts(items);
+    // Convert CartItem[] to CartItemWithProduct[] by adding product data
+    const productsWithData: CartItemWithProduct[] = items.map(item => ({
+      ...item,
+      product: {
+        id: item.slug, // Use slug as id for now
+        slug: item.slug,
+        name: `Product ${item.slug}`, // Placeholder name
+        pricePair: 0, // Placeholder price
+        images: [], // Empty images array
+        category: { name: 'Unknown' }, // Placeholder category
+        article: undefined,
+      },
+    }));
+    setProducts(productsWithData);
     setLoading(false);
   }, [items]);
 

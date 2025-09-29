@@ -25,7 +25,7 @@ export function ImageGrid({
     new Set()
   );
 
-  const { handleImageToggle, handleImageDelete } = useImageHandling({
+  const { handleImageToggle } = useImageHandling({
     draftId,
     onImageToggle,
     onReload,
@@ -62,17 +62,29 @@ export function ImageGrid({
           >
             <ImageThumbnail
               image={image}
-              onClick={() => onImageClick(index)}
-              className="h-12 w-12 cursor-pointer rounded border border-gray-200 hover:border-blue-300"
+              onImageClick={onImageClick}
+              onImageToggle={() => {}}
+              isUpdating={false}
+              index={index}
             />
             {hoveredImages.has(image.id) && (
-              <div className="absolute -right-1 -top-1 z-10">
-                <ImageActionButton
-                  image={image}
-                  onToggle={handleImageToggle}
-                  onDelete={handleImageDelete}
-                />
-              </div>
+              <ImageActionButton
+                imageId={image.id}
+                isActive={image.isActive !== false}
+                isUpdating={false}
+                onToggle={handleImageToggle}
+                onMouseEnter={() =>
+                  setHoveredImages(prev => new Set(prev).add(image.id))
+                }
+                onMouseLeave={() =>
+                  setHoveredImages(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(image.id);
+                    return newSet;
+                  })
+                }
+                imageRef={null}
+              />
             )}
           </div>
         ))}
@@ -99,7 +111,7 @@ export function ImageGrid({
               >
                 <ImageThumbnail
                   image={image}
-                  onClick={() => {
+                  onImageClick={() => {
                     const activeIndex = activeImages.findIndex(
                       img => img.id === image.id
                     );
@@ -107,16 +119,28 @@ export function ImageGrid({
                       onImageClick(activeIndex);
                     }
                   }}
-                  className="h-8 w-8 cursor-pointer rounded border border-gray-200"
+                  onImageToggle={() => {}}
+                  isUpdating={false}
+                  index={activeImages.findIndex(img => img.id === image.id)}
                 />
                 {hoveredImages.has(image.id) && (
-                  <div className="absolute -right-1 -top-1 z-10">
-                    <ImageActionButton
-                      image={image}
-                      onToggle={handleImageToggle}
-                      onDelete={handleImageDelete}
-                    />
-                  </div>
+                  <ImageActionButton
+                    imageId={image.id}
+                    isActive={image.isActive !== false}
+                    isUpdating={false}
+                    onToggle={handleImageToggle}
+                    onMouseEnter={() =>
+                      setHoveredImages(prev => new Set(prev).add(image.id))
+                    }
+                    onMouseLeave={() =>
+                      setHoveredImages(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(image.id);
+                        return newSet;
+                      })
+                    }
+                    imageRef={null}
+                  />
                 )}
               </div>
             ))}

@@ -62,7 +62,7 @@ export default function ProductFilters({
   };
 
   const handleClearFilters = () => {
-    const clearedFilters = {
+    const clearedFilters: FilterOptions = {
       categories: [],
       priceRange: [0, 50000],
       minRating: 0,

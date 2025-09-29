@@ -38,8 +38,7 @@ export function createOptimisticDraftTableColumns({
     onPatch,
     onDelete,
     onImageToggle,
-    onReload,
-    status
+    onReload
   );
 
   return [

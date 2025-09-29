@@ -1,5 +1,5 @@
 import { buildKey, putBuffer, publicUrl, computeSha256 } from '@/lib/s3u';
-import { prisma } from '@/lib/server/db';
+import { prisma } from '@/lib/db-node';
 import {
   isGroupJid,
   extractMessageText,
@@ -14,8 +14,9 @@ export async function processWebhookPayload(payload: any) {
     return { processed: false, message: 'Not a messages upsert event' };
   }
 
-  const { data } = payload;
-  const messages = data.messages || [];
+  const { data } = payload as any;
+  const messages: any[] =
+    data && Array.isArray(data.messages) ? data.messages : [];
 
   for (const message of messages) {
     await processMessage(message);
@@ -37,7 +38,7 @@ async function processMessage(message: any) {
   }
 
   // Process media if present
-  let mediaUrl = null;
+  let mediaUrl: string | null = null;
   if (msg.message?.imageMessage || msg.message?.documentMessage) {
     mediaUrl = await processMediaMessage(msg);
   }
@@ -67,13 +68,16 @@ async function processMediaMessage(msg: any): Promise<string | null> {
     const media = mediaInfo(msg);
     if (!media) return null;
 
-    const buffer = await fetchMediaBuffer(media.url);
+    const buffer = await fetchMediaBuffer({
+      url: media.url,
+      token: process.env.WHAPI_TOKEN as string,
+    });
     if (!buffer) return null;
 
-    const sha256 = computeSha256(buffer);
-    const key = buildKey(`media/${sha256}`);
+    const sha256 = computeSha256(buffer.buf);
+    const key = buildKey(`media/${sha256}.${buffer.ext}`);
 
-    await putBuffer(key, buffer);
+    await putBuffer(key, buffer.buf, buffer.mime);
     return publicUrl(key);
   } catch (error) {
     console.error('Error processing media:', error);
@@ -103,7 +107,7 @@ async function saveMessage(data: {
   mediaWidth: number | null;
   mediaHeight: number | null;
 }) {
-  return prisma.waMessage.create({
+  return prisma.whatsAppMessage.create({
     data: {
       ...data,
       provider: {
@@ -124,7 +128,7 @@ function isProductMessage(text: string): boolean {
 
 async function processWithAI(text: string, mediaUrl: string | null) {
   try {
-    const result = await normalizeTextToDraft(text, mediaUrl);
+    const result = await normalizeTextToDraft(text);
     if (result) {
       console.log('AI processing result:', result);
     }

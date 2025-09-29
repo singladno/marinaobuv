@@ -4,7 +4,13 @@ import React, { useState, useRef } from 'react';
 
 import { ImageModal } from '@/components/ui/ImageModal';
 import { sanitizeImageUrl } from '@/lib/image-security';
-import type { DraftImage } from '@/types/admin';
+type DraftImage = {
+  id: string;
+  url: string;
+  alt?: string | null;
+  color?: string | null;
+  isActive?: boolean;
+};
 
 import { OptimisticImageGrid } from './OptimisticImageGrid';
 
@@ -62,13 +68,15 @@ export function OptimisticImagesCell({
         <div ref={modalRef}>
           <ImageModal
             images={activeImages.map(img => ({
+              id: img.id,
               url: sanitizeImageUrl(img.url),
               alt: img.alt || '',
+              color: img.color || null,
+              isActive: img.isActive,
             }))}
-            currentIndex={selectedImageIndex}
+            isOpen={true}
             onClose={closeModal}
-            onNext={nextImage}
-            onPrev={prevImage}
+            initialIndex={selectedImageIndex}
           />
         </div>
       )}

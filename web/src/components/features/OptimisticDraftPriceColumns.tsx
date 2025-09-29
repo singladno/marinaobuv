@@ -20,9 +20,13 @@ export function createPriceColumns(
       header: 'Цена за пару',
       cell: ({ row }) => (
         <MemoizedOptimisticEditableCell
-          draft={row.original}
-          field="pricePair"
-          onPatch={onPatch}
+          value={row.original.pricePair}
+          type="price"
+          onSave={async value => {
+            const numeric = typeof value === 'string' ? Number(value) : value;
+            await onPatch(row.original.id, { pricePair: numeric ?? null });
+          }}
+          placeholder="—"
         />
       ),
     },
@@ -52,7 +56,7 @@ export function createPriceColumns(
     {
       id: 'price',
       header: 'Цена',
-      cell: ({ row }) => <PriceCell draft={row.original} onPatch={onPatch} />,
+      cell: ({ row }) => <PriceCell value={row.original.pricePair ?? null} />,
     },
   ];
 }

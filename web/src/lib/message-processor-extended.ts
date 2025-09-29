@@ -134,7 +134,7 @@ export async function saveWhatsAppMessage(
       mediaS3Key,
       mediaUrl,
       providerId,
-      rawPayload: message as unknown as Record<string, unknown>,
+      rawPayload: message as unknown as any,
     },
     create: {
       waMessageId: message.id, // Store WhatsApp message ID
@@ -162,7 +162,7 @@ export async function saveWhatsAppMessage(
       mediaS3Key,
       mediaUrl,
       providerId,
-      rawPayload: message as unknown as Record<string, unknown>,
+      rawPayload: message as unknown as any,
     },
   });
 
@@ -186,48 +186,30 @@ export async function processTextWithAI(
       return;
     }
 
-    await prisma.productDraft.upsert({
+    await prisma.waDraftProduct.upsert({
       where: { messageId },
       update: {
-        name: productDraft.name,
-        season: productDraft.season
-          ? (productDraft.season.toUpperCase() as
-              | 'SPRING'
-              | 'SUMMER'
-              | 'AUTUMN'
-              | 'WINTER')
-          : null,
-        typeSlug: productDraft.typeSlug || null,
-        pricePair: productDraft.pricePair || null,
-        packPairs: productDraft.packPairs || null,
-        priceBox: productDraft.priceBox || null,
-        material: productDraft.material || null,
+        pricePair: productDraft.pricePair ?? undefined,
         gender: productDraft.gender
-          ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
-          : null,
-        sizes: productDraft.sizes || null,
-        rawGptResponse: productDraft as Record<string, unknown>,
+          ? (productDraft.gender.toUpperCase() as any)
+          : undefined,
+        season: productDraft.season
+          ? (productDraft.season.toUpperCase() as any)
+          : undefined,
+        sizes: (productDraft.sizes as any) || undefined,
       },
       create: {
         messageId,
-        name: productDraft.name,
-        season: productDraft.season
-          ? (productDraft.season.toUpperCase() as
-              | 'SPRING'
-              | 'SUMMER'
-              | 'AUTUMN'
-              | 'WINTER')
-          : null,
-        typeSlug: productDraft.typeSlug || null,
-        pricePair: productDraft.pricePair || null,
-        packPairs: productDraft.packPairs || null,
-        priceBox: productDraft.priceBox || null,
-        material: productDraft.material || null,
+        providerId: 'unknown',
+        pricePair: (productDraft.pricePair as any) ?? null,
         gender: productDraft.gender
-          ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
+          ? (productDraft.gender.toUpperCase() as any)
           : null,
-        sizes: productDraft.sizes || null,
-        rawGptResponse: productDraft as Record<string, unknown>,
+        season: productDraft.season
+          ? (productDraft.season.toUpperCase() as any)
+          : null,
+        sizes: (productDraft.sizes as any) ?? null,
+        status: 'draft',
       },
     });
 

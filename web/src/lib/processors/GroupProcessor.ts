@@ -90,15 +90,15 @@ export class GroupProcessor {
       console.log(`   📸 Uploaded ${imageData.length} images to S3`);
 
       // Create draft product
-      await this.productService.createDraftProductFromAnalysis(
-        group.messageIds[0], // Use first message as primary
-        messages[0].from!,
-        messages[0].fromName || 'Unknown',
-        analysisResult,
-        imageData,
-        group.productContext,
-        group.messageIds // Pass all message IDs as source
-      );
+      await this.productService.createDraftProductFromAnalysis({
+        messageId: group.messageIds[0],
+        from: messages[0].from || '',
+        fromName: messages[0].fromName || 'Unknown',
+        analysis: analysisResult,
+        images: imageData,
+        context: group.productContext,
+        sourceMessageIds: group.messageIds,
+      });
 
       console.log(`✅ Successfully processed group ${group.groupId}`);
     } catch (error) {

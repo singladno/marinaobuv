@@ -63,7 +63,6 @@ export async function normalizeTextToDraft(
     console.log('Parsed JSON content:', JSON.stringify(jsonContent, null, 2));
 
     const validated = ProductDraftSchema.parse(jsonContent);
-
     return validated;
   } catch (error) {
     console.error('Failed to normalize text with YandexGPT:', error);
@@ -90,7 +89,7 @@ export async function validateDraftWithImages(
   rawResponse: unknown;
 } | null> {
   try {
-    console.log(`🔍 Starting second-pass validation for draft: ${draft.name}`);
+    console.log(`🔍 Starting second-pass validation for draft`);
     console.log(`📸 Examining ${imageUrls.length} images:`, imageUrls);
 
     const authHeader = env.YC_IAM_TOKEN
@@ -143,7 +142,7 @@ export async function validateDraftWithImages(
       typeof jsonContent?.normalizedName === 'string' &&
       jsonContent.normalizedName.trim()
         ? jsonContent.normalizedName.trim()
-        : draft.name || 'Не указано';
+        : 'Не указано';
 
     const productColor: string | null =
       typeof jsonContent?.productColor === 'string' &&

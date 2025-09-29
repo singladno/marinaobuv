@@ -57,8 +57,9 @@ export function Button({
   const buttonClasses = clsx(base, variants[variant], sizes[size], className);
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children, {
-      className: clsx(buttonClasses, children.props.className),
+    const c = children as React.ReactElement<any>;
+    return React.cloneElement(c, {
+      className: clsx(buttonClasses, c.props?.className),
     });
   }
 

@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/Button';
 
-import { RowWrapper } from './GruzchikRowWrapper';
+import { GruzchikRowWrapper } from './GruzchikRowWrapper';
 
 interface GruzchikActionsColumnProps {
   orderId: string;
@@ -12,11 +12,11 @@ export function GruzchikActionsColumn({
   updatingOrders,
 }: GruzchikActionsColumnProps) {
   return (
-    <RowWrapper orderId={orderId} updatingOrders={updatingOrders}>
+    <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       <div className="flex flex-col space-y-2">
         <Button
           size="sm"
-          variant="default"
+          variant="primary"
           className="w-full text-xs"
           onClick={() => console.log('Update availability for order:', orderId)}
         >
@@ -31,6 +31,6 @@ export function GruzchikActionsColumn({
           Подробнее
         </Button>
       </div>
-    </RowWrapper>
+    </GruzchikRowWrapper>
   );
 }

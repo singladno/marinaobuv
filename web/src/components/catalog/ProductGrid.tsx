@@ -55,7 +55,15 @@ export function ProductGrid({ products, gridCols, loading }: ProductGridProps) {
   return (
     <div className={gridClasses[gridCols]}>
       {products.map(product => (
-        <ProductCard key={product.id} product={product as any} />
+        <ProductCard
+          key={product.id}
+          slug={product.slug}
+          name={product.name}
+          pricePair={product.pricePair}
+          currency="RUB"
+          imageUrl={product.primaryImageUrl}
+          category={product.category?.name ?? undefined}
+        />
       ))}
     </div>
   );

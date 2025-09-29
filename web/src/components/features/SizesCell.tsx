@@ -65,8 +65,8 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
               key={index}
               draftSize={draftSize}
               setDraftSize={setDraftSize}
-              draftPairs={draftPairs}
-              setDraftPairs={setDraftPairs}
+              draftPairs={Number(draftPairs) || 0}
+              setDraftPairs={(pairs: number) => setDraftPairs(String(pairs))}
               onKeyDown={handleKeyDown}
               onApply={() => applyEdit(index)}
               onCancel={() => setEditingIndex(null)}

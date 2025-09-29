@@ -2,7 +2,6 @@ import type { ColumnDef, Table } from '@tanstack/react-table';
 import React from 'react';
 
 import { DataTable } from '@/components/ui/DataTable';
-import { useTableRenderers } from '@/hooks/useTableRenderers';
 
 interface UnifiedTableContentProps<TData, TValue> {
   table?: Table<TData>;
@@ -36,7 +35,27 @@ export function UnifiedTableContent<TData, TValue>({
   emptyMessage,
   loadingMessage,
 }: UnifiedTableContentProps<TData, TValue>) {
-  const { renderLoading, renderError, renderEmpty } = useTableRenderers();
+  const renderLoading = (message: string) => (
+    <div className="flex items-center justify-center py-8">
+      <div className="flex items-center space-x-2">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-orange-600 border-t-transparent"></div>
+        <span className="text-sm text-gray-500">{message}</span>
+      </div>
+    </div>
+  );
+
+  const renderError = (errorMessage: string) => (
+    <div className="flex flex-col items-center justify-center py-8">
+      <span className="text-sm font-medium text-red-500">Ошибка загрузки</span>
+      <span className="text-xs text-gray-500">{errorMessage}</span>
+    </div>
+  );
+
+  const renderEmpty = (message: string) => (
+    <div className="flex items-center justify-center py-8">
+      <span className="text-sm text-gray-500">{message}</span>
+    </div>
+  );
 
   if (loading) {
     return renderLoading(loadingMessage || 'Загрузка...');

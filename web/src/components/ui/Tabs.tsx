@@ -2,7 +2,8 @@ import * as React from 'react';
 
 interface TabsProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
+  onValueChange?: (value: string) => void;
   children: React.ReactNode;
   className?: string;
 }
@@ -13,15 +14,22 @@ interface TabProps {
   className?: string;
 }
 
-export function Tabs({ value, onChange, children, className = '' }: TabsProps) {
+export function Tabs({
+  value,
+  onChange,
+  onValueChange,
+  children,
+  className = '',
+}: TabsProps) {
   return (
     <div className={`flex w-full ${className}`}>
       {React.Children.map(children, child => {
-        if (React.isValidElement<TabProps>(child)) {
-          return React.cloneElement(child, {
-            ...child.props,
-            isActive: child.props.value === value,
-            onClick: () => onChange(child.props.value),
+        if (React.isValidElement(child)) {
+          const c = child as React.ReactElement<any>;
+          return React.cloneElement(c, {
+            ...c.props,
+            isActive: c.props.value === value,
+            onClick: () => (onValueChange || onChange)?.(c.props.value),
           });
         }
         return child;

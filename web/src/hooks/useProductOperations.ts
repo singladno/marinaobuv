@@ -12,7 +12,7 @@ export interface ProductOperation {
 }
 
 export interface UseProductOperationsProps {
-  onUpdate: (id: string, data: ProductUpdateData) => Promise<void>;
+  onUpdate: (id: string, data: ProductUpdateData) => Promise<any>;
   onDelete: (id: string) => Promise<void>;
 }
 

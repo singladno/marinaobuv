@@ -1,6 +1,6 @@
 import Image from 'next/image';
 
-import { RowWrapper } from './GruzchikRowWrapper';
+import { GruzchikRowWrapper } from './GruzchikRowWrapper';
 
 interface GruzchikImageColumnProps {
   orderId: string;
@@ -16,7 +16,7 @@ export function GruzchikImageColumn({
   updatingOrders,
 }: GruzchikImageColumnProps) {
   return (
-    <RowWrapper orderId={orderId} updatingOrders={updatingOrders}>
+    <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border">
         {imageUrl ? (
           <Image
@@ -32,6 +32,6 @@ export function GruzchikImageColumn({
           </div>
         )}
       </div>
-    </RowWrapper>
+    </GruzchikRowWrapper>
   );
 }

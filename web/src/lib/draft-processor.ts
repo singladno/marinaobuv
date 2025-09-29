@@ -19,8 +19,12 @@ export function extractTextContent(
   const textContents: string[] = [];
   const mediaInfo: string[] = [];
 
-  for (const message of messages) {
-    if (message.text && message.text.trim()) {
+  for (const message of messages as any[]) {
+    if (
+      message.text &&
+      typeof message.text === 'string' &&
+      message.text.trim()
+    ) {
       textContents.push(message.text.trim());
     }
 

@@ -21,6 +21,8 @@ export function createBasicColumns(
           type="checkbox"
           checked={table.getIsAllPageRowsSelected()}
           onChange={e => table.toggleAllPageRowsSelected(!!e.target.checked)}
+          aria-label="Выбрать все строки на странице"
+          title="Выбрать все"
           className="rounded border-gray-300"
         />
       ),
@@ -29,6 +31,8 @@ export function createBasicColumns(
           type="checkbox"
           checked={row.getIsSelected()}
           onChange={e => row.toggleSelected(!!e.target.checked)}
+          aria-label="Выбрать строку"
+          title="Выбрать"
           className="rounded border-gray-300"
         />
       ),

@@ -5,7 +5,7 @@ import { DraftDeletionActions } from './DraftDeletionActions';
 
 interface DraftBulkOperationsProps {
   selectedIds: string[];
-  status?: string;
+  status?: 'draft' | 'deleted' | 'approved' | string;
   onApprove: () => Promise<void>;
   onConvertToCatalog: () => Promise<void>;
   onBulkDelete: () => void;
@@ -44,7 +44,6 @@ export function DraftBulkOperations({
       {status === 'deleted' && (
         <DraftDeletionActions
           selectedCount={selectedCount}
-          onBulkDelete={onBulkDelete}
           onBulkRestore={onBulkRestore}
           onBulkPermanentDelete={onBulkPermanentDelete}
         />

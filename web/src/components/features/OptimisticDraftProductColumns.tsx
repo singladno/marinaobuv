@@ -21,9 +21,12 @@ export function createProductColumns(
       header: 'Название',
       cell: ({ row }) => (
         <MemoizedOptimisticEditableCell
-          draft={row.original}
-          field="name"
-          onPatch={onPatch}
+          value={row.original.name}
+          onSave={async value => {
+            await onPatch(row.original.id, { name: (value as string) ?? null });
+          }}
+          placeholder="—"
+          type="text"
         />
       ),
     },
@@ -32,9 +35,14 @@ export function createProductColumns(
       header: 'Артикул',
       cell: ({ row }) => (
         <MemoizedOptimisticEditableCell
-          draft={row.original}
-          field="article"
-          onPatch={onPatch}
+          value={row.original.article}
+          onSave={async value => {
+            await onPatch(row.original.id, {
+              article: (value as string) ?? null,
+            });
+          }}
+          placeholder="—"
+          type="text"
         />
       ),
     },
@@ -42,21 +50,36 @@ export function createProductColumns(
       id: 'gender',
       header: 'Пол',
       cell: ({ row }) => (
-        <MemoizedGenderSelectCell draft={row.original} onPatch={onPatch} />
+        <MemoizedGenderSelectCell
+          value={row.original.gender}
+          onChange={async value => {
+            await onPatch(row.original.id, { gender: value });
+          }}
+        />
       ),
     },
     {
       id: 'season',
       header: 'Сезон',
       cell: ({ row }) => (
-        <MemoizedSeasonSelectCell draft={row.original} onPatch={onPatch} />
+        <MemoizedSeasonSelectCell
+          value={row.original.season}
+          onChange={async value => {
+            await onPatch(row.original.id, { season: value });
+          }}
+        />
       ),
     },
     {
       id: 'sizes',
       header: 'Размеры',
       cell: ({ row }) => (
-        <MemoizedOptimisticSizesCell draft={row.original} onPatch={onPatch} />
+        <MemoizedOptimisticSizesCell
+          sizes={row.original.sizes || []}
+          onChange={async sizes => {
+            await onPatch(row.original.id, { sizes });
+          }}
+        />
       ),
     },
   ];

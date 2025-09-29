@@ -16,7 +16,9 @@ export function ReadOnlySizesDisplay({ sizes }: ReadOnlySizesDisplayProps) {
             <div className="flex items-center gap-1">
               <span className="font-medium">{x.size}</span>
               <span className="text-gray-500">×</span>
-              <span className="text-gray-600">{x.pairs}</span>
+              <span className="text-gray-600">
+                {x.count || x.quantity || 0}
+              </span>
             </div>
           </div>
         ))}

@@ -19,8 +19,9 @@ export function ProductTableRow({
   product,
   onUpdateProduct,
 }: ProductTableRowProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ru-RU', {
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('ru-RU', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

@@ -47,10 +47,10 @@ export function DraftTableBody({
                           : isFrozenRight
                             ? { right: 0 }
                             : {}),
-                        ...(cell.column.columnDef.meta?.width && {
-                          width: cell.column.columnDef.meta.width,
-                          minWidth: cell.column.columnDef.meta.width,
-                          maxWidth: cell.column.columnDef.meta.width,
+                        ...((cell.column.columnDef.meta as any)?.width && {
+                          width: (cell.column.columnDef.meta as any).width,
+                          minWidth: (cell.column.columnDef.meta as any).width,
+                          maxWidth: (cell.column.columnDef.meta as any).width,
                         }),
                       }}
                     >

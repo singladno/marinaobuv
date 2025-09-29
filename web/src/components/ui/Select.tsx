@@ -50,8 +50,12 @@ const Select = React.forwardRef<
         <div className="bg-popover text-popover-foreground absolute z-50 mt-1 w-full rounded-md border shadow-md">
           <div className="p-1">
             {React.Children.map(children, child => {
-              if (React.isValidElement(child) && child.type === SelectContent) {
-                return React.cloneElement(child, {
+              if (
+                React.isValidElement(child) &&
+                (child.type as any) === SelectContent
+              ) {
+                const c = child as React.ReactElement<any>;
+                return React.cloneElement(c, {
                   onSelect: handleSelect,
                   selectedValue,
                 });
@@ -112,8 +116,9 @@ const SelectContent = React.forwardRef<
     {...props}
   >
     {React.Children.map(children, child => {
-      if (React.isValidElement(child) && child.type === SelectItem) {
-        return React.cloneElement(child, {
+      if (React.isValidElement(child) && (child.type as any) === SelectItem) {
+        const c = child as React.ReactElement<any>;
+        return React.cloneElement(c, {
           onSelect,
           selectedValue,
         });

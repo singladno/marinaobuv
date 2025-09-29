@@ -27,9 +27,9 @@ export function createGruzchikPurchaseItemColumns({
       header: 'Фото',
       cell: ({ row }) => (
         <ImageCell
-          imageUrl={row.original.imageUrl}
-          name={row.original.name}
-          itemId={row.original.id}
+          imageUrl={row.original.itemImage || undefined}
+          name={row.original.itemName}
+          itemId={row.original.itemId}
           updatingItems={updatingItems}
         />
       ),
@@ -39,42 +39,22 @@ export function createGruzchikPurchaseItemColumns({
       header: 'Название',
       cell: ({ row }) => (
         <NameCell
-          name={row.original.name}
-          article={row.original.article}
-          itemId={row.original.id}
+          name={row.original.itemName}
+          article={row.original.itemArticle || undefined}
+          itemId={row.original.itemId}
           updatingItems={updatingItems}
         />
       ),
     },
-    {
-      id: 'size',
-      header: 'Размер',
-      cell: ({ row }) => (
-        <TextCell
-          value={row.original.size || 'Не указан'}
-          itemId={row.original.id}
-          updatingItems={updatingItems}
-        />
-      ),
-    },
-    {
-      id: 'color',
-      header: 'Цвет',
-      cell: ({ row }) => (
-        <TextCell
-          value={row.original.color || 'Не указан'}
-          itemId={row.original.id}
-          updatingItems={updatingItems}
-        />
-      ),
-    },
+    // Size and color are not available on GruzchikOrderItemRow
+    // Keep placeholder columns if needed in the future
     {
       id: 'quantity',
       header: 'Количество',
       cell: ({ row }) => (
         <QuantityCell
-          quantity={row.original.quantity}
-          itemId={row.original.id}
+          quantity={row.original.itemQty}
+          itemId={row.original.itemId}
           updatingItems={updatingItems}
         />
       ),
@@ -84,8 +64,8 @@ export function createGruzchikPurchaseItemColumns({
       header: 'Цена',
       cell: ({ row }) => (
         <PriceCell
-          price={row.original.price}
-          itemId={row.original.id}
+          price={row.original.itemPrice}
+          itemId={row.original.itemId}
           updatingItems={updatingItems}
         />
       ),
@@ -95,8 +75,8 @@ export function createGruzchikPurchaseItemColumns({
       header: 'Статус',
       cell: ({ row }) => (
         <StatusCell
-          status={row.original.status}
-          itemId={row.original.id}
+          status={row.original.orderStatus}
+          itemId={row.original.itemId}
           updatingItems={updatingItems}
         />
       ),
@@ -106,10 +86,10 @@ export function createGruzchikPurchaseItemColumns({
       header: 'Действия',
       cell: ({ row }) => (
         <ActionsCell
-          itemId={row.original.id}
+          itemId={row.original.itemId}
           updatingItems={updatingItems}
-          onUpdate={() => console.log('Update item:', row.original.id)}
-          onView={() => console.log('View item:', row.original.id)}
+          onUpdate={() => console.log('Update item:', row.original.itemId)}
+          onView={() => console.log('View item:', row.original.itemId)}
         />
       ),
     },

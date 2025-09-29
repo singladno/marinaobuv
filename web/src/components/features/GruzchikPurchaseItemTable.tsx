@@ -26,10 +26,13 @@ export function GruzchikPurchaseItemTable() {
 
   const columns = useMemo(
     () =>
-      createGruzchikPurchaseItemColumns(
-        updateOrderOptimistically,
-        updatingOrders
-      ),
+      createGruzchikPurchaseItemColumns({
+        // adapter: expected signature is (itemId, updates) => Promise<void>
+        onUpdate: async (itemId: string, updates: any) => {
+          await updateOrderOptimistically(itemId, updates);
+        },
+        updatingItems: updatingOrders,
+      }),
     [updateOrderOptimistically, updatingOrders]
   );
 
@@ -94,7 +97,10 @@ export function GruzchikPurchaseItemTable() {
   return (
     <div className="space-y-8">
       {ordersWithItems.map(orderGroup => (
-        <div key={orderGroup.orderId} className="space-y-4">
+        <div
+          key={orderGroup.order?.id || orderGroup.orderNumber}
+          className="space-y-4"
+        >
           {/* Order Header */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="flex items-center justify-between">
@@ -151,10 +157,7 @@ export function GruzchikPurchaseItemTable() {
       {pagination.totalPages > 1 && (
         <div className="mt-6">
           <DataTablePagination
-            page={pagination.page}
-            pageSize={pagination.pageSize}
-            total={pagination.total}
-            totalPages={pagination.totalPages}
+            pagination={pagination}
             onPageChange={onPageChange}
             onPageSizeChange={onPageSizeChange}
           />

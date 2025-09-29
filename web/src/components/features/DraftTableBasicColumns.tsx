@@ -42,17 +42,22 @@ export function createBasicColumns({
             type="checkbox"
             checked={allSelected}
             ref={el => {
-              if (el) el.indeterminate = someSelected && !allSelected;
+              if (el)
+                (el as HTMLInputElement).indeterminate = Boolean(
+                  someSelected && !allSelected
+                );
             }}
             onChange={e => onSelectAll(e.target.checked)}
             className="rounded border-gray-300"
+            aria-label="Выбрать все черновики"
           />
         ),
         cell: ({ row }) => (
           <ApprovalSelectionCell
-            draftId={row.original.id}
-            isSelected={row.original.isSelected}
+            id={row.original.id}
+            selected={Boolean((row.original as any).isSelected)}
             onToggle={onToggle}
+            approvalState={null}
           />
         ),
       })
@@ -67,8 +72,9 @@ export function createBasicColumns({
       cell: ({ row }) => (
         <MemoizedEditableCell
           value={row.original.name}
-          onSave={value => onPatch(row.original.id, { name: value })}
+          onBlur={value => onPatch(row.original.id, { name: value })}
           placeholder="Введите название"
+          aria-label="Название товара"
         />
       ),
     })
@@ -81,10 +87,12 @@ export function createBasicColumns({
       header: 'Категория',
       cell: ({ row }) => (
         <MemoizedCategoryCell
+          category={row.original.category}
           categoryId={row.original.categoryId}
+          onCategoryChange={categoryId =>
+            onPatch(row.original.id, { categoryId })
+          }
           categories={categories}
-          onPatch={onPatch}
-          draftId={row.original.id}
         />
       ),
     })
@@ -96,11 +104,7 @@ export function createBasicColumns({
       id: 'provider',
       header: 'Поставщик',
       cell: ({ row }) => (
-        <MemoizedProviderCell
-          providerId={row.original.providerId}
-          onPatch={onPatch}
-          draftId={row.original.id}
-        />
+        <MemoizedProviderCell provider={row.original.provider} />
       ),
     })
   );
@@ -110,12 +114,7 @@ export function createBasicColumns({
     columnHelper.display({
       id: 'source',
       header: 'Источник',
-      cell: ({ row }) => (
-        <MemoizedSourceCell
-          source={row.original.source}
-          draftId={row.original.id}
-        />
-      ),
+      cell: ({ row }) => <MemoizedSourceCell source={row.original.source} />,
     })
   );
 

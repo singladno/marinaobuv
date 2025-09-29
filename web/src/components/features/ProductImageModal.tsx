@@ -70,9 +70,6 @@ export function ProductImageModal({
         {/* Badges */}
         <ImageModalBadges
           currentImage={{
-            id: currentImage.id,
-            url: currentImage.url,
-            alt: currentImage.alt,
             color: null,
             isActive: true,
           }}

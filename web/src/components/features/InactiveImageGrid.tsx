@@ -3,7 +3,9 @@
 import React, { useState, useCallback } from 'react';
 
 import { useImageHandling } from '@/hooks/useImageHandling';
-import type { DraftImage } from '@/types/admin';
+import type { Draft } from '@/types/admin';
+
+type DraftImage = Draft['images'][0];
 
 import { ImageActionButton } from './ImageActionButton';
 import { ImageThumbnail } from './ImageThumbnail';
@@ -26,7 +28,7 @@ export function InactiveImageGrid({
   const [togglingImages, setTogglingImages] = useState<Set<string>>(new Set());
   const [hoveredImages, setHoveredImages] = useState<Set<string>>(new Set());
 
-  const { handleImageToggle, handleImageDelete } = useImageHandling({
+  const { handleImageToggle } = useImageHandling({
     draftId,
     onImageToggle,
     onReload,
@@ -36,7 +38,9 @@ export function InactiveImageGrid({
     async (imageId: string, isActive: boolean) => {
       setTogglingImages(prev => new Set(prev).add(imageId));
       try {
-        await handleImageToggle(imageId, isActive);
+        // Create a synthetic MouseEvent for compatibility
+        const event = new MouseEvent('click') as unknown as React.MouseEvent;
+        await handleImageToggle(imageId, isActive, event);
       } finally {
         setTogglingImages(prev => {
           const newSet = new Set(prev);
@@ -71,7 +75,7 @@ export function InactiveImageGrid({
           >
             <ImageThumbnail
               image={image}
-              onClick={() => {
+              onImageClick={() => {
                 const activeIndex = images.findIndex(
                   img => img.id === image.id
                 );
@@ -79,15 +83,30 @@ export function InactiveImageGrid({
                   onImageClick(activeIndex);
                 }
               }}
-              className="h-8 w-8 cursor-pointer rounded border border-gray-200"
+              onImageToggle={() => {}}
+              isUpdating={false}
+              index={images.findIndex(img => img.id === image.id)}
             />
             {hoveredImages.has(image.id) && (
               <div className="absolute -right-1 -top-1 z-10">
                 <ImageActionButton
-                  image={image}
-                  onToggle={handleToggleWithOptimistic}
-                  onDelete={handleImageDelete}
-                  disabled={togglingImages.has(image.id)}
+                  imageId={image.id}
+                  isActive={image.isActive !== false}
+                  isUpdating={togglingImages.has(image.id)}
+                  onToggle={(id, active, e) =>
+                    handleToggleWithOptimistic(id, active)
+                  }
+                  onMouseEnter={() =>
+                    setHoveredImages(prev => new Set(prev).add(image.id))
+                  }
+                  onMouseLeave={() =>
+                    setHoveredImages(prev => {
+                      const newSet = new Set(prev);
+                      newSet.delete(image.id);
+                      return newSet;
+                    })
+                  }
+                  imageRef={null}
                 />
               </div>
             )}

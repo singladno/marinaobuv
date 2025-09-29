@@ -68,7 +68,10 @@ export function ImageModal({
     selectedImages,
     onImageToggle,
     onBulkDelete: handleBulkDelete,
-    onImageSelect: setCurrentIndex,
+    onImageSelect: (imageId: string) => {
+      const index = images.findIndex(img => img.id === imageId);
+      if (index !== -1) setCurrentIndex(index);
+    },
     onToggleSelection: toggleImageSelection,
   });
 
@@ -94,22 +97,21 @@ export function ImageModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={
-        <ImageModalHeader
-          selectedCount={selectedImages.size}
-          onSelectAll={selectAllImages}
-          onDeselectAll={deselectAllImages}
-          onBulkDelete={handleBulkDelete}
-          onBulkSplit={handleBulkSplit}
-          isBulkDeleting={isBulkDeleting}
-          isBulkSplitting={isBulkSplitting}
-          hasBulkDelete={!!onBulkDelete}
-          hasBulkSplit={!!onBulkSplit}
-        />
-      }
+      title="Изображения"
       size="xl"
       className="!max-w-none"
     >
+      <ImageModalHeader
+        selectedCount={selectedImages.size}
+        onSelectAll={selectAllImages}
+        onDeselectAll={deselectAllImages}
+        onBulkDelete={handleBulkDelete}
+        onBulkSplit={handleBulkSplit}
+        isBulkDeleting={isBulkDeleting}
+        isBulkSplitting={isBulkSplitting}
+        hasBulkDelete={!!onBulkDelete}
+        hasBulkSplit={!!onBulkSplit}
+      />
       <div className="relative">
         {/* Navigation buttons */}
         <ImageModalNavigation

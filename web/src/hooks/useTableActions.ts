@@ -30,6 +30,7 @@ export function useTableActions({
           label: `Добавить в каталог (${selectedCount})`,
           onClick: onConvertToCatalog,
           disabled: !selectedCount,
+          loading: false,
           variant: 'success' as const,
         },
       };
@@ -41,6 +42,7 @@ export function useTableActions({
           label: `Одобрить (${selectedCount})`,
           onClick: onApprove,
           disabled: !selectedCount,
+          loading: false,
           variant: 'primary' as const,
         },
       };
@@ -52,12 +54,14 @@ export function useTableActions({
           label: `Восстановить (${selectedCount})`,
           onClick: onBulkRestore,
           disabled: !selectedCount,
+          loading: false,
           variant: 'success' as const,
         },
         secondary: {
           label: `Удалить навсегда (${selectedCount})`,
           onClick: onBulkPermanentDelete,
           disabled: !selectedCount,
+          loading: false,
           variant: 'danger' as const,
         },
       };

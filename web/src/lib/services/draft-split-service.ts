@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/server/db';
+import { prisma } from '@/lib/db-node';
 
 interface SplitDraftParams {
   draftId: string;
@@ -38,19 +38,19 @@ export async function splitDraft({ draftId, imageIds }: SplitDraftParams) {
       sizes: originalDraft.sizes,
       gender: originalDraft.gender,
       season: originalDraft.season,
-      provider: originalDraft.provider,
+      providerId: originalDraft.providerId,
       gptRequest: originalDraft.gptRequest,
-      gptResponse: originalDraft.gptResponse,
+      rawGptResponse: originalDraft.rawGptResponse,
       aiStatus: originalDraft.aiStatus,
-      aiStatusMessage: originalDraft.aiStatusMessage,
-      isActive: originalDraft.isActive,
+      aiContext: originalDraft.aiContext,
+      // isActive not present on waDraftProduct
       images: {
         create: originalDraft.images
           .filter(img => imageIds.includes(img.id))
           .map(img => ({
             url: img.url,
             isActive: img.isActive,
-            waMessageId: img.waMessageId,
+            // waMessageId not present on waDraftProductImage
           })),
       },
     },

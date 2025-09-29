@@ -32,7 +32,9 @@ export function SizeDisplay({
       <div className="flex items-center gap-1">
         <span className="font-medium">{size.size}</span>
         <span className="text-gray-500">×</span>
-        <span className="text-gray-600">{size.pairs}</span>
+        <span className="text-gray-600">
+          {size.count || size.quantity || 0}
+        </span>
       </div>
 
       {isSaving && (

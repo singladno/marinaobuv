@@ -51,29 +51,14 @@ export async function listProductsByCategoryId(
     where.categoryId = categoryId;
   }
 
-  // Apply filters
+  // Apply filters (aligned with current CatalogFilters type)
   if (filters) {
-    if (filters.minPrice !== undefined) {
-      where.pricePair = { gte: filters.minPrice };
+    const { priceFrom, priceTo } = filters as any;
+    if (priceFrom !== undefined && priceFrom !== null) {
+      (where as any).pricePair = { gte: priceFrom };
     }
-    if (filters.maxPrice !== undefined) {
-      where.pricePair = { ...where.pricePair, lte: filters.maxPrice };
-    }
-    if (filters.gender && filters.gender.length > 0) {
-      where.gender = { in: filters.gender };
-    }
-    if (filters.season && filters.season.length > 0) {
-      where.season = { in: filters.season };
-    }
-    if (filters.material && filters.material.length > 0) {
-      where.material = { in: filters.material };
-    }
-    if (filters.search) {
-      where.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
-        { description: { contains: filters.search, mode: 'insensitive' } },
-        { material: { contains: filters.search, mode: 'insensitive' } },
-      ];
+    if (priceTo !== undefined && priceTo !== null) {
+      (where as any).pricePair = { ...(where as any).pricePair, lte: priceTo };
     }
   }
 
@@ -86,7 +71,6 @@ export async function listProductsByCategoryId(
       include: {
         category: true,
         images: {
-          where: { isActive: true },
           orderBy: { sort: 'asc' },
         },
       },

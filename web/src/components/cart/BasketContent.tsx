@@ -6,11 +6,12 @@ interface CartItemWithProduct {
   qty: number;
   product: {
     id: string;
+    slug: string;
     name: string;
     pricePair: number;
     images: Array<{ url: string; alt?: string }>;
     category: { name: string };
-    article?: string;
+    article: string;
   };
 }
 

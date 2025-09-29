@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/Badge';
 
-import { RowWrapper } from './GruzchikRowWrapper';
+import { GruzchikRowWrapper } from './GruzchikRowWrapper';
 
 interface GruzchikStatusColumnProps {
   orderId: string;
@@ -13,7 +13,11 @@ export function GruzchikStatusColumn({
   status,
   updatingOrders,
 }: GruzchikStatusColumnProps) {
-  const getVariant = () => {
+  const getVariant = ():
+    | 'default'
+    | 'secondary'
+    | 'destructive'
+    | 'outline' => {
     if (status === 'Закуплен') return 'default';
     if (status === 'Наличие') return 'secondary';
     return 'outline';
@@ -26,8 +30,8 @@ export function GruzchikStatusColumn({
   };
 
   return (
-    <RowWrapper orderId={orderId} updatingOrders={updatingOrders}>
+    <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       <Badge variant={getVariant()}>{getDisplayText()}</Badge>
-    </RowWrapper>
+    </GruzchikRowWrapper>
   );
 }

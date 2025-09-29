@@ -1,5 +1,5 @@
 import { EditablePayment } from './GruzchikEditablePayment';
-import { RowWrapper } from './GruzchikRowWrapper';
+import { GruzchikRowWrapper } from './GruzchikRowWrapper';
 
 interface GruzchikPaymentColumnProps {
   orderId: string;
@@ -15,10 +15,10 @@ export function GruzchikPaymentColumn({
   updatingOrders,
 }: GruzchikPaymentColumnProps) {
   return (
-    <RowWrapper orderId={orderId} updatingOrders={updatingOrders}>
+    <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       {onUpdate ? (
         <EditablePayment
-          order={{ id: orderId, payment: payment || 0 }}
+          order={{ id: orderId, payment: payment || 0 } as any}
           onUpdate={onUpdate}
         />
       ) : (
@@ -26,6 +26,6 @@ export function GruzchikPaymentColumn({
           {payment || 0} ₽
         </div>
       )}
-    </RowWrapper>
+    </GruzchikRowWrapper>
   );
 }

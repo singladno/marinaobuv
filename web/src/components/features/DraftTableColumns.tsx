@@ -8,7 +8,7 @@ import { createProductColumns } from './DraftTableProductColumns';
 interface CreateDraftTableColumnsParams {
   onToggle: (id: string) => void;
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
   onImageToggle: (imageId: string, isActive: boolean) => Promise<void>;
   categories: CategoryNode[];
   onReload?: () => void;
@@ -54,7 +54,6 @@ export function createDraftTableColumns({
     onPatch,
     onImageToggle,
     onReload,
-    onDelete,
     status,
   });
 

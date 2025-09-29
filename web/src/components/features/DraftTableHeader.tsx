@@ -55,25 +55,19 @@ export function DraftTableHeader({
 
       {/* Actions Toolbar */}
       <DraftTableActions
-        selectedCount={selectedCount}
-        onSelectAll={onSelectAll}
-        onBulkDelete={onBulkDelete}
-        onBulkRestore={onBulkRestore}
-        onBulkPermanentDelete={onBulkPermanentDelete}
-        onApprove={onApprove}
-        onConvertToCatalog={onConvertToCatalog}
-        loading={loading}
-        error={error}
-        categories={categories}
+        status={status}
         onReload={onReload}
-        onColumnSettings={onColumnSettings}
+        onOpenSettings={onColumnSettings}
       />
 
       {/* Column Settings Modal */}
       {showColumnSettings && (
         <ColumnSettingsModal
+          isOpen={showColumnSettings}
           onClose={onCloseColumnSettings}
-          categories={categories}
+          columns={[]}
+          onToggleColumn={() => {}}
+          onReset={() => {}}
         />
       )}
     </div>

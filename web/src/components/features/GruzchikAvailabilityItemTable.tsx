@@ -86,10 +86,7 @@ export function GruzchikAvailabilityItemTable() {
       {pagination.totalPages > 1 && (
         <div className="mt-6">
           <DataTablePagination
-            page={pagination.page}
-            pageSize={pagination.pageSize}
-            total={pagination.total}
-            totalPages={pagination.totalPages}
+            pagination={pagination}
             onPageChange={onPageChange}
             onPageSizeChange={onPageSizeChange}
           />

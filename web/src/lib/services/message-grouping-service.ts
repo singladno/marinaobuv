@@ -19,6 +19,11 @@ export class MessageGroupingService {
     if (!env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is required');
     }
+    this.openai = null;
+  }
+
+  private async ensureClient() {
+    if (this.openai) return;
     const { default: OpenAI } = await import('openai');
     this.openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
   }
@@ -27,6 +32,7 @@ export class MessageGroupingService {
    * Group messages using OpenAI analysis
    */
   async groupMessages(messageIds: string[]): Promise<MessageGroup[]> {
+    await this.ensureClient();
     console.log(
       `📊 Step 1: Grouping ${messageIds.length} messages with OpenAI...`
     );

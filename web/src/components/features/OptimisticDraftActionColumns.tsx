@@ -14,22 +14,20 @@ export function createActionColumns(
     {
       id: 'provider',
       header: 'Поставщик',
-      cell: ({ row }) => (
-        <ProviderCell draft={row.original} onPatch={onPatch} />
-      ),
+      cell: ({ row }) => <ProviderCell provider={row.original.provider} />,
     },
     {
       id: 'gptRequest',
       header: 'GPT Запрос',
       cell: ({ row }) => (
-        <GptRequestCell draft={row.original} onPatch={onPatch} />
+        <GptRequestCell gptRequest={row.original.gptRequest} />
       ),
     },
     {
       id: 'gptResponse',
       header: 'GPT Ответ',
       cell: ({ row }) => (
-        <GptResponseCell draft={row.original} onPatch={onPatch} />
+        <GptResponseCell rawGptResponse={row.original.rawGptResponse} />
       ),
     },
     {

@@ -58,13 +58,15 @@ export function ImageGallery({
       {isModalOpen && activeImages.length > 0 && (
         <ImageModal
           images={activeImages.map(img => ({
+            id: img.id,
             url: sanitizeImageUrl(img.url),
-            alt: img.alt || '',
+            alt: img.alt || undefined,
+            color: img.color || undefined,
+            isActive: img.isActive !== false,
           }))}
-          currentIndex={selectedImageIndex}
+          isOpen={isModalOpen}
           onClose={closeModal}
-          onNext={nextImage}
-          onPrev={prevImage}
+          initialIndex={selectedImageIndex}
         />
       )}
     </>

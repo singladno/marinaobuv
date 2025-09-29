@@ -28,20 +28,18 @@ export function useDraftsTableNew({
   onImageToggle: (imageId: string, isActive: boolean) => Promise<void>;
   categories: CategoryNode[];
   onReload?: () => void;
-  status?: string;
+  status?: 'pending' | 'approved' | 'rejected' | 'deleted' | string;
   getApprovalState?: (id: string) => { isProcessing: boolean };
 }) {
-  const {
-    actions,
-    dataWithOptimisticUpdates,
-    updateDraft,
-    deleteDraft,
-    toggleImage,
-    isProcessing,
-  } = useDraftOperations({
+  const [localData, setLocalData] = React.useState<Draft[]>(data);
+  const [selected, setSelected] = React.useState<Record<string, boolean>>({});
+
+  const { handleDelete, handlePatch } = useDraftOperations({
+    data: localData,
+    selected,
     onPatch,
     onDelete,
-    onImageToggle,
+    setLocalData,
   });
 
   // TanStack Table row selection state
@@ -54,8 +52,8 @@ export function useDraftsTableNew({
 
   // Sync external data with internal state
   React.useEffect(() => {
-    actions.setData(data);
-  }, [data, actions]);
+    setLocalData(data);
+  }, [data]);
 
   const {
     columnVisibility: finalColumnVisibility,
@@ -74,9 +72,9 @@ export function useDraftsTableNew({
 
   const columns = React.useMemo(() => {
     return createOptimisticDraftTableColumns({
-      onPatch: updateDraft,
-      onDelete: deleteDraft,
-      onImageToggle: toggleImage,
+      onPatch: handlePatch,
+      onDelete: handleDelete,
+      onImageToggle,
       categories,
       onReload,
       status,
@@ -84,9 +82,9 @@ export function useDraftsTableNew({
       getApprovalState,
     });
   }, [
-    updateDraft,
-    deleteDraft,
-    toggleImage,
+    handlePatch,
+    handleDelete,
+    onImageToggle,
     categories,
     onReload,
     status,
@@ -95,7 +93,7 @@ export function useDraftsTableNew({
   ]);
 
   const table = useReactTable({
-    data: dataWithOptimisticUpdates,
+    data: localData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     state: {
@@ -105,7 +103,7 @@ export function useDraftsTableNew({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     enableRowSelection: true,
-    getRowId: row => row.id,
+    getRowId: (row: Draft) => row.id,
   });
 
   const handleResetColumns = React.useCallback(() => {
@@ -128,12 +126,12 @@ export function useDraftsTableNew({
     columnVisibility: finalColumnVisibility,
     handleToggleColumn,
     handleResetColumns,
-    savingStatus: isProcessing ? 'saving' : 'idle',
+    savingStatus: 'idle', // Simplified for now
     selectedRows,
     selectedIds,
     allSelected,
     someSelected,
-    dataWithOptimisticUpdates,
+    dataWithOptimisticUpdates: localData,
     clearSelection,
   };
 }

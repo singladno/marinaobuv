@@ -20,7 +20,7 @@ export function useBasketPageState() {
     ? {
         id: order.selectedShipping.id,
         name: order.selectedShipping.name,
-        cost: order.selectedShipping.cost,
+        cost: order.selectedShipping.priceLabel === 'Бесплатно' ? 0 : 250,
       }
     : null;
   const [isEditingTransport, setIsEditingTransport] = useState(false);

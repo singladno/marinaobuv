@@ -32,8 +32,8 @@ export function DraftsTable({
   onToggle: (id: string) => void;
   onSelectAll?: (selectAll: boolean) => void;
   onPatch: (id: string, patch: Partial<Draft>) => Promise<void>;
-  status?: string;
-  onStatusChange?: (status: string | undefined) => void;
+  status?: 'pending' | 'approved' | 'rejected' | 'deleted' | string;
+  onStatusChange?: (status: string) => void;
   onReload?: () => void;
   onApprove?: () => void;
   onConvertToCatalog?: () => void;
@@ -83,10 +83,10 @@ export function DraftsTable({
   return (
     <div className="flex h-full flex-col rounded-lg bg-gray-50 dark:bg-gray-800">
       <DraftTableHeader
-        status={status ?? 'draft'}
-        onStatusChange={onStatusChange}
+        status={status ?? 'pending'}
+        onStatusChange={onStatusChange as any}
         selectedCount={selectedCount}
-        onSelectAll={onSelectAll}
+        onSelectAll={onSelectAll ? () => onSelectAll(true) : undefined}
         onBulkDelete={onBulkDelete}
         onBulkRestore={onBulkRestore}
         onBulkPermanentDelete={onBulkPermanentDelete}

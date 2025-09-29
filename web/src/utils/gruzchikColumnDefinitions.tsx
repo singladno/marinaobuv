@@ -5,7 +5,7 @@ import { EditableLabel } from '@/components/features/GruzchikEditableLabel';
 import { GruzchikImageColumn } from '@/components/features/GruzchikImageColumn';
 import { GruzchikNameColumn } from '@/components/features/GruzchikNameColumn';
 import { GruzchikPaymentColumn } from '@/components/features/GruzchikPaymentColumn';
-import { RowWrapper } from '@/components/features/GruzchikRowWrapper';
+import GroupRowWrapper from '@/components/features/GruzchikRowWrapper';
 import { GruzchikStatusColumn } from '@/components/features/GruzchikStatusColumn';
 import type { GruzchikOrder } from '@/hooks/useGruzchikOrders';
 
@@ -50,7 +50,10 @@ export function createGruzchikAvailabilityColumns({
       id: 'label',
       header: 'Метка',
       cell: ({ row }) => (
-        <RowWrapper orderId={row.original.id} updatingOrders={updatingOrders}>
+        <GroupRowWrapper
+          orderId={row.original.id}
+          updatingOrders={updatingOrders}
+        >
           {onUpdate ? (
             <EditableLabel order={row.original} onUpdate={onUpdate} />
           ) : (
@@ -58,7 +61,7 @@ export function createGruzchikAvailabilityColumns({
               {row.original.label || 'Без метки'}
             </div>
           )}
-        </RowWrapper>
+        </GroupRowWrapper>
       ),
     },
     {

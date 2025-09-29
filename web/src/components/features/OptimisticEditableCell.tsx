@@ -67,7 +67,7 @@ export function OptimisticEditableCell({
     );
   }
 
-  const inputProps = getInputProps(
+  const inputProps = getInputProps({
     editValue,
     setEditValue,
     handleBlur,
@@ -75,8 +75,8 @@ export function OptimisticEditableCell({
     placeholder,
     className,
     isSaving,
-    ariaLabel
-  );
+    ariaLabel,
+  });
 
   if (type === 'number' || type === 'price') {
     return (

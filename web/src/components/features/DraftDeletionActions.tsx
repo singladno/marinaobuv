@@ -25,7 +25,7 @@ export function DraftDeletionActions({
         >
           Восстановить
         </Button>
-        <Button onClick={onBulkPermanentDelete} size="sm" variant="destructive">
+        <Button onClick={onBulkPermanentDelete} size="sm" variant="danger">
           Удалить навсегда
         </Button>
       </div>

@@ -14,7 +14,7 @@ export function useBasketOrder() {
   const [shippingAddress, setShippingAddress] = useState('');
   const [notes, setNotes] = useState('');
 
-  const shippingCost = selectedShipping.cost;
+  const shippingCost = selectedShipping.priceLabel === 'Бесплатно' ? 0 : 250; // Default cost for paid shipping
 
   const handlePlaceOrder = useCallback(async () => {
     if (!shippingAddress.trim()) {

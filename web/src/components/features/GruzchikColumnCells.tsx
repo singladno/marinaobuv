@@ -146,7 +146,7 @@ export function ActionsCell({
       <div className="flex flex-col space-y-1">
         <Button
           size="sm"
-          variant="default"
+          variant="primary"
           className="w-full text-xs"
           onClick={() => onUpdate?.(itemId)}
         >

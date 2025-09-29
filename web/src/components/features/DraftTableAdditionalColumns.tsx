@@ -11,6 +11,7 @@ interface CreateAdditionalColumnsParams {
   onImageToggle: (imageId: string, isActive: boolean) => Promise<void>;
   onReload?: () => void;
   status?: string;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export function createAdditionalColumns({
@@ -29,8 +30,7 @@ export function createAdditionalColumns({
       cell: ({ row }) => (
         <MemoizedSizesCell
           sizes={row.original.sizes}
-          onPatch={onPatch}
-          draftId={row.original.id}
+          onChange={next => onPatch(row.original.id, { sizes: next })}
         />
       ),
     })
@@ -57,11 +57,7 @@ export function createAdditionalColumns({
       id: 'gptRequest',
       header: 'GPT Запрос',
       cell: ({ row }) => (
-        <GptRequestCell
-          gptRequest={row.original.gptRequest}
-          onPatch={onPatch}
-          draftId={row.original.id}
-        />
+        <GptRequestCell gptRequest={row.original.gptRequest} />
       ),
     })
   );
@@ -72,11 +68,7 @@ export function createAdditionalColumns({
       id: 'gptResponse',
       header: 'GPT Ответ',
       cell: ({ row }) => (
-        <GptResponseCell
-          gptResponse={row.original.gptResponse}
-          onPatch={onPatch}
-          draftId={row.original.id}
-        />
+        <GptResponseCell rawGptResponse={row.original.rawGptResponse} />
       ),
     })
   );
@@ -86,13 +78,7 @@ export function createAdditionalColumns({
     columnHelper.display({
       id: 'source',
       header: 'Источник',
-      cell: ({ row }) => (
-        <SourceCell
-          source={row.original.source}
-          onReload={onReload}
-          draftId={row.original.id}
-        />
-      ),
+      cell: ({ row }) => <SourceCell source={row.original.source} />,
     })
   );
 

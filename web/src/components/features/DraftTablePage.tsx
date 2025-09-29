@@ -65,7 +65,6 @@ export function DraftTablePage({
           onBulkRestore={() => setShowRestoreModal(true)}
           onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
           isProcessing={isProcessing}
-          currentProcessingDraft={currentProcessingDraft}
         />
       </div>
 
@@ -73,25 +72,14 @@ export function DraftTablePage({
       <div className="min-h-0 flex-1">
         <UnifiedDataTable
           table={table}
-          onPatch={async () => {}}
-          status={status}
-          onStatusChange={onStatusChange}
-          onReload={reload}
-          onApprove={() => approve(newSelectedIds, reload, clearSelection)}
-          onConvertToCatalog={() =>
-            convertToCatalog(newSelectedIds, reload, clearSelection)
-          }
-          onBulkDelete={() => setShowDeleteModal(true)}
-          onBulkRestore={() => setShowRestoreModal(true)}
-          onBulkPermanentDelete={() => setShowPermanentDeleteModal(true)}
           loading={loading}
           error={error}
           data={data}
-          categories={categories}
           pagination={pagination}
           onPageChange={goToPage}
           onPageSizeChange={changePageSize}
-          isDraftTable={true}
+          onReload={reload}
+          onColumnSettings={() => {}}
         />
       </div>
 

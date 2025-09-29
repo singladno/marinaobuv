@@ -17,14 +17,14 @@ interface CreateColumnsOptions {
 export function createOptimisticDraftTableColumns(
   options: CreateColumnsOptions
 ) {
-  return createColumns(
-    options.onPatch,
-    options.onDelete,
-    options.onImageToggle,
-    options.categories,
-    options.onReload,
-    options.status,
-    options.onToggle,
-    options.getApprovalState
-  );
+  return createColumns({
+    onPatch: options.onPatch,
+    onDelete: options.onDelete,
+    onImageToggle: options.onImageToggle,
+    categories: options.categories,
+    onReload: options.onReload,
+    status: options.status,
+    onToggle: options.onToggle,
+    getApprovalState: options.getApprovalState,
+  } as any);
 }

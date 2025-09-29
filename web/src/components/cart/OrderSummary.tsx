@@ -23,17 +23,46 @@ interface OrderSummaryProps {
     name: string;
     cost: number;
   } | null;
-  onProceedToCheckout: () => void;
+  // Extended props to align with BasketContent usage
+  isEditingTransport: boolean;
+  setIsEditingTransport: (editing: boolean) => void;
+  selectedTransportId: string | null;
+  setSelectedTransportId: (id: string | null) => void;
   isLoggedIn: boolean;
-  onOpenLoginModal: () => void;
+  setIsLoginModalOpen: (open: boolean) => void;
+  isEditingUserData: boolean;
+  setIsEditingUserData: (editing: boolean) => void;
+  userEmail: string;
+  setUserEmail: (email: string) => void;
+  orderPhone: string;
+  setOrderPhone: (phone: string) => void;
+  userFullName: string;
+  setUserFullName: (name: string) => void;
+  userAddress: string;
+  setUserAddress: (address: string) => void;
+  onPlaceOrder: () => void;
 }
 
 export function OrderSummary({
   products,
   selectedTransport,
-  onProceedToCheckout,
+  isEditingTransport,
+  setIsEditingTransport,
+  selectedTransportId,
+  setSelectedTransportId,
   isLoggedIn,
-  onOpenLoginModal,
+  setIsLoginModalOpen,
+  isEditingUserData,
+  setIsEditingUserData,
+  userEmail,
+  setUserEmail,
+  orderPhone,
+  setOrderPhone,
+  userFullName,
+  setUserFullName,
+  userAddress,
+  setUserAddress,
+  onPlaceOrder,
 }: OrderSummaryProps) {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -81,7 +110,7 @@ export function OrderSummary({
       </div>
 
       <button
-        onClick={isLoggedIn ? onProceedToCheckout : onOpenLoginModal}
+        onClick={isLoggedIn ? onPlaceOrder : () => setIsLoginModalOpen(true)}
         className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
       >
         {isLoggedIn ? 'Оформить заказ' : 'Войти для оформления заказа'}

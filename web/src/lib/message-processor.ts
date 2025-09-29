@@ -12,25 +12,21 @@ export async function saveWhatsAppMessage(
   const waMessage = await prisma.whatsAppMessage.upsert({
     where: { waMessageId: key.id as string },
     update: {
-      remoteJid: key.remoteJid as string,
-      fromMe: key.fromMe as boolean,
-      pushName: data.pushName as string | null,
-      messageType: data.messageType as string | null,
+      from: (key.remoteJid as string) || null,
+      fromMe: (key.fromMe as boolean) || false,
       text,
       mediaS3Key,
       mediaUrl,
-      rawPayload: body as any,
+      rawPayload: body as unknown as any,
     },
     create: {
       waMessageId: key.id as string,
-      remoteJid: key.remoteJid as string,
-      fromMe: key.fromMe as boolean,
-      pushName: data.pushName as string | null,
-      messageType: data.messageType as string | null,
+      from: (key.remoteJid as string) || null,
+      fromMe: (key.fromMe as boolean) || false,
       text,
       mediaS3Key,
       mediaUrl,
-      rawPayload: body as any,
+      rawPayload: body as unknown as any,
     },
   });
 

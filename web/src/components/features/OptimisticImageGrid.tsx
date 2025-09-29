@@ -2,7 +2,14 @@
 
 import React from 'react';
 
-import type { DraftImage } from '@/types/admin';
+// Align with ImageModal images shape; drafts don't have a separate DraftImage type
+type DraftImage = {
+  id: string;
+  url: string;
+  alt?: string | null;
+  color?: string | null;
+  isActive?: boolean;
+};
 
 import { ActiveImageGrid } from './ActiveImageGrid';
 import { InactiveImageGrid } from './InactiveImageGrid';

@@ -1,5 +1,5 @@
 import { EditableLabel } from './GruzchikEditableLabel';
-import { RowWrapper } from './GruzchikRowWrapper';
+import { GruzchikRowWrapper } from './GruzchikRowWrapper';
 
 interface GruzchikNameColumnProps {
   orderId: string;
@@ -15,10 +15,10 @@ export function GruzchikNameColumn({
   updatingOrders,
 }: GruzchikNameColumnProps) {
   return (
-    <RowWrapper orderId={orderId} updatingOrders={updatingOrders}>
+    <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       {onUpdate ? (
         <EditableLabel
-          order={{ id: orderId, name: name || '' }}
+          order={{ id: orderId, label: name || '' } as any}
           onUpdate={onUpdate}
         />
       ) : (
@@ -26,6 +26,6 @@ export function GruzchikNameColumn({
           {name || 'Без названия'}
         </div>
       )}
-    </RowWrapper>
+    </GruzchikRowWrapper>
   );
 }

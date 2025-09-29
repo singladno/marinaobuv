@@ -42,7 +42,7 @@ export function useSizesManagement({
     handleMouseLeave,
     handleDeleteButtonMouseEnter,
     handleDeleteButtonMouseLeave,
-  } = useSizeMouseHandling(disabled);
+  } = useSizeMouseHandling();
 
   // Enhanced delete handler that also clears hover state
   const handleDeleteSizeWithHover = useCallback(

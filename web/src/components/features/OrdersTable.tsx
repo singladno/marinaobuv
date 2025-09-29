@@ -59,11 +59,13 @@ export function OrdersTable() {
       setSelected({});
       addNotification({
         type: 'success',
+        title: 'Удаление заказов',
         message: `Успешно удалено ${selectedOrderIds.length} заказ${selectedOrderIds.length === 1 ? '' : selectedOrderIds.length < 5 ? 'а' : 'ов'}`,
       });
     } catch {
       addNotification({
         type: 'error',
+        title: 'Ошибка',
         message: 'Ошибка при удалении заказов',
       });
     }

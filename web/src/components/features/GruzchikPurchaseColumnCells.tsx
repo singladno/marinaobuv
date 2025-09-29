@@ -16,10 +16,16 @@ interface OrderNumberCellProps {
   updatingOrders: Set<string>;
 }
 
-export function OrderNumberCell({ orderNumber, orderId, updatingOrders }: OrderNumberCellProps) {
+export function OrderNumberCell({
+  orderNumber,
+  orderId,
+  updatingOrders,
+}: OrderNumberCellProps) {
   return (
     <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
-      <div className="font-medium text-gray-900 dark:text-white">{orderNumber}</div>
+      <div className="font-medium text-gray-900 dark:text-white">
+        {orderNumber}
+      </div>
     </GruzchikRowWrapper>
   );
 }
@@ -30,7 +36,11 @@ interface DateCellProps {
   updatingOrders: Set<string>;
 }
 
-export function DateCell({ createdAt, orderId, updatingOrders }: DateCellProps) {
+export function DateCell({
+  createdAt,
+  orderId,
+  updatingOrders,
+}: DateCellProps) {
   return (
     <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -47,7 +57,12 @@ interface CustomerCellProps {
   updatingOrders: Set<string>;
 }
 
-export function CustomerCell({ fullName, phone, orderId, updatingOrders }: CustomerCellProps) {
+export function CustomerCell({
+  fullName,
+  phone,
+  orderId,
+  updatingOrders,
+}: CustomerCellProps) {
   return (
     <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       <div className="space-y-1">
@@ -108,7 +123,12 @@ interface LabelCellProps {
   updatingOrders: Set<string>;
 }
 
-export function LabelCell({ order, onUpdate, orderId, updatingOrders }: LabelCellProps) {
+export function LabelCell({
+  order,
+  onUpdate,
+  orderId,
+  updatingOrders,
+}: LabelCellProps) {
   return (
     <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       {onUpdate ? (
@@ -129,7 +149,12 @@ interface PaymentCellProps {
   updatingOrders: Set<string>;
 }
 
-export function PaymentCell({ order, onUpdate, orderId, updatingOrders }: PaymentCellProps) {
+export function PaymentCell({
+  order,
+  onUpdate,
+  orderId,
+  updatingOrders,
+}: PaymentCellProps) {
   return (
     <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       {onUpdate ? (
@@ -149,7 +174,11 @@ interface StatusCellProps {
   updatingOrders: Set<string>;
 }
 
-export function StatusCell({ status, orderId, updatingOrders }: StatusCellProps) {
+export function StatusCell({
+  status,
+  orderId,
+  updatingOrders,
+}: StatusCellProps) {
   return (
     <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       <Badge variant="outline">{status}</Badge>
@@ -164,13 +193,18 @@ interface ActionsCellProps {
   onView?: (orderId: string) => void;
 }
 
-export function ActionsCell({ orderId, updatingOrders, onUpdate, onView }: ActionsCellProps) {
+export function ActionsCell({
+  orderId,
+  updatingOrders,
+  onUpdate,
+  onView,
+}: ActionsCellProps) {
   return (
     <GruzchikRowWrapper itemId={orderId} updatingItems={updatingOrders}>
       <div className="flex flex-col space-y-1">
         <Button
           size="sm"
-          variant="default"
+          variant="primary"
           className="w-full text-xs"
           onClick={() => onUpdate?.(orderId)}
         >

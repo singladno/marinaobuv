@@ -12,15 +12,16 @@ interface EditablePaymentProps {
 
 export function EditablePayment({ order, onUpdate }: EditablePaymentProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [value, setValue] = useState(order.payment || '');
+  const [value, setValue] = useState<string>(String(order.payment ?? ''));
   const { addNotification } = useNotifications();
 
   const handleBlur = async () => {
-    const trimmedValue = value.trim() || null;
-    if (trimmedValue !== order.payment) {
+    const trimmedValue = value.trim();
+    const nextValue = trimmedValue === '' ? null : Number(trimmedValue);
+    if (nextValue !== order.payment) {
       setIsUpdating(true);
       try {
-        await onUpdate(order.id, { payment: trimmedValue });
+        await onUpdate(order.id, { payment: nextValue });
         addNotification({
           type: 'success',
           title: 'Оплата обновлена',
@@ -32,7 +33,7 @@ export function EditablePayment({ order, onUpdate }: EditablePaymentProps) {
           title: 'Ошибка обновления',
           message: 'Не удалось обновить информацию об оплате',
         });
-        setValue(order.payment || '');
+        setValue(String(order.payment ?? ''));
       } finally {
         setIsUpdating(false);
       }

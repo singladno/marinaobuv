@@ -5,7 +5,13 @@
  * Handles both DraftSize format (with isActive) and Draft.sizes format (without isActive)
  */
 export function calculateTotalPairs(
-  sizes: Array<{ size: string; count: number; isActive?: boolean }>
+  sizes: Array<{
+    size: string;
+    count?: number;
+    quantity?: number;
+    stock?: number;
+    isActive?: boolean;
+  }>
 ): number {
   if (!sizes || sizes.length === 0) {
     return 0;
@@ -17,8 +23,12 @@ export function calculateTotalPairs(
       return total;
     }
 
-    // Handle both quantity and count fields
-    const quantity = size.quantity || size.count || size.stock || 0;
+    // Handle common quantity fields across sources
+    const quantity =
+      (typeof size.quantity === 'number' ? size.quantity : undefined) ??
+      (typeof size.count === 'number' ? size.count : undefined) ??
+      (typeof size.stock === 'number' ? size.stock : undefined) ??
+      0;
     return total + quantity;
   }, 0);
 }

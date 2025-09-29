@@ -30,9 +30,9 @@ export function useImageModalKeyboard({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
-        onImageSelect(Math.max(0, currentIndex - 1));
+        onImageSelect(String(Math.max(0, currentIndex - 1)));
       } else if (e.key === 'ArrowRight') {
-        onImageSelect(Math.min(images.length - 1, currentIndex + 1));
+        onImageSelect(String(Math.min(images.length - 1, currentIndex + 1)));
       } else if (e.key === ' ') {
         // Spacebar to select/deselect current image
         e.preventDefault();
@@ -55,7 +55,11 @@ export function useImageModalKeyboard({
           const currentImage = images[safeIndex];
           if (currentImage) {
             const isActive = currentImage.isActive === true;
-            onImageToggle(currentImage.id, !isActive, e as React.MouseEvent);
+            onImageToggle(
+              currentImage.id,
+              !isActive,
+              e as unknown as React.MouseEvent
+            );
           }
         }
       }

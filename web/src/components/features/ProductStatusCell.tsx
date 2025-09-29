@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type { Product, ProductUpdateData } from '@/types/product';
 
 import { EditableProductCell } from './EditableProductCell';
@@ -11,6 +13,9 @@ export function ProductStatusCell({
   product,
   onUpdateProduct,
 }: ProductStatusCellProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const statusOptions = [
     { value: 'active', label: 'Активный' },
     { value: 'inactive', label: 'Неактивный' },
@@ -22,17 +27,28 @@ export function ProductStatusCell({
     return option?.label || status;
   };
 
+  const handleSave = async (value: string) => {
+    setIsSaving(true);
+    try {
+      const selectedOption = statusOptions.find(opt => opt.label === value);
+      if (selectedOption) {
+        await onUpdateProduct(product.id, {
+          isActive: selectedOption.value === 'active',
+        });
+      }
+    } finally {
+      setIsSaving(false);
+      setIsEditing(false);
+    }
+  };
+
   return (
     <EditableProductCell
       value={getStatusLabel(product.isActive ? 'active' : 'inactive')}
-      onSave={async value => {
-        const selectedOption = statusOptions.find(opt => opt.label === value);
-        if (selectedOption) {
-          await onUpdateProduct(product.id, {
-            isActive: selectedOption.value === 'active',
-          });
-        }
-      }}
+      onSave={handleSave}
+      isEditing={isEditing}
+      onEdit={() => setIsEditing(true)}
+      isSaving={isSaving}
       type="select"
       options={statusOptions}
       className="text-sm"

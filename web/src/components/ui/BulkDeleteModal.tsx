@@ -79,7 +79,7 @@ export function BulkDeleteModal({
             Отмена
           </Button>
           <Button
-            variant="destructive"
+            variant="danger"
             onClick={handleConfirm}
             disabled={isDeleting || isLoading}
             className="w-full sm:w-auto"
