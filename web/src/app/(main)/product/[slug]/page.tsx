@@ -10,9 +10,9 @@ import { prisma } from '@/lib/server/db';
 export default async function ProductPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const awaited = await Promise.resolve(params);
+  const awaited = await params;
   const product = await prisma.product.findUnique({
     where: { slug: awaited.slug },
     include: {
