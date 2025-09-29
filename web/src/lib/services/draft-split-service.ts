@@ -34,12 +34,12 @@ export async function splitDraft({ draftId, imageIds }: SplitDraftParams) {
       article: originalDraft.article,
       pricePair: originalDraft.pricePair,
       categoryId: originalDraft.categoryId,
-      source: originalDraft.source,
-      sizes: originalDraft.sizes,
+      source: originalDraft.source as any,
+      sizes: originalDraft.sizes as any,
       gender: originalDraft.gender,
       season: originalDraft.season,
       gptRequest: originalDraft.gptRequest,
-      rawGptResponse: originalDraft.rawGptResponse,
+      rawGptResponse: originalDraft.rawGptResponse as any,
       aiStatus: originalDraft.aiStatus,
       aiContext: originalDraft.aiContext,
       images: {
@@ -86,7 +86,7 @@ export async function splitDraft({ draftId, imageIds }: SplitDraftParams) {
     newDraft: {
       id: newDraft.id,
       name: newDraft.name,
-      images: newDraft.images,
+      images: newDraft.images || [],
     },
   };
 }

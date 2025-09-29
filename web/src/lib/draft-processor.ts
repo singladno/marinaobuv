@@ -11,7 +11,10 @@ import { normalizeTextToDraft } from './yagpt';
  * Extract text content from messages
  */
 export function extractTextContent(
-  messages: Array<{ text?: string; media?: { type: string; url: string } }>
+  messages: Array<{
+    text?: string | null;
+    media?: { type: string; url: string };
+  }>
 ): {
   textContents: string[];
   mediaInfo: string[];

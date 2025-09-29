@@ -26,7 +26,9 @@ export default function GruzchikSidebarLayout({
       {/* Sidebar - Left column */}
       <GruzchikSidebar
         isCollapsed={isCollapsed}
-        setIsCollapsed={setCollapsed}
+        setIsCollapsed={v =>
+          setCollapsed(typeof v === 'function' ? v(isCollapsed) : v)
+        }
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={closeMobile}
       />

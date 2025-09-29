@@ -25,8 +25,8 @@ async function checkMessages() {
     // Group by from field
     const byFrom = messages.reduce(
       (acc, msg) => {
-        if (!acc[msg.from]) acc[msg.from] = [];
-        acc[msg.from].push(msg);
+        if (msg.from && !acc[msg.from]) acc[msg.from] = [];
+        if (msg.from) acc[msg.from].push(msg);
         return acc;
       },
       {} as Record<

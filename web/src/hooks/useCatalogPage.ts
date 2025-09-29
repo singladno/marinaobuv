@@ -27,7 +27,23 @@ export function useCatalogPage() {
   const filteredProducts = useMemo(() => {
     if (!products) return [];
 
-    const filtered = products.filter(product => {
+    // Convert products to the format expected by catalog filters
+    const catalogProducts = products.map(product => ({
+      id: product.id,
+      name: product.name,
+      pricePair: product.pricePair,
+      createdAt: product.createdAt,
+      category: product.category
+        ? {
+            id: product.category.id,
+            name: product.category.name,
+          }
+        : undefined,
+      reviews: [], // Add empty reviews array for now
+      sizes: [], // No sizes property in this Product type
+    }));
+
+    const filtered = catalogProducts.filter(product => {
       return (
         matchesSearchQuery(product, searchQuery) &&
         matchesCategoryFilter(product, filters.categories) &&
@@ -44,8 +60,8 @@ export function useCatalogPage() {
     setSearchQuery(query);
   };
 
-  const handleFiltersChange = (newFilters: FilterOptions) => {
-    setFilters(newFilters);
+  const handleFiltersChange = (newFilters: Partial<FilterOptions>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
   const handleGridColsChange = (cols: 4 | 5) => {

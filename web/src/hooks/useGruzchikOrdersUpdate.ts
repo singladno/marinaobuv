@@ -26,7 +26,13 @@ export function useGruzchikOrdersUpdate(
       // Apply optimistic update immediately
       setOrders(
         orders.map(order =>
-          order.id === orderId ? { ...order, ...updates } : order
+          order.id === orderId
+            ? {
+                ...order,
+                ...updates,
+                payment: updates.payment ?? order.payment,
+              }
+            : order
         )
       );
 

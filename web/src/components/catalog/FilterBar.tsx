@@ -40,8 +40,8 @@ export default function FilterBar({
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <PriceFilter
           bounds={bounds}
-          priceFrom={filters.priceFrom}
-          priceTo={filters.priceTo}
+          priceFrom={filters.priceFrom ?? undefined}
+          priceTo={filters.priceTo ?? undefined}
         />
         <SortFilter sort={filters.sort} />
         <FilterActions resetHref={resetHref} />

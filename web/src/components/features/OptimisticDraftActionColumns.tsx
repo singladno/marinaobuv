@@ -1,4 +1,5 @@
 import type { Draft } from '@/types/admin';
+import type { Row } from '@tanstack/react-table';
 
 import { GptRequestCell } from './GptRequestCell';
 import { GptResponseCell } from './GptResponseCell';
@@ -14,26 +15,28 @@ export function createActionColumns(
     {
       id: 'provider',
       header: 'Поставщик',
-      cell: ({ row }) => <ProviderCell provider={row.original.provider} />,
+      cell: ({ row }: { row: Row<Draft> }) => (
+        <ProviderCell provider={row.original.provider} />
+      ),
     },
     {
       id: 'gptRequest',
       header: 'GPT Запрос',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <GptRequestCell gptRequest={row.original.gptRequest} />
       ),
     },
     {
       id: 'gptResponse',
       header: 'GPT Ответ',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <GptResponseCell rawGptResponse={row.original.rawGptResponse} />
       ),
     },
     {
       id: 'actions',
       header: 'Действия',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <div className="flex space-x-2">
           <button
             onClick={() => onDelete(row.original.id)}

@@ -45,7 +45,7 @@ export const matchesPriceRange = (
 export const matchesRatingFilter = (product: Product, minRating: number) => {
   if (minRating === 0) return true;
   const avgRating =
-    product.reviews?.length > 0
+    product.reviews && product.reviews.length > 0
       ? product.reviews.reduce(
           (sum: number, review: { rating: number }) => sum + review.rating,
           0

@@ -8,7 +8,7 @@ export function ReadOnlySizesDisplay({ sizes }: ReadOnlySizesDisplayProps) {
   return (
     <div className="flex items-center gap-1 overflow-x-auto py-2">
       <div className="flex gap-1">
-        {sizes.map((x, index) => (
+        {sizes?.map((x, index) => (
           <div
             key={index}
             className="flex-shrink-0 rounded border bg-white px-2 py-1 text-sm shadow-sm dark:bg-gray-800"

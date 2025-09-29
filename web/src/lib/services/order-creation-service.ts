@@ -63,10 +63,13 @@ export async function createOrder(
     const itemCodes = await generateItemCodes(item.qty);
 
     orderItems.push({
-      productId: product.id,
-      quantity: item.qty,
-      price: boxPrice,
-      total: itemTotal,
+      slug: product.slug,
+      name: product.name,
+      priceBox: boxPrice,
+      qty: item.qty,
+      product: {
+        connect: { id: product.id },
+      },
       itemCodes,
     });
   }

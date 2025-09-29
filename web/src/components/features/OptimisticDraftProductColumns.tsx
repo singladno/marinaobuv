@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Row } from '@tanstack/react-table';
 
 import type { Draft } from '@/types/admin';
 
@@ -19,7 +20,7 @@ export function createProductColumns(
     {
       id: 'name',
       header: 'Название',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <MemoizedOptimisticEditableCell
           value={row.original.name}
           onSave={async value => {
@@ -33,7 +34,7 @@ export function createProductColumns(
     {
       id: 'article',
       header: 'Артикул',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <MemoizedOptimisticEditableCell
           value={row.original.article}
           onSave={async value => {
@@ -49,7 +50,7 @@ export function createProductColumns(
     {
       id: 'gender',
       header: 'Пол',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <MemoizedGenderSelectCell
           value={row.original.gender}
           onChange={async value => {
@@ -61,7 +62,7 @@ export function createProductColumns(
     {
       id: 'season',
       header: 'Сезон',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <MemoizedSeasonSelectCell
           value={row.original.season}
           onChange={async value => {
@@ -73,11 +74,23 @@ export function createProductColumns(
     {
       id: 'sizes',
       header: 'Размеры',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <MemoizedOptimisticSizesCell
-          sizes={row.original.sizes || []}
+          sizes={(row.original.sizes || []).map(size => ({
+            id: `${size.size}-${Math.random()}`,
+            size: size.size,
+            quantity: size.quantity || size.count || size.stock || 0,
+            isActive: true,
+          }))}
           onChange={async sizes => {
-            await onPatch(row.original.id, { sizes });
+            await onPatch(row.original.id, {
+              sizes: sizes.map(s => ({
+                size: s.size,
+                quantity: s.quantity,
+                stock: s.quantity,
+                count: s.quantity,
+              })),
+            });
           }}
         />
       ),

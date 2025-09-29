@@ -55,7 +55,7 @@ export class ProductCreationCore {
         sizes: analysis.sizes || [],
         source: sourceMessageIds,
         gptRequest: '',
-        rawGptResponse: null,
+        rawGptResponse: undefined,
         aiStatus: 'ai_completed',
         aiProcessedAt: new Date(),
       },

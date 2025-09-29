@@ -1,6 +1,8 @@
 import * as React from 'react';
+import type { Row, Table } from '@tanstack/react-table';
 
 import type { CategoryNode } from '@/components/ui/CategorySelector';
+import type { Draft } from '@/types/admin';
 
 import { ApprovalSelectionCell } from './ApprovalSelectionCell';
 import {
@@ -16,7 +18,7 @@ export function createBasicColumns(
   return [
     {
       id: 'select',
-      header: ({ table }) => (
+      header: ({ table }: { table: Table<Draft> }) => (
         <input
           type="checkbox"
           checked={table.getIsAllPageRowsSelected()}
@@ -26,7 +28,7 @@ export function createBasicColumns(
           className="rounded border-gray-300"
         />
       ),
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <input
           type="checkbox"
           checked={row.getIsSelected()}
@@ -40,17 +42,21 @@ export function createBasicColumns(
     {
       id: 'images',
       header: 'Фото',
-      cell: ({ row }) => <MemoizedSourceCell source={row.original.source} />,
+      cell: ({ row }: { row: Row<Draft> }) => (
+        <MemoizedSourceCell source={row.original.source} />
+      ),
     },
     {
       id: 'source',
       header: 'Источник',
-      cell: ({ row }) => <MemoizedSourceCell source={row.original.source} />,
+      cell: ({ row }: { row: Row<Draft> }) => (
+        <MemoizedSourceCell source={row.original.source} />
+      ),
     },
     {
       id: 'category',
       header: 'Категория',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <MemoizedCategoryCell
           category={row.original.category}
           categoryId={row.original.categoryId}
@@ -62,10 +68,10 @@ export function createBasicColumns(
     {
       id: 'approval',
       header: 'Одобрение',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <ApprovalSelectionCell
           id={row.original.id}
-          selected={row.original.selected || false}
+          selected={(row.original as any).selected || false}
           onToggle={onToggle || (() => {})}
           approvalState={
             getApprovalState

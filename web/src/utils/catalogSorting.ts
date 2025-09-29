@@ -31,7 +31,7 @@ export const sortProducts = (products: Product[], sortBy: string) => {
     case 'rating':
       return products.sort((a, b) => {
         const aRating =
-          a.reviews?.length > 0
+          a.reviews && a.reviews.length > 0
             ? a.reviews.reduce(
                 (sum: number, review: { rating: number }) =>
                   sum + review.rating,
@@ -39,7 +39,7 @@ export const sortProducts = (products: Product[], sortBy: string) => {
               ) / a.reviews.length
             : 0;
         const bRating =
-          b.reviews?.length > 0
+          b.reviews && b.reviews.length > 0
             ? b.reviews.reduce(
                 (sum: number, review: { rating: number }) =>
                   sum + review.rating,

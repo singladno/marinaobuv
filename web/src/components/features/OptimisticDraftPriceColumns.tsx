@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Row } from '@tanstack/react-table';
 
 import type { Draft } from '@/types/admin';
 import {
@@ -18,7 +19,7 @@ export function createPriceColumns(
     {
       id: 'pricePair',
       header: 'Цена за пару',
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Draft> }) => (
         <MemoizedOptimisticEditableCell
           value={row.original.pricePair}
           type="price"
@@ -33,19 +34,17 @@ export function createPriceColumns(
     {
       id: 'totalPairs',
       header: 'Всего пар',
-      cell: ({ row }) => {
-        const totalPairs = calculateTotalPairs(row.original.sizes);
+      cell: ({ row }: { row: Row<Draft> }) => {
+        const totalPairs = calculateTotalPairs(row.original.sizes || []);
         return <div className="text-sm">{totalPairs}</div>;
       },
     },
     {
       id: 'boxPrice',
       header: 'Цена коробки',
-      cell: ({ row }) => {
-        const boxPrice = calculateBoxPrice(
-          row.original.pricePair,
-          row.original.sizes
-        );
+      cell: ({ row }: { row: Row<Draft> }) => {
+        const totalPairs = calculateTotalPairs(row.original.sizes || []);
+        const boxPrice = calculateBoxPrice(row.original.pricePair, totalPairs);
         return (
           <div className="text-sm font-medium">
             {boxPrice ? `${boxPrice} ₽` : 'Не рассчитано'}
@@ -56,7 +55,9 @@ export function createPriceColumns(
     {
       id: 'price',
       header: 'Цена',
-      cell: ({ row }) => <PriceCell value={row.original.pricePair ?? null} />,
+      cell: ({ row }: { row: Row<Draft> }) => (
+        <PriceCell value={row.original.pricePair ?? null} />
+      ),
     },
   ];
 }

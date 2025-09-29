@@ -60,11 +60,11 @@ export function OrdersTableActions({
 
         <div className="flex items-center space-x-4">
           <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            {selectedCount > 0
+            {(selectedCount ?? 0) > 0
               ? `Выбрано заказов: ${selectedCount}`
               : 'Выберите заказы для действий'}
           </span>
-          {selectedCount > 0 && onClearSelection && (
+          {(selectedCount ?? 0) > 0 && onClearSelection && (
             <button
               onClick={onClearSelection}
               className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"

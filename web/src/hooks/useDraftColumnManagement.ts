@@ -33,7 +33,7 @@ export function useDraftColumnManagement(status?: string) {
       setColumnVisibility(prev => {
         const newVisibility = {
           ...prev,
-          [columnId]: !prev[columnId],
+          [columnId]: !prev[columnId as keyof typeof prev],
         };
 
         // For approved status, always keep category visible

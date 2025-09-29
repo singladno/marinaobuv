@@ -50,7 +50,7 @@ export function createGruzchikPurchaseColumns({
       header: 'Клиент',
       cell: ({ row }) => (
         <CustomerCell
-          fullName={row.original.fullName}
+          fullName={row.original.fullName ?? undefined}
           phone={row.original.phone}
           orderId={row.original.id}
           updatingOrders={updatingOrders}
@@ -110,7 +110,9 @@ export function createGruzchikPurchaseColumns({
         <ActionsCell
           orderId={row.original.id}
           updatingOrders={updatingOrders}
-          onUpdate={() => console.log('Update purchase for order:', row.original.id)}
+          onUpdate={() =>
+            console.log('Update purchase for order:', row.original.id)
+          }
           onView={() => console.log('View order:', row.original.id)}
         />
       ),

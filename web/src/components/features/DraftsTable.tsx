@@ -85,17 +85,17 @@ export function DraftsTable({
       <DraftTableHeader
         status={status ?? 'pending'}
         onStatusChange={onStatusChange as any}
-        selectedCount={selectedCount}
-        onSelectAll={onSelectAll ? () => onSelectAll(true) : undefined}
-        onBulkDelete={onBulkDelete}
-        onBulkRestore={onBulkRestore}
-        onBulkPermanentDelete={onBulkPermanentDelete}
-        onApprove={onApprove}
-        onConvertToCatalog={onConvertToCatalog}
+        selectedCount={selectedCount ?? 0}
+        onSelectAll={onSelectAll ? () => onSelectAll(true) : () => {}}
+        onBulkDelete={onBulkDelete ?? (() => {})}
+        onBulkRestore={onBulkRestore ?? (() => {})}
+        onBulkPermanentDelete={onBulkPermanentDelete ?? (() => {})}
+        onApprove={onApprove ?? (() => {})}
+        onConvertToCatalog={onConvertToCatalog ?? (() => {})}
         loading={loading}
-        error={error}
+        error={error ?? null}
         categories={categories}
-        onReload={onReload}
+        onReload={onReload ?? (() => {})}
         onColumnSettings={() => setIsSettingsOpen(true)}
         showColumnSettings={isSettingsOpen}
         onCloseColumnSettings={() => setIsSettingsOpen(false)}

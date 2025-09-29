@@ -5,7 +5,7 @@ interface SizeEditModeProps {
   setDraftSize: (size: string) => void;
   draftPairs: number;
   setDraftPairs: (pairs: number) => void;
-  onKeyDown: (e: React.KeyboardEvent) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onApply: () => void;
   onCancel: () => void;
   isSaving: boolean;

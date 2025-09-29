@@ -60,10 +60,11 @@ export async function POST(req: NextRequest) {
       gruzchikId?: string;
     } = {};
     if (typeof status === 'string') data.status = status;
-    if (label !== undefined) data.label = label;
+    if (label !== undefined && label !== null) data.label = label;
     if (payment !== undefined && payment !== null)
       data.payment = Number(payment) || 0;
-    if (gruzchikId !== undefined) data.gruzchikId = gruzchikId;
+    if (gruzchikId !== undefined && gruzchikId !== null)
+      data.gruzchikId = gruzchikId;
 
     const updated = await prisma.order.update({ where: { id }, data });
     return NextResponse.json({ ok: true, order: updated });

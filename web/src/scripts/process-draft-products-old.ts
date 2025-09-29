@@ -286,7 +286,7 @@ async function processMessageGroupToDraft(
         gender: productData.gender,
         season: productData.season,
         description: productData.description,
-        sizes: productData.sizes,
+        sizes: productData.sizes || [],
         rawGptResponse: productDraft as any,
         gptRequest: combinedText,
         source: messageIds,

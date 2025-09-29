@@ -40,7 +40,7 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
   return (
     <>
       <div className="flex items-center gap-1 overflow-x-auto overflow-y-visible py-2">
-        {sizes.map((x, index) => {
+        {sizes?.map((x, index) => {
           const isEditing = editingIndex === index;
           const isSaving = savingIndex === index;
           if (!isEditing) {
@@ -50,9 +50,7 @@ export function SizesCell({ sizes, onChange }: SizesCellProps) {
                 size={x}
                 index={index}
                 isSaving={isSaving}
-                onEdit={() =>
-                  onChange && !isSaving ? startEdit(index) : undefined
-                }
+                onEdit={() => (!isSaving ? startEdit(index) : undefined)}
                 onDelete={() => deleteItem(index)}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}

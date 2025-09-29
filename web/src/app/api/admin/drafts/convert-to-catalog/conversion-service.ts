@@ -56,7 +56,7 @@ export async function convertDraftToProduct(draft: DraftProduct) {
   }
 
   // Process sizes
-  const processedSizes = processDraftSizes(draft.sizes);
+  const processedSizes = processDraftSizes(draft.sizes || []);
   if (draft.sizes && Array.isArray(draft.sizes)) {
     console.log(
       `  📏 Processing ${draft.sizes.length} sizes for draft ${draft.id}...`

@@ -3,7 +3,7 @@ import * as React from 'react';
 import type { Draft } from '@/types/admin';
 
 interface SizeDisplayProps {
-  size: Draft['sizes'][0];
+  size: NonNullable<Draft['sizes']>[0];
   index: number;
   isSaving: boolean;
   onEdit: () => void;

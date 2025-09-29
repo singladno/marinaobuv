@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import type { Product } from '@/types/product';
+import type { Product, ProductUpdateData } from '@/types/product';
 
 import { ProductsTableContent } from './ProductsTableContent';
 import { ProductsTableFilters } from './ProductsTableFilters';
@@ -23,7 +23,7 @@ interface ProductsTableProps {
     categoryId: string;
   };
   onFiltersChange: (filters: { search?: string; categoryId?: string }) => void;
-  onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onReload: () => void;

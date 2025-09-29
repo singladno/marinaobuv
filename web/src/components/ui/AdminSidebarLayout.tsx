@@ -26,7 +26,9 @@ export default function AdminSidebarLayout({
       {/* Sidebar - Left column */}
       <AdminSidebar
         isCollapsed={isCollapsed}
-        setIsCollapsed={setCollapsed}
+        setIsCollapsed={v =>
+          setCollapsed(typeof v === 'function' ? v(isCollapsed) : v)
+        }
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={closeMobile}
       />

@@ -24,7 +24,9 @@ export function PriceFilter({ priceRange, onPriceRangeChange }: Props) {
           </Label>
           <Slider
             value={priceRange}
-            onValueChange={onPriceRangeChange}
+            onValueChange={value =>
+              onPriceRangeChange([value[0], value[1]] as [number, number])
+            }
             min={0}
             max={50000}
             step={100}

@@ -37,7 +37,7 @@ export function createPriceColumns({ onPatch }: CreatePriceColumnsParams) {
       header: () => 'Пар в упаковке',
       cell: info => {
         const { sizes } = info.row.original;
-        const totalPairs = calculateTotalPairs(sizes);
+        const totalPairs = calculateTotalPairs(sizes || []);
 
         return (
           <div className="flex items-center justify-center">
@@ -56,7 +56,7 @@ export function createPriceColumns({ onPatch }: CreatePriceColumnsParams) {
       header: () => 'Цена коробки (₽)',
       cell: info => {
         const { pricePair, sizes } = info.row.original;
-        const totalPairs = calculateTotalPairs(sizes);
+        const totalPairs = calculateTotalPairs(sizes || []);
         const calculatedBoxPrice = calculateBoxPrice(pricePair, totalPairs);
 
         return (

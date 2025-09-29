@@ -12,7 +12,7 @@ import { ProductSeasonCell } from '@/components/features/ProductSeasonCell';
 import { ProductSelectionCheckbox } from '@/components/features/ProductSelectionCheckbox';
 import { ProductSizesCell } from '@/components/features/ProductSizesCell';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
-import type { Product } from '@/types/product';
+import type { Product, ProductUpdateData } from '@/types/product';
 
 type ProductWithSelected = Product & { selected?: boolean };
 
@@ -27,7 +27,7 @@ export function createProductColumnDefinitions({
   allSelected,
   someSelected,
 }: {
-  onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
   onDeleteProduct: (id: string) => Promise<void>;
   categories: CategoryNode[];
   onToggle?: (id: string) => void;

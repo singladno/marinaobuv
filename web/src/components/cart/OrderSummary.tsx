@@ -2,7 +2,7 @@ interface Product {
   id: string;
   slug: string;
   name: string;
-  article: string | null;
+  article?: string;
   pricePair: number;
   images: Array<{ url: string; alt?: string }>;
   category: {

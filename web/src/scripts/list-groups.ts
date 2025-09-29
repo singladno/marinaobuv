@@ -19,7 +19,7 @@ async function fetchGroups() {
       '/groups/list',
       '/chats/list',
       '/groups/get',
-      '/chats/get'
+      '/chats/get',
     ];
 
     let groups = [];
@@ -31,14 +31,17 @@ async function fetchGroups() {
         const response = await fetch(`${env.WHAPI_BASE_URL}${endpoint}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${env.WHAPI_TOKEN}`,
+            Authorization: `Bearer ${env.WHAPI_TOKEN}`,
             'Content-Type': 'application/json',
           },
         });
 
         if (response.ok) {
           const data = await response.json();
-          console.log(`✅ Success with ${endpoint}:`, JSON.stringify(data, null, 2));
+          console.log(
+            `✅ Success with ${endpoint}:`,
+            JSON.stringify(data, null, 2)
+          );
 
           // Handle different response formats
           if (Array.isArray(data)) {
@@ -56,10 +59,15 @@ async function fetchGroups() {
             break;
           }
         } else {
-          console.log(`❌ Failed with ${endpoint}: ${response.status} ${response.statusText}`);
+          console.log(
+            `❌ Failed with ${endpoint}: ${response.status} ${response.statusText}`
+          );
         }
       } catch (error) {
-        console.log(`❌ Error with ${endpoint}:`, error.message);
+        console.log(
+          `❌ Error with ${endpoint}:`,
+          error instanceof Error ? error.message : String(error)
+        );
       }
     }
 
@@ -68,39 +76,46 @@ async function fetchGroups() {
       return;
     }
 
-    console.log(`\n✅ Found ${groups.length} groups using endpoint: ${successfulEndpoint}\n`);
+    console.log(
+      `\n✅ Found ${groups.length} groups using endpoint: ${successfulEndpoint}\n`
+    );
 
-    groups.forEach((group, index) => {
+    groups.forEach((group: any, index: number) => {
       console.log(`--- Group ${index + 1} ---`);
       console.log(`ID: ${group.id || group.jid || group.chat_id || 'N/A'}`);
       console.log(`Name: ${group.name || group.subject || 'N/A'}`);
       console.log(`Description: ${group.description || 'N/A'}`);
-      console.log(`Participants: ${group.participants?.length || group.participants_count || 'N/A'}`);
+      console.log(
+        `Participants: ${group.participants?.length || group.participants_count || 'N/A'}`
+      );
       console.log(`Created: ${group.created_at || group.creation || 'N/A'}`);
       console.log('');
     });
 
     // Look for "Распродажа Садовода" specifically
-    const targetGroup = groups.find(group => {
+    const targetGroup = groups.find((group: any) => {
       const name = group.name || group.subject || '';
-      return name.toLowerCase().includes('распродажа') ||
-             name.toLowerCase().includes('садовода') ||
-             name.toLowerCase().includes('распродажа садовода');
+      return (
+        name.toLowerCase().includes('распродажа') ||
+        name.toLowerCase().includes('садовода') ||
+        name.toLowerCase().includes('распродажа садовода')
+      );
     });
 
     if (targetGroup) {
       console.log('🎯 FOUND TARGET GROUP:');
-      console.log(`ID: ${targetGroup.id || targetGroup.jid || targetGroup.chat_id}`);
+      console.log(
+        `ID: ${targetGroup.id || targetGroup.jid || targetGroup.chat_id}`
+      );
       console.log(`Name: ${targetGroup.name || targetGroup.subject}`);
       console.log(`Description: ${targetGroup.description || 'N/A'}`);
     } else {
       console.log('❌ Target group "Распродажа Садовода" not found');
       console.log('Available group names:');
-      groups.forEach(group => {
+      groups.forEach((group: any) => {
         console.log(`- ${group.name || group.subject || 'N/A'}`);
       });
     }
-
   } catch (error) {
     console.error('Error fetching groups:', error);
   }

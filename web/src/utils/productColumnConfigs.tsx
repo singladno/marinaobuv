@@ -1,7 +1,8 @@
 import { createProductColumnDefinitions } from './productColumnDefinitions';
+import type { ProductUpdateData } from '@/types/product';
 
 interface CreateProductColumnsOptions {
-  onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
   onDeleteProduct: (id: string) => Promise<void>;
   categories: Array<{ id: string; name: string; slug?: string; path?: string }>;
   onToggle?: (id: string) => void;

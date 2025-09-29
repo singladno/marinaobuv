@@ -7,6 +7,8 @@ import { sanitizeImageUrl } from '@/lib/image-security';
 type DraftImage = {
   id: string;
   url: string;
+  isPrimary: boolean;
+  sort: number;
   alt?: string | null;
   color?: string | null;
   isActive?: boolean;
