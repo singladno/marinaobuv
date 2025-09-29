@@ -133,6 +133,8 @@ jobs:
           username: ${{ secrets.RUSSIAN_USERNAME }}
           key: ${{ secrets.RUSSIAN_SSH_KEY }}
           port: ${{ secrets.RUSSIAN_SSH_PORT || 22 }}
+          timeout: 60s
+          command_timeout: 60s
           script: |
             set -euo pipefail
 
