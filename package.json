@@ -1,33 +1,38 @@
 {
   "name": "marinaobuv",
   "version": "1.0.0",
-  "description": "Marina Obuv - Web Application",
-  "private": true,
+  "description": "MarinaObuv - Modern Next.js Application",
+  "main": "ecosystem.config.js",
   "scripts": {
     "dev": "cd web && npm run dev",
     "build": "cd web && npm run build",
-    "start": "cd web && npm run start",
-    "install": "cd web && npm install",
-    "lint": "cd web && npm run lint",
-    "lint:fix": "cd web && npm run lint:fix",
-    "typecheck": "cd web && npm run typecheck",
-    "format": "cd web && npm run format",
-    "format:check": "cd web && npm run format:check",
-    "pre-commit": "cd web && npm run pre-commit",
-    "prisma": "cd web && npx prisma studio",
-    "fetch-messages": "cd web && npx tsx src/scripts/fetch-group-messages.ts",
-    "draft:setup": "cd web && npx tsx src/scripts/setup-draft-products.ts",
-    "draft:process": "cd web && npx tsx src/scripts/process-draft-products.ts",
-    "draft:view": "cd web && npx tsx src/scripts/view-draft-products.ts",
-    "prisma:seed": "cd web && npm run prisma:seed",
-    "make-hash": "node web/scripts/make-hash.js",
-    "fetchMessages": "cd web && npx tsx src/scripts/fetch-recent-messages.ts",
-    "processDraft": "cd web && npx tsx src/scripts/process-draft-products-unified.ts",
-    "genWA": "cd web && npx tsx src/scripts/fetch-recent-messages.ts && npx tsx src/scripts/process-draft-products-unified.ts",
-    "messages:clear": "cd web && npm run messages:clear"
+    "start": "pm2 start ecosystem.config.js",
+    "start:prod": "pm2 start ecosystem.config.js --env production",
+    "stop": "pm2 stop marinaobuv",
+    "restart": "pm2 restart marinaobuv",
+    "reload": "pm2 reload marinaobuv",
+    "delete": "pm2 delete marinaobuv",
+    "logs": "pm2 logs marinaobuv",
+    "status": "pm2 status",
+    "monitor": "pm2 monit",
+    "setup": "npm install && cd web && npm install",
+    "deploy": "./deploy-pm2.sh",
+    "backup": "./backup.sh",
+    "health": "curl -s http://localhost:3000/api/health || echo 'Application not responding'"
+  },
+  "keywords": [
+    "nextjs",
+    "react",
+    "typescript",
+    "marinaobuv"
+  ],
+  "author": "MarinaObuv Team",
+  "license": "Private",
+  "devDependencies": {
+    "pm2": "^5.3.0"
   },
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=20.0.0",
     "npm": ">=8.0.0"
   }
 }

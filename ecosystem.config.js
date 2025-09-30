@@ -1,0 +1,37 @@
+module.exports = {
+  apps: [
+    {
+      name: "marinaobuv",
+      script: "web/node_modules/.bin/next",
+      args: "start",
+      cwd: "./web",
+      instances: process.env.NODE_ENV === "production" ? "max" : 1,
+      exec_mode: process.env.NODE_ENV === "production" ? "cluster" : "fork",
+      env: {
+        NODE_ENV: "development",
+        PORT: 3000,
+        HOSTNAME: "0.0.0.0",
+      },
+      env_production: {
+        NODE_ENV: "production",
+        PORT: 3000,
+        HOSTNAME: "0.0.0.0",
+      },
+      log_file: "./logs/marinaobuv.log",
+      out_file: "./logs/marinaobuv-out.log",
+      error_file: "./logs/marinaobuv-error.log",
+      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
+      merge_logs: true,
+      max_memory_restart: "1G",
+      node_args: "--max-old-space-size=1024",
+      watch: process.env.NODE_ENV === "development",
+      ignore_watch: ["node_modules", "logs", ".next"],
+      max_restarts: 10,
+      min_uptime: "10s",
+      restart_delay: 4000,
+      kill_timeout: 5000,
+      listen_timeout: 3000,
+      shutdown_with_message: true,
+    },
+  ],
+};
