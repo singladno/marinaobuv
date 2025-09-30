@@ -6,6 +6,8 @@ services:
       context: ./web
       dockerfile: Dockerfile.prod
     restart: unless-stopped
+    env_file:
+      - web/.env.production
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
@@ -32,6 +34,8 @@ services:
   db:
     image: postgres:16
     restart: unless-stopped
+    env_file:
+      - web/.env.production
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
