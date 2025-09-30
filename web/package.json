@@ -2,10 +2,6 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
-  "engines": {
-    "node": "22.19.0",
-    "npm": ">=11.0.0"
-  },
   "scripts": {
     "dev:simple": "next dev --turbopack",
     "dev": "next dev --turbopack & npm run lint:watch & npm run typecheck:watch",

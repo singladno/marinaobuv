@@ -2,8 +2,6 @@ import type { Role } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
-
-export const dynamic = 'force-dynamic';
 import {
   processDraftImagesForApprovalById,
   updateDraftImagesWithS3Urls,

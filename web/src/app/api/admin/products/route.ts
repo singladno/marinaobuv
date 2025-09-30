@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getSession } from '@/lib/server/session';
-export const dynamic = 'force-dynamic';
 
 import { getProductById, getProducts } from './product-service';
 
