@@ -38,8 +38,8 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src ./src
 
-# Install production dependencies
-RUN npm ci --only=production --ignore-scripts
+# Install all dependencies including React
+RUN npm ci --ignore-scripts
 
 # Verify the build files exist
 RUN ls -la .next/
