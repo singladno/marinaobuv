@@ -63,59 +63,59 @@ jobs:
               run: |
                   cd web && npm run build
 
-             - name: Deploy to server
-               uses: appleboy/ssh-action@v1.0.3
-               with:
-                   host: ${{ secrets.RUSSIAN_HOST }}
-                   username: ${{ secrets.RUSSIAN_USERNAME }}
-                   key: ${{ secrets.RUSSIAN_SSH_KEY }}
-                   script: |
-                       # Check if application directory exists
-                       if [ ! -d "/var/www/marinaobuv" ]; then
-                           echo "Setting up application directory..."
-                           sudo mkdir -p /var/www/marinaobuv
-                           sudo chown -R $USER:$USER /var/www/marinaobuv
-                           git clone https://github.com/singladno/marinaobuv.git /var/www/marinaobuv
-                       fi
+            - name: Deploy to server
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.RUSSIAN_HOST }}
+                  username: ${{ secrets.RUSSIAN_USERNAME }}
+                  key: ${{ secrets.RUSSIAN_SSH_KEY }}
+                  script: |
+                      # Check if application directory exists
+                      if [ ! -d "/var/www/marinaobuv" ]; then
+                          echo "Setting up application directory..."
+                          sudo mkdir -p /var/www/marinaobuv
+                          sudo chown -R $USER:$USER /var/www/marinaobuv
+                          git clone https://github.com/singladno/marinaobuv.git /var/www/marinaobuv
+                      fi
 
-                       # Navigate to application directory
-                       cd /var/www/marinaobuv
+                      # Navigate to application directory
+                      cd /var/www/marinaobuv
 
-                       # Pull latest changes
-                       git pull origin main
+                      # Pull latest changes
+                      git pull origin main
 
-                       # Install dependencies
-                       npm install
-                       cd web && npm ci --production
-                       cd ..
+                      # Install dependencies
+                      npm install
+                      cd web && npm ci --production
+                      cd ..
 
-                       # Generate Prisma client
-                       cd web && npm run prisma:generate
-                       cd ..
+                      # Generate Prisma client
+                      cd web && npm run prisma:generate
+                      cd ..
 
-                       # Run database migrations
-                       cd web && npm run prisma:migrate
-                       cd ..
+                      # Run database migrations
+                      cd web && npm run prisma:migrate
+                      cd ..
 
-                       # Build application
-                       cd web && npm run build
-                       cd ..
+                      # Build application
+                      cd web && npm run build
+                      cd ..
 
-                       # Stop existing PM2 processes
-                       pm2 delete marinaobuv 2>/dev/null || true
+                      # Stop existing PM2 processes
+                      pm2 delete marinaobuv 2>/dev/null || true
 
-                       # Start PM2 application
-                       pm2 start ecosystem.config.js --env production
+                      # Start PM2 application
+                      pm2 start ecosystem.config.js --env production
 
-                       # Save PM2 configuration
-                       pm2 save
+                      # Save PM2 configuration
+                      pm2 save
 
-                       # Show status
-                       pm2 status
+                      # Show status
+                      pm2 status
 
-                       # Health check
-                       sleep 10
-                       curl -f http://localhost:3000/api/health || exit 1
+                      # Health check
+                      sleep 10
+                      curl -f http://localhost:3000/api/health || exit 1
 
             - name: Notify deployment status
               if: always()
