@@ -39,7 +39,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src ./src
 
 # Install only production dependencies with timeout
-RUN npm ci --only=production --ignore-scripts --maxsockets 1 --prefer-offline
+RUN npm ci --omit=dev --ignore-scripts --maxsockets 1 --prefer-offline
 
 # Verify the build files exist
 RUN ls -la .next/
