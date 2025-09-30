@@ -37,6 +37,7 @@ function computeRemotePatterns() {
 }
 
 const nextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns: computeRemotePatterns(),
     formats: ['image/avif', 'image/webp'],

@@ -2,6 +2,7 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev:simple": "next dev --turbopack",
     "dev": "next dev --turbopack & npm run lint:watch & npm run typecheck:watch",
