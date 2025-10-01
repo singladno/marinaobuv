@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 
-import { FilterOptions } from '@/components/product/ProductFilters';
+import { FilterOptions } from '@/types/filters';
 import { useCatalogProducts } from '@/hooks/useCatalogProducts';
 import {
   matchesCategoryFilter,

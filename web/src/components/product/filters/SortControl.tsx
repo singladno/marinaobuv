@@ -1,6 +1,6 @@
 'use client';
 
-import type { FilterOptions } from '@/components/product/ProductFilters';
+import type { FilterOptions } from '@/types/filters';
 
 import FilterPill from './FilterPill';
 

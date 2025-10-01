@@ -1,13 +1,9 @@
 'use client';
 
-import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
-
 import { ProductGrid } from '@/components/catalog/ProductGrid';
-import ProductFilters from '@/components/product/ProductFilters';
 import TopFiltersBar from '@/components/product/TopFiltersBar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/Sheet';
 import { Text } from '@/components/ui/Text';
 import { useCatalogPage } from '@/hooks/useCatalogPage';
 
@@ -63,60 +59,28 @@ export default function CatalogPage() {
           />
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-4">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="hidden lg:block">
-              <ProductFilters
-                onFiltersChange={handleFiltersChange}
-                onClearFilters={clearFilters}
-              />
-            </div>
-
-            {/* Mobile Filters */}
-            <div className="lg:hidden">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="w-full">
-                    <AdjustmentsHorizontalIcon className="mr-2 h-4 w-4" />
-                    Фильтры
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-80">
-                  <div className="mt-6">
-                    <ProductFilters
-                      onFiltersChange={handleFiltersChange}
-                      onClearFilters={clearFilters}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
+        {/* Products Grid */}
+        <div className="w-full">
+          {/* Results Header */}
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Text className="text-muted-foreground text-sm">
+                Найдено товаров: {products.length}
+              </Text>
+              {searchQuery && (
+                <Badge variant="secondary">
+                  Поиск: &quot;{searchQuery}&quot;
+                </Badge>
+              )}
             </div>
           </div>
 
-          {/* Products Grid */}
-          <div className="lg:col-span-3">
-            {/* Results Header */}
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Text className="text-muted-foreground text-sm">
-                  Найдено товаров: {products.length}
-                </Text>
-                {searchQuery && (
-                  <Badge variant="secondary">
-                    Поиск: &quot;{searchQuery}&quot;
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Products */}
-            <ProductGrid
-              products={products}
-              gridCols={gridCols}
-              loading={loading}
-            />
-          </div>
+          {/* Products */}
+          <ProductGrid
+            products={products}
+            gridCols={gridCols}
+            loading={loading}
+          />
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import CategoryControl from '@/components/product/filters/CategoryControl';
 import PriceControl from '@/components/product/filters/PriceControl';
 import SortControl from '@/components/product/filters/SortControl';
-import type { FilterOptions } from '@/components/product/ProductFilters';
+import type { FilterOptions } from '@/types/filters';
 
 type TopFiltersBarProps = {
   filters: FilterOptions;

@@ -29,7 +29,7 @@ export default function Pagination({
         if (categoryId) {
           queryParams.categoryId = categoryId;
         }
-        const href = `${basePath}${buildQueryString(queryParams, { ...filters, categoryId })}`;
+        const href = `${basePath}${buildQueryString(queryParams, filters ? { ...filters, categoryId } : undefined)}`;
         const isActive = n === page;
         return (
           <a

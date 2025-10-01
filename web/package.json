@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:simple": "next dev --turbopack",
-    "dev": "next dev --turbopack & npm run lint:watch & npm run typecheck:watch",
+    "dev:simple": "PORT=3000 next dev --turbopack",
+    "dev": "PORT=3000 next dev --turbopack & npm run lint:watch & npm run typecheck:watch",
     "lint:watch": "nodemon --watch src --ext ts,tsx,js,jsx --exec \"npm run lint\"",
-    "docker:local": "docker-compose -f ../docker-compose.local.yml up -d && next dev --turbopack",
+    "docker:local": "docker-compose -f ../docker-compose.local.yml up -d && PORT=3000 next dev --turbopack",
     "build": "next build",
     "build:local": "next build",
     "start": "next start",

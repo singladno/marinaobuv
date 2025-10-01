@@ -1,8 +1,16 @@
-export type CatalogFilters = {
-  sizes?: string[]; // e.g. ["36","37","38"]
-  priceFrom?: number | null; // RUB
-  priceTo?: number | null; // RUB
-  sort?: 'relevance' | 'price-asc' | 'price-desc' | 'newest';
-  page?: number;
-  pageSize?: number;
-};
+export interface FilterOptions {
+  categories: string[];
+  priceRange: [number, number];
+  minRating: number;
+  inStock: boolean;
+  sortBy: string;
+}
+
+export interface CatalogFilters {
+  sizes?: string[];
+  priceFrom: number | null;
+  priceTo: number | null;
+  sort: 'relevance' | 'price-asc' | 'price-desc' | 'newest';
+  page: number;
+  pageSize: number;
+}
