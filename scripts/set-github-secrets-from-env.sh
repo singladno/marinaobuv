@@ -47,7 +47,7 @@ parse_line() {
   local key="${line%%=*}"
   local value="${line#*=}"
   # strip surrounding quotes if present
-  value="$(echo "$value" | sed -E 's/^"(.*)"$/\1/; s/^\'(.*)\'$/\1/')"
+  value="$(echo "$value" | sed -E 's/^"(.*)"$/\1/; s/^\'"'"'(.*)\'"'"'$/\1/')"
   # trim spaces around key
   key="$(echo "$key" | sed -E 's/^\s+|\s+$//g')"
   # guard against empty key
