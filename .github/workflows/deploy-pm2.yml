@@ -246,6 +246,10 @@ jobs:
             # Stop existing PM2 processes
             pm2 delete marinaobuv 2>/dev/null || true
 
+            # Fix nginx configuration for PM2
+            chmod +x scripts/fix-nginx-pm2.sh
+            ./scripts/fix-nginx-pm2.sh
+
             # Start PM2 application
             pm2 start ecosystem.config.js --env production
             if [ $? -ne 0 ]; then
