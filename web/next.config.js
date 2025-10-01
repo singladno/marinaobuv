@@ -39,12 +39,12 @@ function computeRemotePatterns() {
 const nextConfig = {
   // Silence workspace root inference in CI with multiple lockfiles
   outputFileTracingRoot: process.cwd(),
-  
+
   // Production optimizations
   compress: true,
   poweredByHeader: false,
   generateEtags: true,
-  
+
   // Image optimization
   images: {
     remotePatterns: computeRemotePatterns(),
@@ -53,7 +53,7 @@ const nextConfig = {
     dangerouslyAllowSVG: false,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
-  
+
   // Build optimizations
   eslint: {
     // Enable ESLint during builds and development
@@ -65,7 +65,7 @@ const nextConfig = {
     // Enable TypeScript checking during builds and development
     ignoreBuildErrors: false,
   },
-  
+
   // Security headers
   async headers() {
     return [
