@@ -176,6 +176,60 @@ jobs:
             # Pull latest changes
             git pull origin main
 
+            # Ensure env directory exists and write production env from secrets
+            mkdir -p web
+            cat > web/.env.production << 'ENVEOF'
+NODE_ENV=production
+
+# Public
+NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+NEXT_PUBLIC_BRAND_NAME=${{ secrets.NEXT_PUBLIC_BRAND_NAME }}
+
+# Database
+DATABASE_URL=${{ secrets.DATABASE_URL }}
+
+# Auth
+NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+
+# Whapi
+WHAPI_BASE_URL=${{ secrets.WHAPI_BASE_URL }}
+WHAPI_TOKEN=${{ secrets.WHAPI_TOKEN }}
+WHAPI_WEBHOOK_SECRET=${{ secrets.WHAPI_WEBHOOK_SECRET }}
+WHAPI_VERIFY_TOKEN=${{ secrets.WHAPI_VERIFY_TOKEN }}
+
+# S3
+S3_ENDPOINT=${{ secrets.S3_ENDPOINT }}
+S3_REGION=${{ secrets.S3_REGION }}
+S3_BUCKET=${{ secrets.S3_BUCKET }}
+S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
+S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
+CDN_BASE_URL=${{ secrets.CDN_BASE_URL }}
+
+# Yandex Cloud
+YC_FOLDER_ID=${{ secrets.YC_FOLDER_ID }}
+YC_API_KEY=${{ secrets.YC_API_KEY }}
+
+# Target Group
+TARGET_GROUP_ID=${{ secrets.TARGET_GROUP_ID }}
+
+# OpenAI
+OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
+OPENAI_VISION_MODEL=${{ secrets.OPENAI_VISION_MODEL }}
+OPENAI_REQUEST_DELAY_MS=${{ secrets.OPENAI_REQUEST_DELAY_MS }}
+
+# Processing
+MESSAGE_FETCH_HOURS=${{ secrets.MESSAGE_FETCH_HOURS }}
+PROCESSING_BATCH_SIZE=${{ secrets.PROCESSING_BATCH_SIZE }}
+
+# Session
+SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+ENVEOF
+
+            # Show which env keys are present (names only)
+            echo "Env keys on server:" && cut -d= -f1 web/.env.production | paste -sd, -
+
             # Install dependencies
             npm install
             cd web && npm ci --production
