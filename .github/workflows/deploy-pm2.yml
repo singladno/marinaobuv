@@ -382,7 +382,7 @@ jobs:
             timeout 30 curl -f https://marina-obuv.ru/api/health || echo "HTTPS domain access failed"
             echo "Domain Test (HTTP redirect):"
             timeout 30 curl -f http://marina-obuv.ru/api/health || echo "HTTP redirect test failed"
-            
+
             echo ""
             echo "🎉 Deployment completed successfully!"
             echo "✅ Application is running on port 3000"
