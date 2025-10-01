@@ -246,15 +246,39 @@ jobs:
             # Stop existing PM2 processes
             pm2 delete marinaobuv 2>/dev/null || true
 
-            # Fix nginx configuration for PM2
-            echo "🔧 Configuring nginx for PM2 deployment..."
+            # Setup HTTPS and nginx configuration
+            echo "🔒 Setting up HTTPS and nginx configuration..."
 
-            # Copy nginx configuration for PM2
-            sudo cp nginx/marinaobuv-pm2.conf /etc/nginx/sites-available/marinaobuv
+            # Install required packages for HTTPS
+            sudo apt-get update
+            sudo apt-get install -y certbot python3-certbot-nginx openssl
+
+            # Create SSL directory structure
+            sudo mkdir -p /etc/ssl/certs
+            sudo mkdir -p /etc/ssl/private
+            sudo chmod 755 /etc/ssl/certs
+            sudo chmod 700 /etc/ssl/private
+
+            # Generate SSL certificate if not exists
+            if [ ! -f "/etc/ssl/certs/marinaobuv.ru.crt" ]; then
+              echo "🔐 Generating SSL certificate..."
+              sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                  -keyout /etc/ssl/private/marinaobuv.ru.key \
+                  -out /etc/ssl/certs/marinaobuv.ru.crt \
+                  -subj "/C=RU/ST=Moscow/L=Moscow/O=MarinaObuv/OU=IT/CN=marina-obuv.ru"
+              
+              sudo chmod 600 /etc/ssl/private/marinaobuv.ru.key
+              sudo chmod 644 /etc/ssl/certs/marinaobuv.ru.crt
+            else
+              echo "✅ SSL certificate already exists"
+            fi
+
+            # Copy HTTPS nginx configuration
+            sudo cp nginx/conf.d/marinaobuv-https.conf /etc/nginx/sites-available/marinaobuv-https
 
             # Enable the site
-            echo "🔗 Enabling nginx site..."
-            sudo ln -sf /etc/nginx/sites-available/marinaobuv /etc/nginx/sites-enabled/
+            echo "🔗 Enabling nginx HTTPS site..."
+            sudo ln -sf /etc/nginx/sites-available/marinaobuv-https /etc/nginx/sites-enabled/
 
             # Remove default nginx site if it exists
             sudo rm -f /etc/nginx/sites-enabled/default
@@ -273,6 +297,21 @@ jobs:
                 echo "❌ Nginx configuration test failed!"
                 exit 1
             fi
+
+            # Setup Let's Encrypt certificate
+            echo "🔐 Setting up Let's Encrypt certificate..."
+            sudo certbot --nginx -d marina-obuv.ru -d www.marina-obuv.ru --non-interactive --agree-tos --email admin@marina-obuv.ru || echo "⚠️ Let's Encrypt setup failed, using self-signed certificate"
+
+            # Setup auto-renewal
+            echo "🔄 Setting up certificate auto-renewal..."
+            (sudo crontab -l 2>/dev/null | grep -v certbot; echo "0 12 * * * /usr/bin/certbot renew --quiet --post-hook 'systemctl reload nginx'") | sudo crontab -
+
+            # Configure firewall
+            echo "🔥 Configuring firewall..."
+            sudo ufw allow 22/tcp
+            sudo ufw allow 80/tcp
+            sudo ufw allow 443/tcp
+            sudo ufw --force enable || echo "⚠️ Firewall configuration failed"
 
             # Start PM2 application
             pm2 start ecosystem.config.js --env production
@@ -333,8 +372,10 @@ jobs:
             echo "Nginx Configuration Test:"
             sudo nginx -t
             echo ""
-            echo "Domain Test:"
-            curl -f http://marina-obuv.ru/api/health || echo "Domain access failed"
+            echo "Domain Test (HTTPS):"
+            curl -f https://marina-obuv.ru/api/health || echo "HTTPS domain access failed"
+            echo "Domain Test (HTTP redirect):"
+            curl -f http://marina-obuv.ru/api/health || echo "HTTP redirect test failed"
 
       - name: Notify deployment status
         if: always()
