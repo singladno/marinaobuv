@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "marinaobuv",
-      script: "web/node_modules/.bin/next",
+      script: "node_modules/.bin/next",
       args: "start",
       cwd: "./web",
       instances: process.env.NODE_ENV === "production" ? "max" : 1,
@@ -31,8 +31,6 @@ module.exports = {
       // Process management
       watch: process.env.NODE_ENV === "development",
       ignore_watch: ["node_modules", "logs", ".next", "*.log"],
-      max_restarts: 5,
-      min_uptime: "30s",
       restart_delay: 5000,
       kill_timeout: 10000,
       listen_timeout: 10000,

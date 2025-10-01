@@ -223,8 +223,8 @@ jobs:
             # Show which env keys are present (names only)
             echo "Env keys on server:" && cut -d= -f1 web/.env.production | paste -sd, -
 
-            # Install dependencies (skip prepare script to avoid husky)
-            cd web && npm ci --production --ignore-scripts
+            # Install dependencies (include devDependencies for build)
+            cd web && npm ci --ignore-scripts
             cd ..
 
             # Generate Prisma client
@@ -237,6 +237,10 @@ jobs:
 
             # Build application (Next.js will automatically load .env.production)
             cd web && npm run build
+            if [ $? -ne 0 ]; then
+              echo "Build failed!"
+              exit 1
+            fi
             cd ..
 
             # Stop existing PM2 processes
@@ -244,6 +248,11 @@ jobs:
 
             # Start PM2 application
             pm2 start ecosystem.config.js --env production
+            if [ $? -ne 0 ]; then
+              echo "PM2 start failed!"
+              pm2 logs marinaobuv --lines 50
+              exit 1
+            fi
 
             # Save PM2 configuration
             pm2 save
@@ -251,9 +260,26 @@ jobs:
             # Show status
             pm2 status
 
-            # Health check
-            sleep 10
-            curl -f http://localhost:3000/api/health || exit 1
+            # Wait for application to start
+            echo "Waiting for application to start..."
+            sleep 15
+
+            # Health check with retries
+            for i in {1..5}; do
+              echo "Health check attempt $i/5..."
+              if curl -f http://localhost:3000/api/health; then
+                echo "Health check passed!"
+                break
+              else
+                echo "Health check failed, attempt $i/5"
+                if [ $i -eq 5 ]; then
+                  echo "Health check failed after 5 attempts"
+                  pm2 logs marinaobuv --lines 50
+                  exit 1
+                fi
+                sleep 5
+              fi
+            done
 
       - name: Notify deployment status
         if: always()
