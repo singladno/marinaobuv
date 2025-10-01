@@ -5,8 +5,8 @@ module.exports = {
       script: "web/node_modules/.bin/next",
       args: "start",
       cwd: "./web",
-      instances: 1,
-      exec_mode: "fork",
+      instances: process.env.NODE_ENV === "production" ? "max" : 1,
+      exec_mode: process.env.NODE_ENV === "production" ? "cluster" : "fork",
       env: {
         NODE_ENV: "development",
         PORT: 3000,
@@ -17,21 +17,35 @@ module.exports = {
         PORT: 3000,
         HOSTNAME: "0.0.0.0",
       },
+      // Logging configuration
       log_file: "./logs/marinaobuv.log",
       out_file: "./logs/marinaobuv-out.log",
       error_file: "./logs/marinaobuv-error.log",
       log_date_format: "YYYY-MM-DD HH:mm:ss Z",
       merge_logs: true,
+      
+      // Performance and memory management
       max_memory_restart: "1G",
-      node_args: "--max-old-space-size=1024",
+      node_args: "--max-old-space-size=2048",
+      
+      // Process management
       watch: process.env.NODE_ENV === "development",
-      ignore_watch: ["node_modules", "logs", ".next"],
-      max_restarts: 10,
-      min_uptime: "10s",
-      restart_delay: 4000,
-      kill_timeout: 5000,
-      listen_timeout: 3000,
+      ignore_watch: ["node_modules", "logs", ".next", "*.log"],
+      max_restarts: 5,
+      min_uptime: "30s",
+      restart_delay: 5000,
+      kill_timeout: 10000,
+      listen_timeout: 10000,
       shutdown_with_message: true,
+      
+      // Advanced PM2 features
+      autorestart: true,
+      max_restarts: 5,
+      min_uptime: "30s",
+      
+      // Health monitoring
+      health_check_grace_period: 3000,
+      health_check_fatal_exceptions: true,
     },
   ],
 };

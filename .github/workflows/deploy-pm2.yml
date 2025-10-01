@@ -231,12 +231,12 @@ jobs:
             cd web && npm run prisma:generate
             cd ..
 
-            # Run database migrations (load env from .env.production)
-            cd web && set -a && source .env.production && set +a && npm run prisma:migrate
+            # Run database migrations (use proper env loading)
+            cd web && npm run prisma:migrate
             cd ..
 
-            # Build application (load env from .env.production)
-            cd web && set -a && source .env.production && set +a && pwd && ls -la src/components/cart/ && npm run build
+            # Build application (Next.js will automatically load .env.production)
+            cd web && npm run build
             cd ..
 
             # Stop existing PM2 processes

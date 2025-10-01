@@ -35,7 +35,7 @@ export default function BasketPage() {
   });
 
   if (basketState.loading) {
-    return <LoadingSpinner />;
+    return <div>Loading...</div>; // <LoadingSpinner />;
   }
 
   return (
@@ -43,33 +43,12 @@ export default function BasketPage() {
       <h1 className="mb-8 text-3xl font-bold">Корзина</h1>
 
       {basketState.products.length === 0 ? (
-        <EmptyCart />
+        <div>Empty Cart</div> // <EmptyCart />
       ) : (
-        <BasketContent
-          products={basketState.products}
-          selectedTransport={basketState.selectedTransport}
-          isEditingTransport={basketState.isEditingTransport}
-          setIsEditingTransport={basketState.setIsEditingTransport}
-          selectedTransportId={basketState.selectedTransportId}
-          setSelectedTransportId={basketState.setSelectedTransportId}
-          isLoggedIn={basketState.isLoggedIn}
-          setIsLoginModalOpen={basketState.setIsLoginModalOpen}
-          isEditingUserData={basketState.isEditingUserData}
-          setIsEditingUserData={basketState.setIsEditingUserData}
-          userEmail={basketState.userEmail}
-          setUserEmail={basketState.setUserEmail}
-          orderPhone={basketState.orderPhone}
-          setOrderPhone={basketState.setOrderPhone}
-          userFullName={basketState.userFullName}
-          setUserFullName={basketState.setUserFullName}
-          userAddress={basketState.userAddress}
-          setUserAddress={basketState.setUserAddress}
-          onPlaceOrder={() => handlers.setIsCheckoutModalOpen(true)}
-          onRemove={basketState.remove}
-          onUpdateQuantity={basketState.updateQuantity}
-        />
+        <div>Basket Content</div>
       )}
 
+      {/* Temporarily commented out modals
       <LoginModal
         isOpen={basketState.isLoginModalOpen}
         onClose={() => basketState.setIsLoginModalOpen(false)}
@@ -92,6 +71,7 @@ export default function BasketPage() {
         onClose={() => handlers.setIsCheckoutModalOpen(false)}
         onPlaceOrder={orderHandlers.handlePlaceOrder}
       />
+      */}
     </div>
   );
 }

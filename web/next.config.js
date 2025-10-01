@@ -39,10 +39,22 @@ function computeRemotePatterns() {
 const nextConfig = {
   // Silence workspace root inference in CI with multiple lockfiles
   outputFileTracingRoot: process.cwd(),
+  
+  // Production optimizations
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: true,
+  
+  // Image optimization
   images: {
     remotePatterns: computeRemotePatterns(),
     formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
+    dangerouslyAllowSVG: false,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  
+  // Build optimizations
   eslint: {
     // Enable ESLint during builds and development
     ignoreDuringBuilds: false,
@@ -52,6 +64,29 @@ const nextConfig = {
   typescript: {
     // Enable TypeScript checking during builds and development
     ignoreBuildErrors: false,
+  },
+  
+  // Security headers
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
   },
 };
 
