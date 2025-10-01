@@ -248,21 +248,21 @@ jobs:
 
             # Fix nginx configuration for PM2
             echo "🔧 Configuring nginx for PM2 deployment..."
-            
+
             # Copy nginx configuration for PM2
             sudo cp nginx/marinaobuv-pm2.conf /etc/nginx/sites-available/marinaobuv
-            
+
             # Enable the site
             echo "🔗 Enabling nginx site..."
             sudo ln -sf /etc/nginx/sites-available/marinaobuv /etc/nginx/sites-enabled/
-            
+
             # Remove default nginx site if it exists
             sudo rm -f /etc/nginx/sites-enabled/default
-            
+
             # Test nginx configuration
             echo "🧪 Testing nginx configuration..."
             sudo nginx -t
-            
+
             if [ $? -eq 0 ]; then
                 echo "✅ Nginx configuration is valid"
                 # Reload nginx
