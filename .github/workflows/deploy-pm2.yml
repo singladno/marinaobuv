@@ -179,7 +179,7 @@ jobs:
 
             # Ensure env directory exists and write production env from secrets
             mkdir -p web
-            cat > web/.env.production << 'ENVEOF'
+            cat > web/.env.production <<EOF
 NODE_ENV=production
 
 # Public
@@ -226,7 +226,7 @@ PROCESSING_BATCH_SIZE=${{ secrets.PROCESSING_BATCH_SIZE }}
 
 # Session
 SESSION_SECRET=${{ secrets.SESSION_SECRET }}
-ENVEOF
+EOF
 
             # Show which env keys are present (names only)
             echo "Env keys on server:" && cut -d= -f1 web/.env.production | paste -sd, -
