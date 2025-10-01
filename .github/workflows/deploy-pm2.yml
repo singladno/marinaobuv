@@ -224,7 +224,6 @@ jobs:
             echo "Env keys on server:" && cut -d= -f1 web/.env.production | paste -sd, -
 
             # Install dependencies
-            npm install
             cd web && npm ci --production
             cd ..
 

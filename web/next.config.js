@@ -38,9 +38,7 @@ function computeRemotePatterns() {
 
 const nextConfig = {
   // Silence workspace root inference in CI with multiple lockfiles
-  experimental: {
-    outputFileTracingRoot: process.cwd(),
-  },
+  outputFileTracingRoot: process.cwd(),
   images: {
     remotePatterns: computeRemotePatterns(),
     formats: ['image/avif', 'image/webp'],
