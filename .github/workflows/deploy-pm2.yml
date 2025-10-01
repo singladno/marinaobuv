@@ -162,6 +162,9 @@ jobs:
           host: ${{ secrets.RUSSIAN_HOST }}
           username: ${{ secrets.RUSSIAN_USERNAME }}
           key: ${{ secrets.RUSSIAN_SSH_KEY }}
+          port: ${{ secrets.RUSSIAN_SSH_PORT }}
+          timeout: 60s
+          command_timeout: 60s
           script: |
             # Check if application directory exists
             if [ ! -d "/var/www/marinaobuv" ]; then
