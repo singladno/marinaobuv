@@ -247,8 +247,80 @@ jobs:
             pm2 delete marinaobuv 2>/dev/null || true
 
             # Fix nginx configuration for PM2
-            chmod +x scripts/fix-nginx-pm2.sh
-            ./scripts/fix-nginx-pm2.sh
+            echo "🔧 Configuring nginx for PM2 deployment..."
+            
+            # Create nginx configuration for PM2
+            sudo tee /etc/nginx/sites-available/marinaobuv > /dev/null <<EOF
+server {
+    listen 80;
+    server_name marina-obuv.ru www.marina-obuv.ru;
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    
+    # Main application - proxy to PM2 running on localhost:3000
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400;
+    }
+    
+    # API routes
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+    
+    # Static files
+    location /_next/static/ {
+        proxy_pass http://localhost:3000;
+        proxy_cache_valid 200 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Health check
+    location /health {
+        proxy_pass http://localhost:3000/api/health;
+        access_log off;
+    }
+}
+EOF
+
+            # Enable the site
+            echo "🔗 Enabling nginx site..."
+            sudo ln -sf /etc/nginx/sites-available/marinaobuv /etc/nginx/sites-enabled/
+            
+            # Remove default nginx site if it exists
+            sudo rm -f /etc/nginx/sites-enabled/default
+            
+            # Test nginx configuration
+            echo "🧪 Testing nginx configuration..."
+            sudo nginx -t
+            
+            if [ $? -eq 0 ]; then
+                echo "✅ Nginx configuration is valid"
+                # Reload nginx
+                echo "🔄 Reloading nginx..."
+                sudo systemctl reload nginx
+                echo "✅ Nginx configuration updated successfully!"
+            else
+                echo "❌ Nginx configuration test failed!"
+                exit 1
+            fi
 
             # Start PM2 application
             pm2 start ecosystem.config.js --env production
@@ -284,6 +356,23 @@ jobs:
                 sleep 5
               fi
             done
+
+            # Final status check
+            echo "📊 Final deployment status:"
+            echo "PM2 Status:"
+            pm2 status
+            echo ""
+            echo "Nginx Status:"
+            sudo systemctl status nginx --no-pager -l
+            echo ""
+            echo "Port 3000 Status:"
+            netstat -tlnp | grep :3000 || echo "Port 3000 not listening"
+            echo ""
+            echo "Nginx Configuration Test:"
+            sudo nginx -t
+            echo ""
+            echo "Domain Test:"
+            curl -f http://marina-obuv.ru/api/health || echo "Domain access failed"
 
       - name: Notify deployment status
         if: always()
