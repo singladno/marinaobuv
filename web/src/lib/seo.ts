@@ -17,7 +17,9 @@ export function buildMetadata(opts: BuildOpts = {}): Metadata {
     opts.description ??
     `${site.brand} — современный магазин обуви и аксессуаров. Каталог, акции, быстрая доставка по России.`;
 
-  const images = (opts.images ?? ['/og-default.png']).map((src) => ({ url: src }));
+  const images = (opts.images ?? ['/og-default.png']).map(src => ({
+    url: src,
+  }));
 
   // Ensure metadataBase is a valid URL even if env is missing/invalid
   let metadataBase: URL | undefined;
