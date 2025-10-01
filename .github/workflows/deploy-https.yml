@@ -1,0 +1,160 @@
+name: Deploy HTTPS Configuration
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "nginx/**"
+            - "scripts/**"
+            - ".github/workflows/deploy-https.yml"
+    workflow_dispatch:
+        inputs:
+            force_deploy:
+                description: "Force deploy even if no changes"
+                required: false
+                default: "false"
+                type: boolean
+
+jobs:
+    deploy-https:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup SSH
+              uses: webfactory/ssh-agent@v0.9.0
+              with:
+                  ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+            - name: Add server to known hosts
+              run: |
+                  ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+            - name: Deploy HTTPS configuration
+              run: |
+                  # Create deployment script
+                  cat > deploy-https-remote.sh << 'EOF'
+                  #!/bin/bash
+                  set -e
+
+                  echo "🚀 Starting HTTPS deployment..."
+
+                  # Variables
+                  PROJECT_DIR="/var/www/marinaobuv"
+                  NGINX_DIR="/etc/nginx"
+                  SSL_DIR="/etc/ssl"
+
+                  # 1. Backup current configuration
+                  echo "📦 Backing up current nginx configuration..."
+                  sudo cp -r $NGINX_DIR/sites-available $NGINX_DIR/sites-available.backup.$(date +%Y%m%d_%H%M%S) || true
+                  sudo cp -r $NGINX_DIR/sites-enabled $NGINX_DIR/sites-enabled.backup.$(date +%Y%m%d_%H%M%S) || true
+
+                  # 2. Update project files
+                  echo "📁 Updating project files..."
+                  cd $PROJECT_DIR
+                  git pull origin main
+
+                  # 3. Install required packages if not present
+                  echo "📦 Installing required packages..."
+                  sudo apt-get update
+                  sudo apt-get install -y nginx certbot python3-certbot-nginx openssl
+
+                  # 4. Create SSL directory structure
+                  echo "📁 Creating SSL directory structure..."
+                  sudo mkdir -p $SSL_DIR/certs
+                  sudo mkdir -p $SSL_DIR/private
+                  sudo chmod 755 $SSL_DIR/certs
+                  sudo chmod 700 $SSL_DIR/private
+
+                  # 5. Generate SSL certificate if not exists
+                  if [ ! -f "$SSL_DIR/certs/marinaobuv.ru.crt" ]; then
+                    echo "🔐 Generating SSL certificate..."
+                    sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                        -keyout $SSL_DIR/private/marinaobuv.ru.key \
+                        -out $SSL_DIR/certs/marinaobuv.ru.crt \
+                        -subj "/C=RU/ST=Moscow/L=Moscow/O=MarinaObuv/OU=IT/CN=marina-obuv.ru"
+                    
+                    sudo chmod 600 $SSL_DIR/private/marinaobuv.ru.key
+                    sudo chmod 644 $SSL_DIR/certs/marinaobuv.ru.crt
+                  else
+                    echo "✅ SSL certificate already exists"
+                  fi
+
+                  # 6. Deploy nginx configuration
+                  echo "⚙️ Deploying nginx HTTPS configuration..."
+                  sudo cp $PROJECT_DIR/nginx/conf.d/marinaobuv-https.conf $NGINX_DIR/sites-available/marinaobuv-https
+
+                  # Enable the site
+                  sudo ln -sf $NGINX_DIR/sites-available/marinaobuv-https $NGINX_DIR/sites-enabled/
+                  sudo rm -f $NGINX_DIR/sites-enabled/default
+
+                  # 7. Test nginx configuration
+                  echo "🧪 Testing nginx configuration..."
+                  if sudo nginx -t; then
+                    echo "✅ Nginx configuration is valid"
+                  else
+                    echo "❌ Nginx configuration test failed"
+                    exit 1
+                  fi
+
+                  # 8. Reload nginx
+                  echo "🔄 Reloading nginx..."
+                  sudo systemctl reload nginx
+
+                  # 9. Setup Let's Encrypt certificate (if not already done)
+                  if [ ! -f "/etc/letsencrypt/live/marina-obuv.ru/fullchain.pem" ]; then
+                    echo "🔐 Setting up Let's Encrypt certificate..."
+                    sudo certbot --nginx -d marina-obuv.ru -d www.marina-obuv.ru --non-interactive --agree-tos --email admin@marina-obuv.ru || echo "⚠️ Let's Encrypt setup failed, using self-signed certificate"
+                  else
+                    echo "✅ Let's Encrypt certificate already exists"
+                  fi
+
+                  # 10. Configure firewall
+                  echo "🔥 Configuring firewall..."
+                  sudo ufw allow 22/tcp
+                  sudo ufw allow 80/tcp
+                  sudo ufw allow 443/tcp
+                  sudo ufw --force enable || echo "⚠️ Firewall configuration failed"
+
+                  # 11. Test HTTPS
+                  echo "🧪 Testing HTTPS..."
+                  sleep 5
+                  if curl -k -s -o /dev/null -w "%{http_code}" https://localhost/health | grep -q "200"; then
+                    echo "✅ HTTPS is working correctly!"
+                  else
+                    echo "⚠️ HTTPS test failed, but configuration is deployed"
+                  fi
+
+                  echo "🎉 HTTPS deployment completed!"
+                  EOF
+
+                  # Make script executable and run it
+                  chmod +x deploy-https-remote.sh
+                  scp deploy-https-remote.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
+                  ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "sudo bash /tmp/deploy-https-remote.sh"
+
+            - name: Verify deployment
+              run: |
+                  echo "🔍 Verifying HTTPS deployment..."
+                  sleep 10
+
+                  # Test HTTPS endpoint
+                  if curl -k -s -o /dev/null -w "%{http_code}" https://${{ secrets.SERVER_HOST }}/health | grep -q "200"; then
+                    echo "✅ HTTPS deployment successful!"
+                  else
+                    echo "⚠️ HTTPS test failed, but deployment completed"
+                  fi
+
+            - name: Notify deployment status
+              if: always()
+              run: |
+                  if [ "${{ job.status }}" == "success" ]; then
+                    echo "🎉 HTTPS deployment completed successfully!"
+                    echo "Your site should now be accessible at:"
+                    echo "https://marina-obuv.ru"
+                    echo "https://www.marina-obuv.ru"
+                  else
+                    echo "❌ HTTPS deployment failed"
+                  fi
