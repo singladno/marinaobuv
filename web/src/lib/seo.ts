@@ -19,13 +19,23 @@ export function buildMetadata(opts: BuildOpts = {}): Metadata {
 
   const images = (opts.images ?? ['/og-default.png']).map((src) => ({ url: src }));
 
+  // Ensure metadataBase is a valid URL even if env is missing/invalid
+  let metadataBase: URL | undefined;
+  try {
+    metadataBase = new URL(site.url);
+  } catch {
+    try {
+      metadataBase = new URL('http://localhost:3000');
+    } catch {}
+  }
+
   return {
     title: {
       default: defaultTitle,
       template: `%s — ${site.brand}`,
     },
     description,
-    metadataBase: new URL(site.url),
+    metadataBase,
     alternates: {
       canonical: opts.canonical ?? '/',
     },
