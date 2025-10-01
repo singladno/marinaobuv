@@ -236,7 +236,7 @@ jobs:
             cd ..
 
             # Build application (load env from .env.production)
-            cd web && set -a && source .env.production && set +a && npm run build
+            cd web && set -a && source .env.production && set +a && pwd && ls -la src/components/cart/ && npm run build
             cd ..
 
             # Stop existing PM2 processes

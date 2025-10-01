@@ -5,8 +5,8 @@ module.exports = {
       script: "web/node_modules/.bin/next",
       args: "start",
       cwd: "./web",
-      instances: process.env.NODE_ENV === "production" ? "max" : 1,
-      exec_mode: process.env.NODE_ENV === "production" ? "cluster" : "fork",
+      instances: 1,
+      exec_mode: "fork",
       env: {
         NODE_ENV: "development",
         PORT: 3000,
