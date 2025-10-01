@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const userCount = await prisma.user.count();
     const productCount = await prisma.product.count();
     const orderCount = await prisma.order.count();
-    
+
     return NextResponse.json({
       status: 'connected',
       database: 'marinaobuv',
@@ -21,9 +21,12 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    return NextResponse.json({
-      status: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }

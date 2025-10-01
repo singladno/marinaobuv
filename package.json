@@ -18,7 +18,12 @@
     "setup": "npm install && cd web && npm install",
     "deploy": "./deploy-pm2.sh",
     "backup": "./backup.sh",
-    "health": "curl -s http://localhost:3000/api/health || echo 'Application not responding'"
+    "health": "curl -s http://localhost:3000/api/health || echo 'Application not responding'",
+    "prisma": "cd web && npx prisma studio",
+    "prisma:generate": "cd web && npx prisma generate",
+    "prisma:migrate": "cd web && npx prisma migrate dev",
+    "prisma:reset": "cd web && npx prisma migrate reset",
+    "prisma:seed": "cd web && npx prisma db seed"
   },
   "keywords": [
     "nextjs",
