@@ -27,7 +27,8 @@
     "parse": "cd web && npx tsx src/scripts/hourly-cron.ts",
     "parse:fetch": "cd web && npm run fetch:recent",
     "parse:test": "cd web && npx tsx src/scripts/test-parsing-monitoring.ts",
-    "parse:cleanup": "cd web && npx tsx src/scripts/cleanup-stuck-parsing.ts"
+    "parse:cleanup": "cd web && npx tsx src/scripts/cleanup-stuck-parsing.ts",
+    "logs:parse": "cd web && tail -f logs/parsing-cron.log"
   },
   "keywords": [
     "nextjs",

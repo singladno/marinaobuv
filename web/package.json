@@ -35,7 +35,9 @@
     "setup:local": "../run-local.sh",
     "docker:up": "docker-compose -f ../docker-compose.local.yml up -d",
     "docker:down": "docker-compose -f ../docker-compose.local.yml down",
-    "docker:logs": "docker-compose -f ../docker-compose.local.yml logs -f"
+    "docker:logs": "docker-compose -f ../docker-compose.local.yml logs -f",
+    "logs:parse": "tail -f logs/parsing-cron.log",
+    "logs": "pm2 logs marinaobuv"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.676.0",
