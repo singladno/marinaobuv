@@ -49,8 +49,8 @@ export async function fetchGroupMessages(
   while (hasMore && allMessages.length < limit) {
     const currentLimit = Math.min(maxPerRequest, limit - allMessages.length);
 
-    // Build URL with offset-based pagination and time filtering
-    const url = `${env.WHAPI_BASE_URL}/messages/list/${encodeURIComponent(chatId)}?count=${currentLimit}&offset=${offset}&time_from=${hoursAgo}&sort=desc`;
+    // Build URL with offset-based pagination and system messages only (user messages not accessible)
+    const url = `${env.WHAPI_BASE_URL}/messages/list/${encodeURIComponent(chatId)}?count=${currentLimit}&offset=${offset}&normal_types=false&sort=desc`;
 
     requestIndex += 1;
     console.log(

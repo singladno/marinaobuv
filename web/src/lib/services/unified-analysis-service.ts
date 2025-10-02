@@ -39,11 +39,19 @@ export class UnifiedAnalysisService {
     if (!env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is required');
     }
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    this.openai = require('openai')({ apiKey: env.OPENAI_API_KEY });
+    // Initialize OpenAI lazily
+    this.openai = null;
     this.validationService = new AnalysisValidationService();
     this.promptService = new AnalysisPromptService();
     this.colorService = new PerImageColorService();
+  }
+
+  private async getOpenAI() {
+    if (!this.openai) {
+      const { default: OpenAI } = await import('openai');
+      this.openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+    }
+    return this.openai;
   }
 
   /**
@@ -101,7 +109,8 @@ export class UnifiedAnalysisService {
 
       messages.push(userMessage);
 
-      const response = await this.openai.chat.completions.create({
+      const openai = await this.getOpenAI();
+      const response = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages,
         temperature: 0.1,
@@ -161,7 +170,8 @@ export class UnifiedAnalysisService {
     context: string
   ): Promise<AnalysisResult | null> {
     try {
-      const response = await this.openai.chat.completions.create({
+      const openai = await this.getOpenAI();
+      const response = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
           {

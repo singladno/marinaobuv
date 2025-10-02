@@ -6,6 +6,11 @@ import './load-env';
 import { prisma } from '../lib/db-node';
 import { env } from '../lib/env';
 import { fetchGroupMessages, WhatsAppMessage } from '../lib/message-fetcher';
+import { ParsingProgressService } from '../lib/services/parsing-progress-service';
+import {
+  initializeParsingSignalHandlers,
+  cleanupSignalHandlers,
+} from '../lib/services/parsing-signal-handler';
 
 /**
  * Fetch messages from the last N hours (configurable via MESSAGE_FETCH_HOURS)
@@ -51,10 +56,9 @@ function isProductMessage(message: WhatsAppMessage): boolean {
   const raw = message as any;
   const type = raw.type;
 
-  // Only save messages that could contain product information
-  const productTypes = ['text', 'image', 'video'];
-
-  return productTypes.includes(type);
+  // Allow all message types to be processed (including system messages)
+  // The AI will determine if it's a product message based on content
+  return true;
 }
 
 /**
@@ -154,9 +158,23 @@ async function saveMessage(message: WhatsAppMessage): Promise<void> {
  * Main function to fetch and process recent messages
  */
 async function main() {
+  let parsingProgressService: ParsingProgressService | null = null;
+
   try {
     if (!env.TARGET_GROUP_ID) {
       throw new Error('TARGET_GROUP_ID is not set in environment variables');
+    }
+
+    // Initialize parsing progress service if parsing history ID is provided
+    const parsingHistoryId = process.env.PARSING_HISTORY_ID;
+    if (parsingHistoryId) {
+      parsingProgressService = new ParsingProgressService(parsingHistoryId);
+      console.log(
+        `📊 Real-time progress tracking enabled for parsing ID: ${parsingHistoryId}`
+      );
+
+      // Initialize signal handlers for graceful shutdown
+      initializeParsingSignalHandlers(parsingProgressService);
     }
 
     console.log('Starting recent message fetch...');
@@ -170,6 +188,11 @@ async function main() {
         `No messages found from the last ${env.MESSAGE_FETCH_HOURS || 24} hours`
       );
       return;
+    }
+
+    // Update progress with total messages found
+    if (parsingProgressService) {
+      await parsingProgressService.updateMessagesRead(messages.length);
     }
 
     // Process each message
@@ -208,10 +231,27 @@ async function main() {
     console.log(`Successfully processed: ${processedCount}`);
     console.log(`Filtered out (non-product): ${filteredCount}`);
     console.log(`Errors: ${errorCount}`);
+
+    // Update final progress
+    if (parsingProgressService) {
+      await parsingProgressService.updateMessagesRead(processedCount);
+    }
   } catch (error) {
     console.error('Fatal error during message fetching:', error);
+
+    // Mark as failed in progress tracking
+    if (parsingProgressService) {
+      await parsingProgressService.markFailed(
+        error instanceof Error
+          ? error.message
+          : 'Unknown error during message fetching'
+      );
+    }
+
     process.exit(1);
   } finally {
+    // Clean up signal handlers
+    cleanupSignalHandlers();
     await prisma.$disconnect();
   }
 }

@@ -1,11 +1,11 @@
 'use client';
 
 import {
-  HomeIcon,
-  DraftsIcon,
   ProductsIcon,
   OrdersIcon,
   UsersIcon,
+  ParsingIcon,
+  DraftsIcon,
 } from './AdminSidebarIcons';
 import { AdminSidebarLink } from './AdminSidebarLink';
 
@@ -18,20 +18,6 @@ export function AdminSidebarNavigation({
 }: AdminSidebarNavigationProps) {
   return (
     <nav>
-      <AdminSidebarLink
-        href="/admin"
-        label="Главная"
-        icon={<HomeIcon />}
-        collapsed={isCollapsed}
-      />
-
-      <AdminSidebarLink
-        href="/admin/drafts"
-        label="Черновики"
-        icon={<DraftsIcon />}
-        collapsed={isCollapsed}
-      />
-
       <AdminSidebarLink
         href="/admin/products"
         label="Товары"
@@ -50,6 +36,13 @@ export function AdminSidebarNavigation({
         href="/admin/users"
         label="Пользователи"
         icon={<UsersIcon />}
+        collapsed={isCollapsed}
+      />
+
+      <AdminSidebarLink
+        href="/admin/parsing"
+        label="Парсинг"
+        icon={<ParsingIcon />}
         collapsed={isCollapsed}
       />
     </nav>

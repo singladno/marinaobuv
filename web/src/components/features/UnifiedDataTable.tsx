@@ -1,7 +1,7 @@
 'use client';
 
 import type { ColumnDef, Table } from '@tanstack/react-table';
-import React, { useState } from 'react';
+import React from 'react';
 
 import { UnifiedTableContent } from './UnifiedTableContent';
 import { UnifiedTableHeader } from './UnifiedTableHeader';
@@ -23,9 +23,6 @@ interface UnifiedDataTableProps<TData, TValue = unknown> {
   className?: string;
   emptyMessage?: string;
   loadingMessage?: string;
-
-  onReload: () => void;
-  onColumnSettings: () => void;
 }
 
 export function UnifiedDataTable<TData, TValue = unknown>({
@@ -40,23 +37,10 @@ export function UnifiedDataTable<TData, TValue = unknown>({
   className,
   emptyMessage,
   loadingMessage,
-  onReload,
-  onColumnSettings,
 }: UnifiedDataTableProps<TData, TValue>) {
-  const [activeTab, setActiveTab] = useState('drafts');
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-  };
-
   return (
     <div className="space-y-6">
-      <UnifiedTableHeader
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        onReload={onReload}
-        onColumnSettings={onColumnSettings}
-      />
+      <UnifiedTableHeader />
 
       <UnifiedTableContent
         table={table}

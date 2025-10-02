@@ -1,18 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import { UserIcon } from '@heroicons/react/24/outline';
 
+import { LoginModal } from '@/components/auth/LoginModal';
 import { Button } from '@/components/ui/Button';
 import ProfileMenuContent from '@/components/ui/ProfileMenuContent';
+import { useUser } from '@/contexts/UserContext';
 import { useAccountMenu } from '@/hooks/useAccountMenu';
 
 export default function AccountMenu() {
+  const { user, loading, error } = useUser();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const {
     open,
     anchorRect,
-    user,
-    loading,
-    error,
     menuRef,
     handleLogout,
     handleMouseEnter,
@@ -41,34 +43,45 @@ export default function AccountMenu() {
 
   if (!user) {
     return (
-      <Button
-        variant="secondary"
-        onClick={() => (window.location.href = '/login')}
-      >
-        <UserIcon className="h-5 w-5" />
-        Войти
-      </Button>
+      <>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowLoginModal(true)}
+          className="hover:bg-transparent"
+          aria-label="Войти"
+        >
+          <UserIcon className="h-4 w-4" />
+        </Button>
+        <LoginModal
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+        />
+      </>
     );
   }
 
   return (
     <div className="relative">
       <Button
-        variant="secondary"
+        variant="ghost"
+        size="icon"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        className="hover:bg-transparent"
+        aria-label={user.name || user.phone || 'Пользователь'}
       >
-        <UserIcon className="h-5 w-5" />
-        {user.name || user.phone || 'Пользователь'}
+        <UserIcon className="h-4 w-4" />
       </Button>
 
       {open && anchorRect && (
         <div
           ref={menuRef}
-          className="fixed z-50 min-w-48 rounded-lg border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          className="fixed z-50 rounded-lg border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
           style={{
-            left: anchorRect.left,
-            top: anchorRect.top,
+            left: `${anchorRect.left}px`,
+            top: `${anchorRect.top}px`,
+            width: `${anchorRect.width}px`,
           }}
           onMouseEnter={handleMenuMouseEnter}
           onMouseLeave={handleMenuMouseLeave}

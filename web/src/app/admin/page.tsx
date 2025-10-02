@@ -1,5 +1,5 @@
+import { redirect } from 'next/navigation';
+
 export default function AdminHome() {
-  return (
-    <div className="text-muted-foreground text-sm">Выберите раздел слева.</div>
-  );
+  redirect('/admin/products');
 }

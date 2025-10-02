@@ -26,7 +26,7 @@ function isActive(path: string, activePath?: string) {
 function buildCatalogUrl(categoryId: string, currentParams: URLSearchParams) {
   const newParams = new URLSearchParams(currentParams);
   newParams.set('categoryId', categoryId);
-  return `/catalog?${newParams.toString()}`;
+  return `/?${newParams.toString()}`;
 }
 
 export function CategoryTreeClient({

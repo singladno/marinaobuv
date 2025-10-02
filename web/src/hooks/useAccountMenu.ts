@@ -2,6 +2,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 
 import { useCart } from '@/contexts/CartContext';
+import { useUser } from '@/contexts/UserContext';
 
 type CurrentUser = {
   userId: string;
@@ -20,48 +21,26 @@ export function useAccountMenu() {
     width: number;
     height: number;
   } | null>(null);
-  const [user, setUser] = useState<CurrentUser>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { setUserId } = useCart();
+  const { user, clearUser } = useUser();
 
   // Refs for hover delay management
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Sync cart with user authentication when user changes
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/auth/me', { cache: 'no-store' });
-        const json = await res.json();
-        if (!cancelled) {
-          setUser(json.user ?? null);
-          // Sync cart with user authentication
-          setUserId(json.user?.userId ?? null);
-        }
-      } catch {
-        if (!cancelled) {
-          setError('Ошибка загрузки пользователя');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [setUserId]);
+    setUserId(user?.userId ?? null);
+  }, [user, setUserId]);
 
   const handleLogout = async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/auth/logout', { method: 'POST' });
       if (res.ok) {
-        setUser(null);
+        clearUser();
         setUserId(null);
         router.push('/');
       }
@@ -78,12 +57,25 @@ export function useAccountMenu() {
     }
 
     const rect = event.currentTarget.getBoundingClientRect();
-    setAnchorRect({
-      left: rect.left,
-      top: rect.bottom,
-      width: rect.width,
-      height: rect.height,
-    });
+    const iconsContainer = document.getElementById('header-icons');
+
+    if (iconsContainer) {
+      const containerRect = iconsContainer.getBoundingClientRect();
+      setAnchorRect({
+        left: containerRect.left,
+        top: containerRect.bottom,
+        width: containerRect.width,
+        height: containerRect.height,
+      });
+    } else {
+      // Fallback to button positioning if container not found
+      setAnchorRect({
+        left: rect.left,
+        top: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      });
+    }
     setOpen(true);
   };
 
@@ -116,7 +108,6 @@ export function useAccountMenu() {
   return {
     open,
     anchorRect,
-    user,
     loading,
     error,
     menuRef,

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Notification } from '@/components/ui/NotificationProvider';
+import { useUser } from '@/contexts/UserContext';
 
 interface UseBasketPageHandlersProps {
   setLoginLoading: (loading: boolean) => void;
@@ -23,6 +24,7 @@ export function useBasketPageHandlers({
   phone,
 }: UseBasketPageHandlersProps) {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const { refreshUser } = useUser();
 
   const handleLogin = async (phone: string, otpCode: string) => {
     setLoginLoading(true);
@@ -38,6 +40,8 @@ export function useBasketPageHandlers({
       setUserId(json.user.userId);
       setIsLoggedIn(true);
       setIsLoginModalOpen(false);
+      // Refresh user data in global context
+      await refreshUser();
       addNotification({
         type: 'success',
         title: 'Успешный вход',

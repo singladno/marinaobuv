@@ -74,14 +74,12 @@ export function ProductsPageContent() {
       />
 
       <UnifiedDataTable<ProductWithSelected, unknown>
-        data={products}
-        columns={columns}
+        data={products as ProductWithSelected[]}
+        columns={columns as any}
         loading={loading}
         pagination={pagination}
-        onReload={reload}
         onPageChange={goToPage}
         onPageSizeChange={changePageSize}
-        onColumnSettings={() => {}}
       />
     </div>
   );

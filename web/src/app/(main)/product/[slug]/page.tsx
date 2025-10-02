@@ -40,14 +40,14 @@ export default async function ProductPage({
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild className="gap-2">
-              <Link href="/catalog">
+              <Link href="/">
                 <ArrowLeft className="h-4 w-4" />
                 Назад
               </Link>
             </Button>
             <nav className="text-muted-foreground text-sm">
               <Link
-                href="/catalog"
+                href="/"
                 className="text-muted-foreground/80 hover:text-foreground transition-colors"
               >
                 Каталог
@@ -55,7 +55,7 @@ export default async function ProductPage({
               <span className="text-muted-foreground/50 mx-1">/</span>
               {product.category?.name ? (
                 <Link
-                  href={`/catalog?category=${encodeURIComponent(
+                  href={`/?category=${encodeURIComponent(
                     product.category.name
                   )}`}
                   className="text-muted-foreground/80 hover:text-foreground transition-colors"

@@ -53,6 +53,29 @@ export class ProductCreationService {
   }
 
   /**
+   * Create a final product directly from analysis results
+   */
+  async createFinalProductFromAnalysis({
+    messageId,
+    from,
+    fromName,
+    analysis,
+    images,
+    context,
+    sourceMessageIds = [],
+  }: CreateDraftProductFromAnalysisParams) {
+    return await this.core.createFinalProductFromAnalysis({
+      messageId,
+      from,
+      fromName,
+      analysis,
+      images,
+      context,
+      sourceMessageIds,
+    });
+  }
+
+  /**
    * Update an existing draft product with new analysis results
    */
   async updateDraftProductFromAnalysis(

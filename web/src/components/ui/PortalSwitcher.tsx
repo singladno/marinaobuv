@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
+import { useUser } from '@/contexts/UserContext';
 
 type CurrentUser = {
   userId?: string;
@@ -14,27 +15,11 @@ type CurrentUser = {
 
 export function PortalSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [, setUser] = useState<CurrentUser>(null);
   const pathname = usePathname();
+  const { user } = useUser();
 
   useEffect(() => {
-    // Check user role from session
-    const checkUserRole = async () => {
-      try {
-        const res = await fetch('/api/auth/me', { cache: 'no-store' });
-        const json = await res.json();
-        const userData = json.user ?? null;
-        setUser(userData);
-        setIsAdmin(userData?.role === 'ADMIN');
-      } catch {
-        setUser(null);
-        setIsAdmin(false);
-      }
-    };
-
-    checkUserRole();
     // Show switcher after a short delay for better UX
     const timer = setTimeout(() => setIsVisible(true), 500);
     return () => clearTimeout(timer);
@@ -52,7 +37,7 @@ export function PortalSwitcher() {
   if (!isVisible) return null;
 
   // Show for admin users (both in admin portal and customer portal)
-  if (!isAdmin) return null;
+  if (user?.role !== 'ADMIN') return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6">
@@ -64,7 +49,7 @@ export function PortalSwitcher() {
         />
       )}
 
-      {/* Menu Items */}
+      {/* Menu Items - Only show the option to switch TO */}
       <div
         className={`absolute bottom-16 right-0 mb-2 space-y-2 transition-all duration-300 ${
           isOpen
@@ -72,91 +57,83 @@ export function PortalSwitcher() {
             : 'pointer-events-none translate-y-2 scale-95 opacity-0'
         }`}
       >
-        {/* Customer Portal */}
-        <Link
-          href="/"
-          onClick={closeMenu}
-          className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 shadow-lg transition-all duration-200 hover:scale-105 sm:px-4 sm:py-3 ${
-            !isAdmin
-              ? 'bg-blue-600 text-white shadow-blue-500/25'
-              : 'bg-white text-gray-700 hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 group-hover:bg-blue-200 sm:h-10 sm:w-10 dark:bg-blue-900/30 dark:group-hover:bg-blue-900/50">
-            <svg
-              className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5 dark:text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-          </div>
-          <div className="text-left">
-            <div className="text-sm font-semibold sm:text-base">
-              Клиентский портал
+        {/* Only show Customer Portal if currently in Admin */}
+        {pathname.startsWith('/admin') && (
+          <Link
+            href="/"
+            onClick={closeMenu}
+            className="group flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-gray-700 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-50 sm:px-4 sm:py-3 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 group-hover:bg-blue-200 sm:h-10 sm:w-10 dark:bg-blue-900/30 dark:group-hover:bg-blue-900/50">
+              <svg
+                className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5 dark:text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
             </div>
-            <div className="text-xs opacity-80 sm:text-sm">
-              Просмотр товаров
+            <div className="text-left">
+              <div className="text-sm font-semibold sm:text-base">
+                Клиентский портал
+              </div>
+              <div className="text-xs opacity-80 sm:text-sm">
+                Просмотр товаров
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        )}
 
-        {/* Admin Portal */}
-        <Link
-          href="/admin"
-          onClick={closeMenu}
-          className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 shadow-lg transition-all duration-200 hover:scale-105 sm:px-4 sm:py-3 ${
-            isAdmin
-              ? 'bg-purple-600 text-white shadow-purple-500/25'
-              : 'bg-white text-gray-700 hover:bg-purple-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 group-hover:bg-purple-200 sm:h-10 sm:w-10 dark:bg-purple-900/30 dark:group-hover:bg-purple-900/50">
-            <svg
-              className="h-4 w-4 text-purple-600 sm:h-5 sm:w-5 dark:text-purple-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          </div>
-          <div className="text-left">
-            <div className="text-sm font-semibold sm:text-base">
-              Админ панель
+        {/* Only show Admin Portal if currently in Customer portal */}
+        {!pathname.startsWith('/admin') && (
+          <Link
+            href="/admin"
+            onClick={closeMenu}
+            className="group flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-gray-700 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-gray-50 sm:px-4 sm:py-3 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 group-hover:bg-gray-200 sm:h-10 sm:w-10 dark:bg-gray-900/30 dark:group-hover:bg-gray-900/50">
+              <svg
+                className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5 dark:text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
             </div>
-            <div className="text-xs opacity-80 sm:text-sm">
-              Управление товарами
+            <div className="text-left">
+              <div className="text-sm font-semibold sm:text-base">
+                Админ панель
+              </div>
+              <div className="text-xs opacity-80 sm:text-sm">
+                Управление товарами
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        )}
       </div>
 
       {/* Main Toggle Button */}
       <button
         onClick={toggleMenu}
-        className={`group relative flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-offset-2 sm:h-14 sm:w-14 ${
-          isAdmin
-            ? 'bg-purple-600 text-white shadow-purple-500/25 focus:ring-purple-500'
-            : 'bg-blue-600 text-white shadow-blue-500/25 focus:ring-blue-500'
-        }`}
+        className="group relative flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-lg shadow-gray-500/25 transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-gray-500 focus:ring-offset-2 sm:h-14 sm:w-14"
         aria-label="Переключить портал"
       >
         {/* Background Animation */}
@@ -203,17 +180,13 @@ export function PortalSwitcher() {
         <div
           className={`absolute inset-0 animate-ping rounded-full ${
             isOpen ? 'opacity-0' : 'opacity-20'
-          } ${isAdmin ? 'bg-purple-400' : 'bg-blue-400'}`}
+          } bg-gray-400`}
         />
       </button>
 
       {/* Current Portal Indicator */}
-      <div
-        className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white shadow-lg sm:-right-2 sm:-top-2 sm:h-6 sm:w-6 ${
-          isAdmin ? 'bg-purple-500' : 'bg-blue-500'
-        }`}
-      >
-        {isAdmin ? 'A' : 'C'}
+      <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-500 text-xs font-bold text-white shadow-lg sm:-right-2 sm:-top-2 sm:h-6 sm:w-6">
+        {pathname.startsWith('/admin') ? 'A' : 'C'}
       </div>
     </div>
   );

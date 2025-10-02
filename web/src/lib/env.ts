@@ -81,8 +81,7 @@ const schema = z
         return parsed;
       }),
 
-    // SMS Configuration (optional)
-    SMS_BASE_URL: z.string().url().optional(),
+    // SMS Configuration (SMS.ru)
     SMS_API_KEY: z.string().optional(),
   })
   .refine(
@@ -135,7 +134,6 @@ const raw = {
   PROCESSING_BATCH_SIZE: process.env.PROCESSING_BATCH_SIZE,
 
   // SMS Configuration
-  SMS_BASE_URL: process.env.SMS_BASE_URL,
   SMS_API_KEY: process.env.SMS_API_KEY,
 };
 

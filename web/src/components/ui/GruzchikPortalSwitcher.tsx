@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
+import { useUser } from '@/contexts/UserContext';
 
 type CurrentUser = {
   userId?: string;
@@ -14,27 +15,11 @@ type CurrentUser = {
 
 export function GruzchikPortalSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isGruzchik, setIsGruzchik] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [, setUser] = useState<CurrentUser>(null);
   const pathname = usePathname();
+  const { user } = useUser();
 
   useEffect(() => {
-    // Check user role from session
-    const checkUserRole = async () => {
-      try {
-        const res = await fetch('/api/auth/me', { cache: 'no-store' });
-        const json = await res.json();
-        const userData = json.user ?? null;
-        setUser(userData);
-        setIsGruzchik(userData?.role === 'GRUZCHIK');
-      } catch {
-        setUser(null);
-        setIsGruzchik(false);
-      }
-    };
-
-    checkUserRole();
     // Show switcher after a short delay for better UX
     const timer = setTimeout(() => setIsVisible(true), 500);
     return () => clearTimeout(timer);
@@ -52,7 +37,7 @@ export function GruzchikPortalSwitcher() {
   if (!isVisible) return null;
 
   // Show for gruzchik users (both in gruzchik portal and customer portal)
-  if (!isGruzchik) return null;
+  if (user?.role !== 'GRUZCHIK') return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6">
@@ -77,7 +62,7 @@ export function GruzchikPortalSwitcher() {
           href="/"
           onClick={closeMenu}
           className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 shadow-lg transition-all duration-200 hover:scale-105 sm:px-4 sm:py-3 ${
-            !isGruzchik
+            user?.role !== 'GRUZCHIK'
               ? 'bg-blue-600 text-white shadow-blue-500/25'
               : 'bg-white text-gray-700 hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
           }`}
@@ -112,7 +97,7 @@ export function GruzchikPortalSwitcher() {
           href="/gruzchik"
           onClick={closeMenu}
           className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 shadow-lg transition-all duration-200 hover:scale-105 sm:px-4 sm:py-3 ${
-            isGruzchik
+            user?.role === 'GRUZCHIK'
               ? 'bg-orange-600 text-white shadow-orange-500/25'
               : 'bg-white text-gray-700 hover:bg-orange-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
           }`}
@@ -147,7 +132,7 @@ export function GruzchikPortalSwitcher() {
       <button
         onClick={toggleMenu}
         className={`group relative flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-offset-2 sm:h-14 sm:w-14 ${
-          isGruzchik
+          user?.role === 'GRUZCHIK'
             ? 'bg-orange-600 text-white shadow-orange-500/25 focus:ring-orange-500'
             : 'bg-blue-600 text-white shadow-blue-500/25 focus:ring-blue-500'
         }`}
@@ -197,17 +182,17 @@ export function GruzchikPortalSwitcher() {
         <div
           className={`absolute inset-0 animate-ping rounded-full ${
             isOpen ? 'opacity-0' : 'opacity-20'
-          } ${isGruzchik ? 'bg-orange-400' : 'bg-blue-400'}`}
+          } ${user?.role === 'GRUZCHIK' ? 'bg-orange-400' : 'bg-blue-400'}`}
         />
       </button>
 
       {/* Current Portal Indicator */}
       <div
         className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white shadow-lg sm:-right-2 sm:-top-2 sm:h-6 sm:w-6 ${
-          isGruzchik ? 'bg-orange-500' : 'bg-blue-500'
+          user?.role === 'GRUZCHIK' ? 'bg-orange-500' : 'bg-blue-500'
         }`}
       >
-        {isGruzchik ? 'Г' : 'К'}
+        {user?.role === 'GRUZCHIK' ? 'Г' : 'К'}
       </div>
     </div>
   );

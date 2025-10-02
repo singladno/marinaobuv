@@ -1,36 +1,88 @@
-// MarinaObuv Project - Component Size Limit: 120 lines max
-// Decompose large components into hooks, sub-components, and utilities
-// import Link from 'next/link';
+'use client';
 
-import { ButtonLink } from '@/components/ui/Button';
+import { ProductGrid } from '@/components/catalog/ProductGrid';
+import TopFiltersBar from '@/components/product/TopFiltersBar';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
-import { site } from '@/lib/site';
+import { useCatalogPage } from '@/hooks/useCatalogPage';
 
 export default function Home() {
+  const {
+    products,
+    loading,
+    error,
+    searchQuery,
+    filters,
+    gridCols,
+    handleSearch,
+    handleFiltersChange,
+    handleGridColsChange,
+    clearFilters,
+  } = useCatalogPage();
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <Text variant="h2" className="mb-4">
+            Ошибка загрузки каталога
+          </Text>
+          <Text className="text-muted-foreground mb-4">{error}</Text>
+          <Button onClick={() => window.location.reload()}>
+            Попробовать снова
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <section className="section-hero mx-auto max-w-5xl rounded-xl border border-border bg-surface/60 p-10 text-center shadow-sm">
-      <Text variant="h1" as="h1" className="mb-3">{site.brand} — Hello World</Text>
-      <Text variant="lead" className="mx-auto mb-8 max-w-2xl">
-        Минимальная стартовая страница. Скоро здесь появится каталог с обувью и аксессуарами.
-      </Text>
-      <div className="mb-8 flex items-center justify-center gap-3">
-        <ButtonLink href="/api/health" variant="primary">Проверить API</ButtonLink>
-        <ButtonLink href="/about" variant="secondary">О нас</ButtonLink>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <Text variant="h1" as="h1" className="mb-2 text-3xl font-bold">
+            Каталог товаров
+          </Text>
+          <Text className="text-muted-foreground">
+            Найдите идеальную обувь для любого случая
+          </Text>
+        </div>
+
+        {/* Top Filters Bar */}
+        <div className="mb-6">
+          <TopFiltersBar
+            filters={filters}
+            onChange={handleFiltersChange}
+            onClear={clearFilters}
+          />
+        </div>
+
+        {/* Products Grid */}
+        <div className="w-full">
+          {/* Results Header */}
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Text className="text-muted-foreground text-sm">
+                Найдено товаров: {products.length}
+              </Text>
+              {searchQuery && (
+                <Badge variant="secondary">
+                  Поиск: &quot;{searchQuery}&quot;
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Products */}
+          <ProductGrid
+            products={products}
+            gridCols={gridCols}
+            loading={loading}
+          />
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded border border-border bg-background p-4 text-left">
-          <Text variant="h3">Каталог</Text>
-          <Text tone="muted">Ассортимент сезонной обуви и аксессуаров.</Text>
-        </div>
-        <div className="rounded border border-border bg-background p-4 text-left">
-          <Text variant="h3">Опт и розница</Text>
-          <Text tone="muted">Гибкие условия для партнёров и покупателей.</Text>
-        </div>
-        <div className="rounded border border-border bg-background p-4 text-left">
-          <Text variant="h3">Быстрая доставка</Text>
-          <Text tone="muted">Оперативная обработка и логистика по РФ.</Text>
-        </div>
-      </div>
-    </section>
+    </div>
   );
 }

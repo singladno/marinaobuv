@@ -17,7 +17,7 @@ export default function MainLayout({
       >
         Пропустить к содержимому
       </a>
-      <div className="bg-background text-foreground flex min-h-screen flex-col">
+      <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1">
           <div id="main-content">{children}</div>

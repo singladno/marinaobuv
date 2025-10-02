@@ -16,7 +16,16 @@ export class PerImageColorService {
       throw new Error('OPENAI_API_KEY is required');
     }
 
-    this.openai = require('openai')({ apiKey: env.OPENAI_API_KEY }); // eslint-disable-line @typescript-eslint/no-require-imports
+    // Initialize OpenAI lazily
+    this.openai = null;
+  }
+
+  private async getOpenAI() {
+    if (!this.openai) {
+      const { default: OpenAI } = await import('openai');
+      this.openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+    }
+    return this.openai;
   }
 
   /**
@@ -77,7 +86,7 @@ Rules:
 
           // Race between the API call and timeout
           const response = (await Promise.race([
-            this.openai.chat.completions.create({
+            (await this.getOpenAI()).chat.completions.create({
               model: 'gpt-4o',
               messages: [
                 { role: 'system', content: systemPrompt },

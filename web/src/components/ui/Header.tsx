@@ -33,7 +33,7 @@ export default function Header({ onSearch }: HeaderProps) {
       if (query) {
         searchParams.set('search', query);
       }
-      window.location.href = `/catalog?${searchParams.toString()}`;
+      window.location.href = `/?${searchParams.toString()}`;
     }
   };
 

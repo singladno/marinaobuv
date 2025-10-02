@@ -4,6 +4,7 @@ import { NotificationProvider } from '@/components/ui/NotificationProvider';
 import { CartProvider } from '@/contexts/CartContext';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { HighlightedProductsProvider } from '@/contexts/HighlightedProductsContext';
+import { UserProvider } from '@/contexts/UserContext';
 
 interface ClientProvidersProps {
   children: React.ReactNode;
@@ -12,11 +13,13 @@ interface ClientProvidersProps {
 export function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <NotificationProvider>
-      <HighlightedProductsProvider>
-        <FavoritesProvider>
-          <CartProvider>{children}</CartProvider>
-        </FavoritesProvider>
-      </HighlightedProductsProvider>
+      <UserProvider>
+        <HighlightedProductsProvider>
+          <FavoritesProvider>
+            <CartProvider>{children}</CartProvider>
+          </FavoritesProvider>
+        </HighlightedProductsProvider>
+      </UserProvider>
     </NotificationProvider>
   );
 }

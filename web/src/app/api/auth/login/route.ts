@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { env } from '@/lib/env';
 import { prisma } from '@/lib/server/db';
 import { verifyPassword } from '@/lib/server/password';
 import { createSession } from '@/lib/server/session';
@@ -15,7 +16,9 @@ export async function POST(req: NextRequest) {
     // Normalize phone number to handle different formats
     const normalizedPhone = normalizePhoneToE164(phone);
 
-    const user = await prisma.user.findUnique({ where: { phone: normalizedPhone } });
+    const user = await prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+    });
     if (!user || !verifyPassword(password, user.passwordHash)) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
@@ -23,19 +26,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if user matches admin phone and update role if needed
+    let updatedUser = user;
+    if (
+      env.ADMIN_PHONE &&
+      env.ADMIN_PHONE === normalizedPhone &&
+      user.role !== 'ADMIN'
+    ) {
+      updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'ADMIN' },
+      });
+    }
+
     await createSession({
-      userId: user.id,
-      role: user.role,
-      providerId: user.providerId,
+      userId: updatedUser.id,
+      role: updatedUser.role,
+      providerId: updatedUser.providerId,
     });
 
     return NextResponse.json({
       ok: true,
       user: {
-        id: user.id,
-        phone: user.phone,
-        name: user.name,
-        role: user.role,
+        id: updatedUser.id,
+        phone: updatedUser.phone,
+        name: updatedUser.name,
+        role: updatedUser.role,
       },
     });
   } catch (e: unknown) {

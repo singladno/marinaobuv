@@ -65,7 +65,7 @@ export default function OrdersPage() {
               Начните покупки в нашем каталоге
             </Text>
             <Button asChild>
-              <Link href="/catalog">Перейти в каталог</Link>
+              <Link href="/">Перейти в каталог</Link>
             </Button>
           </Card>
         ) : (

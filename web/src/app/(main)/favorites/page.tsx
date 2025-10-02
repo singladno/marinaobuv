@@ -96,7 +96,7 @@ export default function FavoritesPage() {
           <div className="py-12 text-center">
             <Text className="mb-3 text-lg">Избранное пусто</Text>
             <Button asChild>
-              <Link href="/catalog">Перейти в каталог</Link>
+              <Link href="/">Перейти в каталог</Link>
             </Button>
           </div>
         ) : (

@@ -89,8 +89,8 @@ export class GroupProcessor {
         await this.imageService.processImagesFromMessages(messages);
       console.log(`   📸 Uploaded ${imageData.length} images to S3`);
 
-      // Create draft product
-      await this.productService.createDraftProductFromAnalysis({
+      // Create final product directly
+      await this.productService.createFinalProductFromAnalysis({
         messageId: group.messageIds[0],
         from: messages[0].from || '',
         fromName: messages[0].fromName || 'Unknown',

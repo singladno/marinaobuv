@@ -123,7 +123,13 @@ cd ..
 # 10. Run database migrations
 print_status "Running database migrations..."
 cd $WEB_DIR
-npm run prisma:migrate
+# Use production environment for migrations
+if [ -f ".env.production" ]; then
+    ./prisma-server.sh npx prisma migrate deploy
+else
+    print_warning ".env.production not found, using local environment"
+    export $(cat .env.local | grep -v '^#' | xargs) && npm run prisma:migrate
+fi
 cd ..
 
 # 11. Build the application
@@ -300,10 +306,20 @@ npm ci --production
 npm run prisma:generate
 
 # Run migrations
-npm run prisma:migrate
+if [ -f ".env.production" ]; then
+    ./prisma-server.sh npx prisma migrate deploy
+else
+    print_warning ".env.production not found, using local environment"
+    export $(cat .env.local | grep -v '^#' | xargs) && npm run prisma:migrate
+fi
 
 # Build application
 npm run build
+
+# Setup parsing cron job
+if [ -f "src/scripts/deploy-cron.sh" ]; then
+    ./src/scripts/deploy-cron.sh
+fi
 
 # Restart PM2
 pm2 restart marinaobuv
@@ -350,7 +366,18 @@ EOF
 
 chmod +x $APP_DIR/monitor.sh
 
-# 25. Final status check
+# 25. Setup parsing cron job
+print_status "Setting up parsing cron job..."
+cd $WEB_DIR
+if [ -f "src/scripts/deploy-cron.sh" ]; then
+    ./src/scripts/deploy-cron.sh
+    print_success "Parsing cron job configured"
+else
+    print_warning "Parsing cron script not found, skipping cron setup"
+fi
+cd $APP_DIR
+
+# 26. Final status check
 print_status "Performing final status check..."
 
 # Check PM2 status
@@ -389,4 +416,6 @@ print_status ""
 print_status "Next steps:"
 print_status "1. Configure your domain DNS to point to this server"
 print_status "2. Run: sudo certbot --nginx -d your-domain.com"
-print_status "3. Update your environment variables in $WEB_DIR/.env.production"
+print_status "3. Setup SMS integration: ./scripts/setup-sms-env.sh"
+print_status "4. Update your environment variables in $WEB_DIR/.env.production"
+print_status "5. Test SMS login functionality"

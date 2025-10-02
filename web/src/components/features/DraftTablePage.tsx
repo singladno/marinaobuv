@@ -78,8 +78,6 @@ export function DraftTablePage({
           pagination={pagination}
           onPageChange={goToPage}
           onPageSizeChange={changePageSize}
-          onReload={reload}
-          onColumnSettings={() => {}}
         />
       </div>
 

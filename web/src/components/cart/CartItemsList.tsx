@@ -32,7 +32,7 @@ export function CartItemsList({
     return (
       <div className="py-12 text-center">
         <p className="text-lg text-gray-500">Ваша корзина пуста</p>
-        <Link href="/catalog">
+        <Link href="/">
           <Button className="mt-4">Перейти в каталог</Button>
         </Link>
       </div>

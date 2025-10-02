@@ -2,14 +2,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { useCart } from '@/contexts/CartContext';
+import { useUser } from '@/contexts/UserContext';
 
 export function useLoginPage() {
   const router = useRouter();
   const { setUserId } = useCart();
+  const { refreshUser } = useUser();
 
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [useOtp, setUseOtp] = useState(true);
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -46,18 +46,8 @@ export function useLoginPage() {
       throw new Error((await resVer.json()).error ?? 'Неверный код');
     const data = await resVer.json();
     setUserId(data.user.userId);
-    router.replace('/');
-  };
-
-  const handlePasswordLogin = async () => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ phone, password }),
-    });
-    if (!res.ok) throw new Error((await res.json()).error ?? 'Неверные данные');
-    const data = await res.json();
-    setUserId(data.user.userId);
+    // Refresh user data in global context
+    await refreshUser();
     router.replace('/');
   };
 
@@ -67,15 +57,11 @@ export function useLoginPage() {
     setError(null);
 
     try {
-      if (useOtp) {
-        if (!codeSent) {
-          await handleOtpRequest();
-          return;
-        }
-        await handleOtpVerification();
-      } else {
-        await handlePasswordLogin();
+      if (!codeSent) {
+        await handleOtpRequest();
+        return;
       }
+      await handleOtpVerification();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
     } finally {
@@ -110,8 +96,6 @@ export function useLoginPage() {
   return {
     // State
     phone,
-    password,
-    useOtp,
     codeSent,
     code,
     error,
@@ -119,8 +103,6 @@ export function useLoginPage() {
 
     // Actions
     setPhone,
-    setPassword,
-    setUseOtp,
     setCode,
     handleSubmit,
     handleOtpResend,

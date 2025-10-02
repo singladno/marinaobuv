@@ -34,7 +34,7 @@ export default function AdminSidebarLayout({
       />
 
       {/* Main content area - Right column */}
-      <div className="flex flex-1 flex-col overflow-hidden bg-gray-50 transition-all duration-300 ease-in-out dark:bg-gray-900">
+      <div className="flex flex-1 flex-col overflow-y-auto bg-gray-50 transition-all duration-300 ease-in-out dark:bg-gray-900">
         {/* Mobile header */}
         <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden dark:border-gray-700 dark:bg-gray-900">
           <div className="flex items-center gap-3">
@@ -63,8 +63,8 @@ export default function AdminSidebarLayout({
           <SidebarToggle isCollapsed={isCollapsed} onToggle={toggleCollapse} />
         </div>
 
-        {/* Main content - No scroll here */}
-        <main className="flex-1 overflow-hidden p-4 sm:p-6">{children}</main>
+        {/* Main content - Allow scrolling */}
+        <main className="flex-1 p-4 sm:p-6">{children}</main>
       </div>
     </>
   );

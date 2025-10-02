@@ -6,36 +6,70 @@ export interface SmsProvider {
   send(toPhoneE164: string, message: string): Promise<void>;
 }
 
-class ConsoleSmsProvider implements SmsProvider {
-  async send(toPhoneE164: string, message: string): Promise<void> {
-    console.log(`[SMS:DEV] → ${toPhoneE164}: ${message}`);
-  }
-}
+// SMS.ru provider implementation
+class SmsRuProvider implements SmsProvider {
+  constructor(private apiKey: string) {}
 
-// Placeholder for future real provider integration (e.g., smsaero.ru, smsc.ru)
-class HttpSmsProvider implements SmsProvider {
-  constructor(
-    private baseUrl: string,
-    private apiKey: string
-  ) {}
   async send(toPhoneE164: string, message: string): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/send`, {
+    // Remove + from phone number for SMS.ru
+    const phone = toPhoneE164.replace('+', '');
+
+    const formData = new URLSearchParams({
+      api_id: this.apiKey,
+      to: phone,
+      msg: message,
+      json: '1',
+      test: '1', // Use test mode until sender is approved
+      // from: 'MarinaObuv', // Will be enabled once sender is approved
+    });
+
+    const res = await fetch('https://sms.ru/sms/send', {
       method: 'POST',
       headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({ to: toPhoneE164, message }),
+      body: formData,
     });
-    if (!res.ok) throw new Error(`SMS send failed: ${res.statusText}`);
+
+    if (!res.ok) {
+      throw new Error(`SMS.ru API error: ${res.statusText}`);
+    }
+
+    const result = await res.json();
+
+    if (result.status !== 'OK') {
+      throw new Error(
+        `SMS.ru send failed: ${result.status_text || 'Unknown error'}`
+      );
+    }
   }
 }
 
 export function getSmsProvider(): SmsProvider {
-  const base = env.SMS_BASE_URL;
   const key = env.SMS_API_KEY;
-  if (base && key) return new HttpSmsProvider(base, key);
-  return new ConsoleSmsProvider();
+  if (!key) {
+    throw new Error('SMS_API_KEY is required for SMS sending');
+  }
+
+  // Check if we're in development mode and SMS.ru is not configured
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      '⚠️  SMS.ru sender not configured. Using console fallback for development.'
+    );
+    return new ConsoleSmsProvider();
+  }
+
+  return new SmsRuProvider(key);
+}
+
+// Temporary console provider for development
+class ConsoleSmsProvider implements SmsProvider {
+  async send(toPhoneE164: string, message: string): Promise<void> {
+    console.log(`[SMS:DEV] → ${toPhoneE164}: ${message}`);
+    console.log(
+      '⚠️  SMS.ru sender not configured. Configure sender in SMS.ru dashboard.'
+    );
+  }
 }
 
 export function normalizePhoneToE164(phone: string): string {

@@ -8,7 +8,7 @@ export function EmptyCart() {
       <p className="mb-4 text-lg text-gray-600 dark:text-gray-300">
         Ваша корзина пуста.
       </p>
-      <Link href="/catalog">
+      <Link href="/">
         <Button>Перейти в каталог</Button>
       </Link>
     </div>
