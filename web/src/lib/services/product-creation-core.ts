@@ -221,7 +221,7 @@ export class ProductCreationCore {
             alt: `Product image ${index + 1}`,
             sort: index,
             isPrimary: index === 0,
-            color: image.color || null,
+            color: null, // Color not available in ImageData
             width: image.width || null,
             height: image.height || null,
           })),
@@ -229,7 +229,7 @@ export class ProductCreationCore {
         sizes: {
           create: (analysis.sizes || []).map((size, index) => ({
             size: size.size,
-            stock: size.stock || 0,
+            stock: 0, // Default stock value
             sku: `${articleNumber}-${size.size}`,
             sort: index,
           })),
