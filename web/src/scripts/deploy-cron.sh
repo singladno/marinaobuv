@@ -6,7 +6,7 @@
 echo "🚀 Setting up parsing cron job for deployment..."
 
 # Get the current directory (should be the web directory)
-WEB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WEB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CRON_SCRIPT="$WEB_DIR/src/scripts/hourly-cron.ts"
 
 # Check if the cron script exists
