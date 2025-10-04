@@ -59,15 +59,25 @@ export function getSmsProvider(): SmsProvider {
     return new ConsoleSmsProvider();
   }
 
+  // In production, check if we should use console fallback
+  // This can be controlled by SMS_USE_CONSOLE environment variable
+  if (env.SMS_USE_CONSOLE === 'true') {
+    console.warn(
+      '⚠️  SMS_USE_CONSOLE=true. Using console fallback for SMS in production.'
+    );
+    return new ConsoleSmsProvider();
+  }
+
   return new SmsRuProvider(key);
 }
 
-// Temporary console provider for development
+// Console provider for development and production fallback
 class ConsoleSmsProvider implements SmsProvider {
   async send(toPhoneE164: string, message: string): Promise<void> {
-    console.log(`[SMS:DEV] → ${toPhoneE164}: ${message}`);
+    console.log(`📱 [SMS] → ${toPhoneE164}: ${message}`);
+    console.log('⚠️  SMS.ru sender not configured. Using console fallback.');
     console.log(
-      '⚠️  SMS.ru sender not configured. Configure sender in SMS.ru dashboard.'
+      '🔧 To enable real SMS sending, configure SMS.ru sender in dashboard.'
     );
   }
 }

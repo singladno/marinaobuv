@@ -89,6 +89,7 @@ const schema = z
 
     // SMS Configuration (SMS.ru)
     SMS_API_KEY: z.string().optional(),
+    SMS_USE_CONSOLE: z.string().optional(),
   })
   .refine(
     data => data.YC_IAM_TOKEN || data.YC_API_KEY,
@@ -147,6 +148,7 @@ const raw = {
 
   // SMS Configuration
   SMS_API_KEY: process.env.SMS_API_KEY,
+  SMS_USE_CONSOLE: process.env.SMS_USE_CONSOLE,
 };
 
 const parsed = schema.safeParse(raw);
