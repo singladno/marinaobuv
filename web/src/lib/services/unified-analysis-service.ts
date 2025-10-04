@@ -1,5 +1,6 @@
 import { getCategoryTree } from '../catalog-categories';
 import { env } from '../env';
+import { getOpenAIClient } from '../openai-client';
 
 import { AnalysisPromptService } from './analysis-prompt-service';
 import { AnalysisValidationService } from './analysis-validation-service';
@@ -48,8 +49,7 @@ export class UnifiedAnalysisService {
 
   private async getOpenAI() {
     if (!this.openai) {
-      const { default: OpenAI } = await import('openai');
-      this.openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+      this.openai = await getOpenAIClient();
     }
     return this.openai;
   }

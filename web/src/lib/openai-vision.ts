@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 
 import { env } from './env';
+import { getOpenAIClient } from './openai-client';
 
 type ProductDraft = {
   name?: string | null;
@@ -34,7 +35,7 @@ export async function validateDraftWithImagesOpenAI(
     return null;
   }
 
-  const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const openai = await getOpenAIClient();
 
   const system = `You are an image color detection assistant for a shoe catalog.
 Given a short draft JSON and a list of image URLs, your ONLY task is: for EACH image URL, return the color of the shoe shown in that image.
