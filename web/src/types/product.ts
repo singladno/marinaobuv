@@ -21,6 +21,7 @@ export interface Product {
   };
   images: ProductImage[];
   sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
+  sourceMessageIds: string[] | null; // Array of WhatsApp message IDs that created this product
 }
 
 export interface ProductImage {
