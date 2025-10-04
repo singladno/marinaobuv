@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 
 import type { Product } from '@/types/product';
+import { useConfirmationModal } from './useConfirmationModal';
 
 interface UseProductBulkOperationsReturn {
   selected: Record<string, boolean>;
@@ -9,10 +10,19 @@ interface UseProductBulkOperationsReturn {
   someSelected: boolean;
   onToggle: (id: string) => void;
   onSelectAll: (selectAll: boolean) => void;
-  onBulkDelete: () => Promise<void>;
+  onBulkDelete: () => Promise<boolean>;
   onBulkActivate: () => Promise<void>;
   onBulkDeactivate: () => Promise<void>;
   clearSelection: () => void;
+  confirmationModal: {
+    isOpen: boolean;
+    options: any;
+    isLoading: boolean;
+    handleConfirm: () => void;
+    handleCancel: () => void;
+    closeModal: () => void;
+    setLoading: (loading: boolean) => void;
+  };
 }
 
 export function useProductBulkOperations(
@@ -21,6 +31,7 @@ export function useProductBulkOperations(
   onDeleteProduct: (id: string) => Promise<void>
 ): UseProductBulkOperationsReturn {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const confirmationModal = useConfirmationModal();
 
   const selectedCount = Object.values(selected).filter(Boolean).length;
   const allSelected = products.length > 0 && selectedCount === products.length;
@@ -52,28 +63,38 @@ export function useProductBulkOperations(
     setSelected({});
   }, []);
 
-  const onBulkDelete = useCallback(async () => {
+  const onBulkDelete = useCallback(async (): Promise<boolean> => {
     const selectedIds = Object.entries(selected)
       .filter(([, isSelected]) => isSelected)
       .map(([id]) => id);
 
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0) return false;
 
-    if (
-      window.confirm(
-        `Вы уверены, что хотите удалить ${selectedIds.length} товаров?`
-      )
-    ) {
+    const confirmed = await confirmationModal.showConfirmation({
+      title: 'Подтверждение удаления',
+      message: `Вы уверены, что хотите удалить ${selectedIds.length} товаров? Это действие нельзя отменить.`,
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'danger',
+    });
+
+    if (confirmed) {
       try {
+        confirmationModal.setLoading(true);
         await Promise.all(selectedIds.map(id => onDeleteProduct(id)));
+        clearSelection();
+        return true;
       } catch (error) {
         console.error('Error bulk deleting products:', error);
         throw error; // Re-throw to let the caller handle the error
       } finally {
-        clearSelection(); // Always clear selection regardless of success/failure
+        confirmationModal.setLoading(false);
+        confirmationModal.closeModal();
       }
     }
-  }, [selected, onDeleteProduct, clearSelection]);
+
+    return false;
+  }, [selected, onDeleteProduct, clearSelection, confirmationModal]);
 
   const onBulkActivate = useCallback(async () => {
     const selectedIds = Object.entries(selected)
@@ -124,5 +145,6 @@ export function useProductBulkOperations(
     onBulkActivate,
     onBulkDeactivate,
     clearSelection,
+    confirmationModal,
   };
 }

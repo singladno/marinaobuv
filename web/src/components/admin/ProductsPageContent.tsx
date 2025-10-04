@@ -1,5 +1,6 @@
 import { ProductBulkOperations } from '@/components/features/ProductBulkOperations';
 import { UnifiedDataTable } from '@/components/features/UnifiedDataTable';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { useCategories } from '@/hooks/useCategories';
 import { useProductBulkOperations } from '@/hooks/useProductBulkOperations';
 import { useProductHandlers } from '@/hooks/useProductHandlers';
@@ -36,6 +37,7 @@ export function ProductsPageContent() {
     onBulkActivate,
     onBulkDeactivate,
     clearSelection,
+    confirmationModal,
   } = useProductBulkOperations(products, updateProduct, deleteProduct);
 
   const {
@@ -47,7 +49,10 @@ export function ProductsPageContent() {
   } = useProductHandlers({
     updateProduct,
     deleteProduct,
-    onBulkDelete,
+    onBulkDelete: async () => {
+      const result = await onBulkDelete();
+      return result;
+    },
     onBulkActivate,
     onBulkDeactivate,
     selectedCount,
@@ -63,6 +68,12 @@ export function ProductsPageContent() {
     someSelected,
   });
 
+  // Map products with selected state
+  const productsWithSelected = products.map(product => ({
+    ...product,
+    selected: selected[product.id] || false,
+  }));
+
   return (
     <div className="space-y-4">
       <ProductBulkOperations
@@ -74,12 +85,24 @@ export function ProductsPageContent() {
       />
 
       <UnifiedDataTable<ProductWithSelected, unknown>
-        data={products as ProductWithSelected[]}
+        data={productsWithSelected}
         columns={columns as any}
         loading={loading}
         pagination={pagination}
         onPageChange={goToPage}
         onPageSizeChange={changePageSize}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={confirmationModal.handleCancel}
+        onConfirm={confirmationModal.handleConfirm}
+        title={confirmationModal.options.title}
+        message={confirmationModal.options.message}
+        confirmText={confirmationModal.options.confirmText}
+        cancelText={confirmationModal.options.cancelText}
+        variant={confirmationModal.options.variant}
+        isLoading={confirmationModal.isLoading}
       />
     </div>
   );

@@ -6,7 +6,7 @@ import type { ProductUpdateData } from '@/types/product';
 interface UseProductHandlersParams {
   updateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  onBulkDelete: () => Promise<void>;
+  onBulkDelete: () => Promise<boolean>;
   onBulkActivate: () => Promise<void>;
   onBulkDeactivate: () => Promise<void>;
   selectedCount: number;
@@ -106,12 +106,15 @@ export function useProductHandlers({
 
   const handleBulkDelete = useCallback(async () => {
     try {
-      await onBulkDelete();
-      addNotification({
-        type: 'success',
-        title: 'Товары удалены',
-        message: `${selectedCount} товаров успешно удалено.`,
-      });
+      const success = await onBulkDelete();
+      if (success) {
+        addNotification({
+          type: 'success',
+          title: 'Товары удалены',
+          message: `${selectedCount} товаров успешно удалено.`,
+        });
+      }
+      // If success is false, user cancelled - no notification needed
     } catch {
       addNotification({
         type: 'error',

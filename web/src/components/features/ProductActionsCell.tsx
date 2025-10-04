@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { MessageSquare } from 'lucide-react';
 
 import { ProductSourceModal } from '@/components/product/ProductSourceModal';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 import type { Product } from '@/types/product';
 
 interface ProductActionsCellProps {
@@ -20,6 +22,7 @@ export function ProductActionsCell({
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const confirmationModal = useConfirmationModal();
   const isActive = product.isActive;
 
   const handleToggleActive = async () => {
@@ -34,7 +37,15 @@ export function ProductActionsCell({
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
+    const confirmed = await confirmationModal.showConfirmation({
+      title: 'Подтверждение удаления',
+      message: `Вы уверены, что хотите удалить товар "${product.name}"? Это действие нельзя отменить.`,
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'danger',
+    });
+
+    if (confirmed) {
       setIsDeleting(true);
       try {
         await onDeleteProduct(product.id);
@@ -111,6 +122,19 @@ export function ProductActionsCell({
         onClose={() => setIsSourceModalOpen(false)}
         productId={product.id}
         productName={product.name}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={confirmationModal.handleCancel}
+        onConfirm={confirmationModal.handleConfirm}
+        title={confirmationModal.options.title}
+        message={confirmationModal.options.message}
+        confirmText={confirmationModal.options.confirmText}
+        cancelText={confirmationModal.options.cancelText}
+        variant={confirmationModal.options.variant}
+        isLoading={confirmationModal.isLoading}
       />
     </>
   );
