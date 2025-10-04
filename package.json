@@ -28,7 +28,10 @@
     "parse:fetch": "cd web && npm run fetch:recent",
     "parse:test": "cd web && npx tsx src/scripts/test-parsing-monitoring.ts",
     "parse:cleanup": "cd web && npx tsx src/scripts/cleanup-stuck-parsing.ts",
-    "server:parse": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'cd /var/www/marinaobuv/web && source .env.production && NODE_ENV=production && cp .env.production .env.local && npx tsx src/scripts/hourly-cron.ts && rm .env.local'",
+    "server:parse": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'cd /var/www/marinaobuv/web && NODE_ENV=production npx tsx src/scripts/hourly-cron.ts'",
+    "env:copy:local": "cp web/.env.local web/.env",
+    "env:copy:prod": "cp web/.env.production web/.env",
+    "env:deploy": "scp -i ~/.ssh/id_rsa_marinaobuv web/.env ubuntu@158.160.143.162:/var/www/marinaobuv/web/.env",
     "logs:parse": "cd web && tail -f logs/parsing-cron.log",
     "server:parser-logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'tail -n 200 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
     "server:logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'pm2 logs marinaobuv'"
