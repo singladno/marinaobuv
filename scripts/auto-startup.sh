@@ -83,7 +83,11 @@ for i in {1..30}; do
     sleep 1
 done
 
-# 4. Start PM2 and application
+# 4. Install dependencies and start PM2 application
+print_status "Installing dependencies..."
+cd "$WEB_DIR"
+npm install --production
+
 print_status "Starting PM2 application..."
 cd "$APP_DIR"
 
