@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import CartActionButton from '@/components/product/CartActionButton';
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
+import { ProductSourceButton } from '@/components/product/ProductSourceButton';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -21,6 +22,7 @@ type Props = {
   category?: string;
   showCategory?: boolean;
   colorOptions?: Array<{ color: string; imageUrl: string }>;
+  productId?: string; // Add productId for source button
 };
 
 export default function ProductCard({
@@ -32,6 +34,7 @@ export default function ProductCard({
   category,
   showCategory = false,
   colorOptions = [],
+  productId,
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -72,7 +75,7 @@ export default function ProductCard({
 
       <Link href={`/product/${slug}`} className="block">
         {/* Image Container */}
-        <div className="bg-muted relative aspect-square w-full overflow-hidden">
+        <div className="bg-muted group/image relative aspect-square w-full overflow-hidden">
           {hasImage ? (
             <Image
               src={displayImageUrl as string}
@@ -95,8 +98,6 @@ export default function ProductCard({
               {category}
             </Badge>
           )}
-
-          {/* Favorite overlay is rendered outside the Link */}
 
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
@@ -124,6 +125,13 @@ export default function ProductCard({
           </div>
         </div>
       </Link>
+
+      {/* Source button for admin users - outside Link to prevent navigation */}
+      {productId && (
+        <div className="absolute bottom-2 right-2 opacity-0 transition-all duration-200 group-hover:opacity-100">
+          <ProductSourceButton productId={productId} productName={name} />
+        </div>
+      )}
     </div>
   );
 }

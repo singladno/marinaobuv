@@ -10,12 +10,7 @@ import ProductReviews from '@/components/product/ProductReviews';
 import { Separator } from '@/components/ui/Separator';
 import { useCart } from '@/contexts/CartContext';
 
-type Size = {
-  id: string;
-  size: string;
-  stock?: number | null;
-  perBox?: number | null;
-};
+// Sizes are now stored as an array of objects like [{size: '36', count: 1}, {size: '38', count: 2}]
 
 type Props = {
   productId: string;
@@ -28,7 +23,7 @@ type Props = {
   gender?: keyof typeof import('@/lib/format').genderRu | null;
   season?: keyof typeof import('@/lib/format').seasonRu | null;
   availabilityCheckedAt?: Date | string | null;
-  sizes: Size[];
+  sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
 };
 
 export default function ProductDetails(props: Props) {
@@ -47,13 +42,13 @@ export default function ProductDetails(props: Props) {
 
   const { add, items } = useCart();
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string>('');
 
   const inCart = useMemo(() => items.some(i => i.slug === slug), [items, slug]);
   const packPairs = useMemo(() => {
     if (!Array.isArray(sizes)) return null;
-    const total = sizes.reduce((sum, s) => sum + Number(s.stock ?? 0), 0);
-    return total > 0 ? total : null;
+    return sizes.length > 0
+      ? sizes.reduce((total, sizeObj) => total + sizeObj.count, 0)
+      : null;
   }, [sizes]);
   const pairPrice = useMemo(
     () => (pricePair != null ? Number(pricePair) : null),
@@ -64,10 +59,6 @@ export default function ProductDetails(props: Props) {
       return Math.round(Number(pairPrice) * Number(packPairs));
     return null;
   }, [pairPrice, packPairs]);
-
-  if (!selectedSize && sizes.length > 0) {
-    setSelectedSize(sizes[0].id);
-  }
 
   const handleAddToCart = () => add(slug, quantity);
   const handleBuyNow = () => add(slug, quantity);
@@ -87,8 +78,6 @@ export default function ProductDetails(props: Props) {
         sizes={sizes}
         packPairs={packPairs}
         boxPrice={boxPrice}
-        selectedSize={selectedSize}
-        onSizeChange={setSelectedSize}
         quantity={quantity}
         onQuantityChange={setQuantity}
       />

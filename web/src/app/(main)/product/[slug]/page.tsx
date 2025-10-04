@@ -19,7 +19,6 @@ export default async function ProductPage({
       images: {
         orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
       },
-      sizes: true,
       category: true,
     },
   });
@@ -97,7 +96,11 @@ export default async function ProductPage({
               gender={product.gender}
               season={product.season}
               availabilityCheckedAt={product.availabilityCheckedAt ?? undefined}
-              sizes={product.sizes}
+              sizes={
+                Array.isArray(product.sizes)
+                  ? (product.sizes as Array<{ size: string; count: number }>)
+                  : []
+              }
             />
           </div>
         </div>

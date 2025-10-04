@@ -38,7 +38,7 @@ export function CartItem({ item, onRemove, onUpdateQuantity }: CartItemProps) {
         className="flex items-center gap-4"
       >
         <Image
-          src={item.product.images[0]?.url || '/placeholder.webp'}
+          src={item.product.images[0]?.url || '/placeholder.svg'}
           alt={item.product.images[0]?.alt || item.product.name}
           width={80}
           height={80}

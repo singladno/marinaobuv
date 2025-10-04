@@ -57,7 +57,11 @@ export class GroupProcessor {
 
       // Get image URLs from messages (don't upload to S3 yet)
       const imageUrls = messages
-        .filter(msg => msg.type === 'image' && msg.mediaUrl)
+        .filter(
+          msg =>
+            (msg.type === 'image' || msg.type === 'imageMessage') &&
+            msg.mediaUrl
+        )
         .map(msg => msg.mediaUrl!);
       console.log(`   📸 Found ${imageUrls.length} images to analyze`);
 
@@ -85,8 +89,10 @@ export class GroupProcessor {
       console.log(`   🖼️  Now uploading images to S3...`);
 
       // Only upload to S3 after successful validation
-      const imageData =
-        await this.imageService.processImagesFromMessages(messages);
+      const imageData = await this.imageService.processImagesFromMessages(
+        messages,
+        analysisResult.imageColors
+      );
       console.log(`   📸 Uploaded ${imageData.length} images to S3`);
 
       // Create final product directly

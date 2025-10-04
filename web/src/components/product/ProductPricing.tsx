@@ -2,20 +2,11 @@
 
 import { rub } from '@/lib/format';
 
-type Size = {
-  id: string;
-  size: string;
-  stock?: number | null;
-  perBox?: number | null;
-};
-
 type Props = {
   pricePair: number;
-  sizes: Size[];
+  sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
   packPairs: number | null;
   boxPrice: number | null;
-  selectedSize: string;
-  onSizeChange: (sizeId: string) => void;
   quantity: number;
   onQuantityChange: (quantity: number) => void;
 };
@@ -25,16 +16,14 @@ export function ProductPricing({
   sizes,
   packPairs,
   boxPrice,
-  selectedSize,
-  onSizeChange,
   quantity,
   onQuantityChange,
 }: Props) {
-  const selectedSizeData = sizes.find(s => s.id === selectedSize);
-  const availableStock = selectedSizeData?.stock ?? 0;
+  // Calculate total available stock across all sizes
+  const totalStock = sizes.reduce((total, sizeObj) => total + sizeObj.count, 0);
 
   const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity >= 1 && newQuantity <= availableStock) {
+    if (newQuantity >= 1 && newQuantity <= totalStock) {
       onQuantityChange(newQuantity);
     }
   };
@@ -54,29 +43,24 @@ export function ProductPricing({
         )}
       </div>
 
-      {/* Size Selection */}
+      {/* Size Display */}
       <div className="space-y-3">
-        <h3 className="font-medium">Размер</h3>
+        <h3 className="font-medium">Размеры</h3>
         <div className="flex flex-wrap gap-2">
-          {sizes.map(size => (
-            <button
-              key={size.id}
-              onClick={() => onSizeChange(size.id)}
-              className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
-                selectedSize === size.id
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
+          {sizes.map(sizeObj => (
+            <div
+              key={sizeObj.size}
+              className="relative flex items-center justify-center rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm"
             >
-              {size.size}
-            </button>
+              <span className="font-medium text-gray-900">{sizeObj.size}</span>
+              {sizeObj.count > 1 && (
+                <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+                  {sizeObj.count}
+                </span>
+              )}
+            </div>
           ))}
         </div>
-        {selectedSizeData && (
-          <p className="text-muted-foreground text-sm">
-            В наличии: {availableStock} пар
-          </p>
-        )}
       </div>
 
       {/* Quantity Selection */}
@@ -93,7 +77,7 @@ export function ProductPricing({
           <span className="w-12 text-center font-medium">{quantity}</span>
           <button
             onClick={() => handleQuantityChange(quantity + 1)}
-            disabled={quantity >= availableStock}
+            disabled={quantity >= totalStock}
             className="flex h-10 w-10 items-center justify-center rounded-lg border disabled:opacity-50"
           >
             +

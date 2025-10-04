@@ -45,13 +45,15 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
           
           Category Detection (CRITICAL):
           - Analyze images and text to determine the shoe category
+          - ALWAYS try to find a suitable category from the provided category tree FIRST
           - Choose the most SPECIFIC and DETAILED category from the provided category tree
           - ALWAYS select the LOWEST level category (most specific)
           - For example: instead of "Женская обувь" choose "Женские сапоги", "Женские туфли", etc.
           - Consider the exact shoe type: сапоги, ботинки, туфли, кроссовки, сандалии, босоножки
           - Consider season and style for maximum accuracy
-          - If no suitable category is found, use "newCategory" field to create a new one
+          - ONLY use "newCategory" field if NO suitable category exists in the tree
           - For newCategory: provide name (Russian), slug (Latin), parentCategoryId (ID from tree)
+          - When creating newCategory, ensure parentCategoryId exists in the provided tree
           
           Provider Discount Extraction (CRITICAL):
           - Look for discount patterns like "С КОРОБКИ 500Р СКИДКА", "скидка 500", "скидка 400"
@@ -128,13 +130,15 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
             
             Category Detection (CRITICAL):
             - Analyze text to determine the shoe category
+            - ALWAYS try to find a suitable category from the provided category tree FIRST
             - Choose the most SPECIFIC and DETAILED category from the provided category tree
             - ALWAYS select the LOWEST level category (most specific)
             - For example: instead of "Женская обувь" choose "Женские сапоги", "Женские туфли", etc.
             - Consider the exact shoe type: сапоги, ботинки, туфли, кроссовки, сандалии, босоножки
             - Consider season and style for maximum accuracy
-            - If no suitable category is found, use "newCategory" field to create a new one
+            - ONLY use "newCategory" field if NO suitable category exists in the tree
             - For newCategory: provide name (Russian), slug (Latin), parentCategoryId (ID from tree)
+            - When creating newCategory, ensure parentCategoryId exists in the provided tree
             
             Provider Discount Extraction (CRITICAL):
             - Look for discount patterns like "С КОРОБКИ 500Р СКИДКА", "скидка 500", "скидка 400"

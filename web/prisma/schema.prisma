@@ -37,13 +37,14 @@ model Product {
   gender                Gender?
   season                Season?
   description           String?
+  sizes                 Json?          // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
+  sourceMessageIds       Json?          // Array of WhatsApp message IDs that created this product
   availabilityCheckedAt DateTime?
   isActive              Boolean        @default(true)
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   category              Category       @relation(fields: [categoryId], references: [id])
   images                ProductImage[]
-  sizes                 ProductSize[]
   reviews               Review[]
   orderItems            OrderItem[]
 
@@ -69,18 +70,6 @@ model ProductImage {
   @@index([productId, sort])
 }
 
-model ProductSize {
-  id        String  @id @default(cuid())
-  productId String
-  size      String
-  perBox    Int?
-  stock     Int?
-  sku       String?
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([productId, size])
-  @@index([size])
-}
 
 model Provider {
   id            String            @id @default(cuid())

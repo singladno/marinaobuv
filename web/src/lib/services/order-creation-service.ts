@@ -7,10 +7,8 @@ interface CreateOrderItem {
   qty: number;
 }
 
-function getBoxPriceFromPair(pricePair: any, sizes: any[]): number {
-  const pairs = Array.isArray(sizes)
-    ? sizes.reduce((sum, s) => sum + Number(s?.stock ?? 0), 0)
-    : 0;
+function getBoxPriceFromPair(pricePair: any, sizes: any): number {
+  const pairs = Array.isArray(sizes) ? sizes.length : 0;
   return Number(pricePair) * (pairs > 0 ? pairs : 1);
 }
 
@@ -32,7 +30,6 @@ export async function createOrder(
       },
     },
     include: {
-      sizes: true,
       images: {
         select: {
           id: true,

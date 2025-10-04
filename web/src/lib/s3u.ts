@@ -47,7 +47,8 @@ export function getExtensionFromMime(mimeType: string): string {
     'video/x-msvideo': 'avi',
     'application/pdf': 'pdf',
     'application/msword': 'doc',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      'docx',
   };
 
   return mimeMap[mimeType] || 'bin';
@@ -125,23 +126,53 @@ export async function putFromUrl(
   key: string,
   url: string,
   contentType?: string
-): Promise<{ success: boolean; url?: string; error?: string }> {
+): Promise<{
+  success: boolean;
+  url?: string;
+  error?: string;
+  isExpired?: boolean;
+}> {
   try {
     const response = await fetch(url);
 
     if (!response.ok) {
+      // Check if it's a 404 or 403 (likely expired URL)
+      if (response.status === 404 || response.status === 403) {
+        console.warn(
+          `Media URL appears to be expired (${response.status}): ${url}`
+        );
+        return {
+          success: false,
+          error: `Media URL expired (${response.status})`,
+          isExpired: true,
+        };
+      }
       throw new Error(`Failed to fetch URL: ${response.statusText}`);
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
-    const finalContentType = contentType || response.headers.get('content-type') || 'application/octet-stream';
+    const finalContentType =
+      contentType ||
+      response.headers.get('content-type') ||
+      'application/octet-stream';
 
     return await putBuffer(key, buffer, finalContentType);
   } catch (error) {
     console.error('Failed to upload from URL:', error);
+
+    // Check if the error indicates an expired URL
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    const isExpired =
+      errorMessage.includes('404') ||
+      errorMessage.includes('403') ||
+      errorMessage.includes('expired') ||
+      errorMessage.includes('not found');
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to process URL',
+      error: errorMessage,
+      isExpired,
     };
   }
 }

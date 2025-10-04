@@ -29,6 +29,41 @@ export class PerImageColorService {
   }
 
   /**
+   * Download image from URL and convert to base64
+   */
+  private async downloadImageAsBase64(url: string): Promise<string | null> {
+    try {
+      console.log(`   📥 Downloading image: ${url}`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; MarinaObuv/1.0)',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64 = buffer.toString('base64');
+      const mimeType = response.headers.get('content-type') || 'image/jpeg';
+
+      return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+      console.error(`   ❌ Failed to download image ${url}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Analyze each image individually to determine its color
    */
   async analyzeImageColors(imageUrls: string[]): Promise<ImageColorResult[]> {
@@ -41,15 +76,45 @@ export class PerImageColorService {
         `   🎨 Analyzing colors for ${imageUrls.length} images individually...`
       );
 
+      // Download all images as base64 first
+      const imageData: Array<{ url: string; base64: string | null }> = [];
+
+      for (let i = 0; i < imageUrls.length; i++) {
+        const url = imageUrls[i];
+        console.log(`   📥 Downloading image ${i + 1}/${imageUrls.length}...`);
+
+        const base64 = await this.downloadImageAsBase64(url);
+        imageData.push({ url, base64 });
+
+        // Small delay between downloads to avoid overwhelming the server
+        if (i < imageUrls.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      // Filter out failed downloads
+      const successfulImages = imageData.filter(img => img.base64 !== null);
+
+      if (successfulImages.length === 0) {
+        console.log(
+          `   ⚠️  No images could be downloaded, returning null colors`
+        );
+        return imageUrls.map(url => ({ url, color: null }));
+      }
+
+      console.log(
+        `   ✅ Successfully downloaded ${successfulImages.length}/${imageUrls.length} images`
+      );
+
       const systemPrompt = `You are an image color detection assistant for a shoe catalog.
-Given a list of image URLs, your ONLY task is: for EACH image URL, return the color of the shoe shown in that image.
+Given a list of images, your ONLY task is: for EACH image, return the color of the shoe shown in that image.
 
 Rules:
 - Use short Russian color names: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый".
 - If the color is unclear, return null for that image's color.
-- Maintain the exact input order of image URLs.
+- Maintain the exact input order of images.
 - Return STRICT JSON with this shape:
-  { "images": [ { "url": "...", "color": "черный" | null }, ... ] }
+  { "images": [ { "color": "черный" | null }, ... ] }
 - Do NOT include explanations or any extra fields.`;
 
       const userMessage = {
@@ -57,11 +122,11 @@ Rules:
         content: [
           {
             type: 'text',
-            text: `Analyze these ${imageUrls.length} images for color detection:`,
+            text: `Analyze these ${successfulImages.length} images for color detection:`,
           },
-          ...imageUrls.map(url => ({
+          ...successfulImages.map(img => ({
             type: 'image_url',
-            image_url: { url },
+            image_url: { url: img.base64! },
           })),
         ],
       };
@@ -79,8 +144,8 @@ Rules:
           // Create a timeout promise
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(
-              () => reject(new Error('Request timeout after 60 seconds')),
-              60000
+              () => reject(new Error('Request timeout after 90 seconds')),
+              90000 // Increased timeout since we're using base64
             );
           });
 
@@ -104,22 +169,28 @@ Rules:
           }
 
           const result = JSON.parse(content) as {
-            images?: Array<{ url?: string; color?: string | null }>;
+            images?: Array<{ color?: string | null }>;
           };
 
           // Map results back to original URLs in order
-          const colorResults: ImageColorResult[] = imageUrls.map(
-            (url, index) => {
-              const imageResult = result.images?.[index];
-              return {
-                url,
-                color:
-                  imageResult?.color && imageResult.color.trim()
-                    ? imageResult.color.trim()
-                    : null,
-              };
+          const colorResults: ImageColorResult[] = imageUrls.map(url => {
+            const successfulIndex = successfulImages.findIndex(
+              img => img.url === url
+            );
+            if (successfulIndex === -1) {
+              // This image failed to download
+              return { url, color: null };
             }
-          );
+
+            const imageResult = result.images?.[successfulIndex];
+            return {
+              url,
+              color:
+                imageResult?.color && imageResult.color.trim()
+                  ? imageResult.color.trim()
+                  : null,
+            };
+          });
 
           console.log(
             `   ✅ Color analysis completed for ${imageUrls.length} images`
@@ -134,7 +205,7 @@ Rules:
 
           if (attempt < maxRetries) {
             console.log(`   🔄 Retrying color analysis...`);
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before retry
           }
         }
       }

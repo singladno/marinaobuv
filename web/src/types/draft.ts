@@ -80,7 +80,7 @@ export interface DraftProductData {
   season?: string | null;
   sizes?: Array<{
     size: string;
-    stock: number;
+    count: number;
   }> | null;
   packPairs?: number | null;
   priceBox?: number | null;

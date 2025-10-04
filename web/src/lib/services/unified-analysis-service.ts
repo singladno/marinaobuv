@@ -62,6 +62,37 @@ export class UnifiedAnalysisService {
     imageUrls: string[],
     context: string
   ): Promise<AnalysisResult | null> {
+    // Add timeout protection for the entire analysis
+    const timeoutMs = 5 * 60 * 1000; // 5 minutes timeout
+    return new Promise(async (resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.log(
+          `⏰ Analysis timed out after ${timeoutMs / 1000}s, skipping...`
+        );
+        resolve(null); // Return null instead of rejecting
+      }, timeoutMs);
+
+      try {
+        const result = await this.performAnalysis(
+          textContent,
+          imageUrls,
+          context
+        );
+        clearTimeout(timeout);
+        resolve(result);
+      } catch (error) {
+        clearTimeout(timeout);
+        console.error('Analysis failed:', error);
+        resolve(null); // Return null instead of rejecting to continue processing
+      }
+    });
+  }
+
+  private async performAnalysis(
+    textContent: string,
+    imageUrls: string[],
+    context: string
+  ): Promise<AnalysisResult | null> {
     try {
       // Get category tree for category selection
       const categoryTree = await getCategoryTree();
@@ -100,11 +131,22 @@ export class UnifiedAnalysisService {
       const validImageUrls = imageUrls.filter(
         url => url && url.startsWith('http')
       );
+
+      console.log(
+        `   📸 Processing ${validImageUrls.length} valid image URLs for analysis`
+      );
+
       for (const imageUrl of validImageUrls) {
         userMessage.content.push({
           type: 'image_url',
           image_url: { url: imageUrl },
         });
+      }
+
+      if (validImageUrls.length === 0 && imageUrls.length > 0) {
+        console.log(
+          `   ⚠️  No valid image URLs found, proceeding with text-only analysis`
+        );
       }
 
       messages.push(userMessage);
@@ -127,12 +169,25 @@ export class UnifiedAnalysisService {
       // Analyze each image individually for color detection
       let imageColors: Array<{ url: string; color: string | null }> = [];
       try {
-        imageColors = await this.colorService.analyzeImageColors(imageUrls);
         console.log(
-          `   🎨 Color analysis results: ${imageColors.filter(ic => ic.color).length}/${imageColors.length} images with colors`
+          `   🎨 Starting color analysis for ${imageUrls.length} images...`
         );
+        imageColors = await this.colorService.analyzeImageColors(imageUrls);
+        const successfulColors = imageColors.filter(ic => ic.color).length;
+        console.log(
+          `   🎨 Color analysis results: ${successfulColors}/${imageColors.length} images with colors`
+        );
+
+        if (successfulColors === 0) {
+          console.log(
+            `   ⚠️  No colors detected from images, continuing with text analysis only`
+          );
+        }
       } catch (colorError) {
         console.error('   ❌ Color analysis failed:', colorError);
+        console.log(
+          `   🔄 Continuing with text analysis only (no image colors)`
+        );
         // Fallback: create empty color results
         imageColors = imageUrls.map(url => ({ url, color: null }));
       }

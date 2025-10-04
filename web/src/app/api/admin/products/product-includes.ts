@@ -20,16 +20,6 @@ export const productInclude = {
     },
     orderBy: { sort: 'asc' },
   },
-  sizes: {
-    select: {
-      id: true,
-      size: true,
-      stock: true,
-      perBox: true,
-      sku: true,
-    },
-    orderBy: { size: 'asc' },
-  },
   _count: {
     select: {
       reviews: true,

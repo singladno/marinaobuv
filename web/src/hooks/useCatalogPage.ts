@@ -30,8 +30,11 @@ export function useCatalogPage() {
     // Convert products to the format expected by catalog filters
     const catalogProducts = products.map(product => ({
       id: product.id,
+      slug: product.slug, // Include slug field
       name: product.name,
       pricePair: product.pricePair,
+      primaryImageUrl: product.primaryImageUrl, // Include image URL
+      colorOptions: product.colorOptions || [], // Include color options
       createdAt: product.createdAt,
       category: product.category
         ? {

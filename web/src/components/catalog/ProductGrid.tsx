@@ -10,6 +10,7 @@ interface Product {
     id: string;
     name: string;
   } | null;
+  colorOptions?: Array<{ color: string; imageUrl: string }>;
 }
 
 interface ProductGridProps {
@@ -63,6 +64,8 @@ export function ProductGrid({ products, gridCols, loading }: ProductGridProps) {
           currency="RUB"
           imageUrl={product.primaryImageUrl}
           category={product.category?.name ?? undefined}
+          colorOptions={product.colorOptions}
+          productId={product.id}
         />
       ))}
     </div>

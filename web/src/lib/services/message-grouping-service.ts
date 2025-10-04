@@ -1,6 +1,7 @@
 import { prisma } from '../db-node';
 import { env } from '../env';
 import { createGroupingPrompt } from '../prompts/grouping-prompt';
+import { GreenApiFetcher } from '../green-api-fetcher';
 
 export interface MessageGroup {
   groupId: string;
@@ -14,12 +15,14 @@ export interface MessageGroup {
  */
 export class MessageGroupingService {
   private openai: any;
+  private greenApiFetcher: GreenApiFetcher;
 
   constructor() {
     if (!env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is required');
     }
     this.openai = null;
+    this.greenApiFetcher = new GreenApiFetcher();
   }
 
   private async ensureClient() {
@@ -42,6 +45,9 @@ export class MessageGroupingService {
       console.log('⚠️  No messages found for grouping');
       return [];
     }
+
+    // Refresh media URLs for image messages before grouping
+    await this.refreshMediaUrls(messages);
 
     const messagesForGPT = this.prepareMessagesForGPT(messages);
     const prompt = createGroupingPrompt(messagesForGPT);
@@ -88,7 +94,9 @@ export class MessageGroupingService {
         );
         for (const msg of groupMessages) {
           const messageType = msg.type || 'text';
-          const hasImage = msg.type === 'image' && !!msg.mediaUrl;
+          const hasImage =
+            (msg.type === 'image' || msg.type === 'imageMessage') &&
+            !!msg.mediaUrl;
           const hasText = msg.text && msg.text.trim();
           const sender = msg.fromName || msg.from || 'Unknown';
 
@@ -125,7 +133,8 @@ export class MessageGroupingService {
       sender: msg.fromName || msg.from || 'Unknown',
       type: msg.type || 'text',
       text: msg.text || '',
-      hasImage: msg.type === 'image' && !!msg.mediaUrl,
+      hasImage:
+        (msg.type === 'image' || msg.type === 'imageMessage') && !!msg.mediaUrl,
       imageUrl: msg.mediaUrl,
       timestamp: msg.createdAt.toISOString(),
       timeAgo: this.getTimeAgo(msg.createdAt, messages[0].createdAt),
@@ -147,5 +156,65 @@ export class MessageGroupingService {
 
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} days ago`;
+  }
+
+  /**
+   * Refresh media URLs for image messages that have null mediaUrl
+   */
+  private async refreshMediaUrls(messages: any[]): Promise<void> {
+    const imageMessages = messages.filter(
+      msg =>
+        (msg.type === 'image' || msg.type === 'imageMessage') && !msg.mediaUrl
+    );
+
+    if (imageMessages.length === 0) {
+      return;
+    }
+
+    console.log(
+      `🔄 Refreshing media URLs for ${imageMessages.length} image messages...`
+    );
+
+    // Process each message individually with a small delay to avoid rate limiting
+    for (let i = 0; i < imageMessages.length; i++) {
+      const message = imageMessages[i];
+
+      try {
+        console.log(
+          `   📸 Refreshing media URL for message ${message.id} (${i + 1}/${imageMessages.length})...`
+        );
+
+        const freshUrl = await this.greenApiFetcher.downloadFile(
+          message.waMessageId,
+          message.chatId || ''
+        );
+
+        if (freshUrl) {
+          // Update the message in database with fresh URL
+          await prisma.whatsAppMessage.update({
+            where: { id: message.id },
+            data: { mediaUrl: freshUrl },
+          });
+
+          // Update the message object for current processing
+          message.mediaUrl = freshUrl;
+          console.log(`   ✅ Refreshed media URL for message ${message.id}`);
+        } else {
+          console.log(
+            `   ⚠️  Could not refresh media URL for message ${message.id}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `   ❌ Error refreshing media URL for message ${message.id}:`,
+          error
+        );
+      }
+
+      // Add a small delay between requests to avoid rate limiting
+      if (i < imageMessages.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+      }
+    }
   }
 }

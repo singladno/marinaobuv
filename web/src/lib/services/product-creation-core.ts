@@ -61,7 +61,10 @@ export class ProductCreationCore {
         season: mapSeason(analysis.season || 'AUTUMN'),
         pricePair: analysis.price || 0,
         providerDiscount: analysis.providerDiscount || 0,
-        sizes: analysis.sizes || [],
+        sizes: (analysis.sizes || []).map(size => ({
+          size: size.size,
+          count: size.count || 1,
+        })),
         source: sourceMessageIds,
         gptRequest: '',
         rawGptResponse: undefined,
@@ -76,9 +79,13 @@ export class ProductCreationCore {
         data: images.map((image, index) => ({
           draftProductId: draftProduct.id,
           url: image.url,
+          key: image.key || null,
           isActive: true,
           sort: index,
           isPrimary: index === 0,
+          color: image.color || null,
+          width: image.width || null,
+          height: image.height || null,
         })),
       });
     }
@@ -105,7 +112,12 @@ export class ProductCreationCore {
         season: analysis.season ? mapSeason(analysis.season) : undefined,
         pricePair: analysis.price || undefined,
         providerDiscount: analysis.providerDiscount || undefined,
-        sizes: analysis.sizes || undefined,
+        sizes: analysis.sizes
+          ? analysis.sizes.map(size => ({
+              size: size.size,
+              count: size.count || 1,
+            }))
+          : undefined,
         gptRequest: undefined,
         rawGptResponse: undefined,
         aiStatus: 'ai_completed',
@@ -125,9 +137,13 @@ export class ProductCreationCore {
         data: images.map((image, index) => ({
           draftProductId,
           url: image.url,
+          key: image.key || null,
           isActive: true,
           sort: index,
           isPrimary: index === 0,
+          color: image.color || null,
+          width: image.width || null,
+          height: image.height || null,
         })),
       });
     }
@@ -161,46 +177,83 @@ export class ProductCreationCore {
     // Get or create category based on LLM analysis
     let category;
     if (analysis.categoryId) {
-      // Use existing category
+      // Use existing category - validate it exists
       category = await prisma.category.findUnique({
-        where: { id: analysis.categoryId },
+        where: { id: analysis.categoryId, isActive: true },
       });
+      if (!category) {
+        console.log(
+          `⚠️  Category ID ${analysis.categoryId} not found or inactive, falling back to default`
+        );
+      }
     }
 
     if (!category && analysis.newCategory) {
-      // Create new category as suggested by LLM
-      category = await prisma.category.create({
-        data: {
-          name: analysis.newCategory.name,
-          slug: analysis.newCategory.slug,
-          path: `/category/${analysis.newCategory.slug}`,
-          parentId: analysis.newCategory.parentCategoryId,
-          sort: 100,
-          isActive: true,
-        },
-      });
-    }
+      // Validate parent category exists before creating new category
+      let parentCategory = null;
+      if (analysis.newCategory.parentCategoryId) {
+        parentCategory = await prisma.category.findUnique({
+          where: { id: analysis.newCategory.parentCategoryId, isActive: true },
+        });
+        if (!parentCategory) {
+          console.log(
+            `⚠️  Parent category ID ${analysis.newCategory.parentCategoryId} not found, creating category without parent`
+          );
+        }
+      }
 
-    if (!category) {
-      // Fallback: find or create a default "Обувь" category
-      category = await prisma.category.findFirst({
-        where: { name: 'Обувь' },
-      });
-
-      if (!category) {
+      try {
+        // Create new category as suggested by LLM
         category = await prisma.category.create({
           data: {
-            name: 'Обувь',
-            slug: 'obuv',
-            path: '/obuv',
+            name: analysis.newCategory.name,
+            slug: analysis.newCategory.slug,
+            path: parentCategory
+              ? `${parentCategory.path}/${analysis.newCategory.slug}`
+              : `/category/${analysis.newCategory.slug}`,
+            parentId: parentCategory ? parentCategory.id : null,
             sort: 100,
             isActive: true,
           },
         });
+        console.log(`✅ Created new category: ${analysis.newCategory.name}`);
+      } catch (error) {
+        console.log(`❌ Failed to create new category: ${error}`);
+        category = null; // Will fall back to default
       }
     }
 
-    // Create the final product directly
+    if (!category) {
+      // Fallback: find or create a default "Обувь" category
+      console.log(`🔄 Falling back to default category`);
+      category = await prisma.category.findFirst({
+        where: { name: 'Обувь', isActive: true },
+      });
+
+      if (!category) {
+        try {
+          category = await prisma.category.create({
+            data: {
+              name: 'Обувь',
+              slug: 'obuv',
+              path: '/obuv',
+              sort: 100,
+              isActive: true,
+            },
+          });
+          console.log(`✅ Created default category: Обувь`);
+        } catch (error) {
+          console.log(`❌ Failed to create default category: ${error}`);
+          throw new Error(
+            `Failed to create or find any suitable category for product`
+          );
+        }
+      } else {
+        console.log(`✅ Using existing default category: Обувь`);
+      }
+    }
+
+    // Create the final product directly with source message IDs
     const product = await prisma.product.create({
       data: {
         name: analysis.name || 'Untitled Product',
@@ -213,6 +266,7 @@ export class ProductCreationCore {
         season: mapSeason(analysis.season || 'AUTUMN'),
         pricePair: analysis.price || 0,
         currency: 'RUB',
+        sourceMessageIds: sourceMessageIds, // Store WhatsApp message IDs directly
         isActive: true, // Set as active immediately
         images: {
           create: images.map((image, index) => ({
@@ -221,19 +275,15 @@ export class ProductCreationCore {
             alt: `Product image ${index + 1}`,
             sort: index,
             isPrimary: index === 0,
-            color: null, // Color not available in ImageData
+            color: image.color || null,
             width: image.width || null,
             height: image.height || null,
           })),
         },
-        sizes: {
-          create: (analysis.sizes || []).map((size, index) => ({
-            size: size.size,
-            stock: 0, // Default stock value
-            sku: `${articleNumber}-${size.size}`,
-            sort: index,
-          })),
-        },
+        sizes: (analysis.sizes || []).map(size => ({
+          size: size.size,
+          count: size.count || 1,
+        })), // Convert to array of size objects
       },
     });
 

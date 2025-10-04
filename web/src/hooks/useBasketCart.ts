@@ -64,21 +64,74 @@ export function useBasketCart() {
   }, [clear, addNotification]);
 
   useEffect(() => {
-    // Convert CartItem[] to CartItemWithProduct[] by adding product data
-    const productsWithData: CartItemWithProduct[] = items.map(item => ({
-      ...item,
-      product: {
-        id: item.slug, // Use slug as id for now
-        slug: item.slug,
-        name: `Product ${item.slug}`, // Placeholder name
-        pricePair: 0, // Placeholder price
-        images: [], // Empty images array
-        category: { name: 'Unknown' }, // Placeholder category
-        article: undefined,
-      },
-    }));
-    setProducts(productsWithData);
-    setLoading(false);
+    const fetchProductData = async () => {
+      if (items.length === 0) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        // Fetch all products and filter by cart items
+        const response = await fetch('/api/products');
+        if (!response.ok) {
+          throw new Error('Failed to fetch products');
+        }
+        const data = await response.json();
+
+        // Create a map of slug to product for quick lookup
+        const productMap = new Map();
+        data.products.forEach((product: any) => {
+          productMap.set(product.slug, product);
+        });
+
+        // Convert CartItem[] to CartItemWithProduct[] with real product data
+        const productsWithData: CartItemWithProduct[] = items
+          .map(item => {
+            const product = productMap.get(item.slug);
+            if (!product) {
+              console.warn(`Product not found for slug: ${item.slug}`);
+              return null;
+            }
+            return {
+              ...item,
+              product: {
+                id: product.id,
+                slug: product.slug,
+                name: product.name,
+                pricePair: product.pricePair,
+                images: product.images || [],
+                category: product.category || { name: 'Unknown' },
+                article: product.article,
+              },
+            };
+          })
+          .filter(Boolean) as CartItemWithProduct[];
+
+        setProducts(productsWithData);
+      } catch (error) {
+        console.error('Error fetching product data for cart:', error);
+        // Fallback to placeholder data
+        const productsWithData: CartItemWithProduct[] = items.map(item => ({
+          ...item,
+          product: {
+            id: item.slug,
+            slug: item.slug,
+            name: `Product ${item.slug}`,
+            pricePair: 0,
+            images: [],
+            category: { name: 'Unknown' },
+            article: undefined,
+          },
+        }));
+        setProducts(productsWithData);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductData();
   }, [items]);
 
   return {

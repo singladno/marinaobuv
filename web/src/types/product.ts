@@ -20,7 +20,7 @@ export interface Product {
     path: string;
   };
   images: ProductImage[];
-  sizes: ProductSize[];
+  sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
 }
 
 export interface ProductImage {
@@ -28,13 +28,6 @@ export interface ProductImage {
   url: string;
   alt: string | null;
   isPrimary: boolean;
-}
-
-export interface ProductSize {
-  id: string;
-  size: string;
-  stock: number | null;
-  sku: string | null;
 }
 
 export interface ProductUpdateData {

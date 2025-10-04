@@ -45,10 +45,29 @@ async function handleShutdown(signal: string) {
 
   if (parsingProgressService) {
     try {
-      await parsingProgressService.markFailed(
-        `Process terminated by ${signal} signal`
-      );
-      console.log('📊 Parsing status updated to failed');
+      // Check if this is a timeout scenario (SIGTERM from timeout)
+      if (signal === 'SIGTERM') {
+        // Try to get current progress to mark as partial completion
+        const progress = await parsingProgressService.getProgress();
+        if (progress && progress.messagesRead > 0) {
+          await parsingProgressService.markPartialCompletion(
+            progress.messagesRead,
+            progress.productsCreated || 0,
+            `Process terminated by ${signal} signal - partial completion`
+          );
+          console.log('📊 Parsing status updated to partial completion');
+        } else {
+          await parsingProgressService.markFailed(
+            `Process terminated by ${signal} signal`
+          );
+          console.log('📊 Parsing status updated to failed');
+        }
+      } else {
+        await parsingProgressService.markFailed(
+          `Process terminated by ${signal} signal`
+        );
+        console.log('📊 Parsing status updated to failed');
+      }
     } catch (error) {
       console.error('❌ Error updating parsing status:', error);
     }

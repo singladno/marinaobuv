@@ -65,13 +65,17 @@ export function generateArticleNumber(): string {
 }
 
 /**
- * Create a slug from a product name
+ * Create a unique slug from a product name
  */
 export function createSlug(name: string): string {
-  return name
+  const baseSlug = name
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .trim();
+
+  // Add timestamp to ensure uniqueness
+  const timestamp = Date.now().toString(36);
+  return `${baseSlug}-${timestamp}`;
 }

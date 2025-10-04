@@ -15,7 +15,6 @@ export async function GET(
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
         },
         category: true,
-        sizes: true,
       },
     });
 

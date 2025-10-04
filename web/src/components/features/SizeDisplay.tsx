@@ -31,10 +31,11 @@ export function SizeDisplay({
     >
       <div className="flex items-center gap-1">
         <span className="font-medium">{size.size}</span>
-        <span className="text-gray-500">×</span>
-        <span className="text-gray-600">
-          {size.count || size.quantity || 0}
-        </span>
+        {(size.count || size.quantity || 0) > 1 && (
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+            {size.count || size.quantity || 0}
+          </span>
+        )}
       </div>
 
       {isSaving && (

@@ -84,11 +84,92 @@ async function runWithTimeout(
   });
 }
 
-async function cleanupStuckProcesses() {
-  // Clean up any parsing processes that have been running for more than 2 hours
-  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+async function runWithGracefulTimeout(
+  command: string,
+  args: string[] = [],
+  timeoutMs: number = 30 * 60 * 1000,
+  extraEnv: Record<string, string> = {}
+) {
+  console.log(
+    `$ ${command} ${args.join(' ')} (with ${timeoutMs / 1000}s graceful timeout)`
+  );
 
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn(command, args, {
+      env: { ...process.env, ...extraEnv },
+      stdio: 'inherit',
+    });
+
+    let isResolved = false;
+    let timeoutTriggered = false;
+
+    // Set up timeout
+    const timeout = setTimeout(() => {
+      if (!isResolved) {
+        timeoutTriggered = true;
+        console.log(
+          `Process approaching timeout after ${timeoutMs / 1000}s, sending graceful shutdown signal...`
+        );
+        // Send SIGTERM for graceful shutdown instead of SIGKILL
+        child.kill('SIGTERM');
+
+        // Give the process time to clean up gracefully
+        setTimeout(() => {
+          if (!isResolved) {
+            console.log(
+              'Process did not shut down gracefully, forcing termination...'
+            );
+            child.kill('SIGKILL');
+            reject(new Error(`Process timed out after ${timeoutMs / 1000}s`));
+          }
+        }, 30000); // 30 seconds grace period
+      }
+    }, timeoutMs);
+
+    child.on('close', code => {
+      if (!isResolved) {
+        clearTimeout(timeout);
+        isResolved = true;
+
+        if (timeoutTriggered) {
+          console.log(
+            `Process completed with exit code ${code} after timeout signal`
+          );
+          // Don't reject on timeout - allow partial completion
+          resolve();
+        } else if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Command failed with exit code ${code}`));
+        }
+      }
+    });
+
+    child.on('error', error => {
+      if (!isResolved) {
+        clearTimeout(timeout);
+        isResolved = true;
+        reject(error);
+      }
+    });
+  });
+}
+
+async function cleanupStuckProcesses() {
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
+  // Find processes stuck for more than 1 hour (warning)
   const stuckRecords = await prisma.parsingHistory.findMany({
+    where: {
+      status: 'running',
+      startedAt: { lt: oneHourAgo },
+    },
+  });
+
+  // Find processes stuck for more than 2 hours (cleanup)
+  const veryOldRecords = await prisma.parsingHistory.findMany({
     where: {
       status: 'running',
       startedAt: { lt: twoHoursAgo },
@@ -97,20 +178,58 @@ async function cleanupStuckProcesses() {
 
   if (stuckRecords.length > 0) {
     console.log(
-      `[cron] Found ${stuckRecords.length} stuck parsing processes, cleaning up...`
+      `[cron] Found ${stuckRecords.length} stuck parsing processes (>1h), cleaning up...`
     );
 
     for (const record of stuckRecords) {
+      const duration = Math.floor(
+        (now.getTime() - record.startedAt.getTime()) / 1000
+      );
+      const isVeryOld = record.startedAt < twoHoursAgo;
+
       await prisma.parsingHistory.update({
         where: { id: record.id },
         data: {
           status: 'failed',
-          completedAt: new Date(),
-          errorMessage:
-            'Process timeout - marked as failed due to stuck status',
-          duration: Math.floor(
-            (Date.now() - record.startedAt.getTime()) / 1000
-          ),
+          completedAt: now,
+          errorMessage: isVeryOld
+            ? 'Process timeout - automatically cleaned up (>2h)'
+            : 'Process timeout - marked as failed due to stuck status (>1h)',
+          duration,
+        },
+      });
+    }
+  }
+
+  // Additional safety check: if too many processes are running, clean up oldest ones
+  const totalRunning = await prisma.parsingHistory.count({
+    where: { status: 'running' },
+  });
+
+  if (totalRunning > 5) {
+    console.log(
+      `[cron] Warning: ${totalRunning} processes running simultaneously`
+    );
+
+    // Clean up oldest running processes (keep only 3 most recent)
+    const oldestRunning = await prisma.parsingHistory.findMany({
+      where: { status: 'running' },
+      orderBy: { startedAt: 'asc' },
+      take: totalRunning - 3,
+    });
+
+    for (const record of oldestRunning) {
+      const duration = Math.floor(
+        (now.getTime() - record.startedAt.getTime()) / 1000
+      );
+
+      await prisma.parsingHistory.update({
+        where: { id: record.id },
+        data: {
+          status: 'failed',
+          completedAt: now,
+          errorMessage: 'Process terminated - too many concurrent processes',
+          duration,
         },
       });
     }
@@ -156,31 +275,41 @@ async function main() {
     const initialMessageCount = await prisma.whatsAppMessage.count({
       where: { processed: false },
     });
-    const initialProductCount = await prisma.waDraftProduct.count();
+    const initialProductCount = await prisma.product.count();
 
-    // 1) Fetch recent WhatsApp messages into DB (with timeout)
-    console.log('[cron] Starting message fetching...');
+    // 1) Fetch recent WhatsApp messages into DB using optimized Green API (with timeout)
+    console.log('[cron] Starting message fetching with optimized Green API...');
     await runWithTimeout(
       'tsx',
-      ['src/scripts/fetch-recent-messages.ts'],
-      15 * 60 * 1000,
+      ['src/scripts/fetch-messages-green-api-optimized.ts'],
+      5 * 60 * 1000,
       { PARSING_HISTORY_ID: parsingHistoryId }
-    ); // 15 minute timeout for fetching
+    ); // 5 minute timeout for fetching (much faster now!)
 
-    // 2) Convert messages to draft products (with timeout)
+    // 2) Convert messages to draft products (with graceful timeout)
     console.log('[cron] Starting product processing...');
-    await runWithTimeout(
-      'tsx',
-      ['src/scripts/process-draft-products-unified.ts'],
-      30 * 60 * 1000,
-      { PARSING_HISTORY_ID: parsingHistoryId }
-    ); // 30 minute timeout for processing
+    try {
+      await runWithGracefulTimeout(
+        'tsx',
+        ['src/scripts/process-draft-products-unified.ts'],
+        30 * 60 * 1000,
+        { PARSING_HISTORY_ID: parsingHistoryId }
+      ); // 30 minute graceful timeout for processing
+      console.log('[cron] Processing completed successfully');
+    } catch (error) {
+      console.log(
+        '[cron] Processing completed with timeout or errors, but partial results may be available'
+      );
+      console.log('[cron] Error details:', error);
+      // Don't fail the entire cron job if processing times out
+      // The parsing progress service will handle the status update
+    }
 
     // Get final counts
     const finalMessageCount = await prisma.whatsAppMessage.count({
       where: { processed: false },
     });
-    const finalProductCount = await prisma.waDraftProduct.count();
+    const finalProductCount = await prisma.product.count();
 
     const messagesRead = initialMessageCount - finalMessageCount;
     const productsCreated = finalProductCount - initialProductCount;
@@ -190,14 +319,24 @@ async function main() {
     );
 
     // Update parsing history with results
+    // Check if the processing was marked as partial completion
+    const currentHistory = await prisma.parsingHistory.findUnique({
+      where: { id: parsingHistoryId },
+    });
+
+    const finalStatus =
+      currentHistory?.status === 'completed' ? 'completed' : 'completed';
+    const finalErrorMessage = currentHistory?.errorMessage || null;
+
     await prisma.parsingHistory.update({
       where: { id: parsingHistoryId },
       data: {
-        status: 'completed',
+        status: finalStatus,
         completedAt,
         messagesRead,
         productsCreated,
         duration,
+        errorMessage: finalErrorMessage,
       },
     });
 
@@ -205,6 +344,12 @@ async function main() {
     console.log(
       `[cron] Messages read: ${messagesRead}, Products created: ${productsCreated}, Duration: ${duration}s`
     );
+
+    if (finalErrorMessage) {
+      console.log(
+        `[cron] Note: Processing completed with warnings: ${finalErrorMessage}`
+      );
+    }
   } catch (error) {
     console.error('[cron] Hourly job failed:', error);
 

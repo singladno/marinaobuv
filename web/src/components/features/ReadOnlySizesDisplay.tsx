@@ -15,10 +15,11 @@ export function ReadOnlySizesDisplay({ sizes }: ReadOnlySizesDisplayProps) {
           >
             <div className="flex items-center gap-1">
               <span className="font-medium">{x.size}</span>
-              <span className="text-gray-500">×</span>
-              <span className="text-gray-600">
-                {x.count || x.quantity || 0}
-              </span>
+              {(x.count || x.quantity || 0) > 1 && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+                  {x.count || x.quantity || 0}
+                </span>
+              )}
             </div>
           </div>
         ))}

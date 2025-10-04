@@ -61,29 +61,28 @@ export function processDraftImages(images: DraftImage[]) {
     );
 }
 
-export function processDraftSizes(sizes: DraftSize[]) {
+export function processDraftSizes(
+  sizes: DraftSize[]
+): Array<{ size: string; count: number }> {
   if (!sizes || !Array.isArray(sizes)) return [];
 
-  return sizes.map((size: DraftSize) => ({
-    size: size.size || size.name || 'Unknown',
-    perBox: size.perBox || null,
-    stock: size.count || size.stock || null,
-    sku: null,
-  }));
-}
+  // Convert to array of size objects with count
+  const result: Array<{ size: string; count: number }> = [];
+  sizes.forEach((size: DraftSize) => {
+    const sizeName = size.size || size.name || 'Unknown';
+    const quantity = size.count || size.stock || 1;
+    result.push({ size: sizeName, count: quantity });
+  });
 
-interface ProcessedSize {
-  size: string;
-  perBox: number | null;
-  stock: number | null;
-  sku: string | null;
+  return result;
 }
 
 export function createProductData(
   draft: DraftProduct,
   slug: string,
   processedImages: DraftImage[],
-  processedSizes: ProcessedSize[]
+  processedSizes: Array<{ size: string; count: number }>,
+  sourceMessageIds?: string[]
 ) {
   const draftPricePair =
     draft.pricePair != null ? Number(draft.pricePair) : null;
@@ -98,6 +97,7 @@ export function createProductData(
     gender: draft.gender ?? null,
     season: draft.season ?? null,
     description: draft.description ?? null,
+    sourceMessageIds: sourceMessageIds || [], // Store WhatsApp message IDs
     images: {
       create: processedImages.map(img => ({
         url: img.url,
@@ -110,9 +110,7 @@ export function createProductData(
         height: (img as { height?: number }).height ?? null,
       })),
     },
-    sizes: {
-      create: processedSizes,
-    },
+    sizes: processedSizes, // Store as JSON array of size objects
     categoryId: draft.categoryId,
     isActive: true,
   };

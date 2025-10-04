@@ -42,6 +42,30 @@ export async function convertDraftToProduct(draft: DraftProduct) {
     `Processing draft ${draft.id} (${draft.name}) for catalog conversion...`
   );
 
+  // Get the full draft with source message IDs
+  const fullDraft = await prisma.waDraftProduct.findUnique({
+    where: { id: draft.id },
+    select: {
+      id: true,
+      name: true,
+      source: true,
+    },
+  });
+
+  if (!fullDraft) {
+    throw new Error(`Draft ${draft.id} not found`);
+  }
+
+  // Extract source message IDs from the draft
+  const sourceMessageIds =
+    fullDraft.source && Array.isArray(fullDraft.source)
+      ? (fullDraft.source as string[])
+      : [];
+
+  console.log(
+    `  📱 Found ${sourceMessageIds.length} source message IDs for draft ${draft.id}`
+  );
+
   // Process images
   const processedImages = processDraftImages(draft.images || []);
   console.log(
@@ -68,12 +92,13 @@ export async function convertDraftToProduct(draft: DraftProduct) {
   // Generate unique slug
   const slug = await generateUniqueSlug(draft.name, draft.id);
 
-  // Create product data
+  // Create product data with source message IDs
   const productData = createProductData(
     draft,
     slug,
     processedImages,
-    processedSizes
+    processedSizes,
+    sourceMessageIds
   );
 
   // Create Product record and update draft status
@@ -90,7 +115,7 @@ export async function convertDraftToProduct(draft: DraftProduct) {
   });
 
   console.log(
-    `  ✅ Successfully converted draft ${draft.id} to product ${product.id} with ${processedImages.length} images`
+    `  ✅ Successfully converted draft ${draft.id} to product ${product.id} with ${processedImages.length} images and ${sourceMessageIds.length} source messages`
   );
 
   return product;

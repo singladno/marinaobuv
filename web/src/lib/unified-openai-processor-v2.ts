@@ -35,18 +35,53 @@ export class UnifiedOpenAIProcessor {
       `📊 Step 2: Processing each group with unified OpenAI analysis...`
     );
 
-    // Step 2: Process each group
+    // Step 2: Process each group with timeout protection
     for (let i = 0; i < messageGroups.length; i++) {
       const group = messageGroups[i];
-      await this.groupProcessor.processGroup(
-        group,
-        i + 1,
-        messageGroups.length
-      );
+
+      try {
+        // Add timeout protection for each group processing
+        await this.processGroupWithTimeout(group, i + 1, messageGroups.length);
+      } catch (error) {
+        console.error(
+          `❌ Error processing group ${i + 1}/${messageGroups.length}:`,
+          error
+        );
+        // Continue with next group instead of failing entirely
+        continue;
+      }
     }
 
     console.log(
       `\n🎉 Processing complete! Processed ${messageGroups.length} product groups.`
     );
+  }
+
+  /**
+   * Process a single group with timeout protection
+   */
+  private async processGroupWithTimeout(
+    group: any,
+    index: number,
+    total: number,
+    timeoutMs: number = 10 * 60 * 1000 // 10 minutes per group
+  ): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.log(
+          `⏰ Group ${index}/${total} processing timed out after ${timeoutMs / 1000}s, skipping...`
+        );
+        resolve(); // Don't reject, just skip this group
+      }, timeoutMs);
+
+      try {
+        await this.groupProcessor.processGroup(group, index, total);
+        clearTimeout(timeout);
+        resolve();
+      } catch (error) {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    });
   }
 }

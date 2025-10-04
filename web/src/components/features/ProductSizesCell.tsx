@@ -1,13 +1,14 @@
 import * as React from 'react';
 
 import type { DraftSize } from '@/types/admin';
-import type { ProductSize } from '@/types/product';
 
 import { OptimisticSizesCell } from './OptimisticSizesCell';
 
 interface ProductSizesCellProps {
-  sizes: ProductSize[];
-  onChange?: (next: ProductSize[]) => Promise<void> | void;
+  sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
+  onChange?: (
+    next: Array<{ size: string; count: number }>
+  ) => Promise<void> | void;
   disabled?: boolean;
 }
 
@@ -16,11 +17,11 @@ export function ProductSizesCell({
   onChange,
   disabled = false,
 }: ProductSizesCellProps) {
-  // Convert ProductSize[] to DraftSize[] format
-  const draftSizes: DraftSize[] = sizes.map(size => ({
-    id: size.id,
-    size: size.size,
-    quantity: size.stock ?? 0,
+  // Convert to DraftSize[] format
+  const draftSizes: DraftSize[] = sizes.map((sizeObj, index) => ({
+    id: `size-${index}`, // Generate temporary ID
+    size: sizeObj.size,
+    quantity: sizeObj.count,
     isActive: true,
   }));
 
@@ -28,15 +29,14 @@ export function ProductSizesCell({
     async (nextDraftSizes: DraftSize[]) => {
       if (!onChange) return;
 
-      // Convert back to ProductSize[] format
-      const nextProductSizes: ProductSize[] = nextDraftSizes.map(draftSize => ({
-        id: draftSize.id,
-        size: draftSize.size,
-        stock: draftSize.quantity,
-        sku: null,
-      }));
+      // Convert back to size objects format
+      const nextSizes: Array<{ size: string; count: number }> =
+        nextDraftSizes.map(draftSize => ({
+          size: draftSize.size,
+          count: draftSize.quantity,
+        }));
 
-      await onChange(nextProductSizes);
+      await onChange(nextSizes);
     },
     [onChange]
   );

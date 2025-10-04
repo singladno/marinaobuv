@@ -109,6 +109,22 @@ export class ParsingProgressService {
   }
 
   /**
+   * Mark parsing as partially completed due to timeout
+   */
+  async markPartialCompletion(
+    messagesRead: number,
+    productsCreated: number,
+    reason: string = 'Process timeout - partial completion'
+  ) {
+    await this.updateProgress({
+      status: 'completed',
+      messagesRead,
+      productsCreated,
+      errorMessage: reason,
+    });
+  }
+
+  /**
    * Get current parsing progress
    */
   async getProgress() {

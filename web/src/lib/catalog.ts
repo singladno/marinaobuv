@@ -47,13 +47,28 @@ export async function getSizeFacetsForPath(
     else where = { product: { category: { path: full } } };
   }
 
-  const rows = await prisma.productSize.groupBy({
-    by: ['size'],
+  // Get all products with their sizes
+  const products = await prisma.product.findMany({
     where,
-    _count: { _all: true },
+    select: {
+      sizes: true,
+    },
   });
 
-  const facets = rows.map(r => ({ size: r.size, count: r._count._all }));
+  // Count sizes from the JSON arrays
+  const sizeCounts: Record<string, number> = {};
+  products.forEach(product => {
+    if (product.sizes && Array.isArray(product.sizes)) {
+      (product.sizes as string[]).forEach((size: string) => {
+        sizeCounts[size] = (sizeCounts[size] || 0) + 1;
+      });
+    }
+  });
+
+  const facets = Object.entries(sizeCounts).map(([size, count]) => ({
+    size,
+    count,
+  }));
   // Sort numerically if possible
   facets.sort((a, b) => {
     const na = Number(a.size);

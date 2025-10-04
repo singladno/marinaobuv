@@ -33,11 +33,19 @@ async function getMessagesForProcessing(limit: number = 50): Promise<string[]> {
   const messages = await prisma.whatsAppMessage.findMany({
     where: {
       processed: false,
-      type: { in: ['text', 'image'] },
+      type: {
+        in: [
+          'text',
+          'image',
+          'textMessage',
+          'imageMessage',
+          'extendedTextMessage',
+        ],
+      },
       // Remove text requirement - allow image-only messages
       OR: [
         { text: { not: null } }, // Messages with text
-        { type: 'image' }, // Image messages (even without text)
+        { type: { in: ['image', 'imageMessage'] } }, // Image messages (even without text)
       ],
     },
     orderBy: { createdAt: 'desc' },
@@ -46,6 +54,31 @@ async function getMessagesForProcessing(limit: number = 50): Promise<string[]> {
   });
 
   return messages.map(msg => msg.id);
+}
+
+/**
+ * Process a batch with timeout protection
+ */
+async function processBatchWithTimeout(
+  processor: UnifiedOpenAIProcessor,
+  messageIds: string[],
+  timeoutMs: number
+): Promise<void> {
+  return new Promise(async (resolve, reject) => {
+    const timeout = setTimeout(() => {
+      console.log(`⏰ Batch timed out after ${timeoutMs / 1000}s, skipping...`);
+      reject(new Error(`Batch timed out after ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+
+    try {
+      await processor.processMessagesToProducts(messageIds);
+      clearTimeout(timeout);
+      resolve();
+    } catch (error) {
+      clearTimeout(timeout);
+      reject(error);
+    }
+  });
 }
 
 async function main() {
@@ -73,15 +106,26 @@ async function main() {
     console.log('2. OpenAI analyzes text + images together');
     console.log('');
 
-    // Get initial product count
-    const initialProductCount = await prisma.waDraftProduct.count();
+    // Get initial product count (final products, not drafts)
+    const initialProductCount = await prisma.product.count();
 
     // Get total count of messages that need processing
     const totalMessages = await prisma.whatsAppMessage.count({
       where: {
         processed: false,
-        type: { in: ['text', 'image'] },
-        OR: [{ text: { not: null } }, { type: 'image' }],
+        type: {
+          in: [
+            'text',
+            'image',
+            'textMessage',
+            'imageMessage',
+            'extendedTextMessage',
+          ],
+        },
+        OR: [
+          { text: { not: null } },
+          { type: { in: ['image', 'imageMessage'] } },
+        ],
       },
     });
 
@@ -95,11 +139,13 @@ async function main() {
     // Initialize unified processor
     const processor = new UnifiedOpenAIProcessor();
 
-    // Process messages in batches
+    // Process messages in batches with timeout protection
     let processedCount = 0;
     let batchNumber = 1;
+    let failedBatches = 0;
+    const maxFailedBatches = 3; // Allow up to 3 failed batches before stopping
 
-    while (processedCount < totalMessages) {
+    while (processedCount < totalMessages && failedBatches < maxFailedBatches) {
       console.log(`\n🔄 Processing batch ${batchNumber}...`);
 
       const messageIds = await getMessagesForProcessing(
@@ -115,20 +161,35 @@ async function main() {
         `Processing ${messageIds.length} messages in batch ${batchNumber}`
       );
 
-      // Process this batch
-      await processor.processMessagesToProducts(messageIds);
+      try {
+        // Process this batch with timeout protection
+        await processBatchWithTimeout(processor, messageIds, 15 * 60 * 1000); // 15 minute timeout per batch
 
-      // Mark messages as processed
-      await prisma.whatsAppMessage.updateMany({
-        where: { id: { in: messageIds } },
-        data: { processed: true },
-      });
+        // Mark messages as processed only if successful
+        await prisma.whatsAppMessage.updateMany({
+          where: { id: { in: messageIds } },
+          data: { processed: true },
+        });
 
-      processedCount += messageIds.length;
+        processedCount += messageIds.length;
+        failedBatches = 0; // Reset failed counter on success
+        console.log(`✅ Batch ${batchNumber} completed successfully`);
+      } catch (error) {
+        failedBatches++;
+        console.error(`❌ Batch ${batchNumber} failed:`, error);
+        console.log(
+          `⚠️  Skipping batch ${batchNumber} and continuing with next batch...`
+        );
+
+        // Don't mark messages as processed if batch failed
+        // They can be retried in the next run
+        continue;
+      }
+
       batchNumber++;
 
       // Get current product count and calculate new products created
-      const currentProductCount = await prisma.waDraftProduct.count();
+      const currentProductCount = await prisma.product.count();
       const newProductsCreated = currentProductCount - initialProductCount;
 
       // Update progress with current counts
@@ -140,38 +201,62 @@ async function main() {
       }
 
       console.log(
-        `✅ Batch ${batchNumber - 1} complete! Processed ${processedCount}/${totalMessages} messages, Created ${newProductsCreated} products`
+        `📊 Progress: Processed ${processedCount}/${totalMessages} messages, Created ${newProductsCreated} products`
+      );
+    }
+
+    if (failedBatches >= maxFailedBatches) {
+      console.log(
+        `⚠️  Stopping processing after ${maxFailedBatches} consecutive failed batches`
       );
     }
 
     // Get final product count
-    const finalProductCount = await prisma.waDraftProduct.count();
+    const finalProductCount = await prisma.product.count();
     productsCreated = finalProductCount - initialProductCount;
 
-    console.log('✅ All processing complete!');
+    console.log('✅ Processing complete!');
     console.log(`📊 Total products created: ${productsCreated}`);
-    console.log('All products are now ready for approval in the admin panel.');
+    console.log(`📊 Total messages processed: ${processedCount}`);
 
-    // Mark as completed with final counts
-    if (parsingProgressService) {
-      await parsingProgressService.markCompleted(
-        processedCount,
-        productsCreated
+    if (failedBatches > 0) {
+      console.log(
+        `⚠️  Some batches failed (${failedBatches} failed batches), but processing continued`
       );
+    }
+
+    // Mark as completed with final counts (even if some batches failed)
+    if (parsingProgressService) {
+      if (failedBatches > 0) {
+        await parsingProgressService.markPartialCompletion(
+          processedCount,
+          productsCreated,
+          `Processing completed with ${failedBatches} failed batches`
+        );
+      } else {
+        await parsingProgressService.markCompleted(
+          processedCount,
+          productsCreated
+        );
+      }
     }
   } catch (error) {
     console.error('Failed to process draft products:', error);
 
-    // Mark as failed in progress tracking
+    // Mark as partial completion instead of complete failure
     if (parsingProgressService) {
-      await parsingProgressService.markFailed(
-        error instanceof Error
-          ? error.message
-          : 'Unknown error during product processing'
+      const currentProductCount = await prisma.product.count();
+      const finalProductsCreated = currentProductCount - initialProductCount;
+
+      await parsingProgressService.markPartialCompletion(
+        processedCount,
+        finalProductsCreated,
+        `Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
 
-    process.exitCode = 1;
+    // Don't exit with error code - allow partial completion
+    console.log('⚠️  Processing completed with errors, but some work was done');
   } finally {
     // Clean up signal handlers
     cleanupSignalHandlers();

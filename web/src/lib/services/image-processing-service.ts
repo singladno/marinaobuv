@@ -6,6 +6,7 @@ export interface ImageData {
   mimeType: string;
   width?: number;
   height?: number;
+  color?: string | null;
 }
 
 /**
@@ -15,11 +16,17 @@ export class ImageProcessingService {
   /**
    * Process images from messages and upload to S3
    */
-  async processImagesFromMessages(messages: any[]): Promise<ImageData[]> {
+  async processImagesFromMessages(
+    messages: any[],
+    imageColors?: Array<{ url: string; color: string | null }>
+  ): Promise<ImageData[]> {
     const imageData: ImageData[] = [];
 
     for (const message of messages) {
-      if (message.type === 'image' && message.mediaUrl) {
+      if (
+        (message.type === 'image' || message.type === 'imageMessage') &&
+        message.mediaUrl
+      ) {
         try {
           console.log(`     📸 Processing image from message ${message.id}...`);
 
@@ -38,12 +45,18 @@ export class ImageProcessingService {
             throw new Error(result.error || 'Failed to upload to S3');
           }
 
+          // Find the color for this image URL
+          const imageColor = imageColors?.find(
+            ic => ic.url === message.mediaUrl
+          );
+
           imageData.push({
             url: result.url || message.mediaUrl,
             key: s3Key,
             mimeType: message.mediaMimeType || 'image/jpeg',
             width: message.mediaWidth,
             height: message.mediaHeight,
+            color: imageColor?.color || null,
           });
         } catch (error) {
           console.error(

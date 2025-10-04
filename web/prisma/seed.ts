@@ -552,7 +552,6 @@ async function main() {
     categories: await prisma.category.count(),
     products: await prisma.product.count(),
     images: await prisma.productImage.count(),
-    sizes: await prisma.productSize.count(),
   };
 
   console.log('Seed complete:', counts);
