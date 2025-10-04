@@ -4,21 +4,28 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ProductSourceModal } from './ProductSourceModal';
 
 interface ProductGalleryProps {
   images: Array<{ url: string; alt?: string }>;
   productName: string;
   height?: number; // px height for main image container
+  productId?: string;
+  sourceMessageIds?: string[] | null;
 }
 
 export default function ProductGalleryVertical({
   images,
   productName,
   height = 560,
+  productId,
+  sourceMessageIds,
 }: ProductGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const safeImages =
     images?.length > 0
       ? images
@@ -85,6 +92,23 @@ export default function ProductGalleryVertical({
           />
         </div>
 
+        {/* Source Chip - shows on hover */}
+        {productId && sourceMessageIds && sourceMessageIds.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIsSourceModalOpen(true)}
+            className="absolute left-3 top-3 z-20 opacity-0 transition-all duration-200 group-hover:opacity-100"
+            title="Просмотр источника сообщений"
+          >
+            <Badge
+              variant="secondary"
+              className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+            >
+              Источник
+            </Badge>
+          </button>
+        )}
+
         {/* Nav arrows */}
         {safeImages.length > 1 && (
           <>
@@ -111,6 +135,16 @@ export default function ProductGalleryVertical({
           </>
         )}
       </Card>
+
+      {/* Source Modal */}
+      {productId && (
+        <ProductSourceModal
+          isOpen={isSourceModalOpen}
+          onClose={() => setIsSourceModalOpen(false)}
+          productId={productId}
+          productName={productName}
+        />
+      )}
     </div>
   );
 }

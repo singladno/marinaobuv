@@ -47,9 +47,14 @@ export async function GET(
             },
           },
         },
-        orderBy: {
-          createdAt: 'asc',
-        },
+        orderBy: [
+          {
+            timestamp: 'asc',
+          },
+          {
+            createdAt: 'asc',
+          },
+        ],
       });
 
       // Format the messages for the frontend
@@ -60,7 +65,7 @@ export async function GET(
         fromName: message.fromName,
         type: message.type,
         text: message.text,
-        timestamp: message.timestamp,
+        timestamp: message.timestamp ? Number(message.timestamp) : null,
         mediaUrl: message.mediaUrl,
         mediaMimeType: message.mediaMimeType,
         mediaWidth: message.mediaWidth,

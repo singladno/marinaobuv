@@ -241,6 +241,64 @@
   }
 }
 
+@layer utilities {
+  /* Consistent shadow utilities */
+  .shadow-card {
+    @apply shadow-sm;
+  }
+
+  .shadow-card-hover {
+    @apply shadow-md;
+  }
+
+  .shadow-elevated {
+    @apply shadow-lg;
+  }
+
+  .shadow-modal {
+    @apply shadow-2xl;
+  }
+
+  /* Consistent border utilities */
+  .border-card {
+    @apply border border-gray-200 dark:border-gray-700;
+  }
+
+  .border-card-error {
+    @apply border-2 border-red-500;
+  }
+
+  .border-input {
+    @apply border border-gray-300 dark:border-gray-600;
+  }
+
+  .border-input-focus {
+    @apply border-purple-500 ring-2 ring-purple-200;
+  }
+
+  .border-dashed-placeholder {
+    @apply border border-dashed border-gray-300 dark:border-gray-600;
+  }
+
+  /* Consistent background utilities */
+  .bg-card {
+    @apply bg-white dark:bg-gray-800;
+  }
+
+  .bg-card-hover {
+    @apply bg-gray-50 dark:bg-gray-700;
+  }
+
+  /* Consistent rounded utilities */
+  .rounded-card {
+    @apply rounded-lg;
+  }
+
+  .rounded-card-large {
+    @apply rounded-xl;
+  }
+}
+
 /**
  * Using the elevate system.
  * Automatic contrast adjustment.

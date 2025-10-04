@@ -32,7 +32,7 @@ export function CartItem({ item, onRemove, onUpdateQuantity }: CartItemProps) {
   };
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-card bg-card shadow-card border-card flex items-center justify-between p-4">
       <Link
         href={`/product/${item.product.id}`}
         className="flex items-center gap-4"

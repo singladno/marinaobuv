@@ -74,6 +74,7 @@ export function ProductSourceModal({
       onClose={onClose}
       title={`Источник: ${productName}`}
       size="xl"
+      zIndex="z-[60]"
     >
       <div className="p-6">
         {loading && (

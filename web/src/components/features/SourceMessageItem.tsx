@@ -47,35 +47,38 @@ export function SourceMessageItem({ message }: SourceMessageItemProps) {
         <div className="mb-2 whitespace-pre-wrap text-sm">{message.text}</div>
       )}
 
-      {message.type === 'image' && message.mediaUrl && (
-        <div className="mt-2">
-          <Image
-            src={message.mediaUrl}
-            alt="Изображение из сообщения"
-            width={400}
-            height={192}
-            className="max-h-48 max-w-full rounded border object-contain"
-            loading="lazy"
-          />
-          {message.mediaMimeType && (
-            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {message.mediaMimeType}
-              {message.mediaWidth && message.mediaHeight && (
-                <span>
-                  {' '}
-                  ({message.mediaWidth}×{message.mediaHeight})
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      {(message.type === 'image' || message.type === 'imageMessage') &&
+        message.mediaUrl && (
+          <div className="mt-2">
+            <Image
+              src={message.mediaUrl}
+              alt="Изображение из сообщения"
+              width={400}
+              height={192}
+              className="max-h-48 max-w-full rounded border object-contain"
+              loading="lazy"
+            />
+            {message.mediaMimeType && (
+              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {message.mediaMimeType}
+                {message.mediaWidth && message.mediaHeight && (
+                  <span>
+                    {' '}
+                    ({message.mediaWidth}×{message.mediaHeight})
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
-      {message.type && message.type !== 'image' && (
-        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          Тип: {message.type}
-        </div>
-      )}
+      {message.type &&
+        message.type !== 'image' &&
+        message.type !== 'imageMessage' && (
+          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Тип: {message.type}
+          </div>
+        )}
 
       <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
         ID: {message.id}

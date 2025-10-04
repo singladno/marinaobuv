@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
@@ -7,6 +8,7 @@ interface ModalProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  zIndex?: string;
 }
 
 export function Modal({
@@ -16,6 +18,7 @@ export function Modal({
   children,
   size = 'md',
   className = '',
+  zIndex = 'z-50',
 }: ModalProps) {
   React.useEffect(() => {
     if (!isOpen) return;
@@ -45,8 +48,8 @@ export function Modal({
     xl: 'max-w-4xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center p-4">
+  const modalContent = (
+    <div className={`fixed inset-0 ${zIndex} grid place-items-center p-4`}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -61,9 +64,9 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
       >
-        <div className="flex max-h-[80vh] flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-900">
+        <div className="rounded-card-large bg-card shadow-modal flex max-h-[80vh] flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-900">
+          <div className="bg-card flex-shrink-0 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <h2
                 id="modal-title"
@@ -73,7 +76,7 @@ export function Modal({
               </h2>
               <button
                 onClick={onClose}
-                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                className="rounded-card p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                 aria-label="Закрыть"
               >
                 <svg
@@ -99,4 +102,7 @@ export function Modal({
       </div>
     </div>
   );
+
+  // Use portal to render modal at document root level
+  return createPortal(modalContent, document.body);
 }

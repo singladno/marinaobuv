@@ -11,11 +11,15 @@ type ImageWithColor = { url: string; alt?: string; color?: string | null };
 type Props = {
   images: ImageWithColor[];
   productName: string;
+  productId?: string;
+  sourceMessageIds?: string[] | null;
 };
 
 export default function ProductGalleryWithColors({
   images,
   productName,
+  productId,
+  sourceMessageIds,
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
@@ -56,6 +60,8 @@ export default function ProductGalleryWithColors({
           images={filteredImages}
           productName={productName}
           height={560}
+          productId={productId}
+          sourceMessageIds={sourceMessageIds}
         />
       </div>
       {colorOptions.length > 1 && (

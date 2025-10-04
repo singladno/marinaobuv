@@ -1,3 +1,5 @@
+import { TransportCompany } from '@/lib/shipping';
+
 interface Product {
   id: string;
   slug: string;
@@ -18,11 +20,7 @@ interface CartItemWithProduct {
 
 interface OrderSummaryProps {
   products: CartItemWithProduct[];
-  selectedTransport: {
-    id: string;
-    name: string;
-    cost: number;
-  } | null;
+  selectedTransport: TransportCompany | null;
   // Extended props to align with BasketContent usage
   isEditingTransport: boolean;
   setIsEditingTransport: (editing: boolean) => void;
@@ -77,44 +75,104 @@ export function OrderSummary({
     0
   );
 
-  const shippingCost = selectedTransport?.cost || 0;
+  const shippingCost = selectedTransport?.priceLabel === 'Бесплатно' ? 0 : 250;
   const total = subtotal + shippingCost;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-      <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-        Итого
-      </h3>
-
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Товары:</span>
-          <span className="font-medium">{formatPrice(subtotal)}</span>
+    <div className="space-y-6">
+      {/* Delivery Summary */}
+      <div className="rounded-card bg-card shadow-card border-card p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Доставка{' '}
+            {selectedTransport ? selectedTransport.name : '— не выбрана'}
+          </h2>
+          <button
+            className="text-purple-600 hover:text-purple-700"
+            aria-label="Редактировать доставку"
+            title="Редактировать доставку"
+            onClick={() => setIsEditingTransport(true)}
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </button>
         </div>
-
-        {selectedTransport && (
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">
-              Доставка ({selectedTransport.name}):
-            </span>
-            <span className="font-medium">{formatPrice(shippingCost)}</span>
-          </div>
+        {selectedTransport ? (
+          <>
+            {selectedTransport.address && (
+              <p className="text-sm text-gray-600">
+                {selectedTransport.address}
+              </p>
+            )}
+            <p className="text-sm text-gray-500">{selectedTransport.eta}</p>
+          </>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Выберите транспортную компанию
+          </p>
         )}
-
-        <div className="border-t border-gray-200 pt-2 dark:border-gray-600">
-          <div className="flex justify-between text-lg font-semibold">
-            <span>Итого:</span>
-            <span>{formatPrice(total)}</span>
-          </div>
-        </div>
       </div>
 
-      <button
-        onClick={isLoggedIn ? onPlaceOrder : () => setIsLoginModalOpen(true)}
-        className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-      >
-        {isLoggedIn ? 'Оформить заказ' : 'Войти для оформления заказа'}
-      </button>
+      {/* Order Total */}
+      <div className="rounded-card bg-card shadow-card border-card p-6">
+        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Итого
+        </h3>
+
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600 dark:text-gray-400">Товары:</span>
+            <span className="font-medium">{formatPrice(subtotal)}</span>
+          </div>
+
+          {selectedTransport && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">
+                Доставка ({selectedTransport.name}):
+              </span>
+              <span className="font-medium">{formatPrice(shippingCost)}</span>
+            </div>
+          )}
+
+          <div className="border-t border-gray-200 pt-2 dark:border-gray-600">
+            <div className="flex justify-between text-lg font-semibold">
+              <span>Итого:</span>
+              <span>{formatPrice(total)}</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={isLoggedIn ? onPlaceOrder : () => setIsLoginModalOpen(true)}
+          className="rounded-card mt-6 w-full bg-purple-600 px-4 py-3 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
+        >
+          {isLoggedIn ? 'Оформить заказ' : 'Войти для оформления заказа'}
+        </button>
+
+        <div className="mt-4 flex items-start gap-2">
+          <input
+            type="checkbox"
+            className="mt-1"
+            defaultChecked
+            aria-label="Согласие с правилами"
+            title="Согласие с правилами"
+          />
+          <p className="text-xs text-gray-600">
+            Соглашаюсь с правилами пользования торговой площадкой и возврата
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

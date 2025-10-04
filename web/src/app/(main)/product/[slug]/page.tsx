@@ -15,7 +15,19 @@ export default async function ProductPage({
   const awaited = await params;
   const product = await prisma.product.findUnique({
     where: { slug: awaited.slug },
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      article: true,
+      pricePair: true,
+      description: true,
+      material: true,
+      gender: true,
+      season: true,
+      availabilityCheckedAt: true,
+      sizes: true,
+      sourceMessageIds: true,
       images: {
         orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
       },
@@ -80,6 +92,12 @@ export default async function ProductPage({
             <ProductGalleryWithColors
               images={images}
               productName={product.name}
+              productId={product.id}
+              sourceMessageIds={
+                Array.isArray(product.sourceMessageIds)
+                  ? (product.sourceMessageIds as string[])
+                  : null
+              }
             />
           </div>
 
@@ -100,6 +118,11 @@ export default async function ProductPage({
                 Array.isArray(product.sizes)
                   ? (product.sizes as Array<{ size: string; count: number }>)
                   : []
+              }
+              sourceMessageIds={
+                Array.isArray(product.sourceMessageIds)
+                  ? (product.sourceMessageIds as string[])
+                  : null
               }
             />
           </div>

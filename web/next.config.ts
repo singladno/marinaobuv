@@ -23,6 +23,13 @@ function computeRemotePatterns() {
     pathname: '/**',
   });
 
+  // Add Yandex Cloud Storage subdomain for WhatsApp media
+  patterns.push({
+    protocol: 'https',
+    hostname: 'sw-media-1105.storage.yandexcloud.net',
+    pathname: '/**',
+  });
+
   if (cdn) {
     try {
       const u = new URL(cdn);

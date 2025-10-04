@@ -24,6 +24,7 @@ type Props = {
   season?: keyof typeof import('@/lib/format').seasonRu | null;
   availabilityCheckedAt?: Date | string | null;
   sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
+  sourceMessageIds?: string[] | null;
 };
 
 export default function ProductDetails(props: Props) {
@@ -38,6 +39,7 @@ export default function ProductDetails(props: Props) {
     gender,
     season,
     sizes,
+    sourceMessageIds,
   } = props;
 
   const { add, items } = useCart();

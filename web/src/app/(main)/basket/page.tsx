@@ -64,6 +64,7 @@ export default function BasketPage() {
           setUserFullName={basketState.setUserFullName}
           userAddress={basketState.userAddress}
           setUserAddress={basketState.setUserAddress}
+          validationErrors={basketState.validationErrors}
           onPlaceOrder={() => handlers.setIsCheckoutModalOpen(true)}
           onRemove={basketState.remove}
           onUpdateQuantity={basketState.updateQuantity}

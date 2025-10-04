@@ -1,3 +1,5 @@
+import * as React from 'react';
+
 import type {
   Product,
   ProductsFilters,
@@ -43,18 +45,27 @@ export function useProducts(): UseProductsReturn {
     onDelete: api.deleteProductAPI,
   });
 
-  const fetchProducts = async (silent = false) => {
-    try {
-      const result = await data.fetchProducts(silent);
-      // Update the state manager with fresh data
-      actions.setData(result.products);
-    } catch (err) {
-      // Error is already handled in useProductsData
-    }
-  };
+  const fetchProducts = React.useCallback(
+    async (silent = false) => {
+      try {
+        const result = await data.fetchProducts(silent);
+        // Update the state manager with fresh data
+        actions.setData(result.products);
+      } catch (err) {
+        console.error('useProducts - fetchProducts error:', err);
+        // Error is already handled in useProductsData
+      }
+    },
+    [data.fetchProducts, actions]
+  );
 
   const reload = async () => fetchProducts(false);
   const reloadSilent = async () => fetchProducts(true);
+
+  // Fetch products on mount only
+  React.useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   // Use optimistic update functions
   const updateProduct = updateProductOptimistic;

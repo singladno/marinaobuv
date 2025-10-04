@@ -2,7 +2,8 @@ import * as React from 'react';
 import { useCategories } from '@/hooks/useCategories';
 import type { Product, ProductUpdateData } from '@/types/product';
 
-import { EditableProductCell } from './EditableProductCell';
+import { CategorySelector } from '@/components/ui/CategorySelector';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 interface ProductCategoryCellProps {
   product: Product;
@@ -14,33 +15,31 @@ export function ProductCategoryCell({
   onUpdateProduct,
 }: ProductCategoryCellProps) {
   const { categories } = useCategories();
-  const category = categories.find(cat => cat.id === product.categoryId);
-
-  const [isEditing, setIsEditing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
 
-  const handleSave = async (value: string) => {
-    const selectedCategory = categories.find(cat => cat.name === value);
-    if (!selectedCategory) return;
+  const handleCategoryChange = async (categoryId: string | null) => {
     setIsSaving(true);
     try {
-      await onUpdateProduct(product.id, { categoryId: selectedCategory.id });
+      await onUpdateProduct(product.id, {
+        categoryId: categoryId || undefined,
+      });
     } finally {
       setIsSaving(false);
-      setIsEditing(false);
     }
   };
 
   return (
-    <EditableProductCell
-      value={category?.name || 'Без категории'}
-      onSave={handleSave}
-      isEditing={isEditing}
-      onEdit={() => setIsEditing(true)}
-      isSaving={isSaving}
-      type="select"
-      options={categories.map(cat => ({ value: cat.name, label: cat.name }))}
-      className="text-sm text-gray-900"
-    />
+    <div className="flex items-center space-x-2">
+      <CategorySelector
+        value={product.categoryId}
+        onChange={handleCategoryChange}
+        categories={categories as CategoryNode[]}
+        placeholder="Выберите категорию"
+        disabled={isSaving}
+      />
+      {isSaving && (
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+      )}
+    </div>
   );
 }

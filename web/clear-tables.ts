@@ -1,0 +1,1 @@
+// Clear tables script

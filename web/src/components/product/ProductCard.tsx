@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import CartActionButton from '@/components/product/CartActionButton';
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
-import { ProductSourceButton } from '@/components/product/ProductSourceButton';
+import { ProductSourceModal } from '@/components/product/ProductSourceModal';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -37,6 +37,7 @@ export default function ProductCard({
   productId,
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   useEffect(() => {
     if (!selectedColor && colorOptions.length > 0) {
@@ -56,82 +57,108 @@ export default function ProductCard({
   const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
   const computedPairPrice = useMemo(() => pricePair ?? null, [pricePair]);
   return (
-    <div className="bg-surface group relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-      {/* Heart overlay outside the Link to avoid navigation */}
-      <button
-        type="button"
-        aria-label="Добавить в избранное"
-        onClick={e => {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleFavorite(slug);
-        }}
-        className="absolute right-3 top-3 z-10 inline-flex cursor-pointer items-center justify-center text-white transition-transform hover:scale-110"
-      >
-        <Heart
-          className={`h-5 w-5 ${isFavorite(slug) ? 'fill-red-500 text-red-500' : ''}`}
-        />
-      </button>
+    <>
+      <div className="bg-surface rounded-card-large shadow-card hover:shadow-card-hover group relative overflow-hidden transition-all duration-300 hover:-translate-y-1">
+        {/* Heart overlay outside the Link to avoid navigation */}
+        <button
+          type="button"
+          aria-label="Добавить в избранное"
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite(slug);
+          }}
+          className="absolute right-3 top-3 z-10 inline-flex cursor-pointer items-center justify-center text-white transition-transform hover:scale-110"
+        >
+          <Heart
+            className={`h-5 w-5 ${isFavorite(slug) ? 'fill-red-500 text-red-500' : ''}`}
+          />
+        </button>
 
-      <Link href={`/product/${slug}`} className="block">
-        {/* Image Container */}
-        <div className="bg-muted group/image relative aspect-square w-full overflow-hidden">
-          {hasImage ? (
-            <Image
-              src={displayImageUrl as string}
-              alt={name}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
-              priority={false}
-            />
-          ) : (
-            <NoImagePlaceholder />
-          )}
+        <Link href={`/product/${slug}`} className="block">
+          {/* Image Container */}
+          <div className="bg-muted group/image relative aspect-square w-full overflow-hidden">
+            {hasImage ? (
+              <Image
+                src={displayImageUrl as string}
+                alt={name}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                priority={false}
+              />
+            ) : (
+              <NoImagePlaceholder />
+            )}
 
-          {/* Category Badge */}
-          {showCategory && category && (
-            <Badge
-              variant="secondary"
-              className="bg-background/90 absolute left-3 top-3 shadow-sm backdrop-blur-sm"
-            >
-              {category}
-            </Badge>
-          )}
+            {/* Category Badge */}
+            {showCategory && category && (
+              <Badge
+                variant="secondary"
+                className="bg-background/90 absolute left-3 top-3 shadow-sm backdrop-blur-sm"
+              >
+                {category}
+              </Badge>
+            )}
 
-          {/* Hover Overlay */}
-          <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
-        </div>
+            {/* Source Chip - shows on hover */}
+            {productId && (
+              <button
+                type="button"
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsSourceModalOpen(true);
+                }}
+                className="absolute left-3 top-3 z-20 opacity-0 transition-all duration-200 group-hover:opacity-100"
+                title="Просмотр источника сообщений"
+              >
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                >
+                  Источник
+                </Badge>
+              </button>
+            )}
 
-        <div className="p-5">
-          <div className="space-y-3">
-            <Text
-              variant="body"
-              className="text-foreground group-hover:text-primary line-clamp-2 min-h-[2.5rem] font-medium leading-tight transition-colors duration-200"
-            >
-              {name}
-            </Text>
-            <div className="flex items-center justify-between">
-              <Text className="text-foreground text-xl font-bold">
-                {rub(computedPairPrice ?? 0)}
-              </Text>
-              <CartActionButton slug={slug} />
-            </div>
-            <ColorSwitcher
-              options={colorOptions}
-              selectedColor={selectedColor || colorOptions[0]?.color || null}
-              onSelect={setSelectedColor}
-            />
+            {/* Hover Overlay */}
+            <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
           </div>
-        </div>
-      </Link>
 
-      {/* Source button for admin users - outside Link to prevent navigation */}
+          <div className="p-5">
+            <div className="space-y-3">
+              <Text
+                variant="body"
+                className="text-foreground group-hover:text-primary line-clamp-2 min-h-[2.5rem] font-medium leading-tight transition-colors duration-200"
+              >
+                {name}
+              </Text>
+              <div className="flex items-center justify-between">
+                <Text className="text-foreground text-xl font-bold">
+                  {rub(computedPairPrice ?? 0)}
+                </Text>
+                <CartActionButton slug={slug} />
+              </div>
+              <ColorSwitcher
+                options={colorOptions}
+                selectedColor={selectedColor || colorOptions[0]?.color || null}
+                onSelect={setSelectedColor}
+              />
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Source Modal - rendered outside card to avoid clipping */}
       {productId && (
-        <div className="absolute bottom-2 right-2 opacity-0 transition-all duration-200 group-hover:opacity-100">
-          <ProductSourceButton productId={productId} productName={name} />
-        </div>
+        <ProductSourceModal
+          isOpen={isSourceModalOpen}
+          onClose={() => setIsSourceModalOpen(false)}
+          productId={productId}
+          productName={name}
+        />
       )}
-    </div>
+    </>
   );
 }

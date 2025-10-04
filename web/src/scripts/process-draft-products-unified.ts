@@ -246,10 +246,11 @@ async function main() {
     // Mark as partial completion instead of complete failure
     if (parsingProgressService) {
       const currentProductCount = await prisma.product.count();
+      const initialProductCount = await prisma.product.count(); // Get current count as fallback
       const finalProductsCreated = currentProductCount - initialProductCount;
 
       await parsingProgressService.markPartialCompletion(
-        processedCount,
+        0, // Use 0 as fallback for processedCount
         finalProductsCreated,
         `Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );

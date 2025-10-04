@@ -50,24 +50,24 @@ export function ProductHeader({ name, article, gender, season, slug }: Props) {
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={handleShare}
-            className="gap-2"
+            className="p-2"
+            title={isSharing ? 'Скопировано!' : 'Поделиться'}
           >
             <Share className="h-4 w-4" />
-            {isSharing ? 'Скопировано!' : 'Поделиться'}
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => toggleFavorite(slug)}
-            className={`gap-2 ${isWishlisted ? 'text-red-500' : ''}`}
+            className={`p-2 ${isWishlisted ? 'text-red-500' : ''}`}
+            title={isWishlisted ? 'В избранном' : 'В избранное'}
           >
             <Heart
               className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`}
             />
-            {isWishlisted ? 'В избранном' : 'В избранное'}
           </Button>
         </div>
       </div>

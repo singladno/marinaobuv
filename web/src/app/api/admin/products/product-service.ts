@@ -27,7 +27,8 @@ export async function getProducts(filters: ProductFilters) {
     where.categoryId = filters.categoryId;
   }
 
-  where.isActive = true;
+  // Admin should see all products (both active and inactive) for management
+  // where.isActive = true;
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
