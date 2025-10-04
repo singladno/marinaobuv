@@ -86,7 +86,7 @@ done
 # 4. Install dependencies and start PM2 application
 print_status "Installing dependencies..."
 cd "$WEB_DIR"
-npm install --production
+npm install --omit=dev --ignore-scripts
 
 print_status "Starting PM2 application..."
 cd "$APP_DIR"
