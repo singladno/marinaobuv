@@ -95,32 +95,6 @@ const categories: CategoryData[] = [
           },
         ],
       },
-      {
-        name: 'Унисекс',
-        slug: 'spring-unisex',
-        path: 'spring/unisex',
-        sort: 300,
-        children: [
-          {
-            name: 'Кроссовки',
-            slug: 'spring-unisex-sneakers',
-            path: 'spring/unisex/sneakers',
-            sort: 100,
-          },
-          {
-            name: 'Кеды',
-            slug: 'spring-unisex-canvas',
-            path: 'spring/unisex/canvas',
-            sort: 200,
-          },
-          {
-            name: 'Слипоны',
-            slug: 'spring-unisex-slip-ons',
-            path: 'spring/unisex/slip-ons',
-            sort: 300,
-          },
-        ],
-      },
     ],
   },
   {
@@ -208,32 +182,6 @@ const categories: CategoryData[] = [
             slug: 'summer-womens-mules',
             path: 'summer/womens/mules',
             sort: 600,
-          },
-        ],
-      },
-      {
-        name: 'Унисекс',
-        slug: 'summer-unisex',
-        path: 'summer/unisex',
-        sort: 300,
-        children: [
-          {
-            name: 'Вьетнамки',
-            slug: 'summer-unisex-flip-flops',
-            path: 'summer/unisex/flip-flops',
-            sort: 100,
-          },
-          {
-            name: 'Кроссовки',
-            slug: 'summer-unisex-sneakers',
-            path: 'summer/unisex/sneakers',
-            sort: 200,
-          },
-          {
-            name: 'Водные туфли',
-            slug: 'summer-unisex-water-shoes',
-            path: 'summer/unisex/water-shoes',
-            sort: 300,
           },
         ],
       },
@@ -333,32 +281,6 @@ const categories: CategoryData[] = [
           },
         ],
       },
-      {
-        name: 'Унисекс',
-        slug: 'autumn-unisex',
-        path: 'autumn/unisex',
-        sort: 300,
-        children: [
-          {
-            name: 'Кроссовки высокие',
-            slug: 'autumn-unisex-high-tops',
-            path: 'autumn/unisex/high-tops',
-            sort: 100,
-          },
-          {
-            name: 'Треккинговые ботинки',
-            slug: 'autumn-unisex-hiking-boots',
-            path: 'autumn/unisex/hiking-boots',
-            sort: 200,
-          },
-          {
-            name: 'Кеды',
-            slug: 'autumn-unisex-canvas',
-            path: 'autumn/unisex/canvas',
-            sort: 300,
-          },
-        ],
-      },
     ],
   },
   {
@@ -446,32 +368,6 @@ const categories: CategoryData[] = [
             slug: 'winter-womens-ugg-boots',
             path: 'winter/womens/ugg-boots',
             sort: 600,
-          },
-        ],
-      },
-      {
-        name: 'Унисекс',
-        slug: 'winter-unisex',
-        path: 'winter/unisex',
-        sort: 300,
-        children: [
-          {
-            name: 'Зимние треккинговые ботинки',
-            slug: 'winter-unisex-hiking-boots',
-            path: 'winter/unisex/hiking-boots',
-            sort: 100,
-          },
-          {
-            name: 'Снежные ботинки',
-            slug: 'winter-unisex-snow-boots',
-            path: 'winter/unisex/snow-boots',
-            sort: 200,
-          },
-          {
-            name: 'Зимние кроссовки',
-            slug: 'winter-unisex-sneakers',
-            path: 'winter/unisex/sneakers',
-            sort: 300,
           },
         ],
       },
