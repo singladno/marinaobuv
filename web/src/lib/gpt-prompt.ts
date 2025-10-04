@@ -31,6 +31,10 @@ export function getSystemPrompt(/* categoryTreeJson?: string */): string {
  - Look for explicit size mentions like "размеры 36/37/38" or "36,37,38" or "36-38"
  - Size patterns: "36/37/38/39/40/41" means 1 pair of each size (36:1, 37:1, 38:1, etc.)
  - Size patterns: "36:2/37:1/38:3" means 2 pairs of 36, 1 pair of 37, 3 pairs of 38
+ - ONE OF THE PATTERNS: "41-45 | 42-43-44-X2" means:
+   * Create range 41-45 (inclusive) with count=1 for each
+   * Add extra pairs for sizes 42, 43, 44 (each gets +1 count due to X2)
+   * Result: 41(1), 42(2), 43(2), 44(2), 45(1) = 8 pairs total
  - If no quantity is specified for a size, assume 1 pair
  - Always include count field, never use 0
  - If no clear size information is provided, omit the sizes field entirely
@@ -58,6 +62,7 @@ Special Case (compact range with total pairs):
  ✅ CORRECT: "36,37,38,39" → sizes: [{"size": "36", "count": 1}, {"size": "37", "count": 1}, {"size": "38", "count": 1}, {"size": "39", "count": 1}], packPairs: 4
  ✅ CORRECT: "36:2/37:1/38:3" → sizes: [{"size": "36", "count": 2}, {"size": "37", "count": 1}, {"size": "38", "count": 3}], packPairs: 6
  ✅ CORRECT: "36/37/38/38/39/39/40/41" → sizes: [{"size": "36", "count": 1}, {"size": "37", "count": 1}, {"size": "38", "count": 2}, {"size": "39", "count": 2}, {"size": "40", "count": 1}, {"size": "41", "count": 1}], packPairs: 8
+ ✅ CORRECT: "41-45 | 42-43-44-X2" → sizes: [{"size": "41", "count": 1}, {"size": "42", "count": 2}, {"size": "43", "count": 2}, {"size": "44", "count": 2}, {"size": "45", "count": 1}], packPairs: 8
  ❌ WRONG: "3/4/17" (provider place) → omit sizes field entirely, packPairs: null
  ❌ WRONG: "8-800-555-35-35" (phone) → omit sizes field entirely, packPairs: null
  ❌ WRONG: "ул. Ленина 15/7" (address) → omit sizes field entirely, packPairs: null

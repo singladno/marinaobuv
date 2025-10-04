@@ -25,6 +25,10 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
           - Look for explicit size mentions like "размеры 36/37/38" or "36,37,38" or "36-38"
           - Size patterns: "36/37/38/39/40/41" means 1 pair of each size (36:1, 37:1, 38:1, etc.)
           - Size patterns: "36:2/37:1/38:3" means 2 pairs of 36, 1 pair of 37, 3 pairs of 38
+          - ONE OF THE PATTERNS: "41-45 | 42-43-44-X2" means:
+            * Create range 41-45 (inclusive) with count=1 for each
+            * Add extra pairs for sizes 42, 43, 44 (each gets +1 count due to X2)
+            * Result: 41(1), 42(2), 43(2), 44(2), 45(1) = 8 pairs total
           - If no quantity is specified for a size, assume 1 pair
           - Always include count field, never use 0
           - If no clear size information is provided, omit the sizes field entirely
@@ -110,6 +114,10 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
             - Look for explicit size mentions like "размеры 36/37/38" or "36,37,38" or "36-38"
             - Size patterns: "36/37/38/39/40/41" means 1 pair of each size (36:1, 37:1, 38:1, etc.)
             - Size patterns: "36:2/37:1/38:3" means 2 pairs of 36, 1 pair of 37, 3 pairs of 38
+            - ONE OF THE PATTERNS: "41-45 | 42-43-44-X2" means:
+              * Create range 41-45 (inclusive) with count=1 for each
+              * Add extra pairs for sizes 42, 43, 44 (each gets +1 count due to X2)
+              * Result: 41(1), 42(2), 43(2), 44(2), 45(1) = 8 pairs total
             - If no quantity is specified for a size, assume 1 pair
             - Always include count field, never use 0
             - If no clear size information is provided, omit the sizes field entirely
