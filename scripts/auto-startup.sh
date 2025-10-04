@@ -86,10 +86,15 @@ done
 # 4. Install dependencies, build application, and start PM2
 print_status "Installing dependencies..."
 cd "$WEB_DIR"
-npm install --omit=dev --ignore-scripts
+npm cache clean --force
+rm -rf node_modules
+npm install --ignore-scripts
 
 print_status "Building application..."
 npm run build
+
+print_status "Installing production dependencies..."
+npm install --omit=dev --ignore-scripts
 
 print_status "Starting PM2 application..."
 cd "$APP_DIR"
