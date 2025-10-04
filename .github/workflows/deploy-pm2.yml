@@ -231,8 +231,12 @@ jobs:
             cd web && npm run prisma:generate
             cd ..
 
-            # Run database migrations (use proper env loading)
-            cd web && npm run prisma:migrate
+            # Check migration status and run database migrations
+            cd web && echo "🔍 Checking migration status..."
+            cd web && npx prisma migrate status
+            cd web && echo "🚀 Running database migrations..."
+            cd web && npm run prisma:migrate:deploy
+            cd web && echo "✅ Migrations completed successfully"
             cd ..
 
             # Build application (Next.js will automatically load .env.production)

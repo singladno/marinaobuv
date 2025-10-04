@@ -15,6 +15,7 @@
     "prisma": "export $(cat .env.local | grep -v '^#' | xargs) && npx prisma studio",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init_catalog",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:reset": "prisma migrate reset --force",
     "fetch:messages": "tsx src/scripts/fetch-group-messages.ts",
