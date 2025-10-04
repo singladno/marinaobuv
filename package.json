@@ -29,7 +29,7 @@
     "parse:test": "cd web && npx tsx src/scripts/test-parsing-monitoring.ts",
     "parse:cleanup": "cd web && npx tsx src/scripts/cleanup-stuck-parsing.ts",
     "logs:parse": "cd web && tail -f logs/parsing-cron.log",
-    "server:parser-logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'tail -f /home/ubuntu/marinaobuv/web/logs/parsing-cron.log'",
+    "server:parser-logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'tail -n 200 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
     "server:logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'pm2 logs marinaobuv'"
   },
   "keywords": [

@@ -317,8 +317,8 @@ fi
 npm run build
 
 # Setup parsing cron job
-if [ -f "src/scripts/deploy-cron.sh" ]; then
-    ./src/scripts/deploy-cron.sh
+if [ -f "web/src/scripts/deploy-cron.sh" ]; then
+    cd web && ./src/scripts/deploy-cron.sh
 fi
 
 # Restart PM2
