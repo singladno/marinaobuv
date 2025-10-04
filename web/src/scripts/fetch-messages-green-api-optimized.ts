@@ -100,14 +100,32 @@ async function main() {
       headers: { 'Content-Type': 'application/json' },
     });
 
+    let allMessages;
     if (!response.ok) {
-      throw new Error(`API failed: ${response.status}`);
+      if (response.status === 429) {
+        console.log(`⚠️  Rate limited, waiting 10 seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        // Retry once after delay
+        const retryResponse = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!retryResponse.ok) {
+          throw new Error(`API failed after retry: ${retryResponse.status}`);
+        }
+        allMessages = await retryResponse.json();
+        console.log(
+          `📨 Got ${allMessages.length} messages with media URLs included (after retry)!`
+        );
+      } else {
+        throw new Error(`API failed: ${response.status}`);
+      }
+    } else {
+      allMessages = await response.json();
+      console.log(
+        `📨 Got ${allMessages.length} messages with media URLs included!`
+      );
     }
-
-    const allMessages = await response.json();
-    console.log(
-      `📨 Got ${allMessages.length} messages with media URLs included!`
-    );
 
     // Filter messages by target group ID
     const messages = allMessages.filter((msg: any) => msg.chatId === chatId);

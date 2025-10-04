@@ -25,6 +25,7 @@ const schema = z
     GREEN_API_INSTANCE_ID: z.string().optional(),
     GREEN_API_TOKEN: z.string().optional(),
     GREEN_API_BASE_URL: z.string().url().optional(),
+    GREEN_API_DASHBOARD_URL: z.string().url().optional(),
     // Admin phone that gets ADMIN role on OTP login
     ADMIN_PHONE: z.string().optional(),
 
@@ -113,6 +114,7 @@ const raw = {
   GREEN_API_INSTANCE_ID: process.env.GREEN_API_INSTANCE_ID,
   GREEN_API_TOKEN: process.env.GREEN_API_TOKEN,
   GREEN_API_BASE_URL: process.env.GREEN_API_BASE_URL,
+  GREEN_API_DASHBOARD_URL: process.env.GREEN_API_DASHBOARD_URL,
   ADMIN_PHONE: process.env.ADMIN_PHONE,
 
   // S3 Configuration
