@@ -1,6 +1,6 @@
 import { prisma } from '../db-node';
 import { env } from '../env';
-import { getOpenAIClient } from '../openai-client';
+import OpenAI from 'openai';
 import { createGroupingPrompt } from '../prompts/grouping-prompt';
 import { GreenApiFetcher } from '../green-api-fetcher';
 
@@ -28,7 +28,9 @@ export class MessageGroupingService {
 
   private async ensureClient() {
     if (this.openai) return;
-    this.openai = await getOpenAIClient();
+    this.openai = new OpenAI({
+      apiKey: env.OPENAI_API_KEY,
+    });
   }
 
   /**

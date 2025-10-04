@@ -2,7 +2,7 @@
  * Service for analyzing individual images to detect colors
  */
 import { env } from '../env';
-import { getOpenAIClient } from '../openai-client';
+import OpenAI from 'openai';
 
 export interface ImageColorResult {
   url: string;
@@ -23,7 +23,9 @@ export class PerImageColorService {
 
   private async getOpenAI() {
     if (!this.openai) {
-      this.openai = await getOpenAIClient();
+      this.openai = new OpenAI({
+        apiKey: env.OPENAI_API_KEY,
+      });
     }
     return this.openai;
   }
