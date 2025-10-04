@@ -33,6 +33,10 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
             * Create range 36-40 (inclusive) with count=1 for each
             * Add extra pair for size 37 (due to Повторы:37)
             * Result: 36(1), 37(2), 38(1), 39(1), 40(1) = 6 pairs total
+          - ANOTHER PATTERN: "36-40 38/2" means:
+            * Create range 36-40 (inclusive) with count=1 for each
+            * Override size 38 to have count=2 (due to 38/2)
+            * Result: 36(1), 37(1), 38(2), 39(1), 40(1) = 6 pairs total
           - If no quantity is specified for a size, assume 1 pair
           - Always include count field, never use 0
           - If no clear size information is provided, omit the sizes field entirely
@@ -126,6 +130,10 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
               * Create range 36-40 (inclusive) with count=1 for each
               * Add extra pair for size 37 (due to Повторы:37)
               * Result: 36(1), 37(2), 38(1), 39(1), 40(1) = 6 pairs total
+            - ANOTHER PATTERN: "36-40 38/2" means:
+              * Create range 36-40 (inclusive) with count=1 for each
+              * Override size 38 to have count=2 (due to 38/2)
+              * Result: 36(1), 37(1), 38(2), 39(1), 40(1) = 6 pairs total
             - If no quantity is specified for a size, assume 1 pair
             - Always include count field, never use 0
             - If no clear size information is provided, omit the sizes field entirely
