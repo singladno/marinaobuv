@@ -83,10 +83,13 @@ for i in {1..30}; do
     sleep 1
 done
 
-# 4. Install dependencies and start PM2 application
+# 4. Install dependencies, build application, and start PM2
 print_status "Installing dependencies..."
 cd "$WEB_DIR"
 npm install --omit=dev --ignore-scripts
+
+print_status "Building application..."
+npm run build
 
 print_status "Starting PM2 application..."
 cd "$APP_DIR"
