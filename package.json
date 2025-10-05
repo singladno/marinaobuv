@@ -17,7 +17,6 @@
     "monitor": "pm2 monit",
     "setup": "npm install && cd web && npm install",
     "deploy": "./deploy-pm2.sh",
-    "backup": "./backup.sh",
     "health": "curl -s http://localhost:3000/api/health || echo 'Application not responding'",
     "prisma": "cd web && export $(cat .env.local | grep -v '^#' | xargs) && npx prisma studio",
     "prisma:generate": "cd web && npx prisma generate",
@@ -33,14 +32,8 @@
     "logs:parse": "cd web && tail -f logs/parsing-cron.log",
     "server:parser-logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'tail -n 200 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
     "server:logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'pm2 logs marinaobuv'",
-    "server:check-parsers": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep && echo \"--- PM2 Processes ---\" && pm2 list | grep -E \"(parsing|cron|tsx)\" || echo \"No parser processes found\"'",
-    "vpn:start": "open -a Surfshark && echo 'Please connect to US server in Surfshark app'",
-    "vpn:stop": "echo 'Please disconnect in Surfshark app'",
-    "vpn:status": "echo 'Check Surfshark app for status'",
-    "vpn:login": "open -a Surfshark && echo 'Please login in Surfshark app'",
-    "parse:vpn": "echo 'Please connect to US server in Surfshark app first, then run: npm run parse'",
-    "deploy:vpn": "./deploy-to-existing-server.sh",
-    "proxy": "cd proxy && npm i && npm run start"
+    "server:cron-status": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'systemctl status cron --no-pager || systemctl status crond --no-pager; echo \"--- enabled ---\"; systemctl is-enabled cron || systemctl is-enabled crond; echo \"--- recent logs (last hour) ---\"; journalctl -u cron --since \"1 hour ago\" --no-pager -n 200 || journalctl -u crond --since \"1 hour ago\" --no-pager -n 200'",
+    "server:check-parsers": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep && echo \"--- PM2 Processes ---\" && pm2 list | grep -E \"(parsing|cron|tsx)\" || echo \"No parser processes found\"'"
   },
   "keywords": [
     "nextjs",

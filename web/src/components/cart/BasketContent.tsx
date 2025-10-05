@@ -44,6 +44,7 @@ interface BasketContentProps {
     userData?: boolean;
   };
   onPlaceOrder: () => void;
+  isPlacingOrder?: boolean;
   onRemove: (slug: string) => void;
   onUpdateQuantity: (slug: string, quantity: number) => void;
 }
@@ -69,6 +70,7 @@ export function BasketContent({
   setUserAddress,
   validationErrors,
   onPlaceOrder,
+  isPlacingOrder,
   onRemove,
   onUpdateQuantity,
 }: BasketContentProps) {
@@ -164,8 +166,32 @@ export function BasketContent({
         <div
           className={`rounded-card bg-card shadow-card p-6 ${validationErrors?.userData ? 'border-card-error' : 'border-card'}`}
         >
-          <div className="mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">Мои данные</h2>
+            <button
+              className="text-purple-600 hover:text-purple-700"
+              aria-label="Редактировать данные"
+              title="Редактировать данные"
+              onClick={() =>
+                isLoggedIn
+                  ? setIsEditingUserData(!isEditingUserData)
+                  : setIsLoginModalOpen(true)
+              }
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+            </button>
           </div>
 
           {isLoggedIn ? (
@@ -173,7 +199,7 @@ export function BasketContent({
               className={`rounded-card p-4 ${validationErrors?.userData ? 'border-card-error' : 'border-card'}`}
             >
               {!isEditingUserData ? (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
                       <svg
@@ -206,26 +232,6 @@ export function BasketContent({
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => setIsEditingUserData(true)}
-                    className="text-purple-600 hover:text-purple-700"
-                    aria-label="Редактировать данные"
-                    title="Редактировать данные"
-                  >
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -330,6 +336,7 @@ export function BasketContent({
         userAddress={userAddress}
         setUserAddress={setUserAddress}
         onPlaceOrder={onPlaceOrder}
+        isPlacingOrder={isPlacingOrder}
       />
     </div>
   );

@@ -39,6 +39,7 @@ interface OrderSummaryProps {
   userAddress: string;
   setUserAddress: (address: string) => void;
   onPlaceOrder: () => void;
+  isPlacingOrder?: boolean;
 }
 
 export function OrderSummary({
@@ -61,6 +62,7 @@ export function OrderSummary({
   userAddress,
   setUserAddress,
   onPlaceOrder,
+  isPlacingOrder,
 }: OrderSummaryProps) {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -156,8 +158,39 @@ export function OrderSummary({
         <button
           onClick={isLoggedIn ? onPlaceOrder : () => setIsLoginModalOpen(true)}
           className="rounded-card mt-6 w-full bg-purple-600 px-4 py-3 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
+          disabled={!!isPlacingOrder}
         >
-          {isLoggedIn ? 'Оформить заказ' : 'Войти для оформления заказа'}
+          {isLoggedIn ? (
+            isPlacingOrder ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <svg
+                  className="h-5 w-5 animate-spin text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+                Оформляем…
+              </span>
+            ) : (
+              'Оформить заказ'
+            )
+          ) : (
+            'Войти для оформления заказа'
+          )}
         </button>
 
         <div className="mt-4 flex items-start gap-2">

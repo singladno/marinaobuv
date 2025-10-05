@@ -146,11 +146,11 @@ print_status "Using existing PM2 configuration..."
 sudo mkdir -p /var/log/pm2
 sudo chown -R $USER:$USER /var/log/pm2
 
-# 14. Start application with PM2
-print_status "Starting application with PM2..."
-pm2 start $APP_DIR/ecosystem.config.js --env production
+# 14. Start or reload PM2 with ecosystem (includes prisma-studio)
+print_status "Starting or reloading PM2 with ecosystem..."
+pm2 startOrReload $APP_DIR/ecosystem.config.js --env production --update-env
 
-# 15. Save PM2 configuration
+# 15. Save PM2 configuration and ensure startup
 pm2 save
 pm2 startup
 

@@ -47,5 +47,17 @@ module.exports = {
       health_check_grace_period: 3000,
       health_check_fatal_exceptions: true,
     },
+    {
+      name: "prisma-studio",
+      cwd: "./web",
+      script: "npx",
+      args: "prisma studio --port 5555 --hostname 127.0.0.1",
+      env: {
+        NODE_ENV: "production",
+      },
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "256M",
+    },
   ],
 };

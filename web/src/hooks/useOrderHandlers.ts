@@ -27,6 +27,8 @@ interface UseOrderHandlersProps {
   ) => void;
 }
 
+import { useState } from 'react';
+
 export function useOrderHandlers({
   products,
   selectedTransportId,
@@ -39,6 +41,7 @@ export function useOrderHandlers({
   setIsCheckoutModalOpen,
   setValidationErrors,
 }: UseOrderHandlersProps) {
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const calculateSubtotal = () => {
     return products.reduce(
       (sum, item) => sum + item.product.pricePair * item.qty,
@@ -59,6 +62,7 @@ export function useOrderHandlers({
     }
 
     try {
+      setIsPlacingOrder(true);
       const orderItems = products.map(item => ({
         productId: item.product.id,
         qty: item.qty,
@@ -102,11 +106,14 @@ export function useOrderHandlers({
         title: 'Ошибка оформления заказа',
         message: err.message,
       });
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
   return {
     calculateSubtotal,
     handlePlaceOrder,
+    isPlacingOrder,
   };
 }

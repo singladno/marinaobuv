@@ -66,6 +66,7 @@ export default function BasketPage() {
           setUserAddress={basketState.setUserAddress}
           validationErrors={basketState.validationErrors}
           onPlaceOrder={orderHandlers.handlePlaceOrder}
+          isPlacingOrder={orderHandlers.isPlacingOrder}
           onRemove={basketState.remove}
           onUpdateQuantity={basketState.updateQuantity}
         />

@@ -1,4 +1,4 @@
-import { generateItemCodes } from '@/lib/itemCodeGenerator';
+import { generateItemCode } from '@/lib/itemCodeGenerator';
 import { generateOrderNumber } from '@/lib/order-number-generator';
 import { prisma } from '@/lib/server/db';
 
@@ -81,8 +81,8 @@ export async function createOrder(
     const itemTotal = boxPrice * item.qty;
     total += itemTotal;
 
-    // Generate item codes
-    const itemCodes = await generateItemCodes(item.qty);
+    // Generate a single item code for this order line
+    const itemCode = generateItemCode();
 
     orderItems.push({
       slug: product.slug,
@@ -92,7 +92,7 @@ export async function createOrder(
       product: {
         connect: { id: product.id },
       },
-      itemCodes,
+      itemCode,
     });
   }
 
