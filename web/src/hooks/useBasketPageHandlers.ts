@@ -33,11 +33,11 @@ export function useBasketPageHandlers({
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ phone, otpCode }),
+        body: JSON.stringify({ code: otpCode }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Не удалось войти');
-      setUserId(json.user.userId);
+      setUserId(json.user.id);
       setIsLoggedIn(true);
       setIsLoginModalOpen(false);
       // Refresh user data in global context

@@ -3,7 +3,8 @@ import { generateOrderNumber } from '@/lib/order-number-generator';
 import { prisma } from '@/lib/server/db';
 
 interface CreateOrderItem {
-  slug: string;
+  slug?: string;
+  productId?: string;
   qty: number;
 }
 
@@ -16,18 +17,40 @@ export async function createOrder(
   userId: string,
   items: CreateOrderItem[],
   customerInfo: {
-    name: string;
+    name?: string;
     phone: string;
-    address: string;
+    address?: string;
     comment?: string;
-  }
+  },
+  transportCompanyId?: string
 ) {
   // Get products with their details
+  // Support items defined by slug or by productId
+  const productIds = items
+    .map(i => i.productId)
+    .filter((v): v is string => Boolean(v));
+  const productSlugs = items
+    .map(i => i.slug)
+    .filter((v): v is string => Boolean(v));
+
   const products = await prisma.product.findMany({
     where: {
-      slug: {
-        in: items.map(item => item.slug),
-      },
+      OR: [
+        productSlugs.length > 0
+          ? {
+              slug: {
+                in: productSlugs,
+              },
+            }
+          : undefined,
+        productIds.length > 0
+          ? {
+              id: {
+                in: productIds,
+              },
+            }
+          : undefined,
+      ].filter(Boolean) as any,
     },
     include: {
       images: {
@@ -49,7 +72,9 @@ export async function createOrder(
   const orderItems = [];
 
   for (const item of items) {
-    const product = products.find(p => p.slug === item.slug);
+    const product = products.find(
+      p => p.slug === item.slug || p.id === item.productId
+    );
     if (!product) continue;
 
     const boxPrice = getBoxPriceFromPair(product.pricePair, product.sizes);
@@ -83,6 +108,7 @@ export async function createOrder(
       fullName: customerInfo.name,
       phone: customerInfo.phone,
       address: customerInfo.address,
+      transportId: transportCompanyId,
       items: {
         create: orderItems,
       },

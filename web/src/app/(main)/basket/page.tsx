@@ -1,7 +1,6 @@
 'use client';
 
 import { BasketContent } from '@/components/cart/BasketContent';
-import { CheckoutModal } from '@/components/cart/CheckoutModal';
 import { EmptyCart } from '@/components/cart/EmptyCart';
 import { LoadingSpinner } from '@/components/cart/LoadingSpinner';
 import { LoginModal } from '@/components/cart/LoginModal';
@@ -32,6 +31,7 @@ export default function BasketPage() {
     addNotification: basketState.addNotification,
     clear: basketState.clear,
     setIsCheckoutModalOpen: handlers.setIsCheckoutModalOpen,
+    setValidationErrors: basketState.setValidationErrors,
   });
 
   if (basketState.loading) {
@@ -65,7 +65,7 @@ export default function BasketPage() {
           userAddress={basketState.userAddress}
           setUserAddress={basketState.setUserAddress}
           validationErrors={basketState.validationErrors}
-          onPlaceOrder={() => handlers.setIsCheckoutModalOpen(true)}
+          onPlaceOrder={orderHandlers.handlePlaceOrder}
           onRemove={basketState.remove}
           onUpdateQuantity={basketState.updateQuantity}
         />
@@ -88,11 +88,7 @@ export default function BasketPage() {
         onLogin={handlers.handleLogin}
       />
 
-      <CheckoutModal
-        isOpen={handlers.isCheckoutModalOpen}
-        onClose={() => handlers.setIsCheckoutModalOpen(false)}
-        onPlaceOrder={orderHandlers.handlePlaceOrder}
-      />
+      {null}
     </div>
   );
 }

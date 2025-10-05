@@ -28,8 +28,13 @@ export class MessageGroupingService {
 
   private async ensureClient() {
     if (this.openai) return;
+    const rawBase = env.OPENAI_BASE_URL || 'https://api.openai.com';
+    const normalizedBase = rawBase.endsWith('/v1')
+      ? rawBase
+      : `${rawBase.replace(/\/+$/, '')}/v1`;
     this.openai = new OpenAI({
       apiKey: env.OPENAI_API_KEY,
+      baseURL: normalizedBase,
     });
   }
 
@@ -177,46 +182,49 @@ export class MessageGroupingService {
       `🔄 Refreshing media URLs for ${imageMessages.length} image messages...`
     );
 
-    // Process each message individually with a small delay to avoid rate limiting
-    for (let i = 0; i < imageMessages.length; i++) {
-      const message = imageMessages[i];
+    // Process with limited concurrency to speed up while avoiding rate limits
+    const concurrency = env.MEDIA_REFRESH_CONCURRENCY || 5;
+    let index = 0;
 
-      try {
-        console.log(
-          `   📸 Refreshing media URL for message ${message.id} (${i + 1}/${imageMessages.length})...`
-        );
-
-        const freshUrl = await this.greenApiFetcher.downloadFile(
-          message.waMessageId,
-          message.chatId || ''
-        );
-
-        if (freshUrl) {
-          // Update the message in database with fresh URL
-          await prisma.whatsAppMessage.update({
-            where: { id: message.id },
-            data: { mediaUrl: freshUrl },
-          });
-
-          // Update the message object for current processing
-          message.mediaUrl = freshUrl;
-          console.log(`   ✅ Refreshed media URL for message ${message.id}`);
-        } else {
+    const worker = async () => {
+      while (index < imageMessages.length) {
+        const current = index++;
+        const message = imageMessages[current];
+        try {
           console.log(
-            `   ⚠️  Could not refresh media URL for message ${message.id}`
+            `   📸 Refreshing media URL for message ${message.id} (${current + 1}/${imageMessages.length})...`
+          );
+
+          const freshUrl = await this.greenApiFetcher.downloadFile(
+            message.waMessageId,
+            message.chatId || ''
+          );
+
+          if (freshUrl) {
+            await prisma.whatsAppMessage.update({
+              where: { id: message.id },
+              data: { mediaUrl: freshUrl },
+            });
+            message.mediaUrl = freshUrl;
+            console.log(`   ✅ Refreshed media URL for message ${message.id}`);
+          } else {
+            console.log(
+              `   ⚠️  Could not refresh media URL for message ${message.id}`
+            );
+          }
+        } catch (error) {
+          console.error(
+            `   ❌ Error refreshing media URL for message ${message.id}:`,
+            error
           );
         }
-      } catch (error) {
-        console.error(
-          `   ❌ Error refreshing media URL for message ${message.id}:`,
-          error
-        );
       }
+    };
 
-      // Add a small delay between requests to avoid rate limiting
-      if (i < imageMessages.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
-      }
-    }
+    const workers = Array.from(
+      { length: Math.min(concurrency, imageMessages.length) },
+      () => worker()
+    );
+    await Promise.all(workers);
   }
 }

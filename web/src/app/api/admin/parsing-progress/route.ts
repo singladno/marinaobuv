@@ -64,10 +64,32 @@ export async function POST(request: NextRequest) {
       updateData.errorMessage = errorMessage;
     }
 
-    // Update the parsing history record
-    const updatedRecord = await prisma.parsingHistory.update({
+    // Upsert the parsing history record with safe defaults to avoid not-found errors
+    const updatedRecord = await prisma.parsingHistory.upsert({
       where: { id: parsingHistoryId },
-      data: updateData,
+      update: updateData,
+      create: {
+        id: parsingHistoryId,
+        // Provide sensible defaults when record is first created
+        startedAt: new Date(),
+        status: updateData.status ?? 'running',
+        messagesRead:
+          typeof updateData.messagesRead === 'number'
+            ? updateData.messagesRead
+            : 0,
+        productsCreated:
+          typeof updateData.productsCreated === 'number'
+            ? updateData.productsCreated
+            : 0,
+        // Only include optional fields if already computed
+        ...(updateData.completedAt
+          ? { completedAt: updateData.completedAt }
+          : {}),
+        ...(updateData.duration ? { duration: updateData.duration } : {}),
+        ...(updateData.errorMessage
+          ? { errorMessage: updateData.errorMessage }
+          : {}),
+      },
     });
 
     console.log(`📊 Updated parsing progress for ${parsingHistoryId}:`, {

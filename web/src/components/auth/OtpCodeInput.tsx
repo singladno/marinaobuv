@@ -27,7 +27,7 @@ export function OtpCodeInput({
             value={code}
             onChange={e => setCode(e.target.value)}
             placeholder="Введите 6-значный код"
-            className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-center text-2xl font-bold tracking-widest text-gray-900 placeholder-gray-400 transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-500 dark:focus:border-blue-400"
+            className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-center text-2xl font-bold tracking-widest text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-400"
             maxLength={6}
             required
           />

@@ -1,18 +1,22 @@
 #!/usr/bin/env tsx
 
-// Load environment variables from .env.local BEFORE any other imports
+// Load environment variables from .env BEFORE any other imports
 import './load-env';
 
 import { spawn } from 'node:child_process';
 
 import { prisma } from '../lib/db-node';
 
-async function run(command: string, args: string[] = []) {
+async function run(
+  command: string,
+  args: string[] = [],
+  extraEnv: Record<string, string> = {}
+) {
   console.log(`$ ${command} ${args.join(' ')}`);
 
   return new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
-      env: process.env,
+      env: { ...process.env, ...extraEnv },
       stdio: 'inherit', // This will show logs in real-time
     });
 
@@ -187,9 +191,18 @@ async function cleanupStuckProcesses() {
       );
       const isVeryOld = record.startedAt < twoHoursAgo;
 
-      await prisma.parsingHistory.update({
+      await prisma.parsingHistory.upsert({
         where: { id: record.id },
-        data: {
+        update: {
+          status: 'failed',
+          completedAt: now,
+          errorMessage: isVeryOld
+            ? 'Process timeout - automatically cleaned up (>2h)'
+            : 'Process timeout - marked as failed due to stuck status (>1h)',
+          duration,
+        },
+        create: {
+          id: record.id,
           status: 'failed',
           completedAt: now,
           errorMessage: isVeryOld
@@ -223,9 +236,16 @@ async function cleanupStuckProcesses() {
         (now.getTime() - record.startedAt.getTime()) / 1000
       );
 
-      await prisma.parsingHistory.update({
+      await prisma.parsingHistory.upsert({
         where: { id: record.id },
-        data: {
+        update: {
+          status: 'failed',
+          completedAt: now,
+          errorMessage: 'Process terminated - too many concurrent processes',
+          duration,
+        },
+        create: {
+          id: record.id,
           status: 'failed',
           completedAt: now,
           errorMessage: 'Process terminated - too many concurrent processes',
@@ -288,22 +308,11 @@ async function main() {
 
     // 2) Convert messages to draft products (with graceful timeout)
     console.log('[cron] Starting product processing...');
-    try {
-      await runWithGracefulTimeout(
-        'tsx',
-        ['src/scripts/process-draft-products-unified.ts'],
-        30 * 60 * 1000,
-        { PARSING_HISTORY_ID: parsingHistoryId }
-      ); // 30 minute graceful timeout for processing
-      console.log('[cron] Processing completed successfully');
-    } catch (error) {
-      console.log(
-        '[cron] Processing completed with timeout or errors, but partial results may be available'
-      );
-      console.log('[cron] Error details:', error);
-      // Don't fail the entire cron job if processing times out
-      // The parsing progress service will handle the status update
-    }
+    // IMPORTANT: Never terminate the parser mid-run; let it complete all messages
+    await run('tsx', ['src/scripts/process-draft-products-unified.ts'], {
+      PARSING_HISTORY_ID: parsingHistoryId,
+    });
+    console.log('[cron] Processing completed successfully');
 
     // Get final counts
     const finalMessageCount = await prisma.whatsAppMessage.count({
@@ -328,9 +337,19 @@ async function main() {
       currentHistory?.status === 'completed' ? 'completed' : 'completed';
     const finalErrorMessage = currentHistory?.errorMessage || null;
 
-    await prisma.parsingHistory.update({
+    await prisma.parsingHistory.upsert({
       where: { id: parsingHistoryId },
-      data: {
+      update: {
+        status: finalStatus,
+        completedAt,
+        messagesRead,
+        productsCreated,
+        duration,
+        errorMessage: finalErrorMessage,
+      },
+      create: {
+        id: parsingHistoryId,
+        startedAt: startTime,
         status: finalStatus,
         completedAt,
         messagesRead,
@@ -359,14 +378,25 @@ async function main() {
         (completedAt.getTime() - startTime.getTime()) / 1000
       );
 
-      await prisma.parsingHistory.update({
+      await prisma.parsingHistory.upsert({
         where: { id: parsingHistoryId },
-        data: {
+        update: {
           status: 'failed',
           completedAt,
           errorMessage:
             error instanceof Error ? error.message : 'Unknown error',
           duration,
+        },
+        create: {
+          id: parsingHistoryId,
+          startedAt: startTime,
+          status: 'failed',
+          completedAt,
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
+          duration,
+          messagesRead: 0,
+          productsCreated: 0,
         },
       });
     }

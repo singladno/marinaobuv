@@ -40,12 +40,12 @@ export function useLoginPage() {
     const resVer = await fetch('/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ phone, code }),
+      body: JSON.stringify({ code }),
     });
     if (!resVer.ok)
       throw new Error((await resVer.json()).error ?? 'Неверный код');
     const data = await resVer.json();
-    setUserId(data.user.userId);
+    setUserId(data.user.id);
     // Refresh user data in global context
     await refreshUser();
     router.replace('/');

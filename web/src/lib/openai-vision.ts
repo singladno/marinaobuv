@@ -34,8 +34,13 @@ export async function validateDraftWithImagesOpenAI(
     return null;
   }
 
+  const rawBase = env.OPENAI_BASE_URL || 'https://api.openai.com';
+  const normalizedBase = rawBase.endsWith('/v1')
+    ? rawBase
+    : `${rawBase.replace(/\/+$/, '')}/v1`;
   const openai = new OpenAI({
     apiKey: env.OPENAI_API_KEY,
+    baseURL: normalizedBase,
   });
 
   const system = `You are an image color detection assistant for a shoe catalog.

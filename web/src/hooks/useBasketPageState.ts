@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBasketAuth } from './useBasketAuth';
 import { useCart } from '@/contexts/CartContext';
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import { useBasketCart } from './useBasketCart';
 import { useBasketOrder } from './useBasketOrder';
 import { popularTransportCompanies, TransportCompany } from '@/lib/shipping';
+import { useUser } from '@/contexts/UserContext';
 
 export function useBasketPageState() {
   const cart = useBasketCart();
@@ -12,6 +13,7 @@ export function useBasketPageState() {
   const order = useBasketOrder();
   const { userId, setUserId, clear } = useCart();
   const { addNotification } = useNotifications();
+  const { user } = useUser();
 
   const finalTotal = cart.totalPrice + order.shippingCost;
   const [selectedTransportId, setSelectedTransportId] = useState<string | null>(
@@ -59,6 +61,18 @@ export function useBasketPageState() {
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  // Prefill phone from authenticated user once (avoid refilling after user clears)
+  const hasAutofilledPhoneRef = useRef(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (hasAutofilledPhoneRef.current) return;
+    if (user?.phone && !orderPhone) {
+      setOrderPhone(user.phone);
+      hasAutofilledPhoneRef.current = true;
+    }
+    // Only depends on user phone; do not re-run on orderPhone changes
+  }, [user?.phone]);
 
   // Persist basket data to localStorage when any field changes
   useEffect(() => {

@@ -34,9 +34,17 @@ export async function POST() {
         (now.getTime() - record.startedAt.getTime()) / 1000
       );
 
-      await prisma.parsingHistory.update({
+      await prisma.parsingHistory.upsert({
         where: { id: record.id },
-        data: {
+        update: {
+          status: 'failed',
+          completedAt: now,
+          errorMessage:
+            'Process timeout - marked as failed due to stuck status',
+          duration: duration,
+        },
+        create: {
+          id: record.id,
           status: 'failed',
           completedAt: now,
           errorMessage:

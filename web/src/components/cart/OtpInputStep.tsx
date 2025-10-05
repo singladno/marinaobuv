@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { formatPhoneNumber } from '@/utils/phoneMask';
 
 interface OtpInputStepProps {
   phone: string;
@@ -47,7 +48,7 @@ export function OtpInputStep({
           required
         />
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Введите код, отправленный на номер {phone}
+          Введите код, отправленный на номер {formatPhoneNumber(phone)}
         </p>
       </div>
 

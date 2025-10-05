@@ -16,7 +16,9 @@ export class UnifiedOpenAIProcessor {
   /**
    * Main processing function - clean and readable
    */
-  async processMessagesToProducts(messageIds: string[]): Promise<void> {
+  async processMessagesToProducts(
+    messageIds: string[]
+  ): Promise<{ anyProcessed: boolean }> {
     console.log(
       `🚀 Processing ${messageIds.length} messages with unified OpenAI approach...`
     );
@@ -28,7 +30,7 @@ export class UnifiedOpenAIProcessor {
       console.log(
         `⚠️  No product groups found. Messages may not contain valid product information.`
       );
-      return;
+      return { anyProcessed: false };
     }
 
     console.log(
@@ -36,12 +38,18 @@ export class UnifiedOpenAIProcessor {
     );
 
     // Step 2: Process each group with timeout protection
+    let processedAny = false;
     for (let i = 0; i < messageGroups.length; i++) {
       const group = messageGroups[i];
 
       try {
         // Add timeout protection for each group processing
-        await this.processGroupWithTimeout(group, i + 1, messageGroups.length);
+        const ok = await this.processGroupWithTimeout(
+          group,
+          i + 1,
+          messageGroups.length
+        );
+        if (ok) processedAny = true;
       } catch (error) {
         console.error(
           `❌ Error processing group ${i + 1}/${messageGroups.length}:`,
@@ -55,6 +63,7 @@ export class UnifiedOpenAIProcessor {
     console.log(
       `\n🎉 Processing complete! Processed ${messageGroups.length} product groups.`
     );
+    return { anyProcessed: processedAny };
   }
 
   /**
@@ -65,19 +74,19 @@ export class UnifiedOpenAIProcessor {
     index: number,
     total: number,
     timeoutMs: number = 10 * 60 * 1000 // 10 minutes per group
-  ): Promise<void> {
+  ): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       const timeout = setTimeout(() => {
         console.log(
           `⏰ Group ${index}/${total} processing timed out after ${timeoutMs / 1000}s, skipping...`
         );
-        resolve(); // Don't reject, just skip this group
+        resolve(false); // Don't reject, just skip this group
       }, timeoutMs);
 
       try {
-        await this.groupProcessor.processGroup(group, index, total);
+        const ok = await this.groupProcessor.processGroup(group, index, total);
         clearTimeout(timeout);
-        resolve();
+        resolve(ok);
       } catch (error) {
         clearTimeout(timeout);
         reject(error);

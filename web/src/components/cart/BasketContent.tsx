@@ -4,6 +4,7 @@ import TransportCompanySelector from '@/components/features/TransportCompanySele
 import { popularTransportCompanies, TransportCompany } from '@/lib/shipping';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 
 interface CartItemWithProduct {
   slug: string;
@@ -243,11 +244,9 @@ export function BasketContent({
                     <label className="mb-1 block text-sm font-medium text-gray-700">
                       Телефон для заказа
                     </label>
-                    <Input
-                      type="tel"
+                    <PhoneInput
                       value={orderPhone}
-                      onChange={e => setOrderPhone(e.target.value)}
-                      placeholder="+7 (999) 123-45-67"
+                      onChange={value => setOrderPhone(value)}
                     />
                   </div>
                   <div>

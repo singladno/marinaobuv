@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-// Load environment variables from .env.local BEFORE any other imports
+// Load environment variables from .env BEFORE any other imports
 import './load-env';
 
 import { prisma } from '../lib/db-node';
@@ -50,9 +50,17 @@ async function cleanupStuckParsing() {
         (now.getTime() - record.startedAt.getTime()) / 1000
       );
 
-      await prisma.parsingHistory.update({
+      await prisma.parsingHistory.upsert({
         where: { id: record.id },
-        data: {
+        update: {
+          status: 'failed',
+          completedAt: now,
+          errorMessage:
+            'Process timeout - marked as failed due to stuck status',
+          duration: duration,
+        },
+        create: {
+          id: record.id,
           status: 'failed',
           completedAt: now,
           errorMessage:

@@ -63,7 +63,7 @@ async function processBatchWithTimeout(
   processor: UnifiedOpenAIProcessor,
   messageIds: string[],
   timeoutMs: number
-): Promise<void> {
+): Promise<{ anyProcessed: boolean }> {
   return new Promise(async (resolve, reject) => {
     const timeout = setTimeout(() => {
       console.log(`⏰ Batch timed out after ${timeoutMs / 1000}s, skipping...`);
@@ -71,9 +71,9 @@ async function processBatchWithTimeout(
     }, timeoutMs);
 
     try {
-      await processor.processMessagesToProducts(messageIds);
+      const result = await processor.processMessagesToProducts(messageIds);
       clearTimeout(timeout);
-      resolve();
+      resolve(result);
     } catch (error) {
       clearTimeout(timeout);
       reject(error);
@@ -162,14 +162,20 @@ async function main() {
       );
 
       try {
-        // Process this batch with timeout protection
-        await processBatchWithTimeout(processor, messageIds, 15 * 60 * 1000); // 15 minute timeout per batch
+        // Process this batch with timeout protection; returns whether any group produced a product
+        const { anyProcessed } = await processBatchWithTimeout(
+          processor,
+          messageIds,
+          15 * 60 * 1000
+        );
 
-        // Mark messages as processed only if successful
-        await prisma.whatsAppMessage.updateMany({
-          where: { id: { in: messageIds } },
-          data: { processed: true },
-        });
+        // Mark messages as processed only if the batch produced at least one product/group
+        if (anyProcessed) {
+          await prisma.whatsAppMessage.updateMany({
+            where: { id: { in: messageIds } },
+            data: { processed: true },
+          });
+        }
 
         processedCount += messageIds.length;
         failedBatches = 0; // Reset failed counter on success

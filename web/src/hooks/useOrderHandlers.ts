@@ -17,6 +17,14 @@ interface UseOrderHandlersProps {
   addNotification: (notification: any) => void;
   clear: () => void;
   setIsCheckoutModalOpen: (open: boolean) => void;
+  setValidationErrors: (
+    updater:
+      | { transport?: boolean; userData?: boolean }
+      | ((prev: { transport?: boolean; userData?: boolean }) => {
+          transport?: boolean;
+          userData?: boolean;
+        })
+  ) => void;
 }
 
 export function useOrderHandlers({
@@ -29,6 +37,7 @@ export function useOrderHandlers({
   addNotification,
   clear,
   setIsCheckoutModalOpen,
+  setValidationErrors,
 }: UseOrderHandlersProps) {
   const calculateSubtotal = () => {
     return products.reduce(
@@ -39,20 +48,13 @@ export function useOrderHandlers({
 
   const handlePlaceOrder = async () => {
     if (!selectedTransportId) {
-      addNotification({
-        type: 'error',
-        title: 'Ошибка оформления заказа',
-        message: 'Пожалуйста, выберите транспортную компанию.',
-      });
+      setValidationErrors(prev => ({ ...prev, transport: true }));
       return;
     }
 
-    if (!orderPhone || !userFullName || !userAddress) {
-      addNotification({
-        type: 'error',
-        title: 'Ошибка оформления заказа',
-        message: 'Пожалуйста, заполните все обязательные поля для доставки.',
-      });
+    // Only phone should be required for placing an order
+    if (!orderPhone) {
+      setValidationErrors(prev => ({ ...prev, userData: true }));
       return;
     }
 

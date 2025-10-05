@@ -4,6 +4,7 @@ import {
   handleOrderCreationError,
   validateCustomerInfo,
   validateOrderItems,
+  validateTransportCompanyId,
 } from '@/lib/orders/orderValidation';
 import { getSession } from '@/lib/server/session';
 import { createOrder, getOrders } from '@/lib/services/order-creation-service';
@@ -36,7 +37,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { items, customerInfo } = body;
+    // Accept flat payload fields and keep backwards compatibility with customerInfo
+    const {
+      items,
+      phone,
+      fullName,
+      address,
+      transportCompanyId,
+      customerInfo,
+    } = body;
 
     // Validate items
     const itemsValidation = validateOrderItems(items);
@@ -47,8 +56,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate customer info
-    const customerValidation = validateCustomerInfo(customerInfo);
+    // Validate required phone (either flat or within customerInfo)
+    const customerValidation = validateCustomerInfo(
+      customerInfo ?? { phone, name: fullName, address }
+    );
     if (!customerValidation.isValid) {
       return NextResponse.json(
         { error: customerValidation.error },
@@ -56,7 +67,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const order = await createOrder(session.userId, items, customerInfo);
+    // Validate required transport company id
+    const transportValidation = validateTransportCompanyId(transportCompanyId);
+    if (!transportValidation.isValid) {
+      return NextResponse.json(
+        { error: transportValidation.error },
+        { status: 400 }
+      );
+    }
+
+    const order = await createOrder(
+      session.userId,
+      items,
+      {
+        name: fullName ?? customerInfo?.name,
+        phone: phone ?? customerInfo?.phone,
+        address: address ?? customerInfo?.address,
+      },
+      String(transportCompanyId)
+    );
 
     return NextResponse.json({
       success: true,

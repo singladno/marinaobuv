@@ -23,8 +23,13 @@ export class PerImageColorService {
 
   private async getOpenAI() {
     if (!this.openai) {
+      const rawBase = env.OPENAI_BASE_URL || 'https://api.openai.com';
+      const normalizedBase = rawBase.endsWith('/v1')
+        ? rawBase
+        : `${rawBase.replace(/\/+$/, '')}/v1`;
       this.openai = new OpenAI({
         apiKey: env.OPENAI_API_KEY,
+        baseURL: normalizedBase,
       });
     }
     return this.openai;
@@ -78,21 +83,33 @@ export class PerImageColorService {
         `   🎨 Analyzing colors for ${imageUrls.length} images individually...`
       );
 
-      // Download all images as base64 first
-      const imageData: Array<{ url: string; base64: string | null }> = [];
+      // Download all images as base64 first with limited concurrency
+      const imageData: Array<{ url: string; base64: string | null }> =
+        Array.from({ length: imageUrls.length }, () => ({
+          url: '',
+          base64: null,
+        }));
 
-      for (let i = 0; i < imageUrls.length; i++) {
-        const url = imageUrls[i];
-        console.log(`   📥 Downloading image ${i + 1}/${imageUrls.length}...`);
+      const concurrency = env.IMAGE_DOWNLOAD_CONCURRENCY || 4;
+      let index = 0;
 
-        const base64 = await this.downloadImageAsBase64(url);
-        imageData.push({ url, base64 });
-
-        // Small delay between downloads to avoid overwhelming the server
-        if (i < imageUrls.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+      const worker = async () => {
+        while (index < imageUrls.length) {
+          const current = index++;
+          const url = imageUrls[current];
+          console.log(
+            `   📥 Downloading image ${current + 1}/${imageUrls.length}...`
+          );
+          const base64 = await this.downloadImageAsBase64(url);
+          imageData[current] = { url, base64 };
         }
-      }
+      };
+
+      const workers = Array.from(
+        { length: Math.min(concurrency, imageUrls.length) },
+        () => worker()
+      );
+      await Promise.all(workers);
 
       // Filter out failed downloads
       const successfulImages = imageData.filter(img => img.base64 !== null);

@@ -49,8 +49,13 @@ export class UnifiedAnalysisService {
 
   private async getOpenAI() {
     if (!this.openai) {
+      const rawBase = env.OPENAI_BASE_URL || 'https://api.openai.com';
+      const normalizedBase = rawBase.endsWith('/v1')
+        ? rawBase
+        : `${rawBase.replace(/\/+$/, '')}/v1`;
       this.openai = new OpenAI({
         apiKey: env.OPENAI_API_KEY,
+        baseURL: normalizedBase,
       });
     }
     return this.openai;
@@ -66,7 +71,7 @@ export class UnifiedAnalysisService {
   ): Promise<AnalysisResult | null> {
     // Add timeout protection for the entire analysis
     const timeoutMs = 5 * 60 * 1000; // 5 minutes timeout
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async resolve => {
       const timeout = setTimeout(() => {
         console.log(
           `⏰ Analysis timed out after ${timeoutMs / 1000}s, skipping...`
@@ -75,7 +80,7 @@ export class UnifiedAnalysisService {
       }, timeoutMs);
 
       try {
-        const result = await this.performAnalysis(
+        const result = await this.performAnalysisWithRetry(
           textContent,
           imageUrls,
           context
@@ -84,10 +89,59 @@ export class UnifiedAnalysisService {
         resolve(result);
       } catch (error) {
         clearTimeout(timeout);
-        console.error('Analysis failed:', error);
-        resolve(null); // Return null instead of rejecting to continue processing
+        console.error('Analysis failed after retries:', error);
+        resolve(null); // Skip this product/group
       }
     });
+  }
+
+  private async sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private isImageDownloadError(e: unknown): boolean {
+    const err = e as any;
+    const message: string = err?.message || '';
+    const code: string | undefined = err?.code || err?.error?.code;
+    return (
+      message.includes('Timeout while downloading') ||
+      message.includes('invalid_image_url') ||
+      code === 'invalid_image_url'
+    );
+  }
+
+  private async performAnalysisWithRetry(
+    textContent: string,
+    imageUrls: string[],
+    context: string,
+    maxAttempts: number = 3
+  ): Promise<AnalysisResult | null> {
+    let attempt = 0;
+    let lastError: unknown = null;
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      try {
+        console.log(`   🔁 OpenAI analysis attempt ${attempt}/${maxAttempts}`);
+        return await this.performAnalysis(textContent, imageUrls, context);
+      } catch (e) {
+        lastError = e;
+        const backoffMs = 1000 * Math.pow(2, attempt - 1);
+        if (this.isImageDownloadError(e)) {
+          console.warn(
+            `   ⚠️  Image download error from OpenAI on attempt ${attempt}. Retrying in ${backoffMs}ms...`
+          );
+          await this.sleep(backoffMs);
+          continue;
+        }
+        console.error('   ❌ Non-retryable error during analysis:', e);
+        throw e;
+      }
+    }
+    console.error(
+      `   ❌ Failed to analyze after ${maxAttempts} attempts. Skipping product.`
+    );
+    if (lastError) console.error(lastError);
+    return null;
   }
 
   private async performAnalysis(
@@ -208,14 +262,8 @@ export class UnifiedAnalysisService {
       return result as AnalysisResult;
     } catch (error) {
       console.error('Error analyzing text and images:', error);
-
-      // If images fail, try text-only analysis
-      if (imageUrls.length > 0 && textContent.trim()) {
-        console.log('   🔄 Falling back to text-only analysis...');
-        return await this.analyzeTextOnly(textContent, context);
-      }
-
-      return null;
+      // Re-throw to be handled by retry logic
+      throw error;
     }
   }
 

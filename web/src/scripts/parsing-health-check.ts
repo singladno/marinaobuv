@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
-// Load environment variables from .env.local FIRST
+// Load environment variables from .env FIRST (strict policy)
 import { config } from 'dotenv';
-config({ path: '.env.local', override: true });
+config({ path: '.env', override: true });
 
 import { prisma } from '../lib/db-node';
 
@@ -52,9 +52,14 @@ async function performHealthCheck(): Promise<HealthCheckResult> {
         (now.getTime() - process.startedAt.getTime()) / 1000
       );
 
-      await prisma.parsingHistory.update({
+      await prisma.parsingHistory.upsert({
         where: { id: process.id },
-        data: {
+        update: {
+          status: 'failed',
+          completedAt: now,
+        },
+        create: {
+          id: process.id,
           status: 'failed',
           completedAt: now,
           errorMessage:

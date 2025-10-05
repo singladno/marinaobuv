@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-// Load environment variables from .env.local BEFORE any other imports
+// Load environment variables from .env BEFORE any other imports
 import './load-env';
 
 import { prisma } from '../lib/db-node';
@@ -49,9 +49,13 @@ async function updateParsingStatus(
       updateData.errorMessage = errorMessage;
     }
 
-    const updatedRecord = await prisma.parsingHistory.update({
+    const updatedRecord = await prisma.parsingHistory.upsert({
       where: { id: parsingHistoryId },
-      data: updateData,
+      update: updateData,
+      create: {
+        id: parsingHistoryId,
+        ...updateData,
+      },
     });
 
     console.log('✅ Parsing status updated successfully:');
