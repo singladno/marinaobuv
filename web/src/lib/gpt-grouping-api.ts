@@ -16,6 +16,14 @@ export async function callGPTForGrouping(
 ): Promise<GPTGroupResponse> {
   console.log(`   🤖 Calling YandexGPT API...`);
 
+  // Type guards for required environment variables
+  if (!env.YC_FOLDER_ID) {
+    throw new Error('YC_FOLDER_ID is required');
+  }
+  if (!env.YC_IAM_TOKEN && !env.YC_API_KEY) {
+    throw new Error('Either YC_IAM_TOKEN or YC_API_KEY is required');
+  }
+
   const authHeader = env.YC_IAM_TOKEN
     ? `Bearer ${env.YC_IAM_TOKEN}`
     : `Api-Key ${env.YC_API_KEY}`;

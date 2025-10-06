@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 // Check if we're in a build context (GitHub Actions or build process)
-const isBuildContext = process.env.NODE_ENV === 'production' && 
+const isBuildContext =
+  process.env.NODE_ENV === 'production' &&
   (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true');
 
 const schema = z
@@ -18,15 +19,20 @@ const schema = z
     NEXT_PUBLIC_BRAND_NAME: z.string().min(1).default('MarinaObuv'),
 
     // Whapi.cloud API - make optional during build
-    WHAPI_BASE_URL: isBuildContext 
+    WHAPI_BASE_URL: isBuildContext
       ? z.string().url('WHAPI_BASE_URL must be a valid URL').optional()
       : z.string().url('WHAPI_BASE_URL must be a valid URL'),
-    WHAPI_TOKEN: isBuildContext 
+    WHAPI_TOKEN: isBuildContext
       ? z.string().min(1, 'WHAPI_TOKEN is required').optional()
       : z.string().min(1, 'WHAPI_TOKEN is required'),
-    WHAPI_WEBHOOK_SECRET: isBuildContext 
-      ? z.string().min(32, 'WHAPI_WEBHOOK_SECRET must be at least 32 characters').optional()
-      : z.string().min(32, 'WHAPI_WEBHOOK_SECRET must be at least 32 characters'),
+    WHAPI_WEBHOOK_SECRET: isBuildContext
+      ? z
+          .string()
+          .min(32, 'WHAPI_WEBHOOK_SECRET must be at least 32 characters')
+          .optional()
+      : z
+          .string()
+          .min(32, 'WHAPI_WEBHOOK_SECRET must be at least 32 characters'),
     WHAPI_VERIFY_TOKEN: z.string().optional(),
 
     // Green API
@@ -38,27 +44,27 @@ const schema = z
     ADMIN_PHONE: z.string().optional(),
 
     // S3 Configuration - make optional during build
-    S3_ENDPOINT: isBuildContext 
+    S3_ENDPOINT: isBuildContext
       ? z.string().url('S3_ENDPOINT must be a valid URL').optional()
       : z.string().url('S3_ENDPOINT must be a valid URL'),
-    S3_REGION: isBuildContext 
+    S3_REGION: isBuildContext
       ? z.string().min(1, 'S3_REGION is required').optional()
       : z.string().min(1, 'S3_REGION is required'),
-    S3_BUCKET: isBuildContext 
+    S3_BUCKET: isBuildContext
       ? z.string().min(1, 'S3_BUCKET is required').optional()
       : z.string().min(1, 'S3_BUCKET is required'),
-    S3_ACCESS_KEY: isBuildContext 
+    S3_ACCESS_KEY: isBuildContext
       ? z.string().min(1, 'S3_ACCESS_KEY is required').optional()
       : z.string().min(1, 'S3_ACCESS_KEY is required'),
-    S3_SECRET_KEY: isBuildContext 
+    S3_SECRET_KEY: isBuildContext
       ? z.string().min(1, 'S3_SECRET_KEY is required').optional()
       : z.string().min(1, 'S3_SECRET_KEY is required'),
-    CDN_BASE_URL: isBuildContext 
+    CDN_BASE_URL: isBuildContext
       ? z.string().url('CDN_BASE_URL must be a valid URL').optional()
       : z.string().url('CDN_BASE_URL must be a valid URL'),
 
     // Yandex Cloud - make optional during build
-    YC_FOLDER_ID: isBuildContext 
+    YC_FOLDER_ID: isBuildContext
       ? z.string().min(1, 'YC_FOLDER_ID is required').optional()
       : z.string().min(1, 'YC_FOLDER_ID is required'),
     YC_IAM_TOKEN: z.string().optional(),

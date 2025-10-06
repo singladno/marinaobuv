@@ -5,6 +5,20 @@ import { Upload } from '@aws-sdk/lib-storage';
 
 import { env } from './env';
 
+// Type guards for required S3 environment variables
+if (!env.S3_ENDPOINT) {
+  throw new Error('S3_ENDPOINT is required');
+}
+if (!env.S3_REGION) {
+  throw new Error('S3_REGION is required');
+}
+if (!env.S3_ACCESS_KEY) {
+  throw new Error('S3_ACCESS_KEY is required');
+}
+if (!env.S3_SECRET_KEY) {
+  throw new Error('S3_SECRET_KEY is required');
+}
+
 // Initialize S3 client for Yandex Object Storage
 const s3Client = new S3Client({
   endpoint: env.S3_ENDPOINT,
