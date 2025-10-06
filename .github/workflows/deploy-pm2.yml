@@ -38,19 +38,7 @@ jobs:
       - name: Run tests (if any)
         run: |
           cd web
-          # Load environment variables from .env file if it exists
-          if [ -f ".env" ]; then
-            echo "Loading environment variables from .env file..."
-            export $(cat .env | grep -v '^#' | xargs)
-          elif [ -f "env.example" ]; then
-            echo "Using env.example as fallback..."
-            export $(cat env.example | grep -v '^#' | xargs)
-          else
-            echo "No environment file found, using defaults..."
-          fi
           npm run build
-        env:
-          NODE_ENV: production
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
