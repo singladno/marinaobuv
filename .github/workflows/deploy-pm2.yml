@@ -52,6 +52,24 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            web/.next/
+            web/package*.json
+            web/node_modules/
+            web/prisma/
+            web/public/
+            web/src/
+            web/next.config.ts
+            web/tsconfig.json
+            web/postcss.config.mjs
+            web/tailwind.config.ts
+            web/.env*
+          retention-days: 1
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
@@ -61,34 +79,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: web/
+
+      - name: Setup Node.js (for server deployment tools)
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          npm install
-          cd web && npm install
-
-      - name: Build application
-        run: |
-          cd web
-          # Load environment variables from .env file if it exists
-          if [ -f ".env" ]; then
-            echo "Loading environment variables from .env file..."
-            export $(cat .env | grep -v '^#' | xargs)
-          elif [ -f "env.example" ]; then
-            echo "Using env.example as fallback..."
-            export $(cat env.example | grep -v '^#' | xargs)
-          else
-            echo "No environment file found, using defaults..."
-          fi
-          npm run build
-        env:
-          NODE_ENV: production
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
@@ -167,60 +167,52 @@ jobs:
             fi
             cd ..
 
-            # Install dependencies (include devDependencies for build)
-            cd web && npm ci --ignore-scripts
+            # Install production dependencies only (no devDependencies needed since we have pre-built artifacts)
+            cd web && npm ci --production --ignore-scripts
             cd ..
 
             # Generate Prisma client with proper environment
-            cd web && echo "🔧 Generating Prisma client..."
-            cd web && ./prisma-server.sh npm run prisma:generate
-            cd ..
+            cd web
+            echo "🔧 Generating Prisma client..."
+            ./prisma-server.sh npm run prisma:generate
 
             # Verify database connection
-            cd web && echo "🔍 Verifying database connection..."
-            cd web && ./prisma-server.sh npx prisma db pull --print || echo "⚠️ Database connection test failed, but continuing..."
-            cd ..
+            echo "🔍 Verifying database connection..."
+            ./prisma-server.sh npx prisma db pull --print || echo "⚠️ Database connection test failed, but continuing..."
 
             # Backup database before migrations
-            cd web && echo "💾 Creating database backup..."
-            cd web && ./prisma-server.sh npm run db:backup || echo "⚠️ Database backup failed, but continuing..."
-            cd ..
+            echo "💾 Creating database backup..."
+            ./prisma-server.sh npm run db:backup || echo "⚠️ Database backup failed, but continuing..."
 
             # Check migration status and run database migrations
-            cd web && echo "🔍 Checking migration status..."
-            cd web && ./prisma-server.sh npx prisma migrate status
-            cd web && echo "🚀 Running database migrations..."
-            cd web && ./prisma-server.sh npm run prisma:migrate:deploy
+            echo "🔍 Checking migration status..."
+            ./prisma-server.sh npx prisma migrate status
+            echo "🚀 Running database migrations..."
+            ./prisma-server.sh npm run prisma:migrate:deploy
             if [ $? -ne 0 ]; then
               echo "❌ Database migration failed!"
               echo "🔧 Attempting database recovery..."
-              cd web && ./prisma-server.sh npm run db:recover
+              ./prisma-server.sh npm run db:recover
               echo "🔧 Attempting to reset and re-run migrations..."
-              cd web && ./prisma-server.sh npx prisma migrate reset --force
-              cd web && ./prisma-server.sh npm run prisma:migrate:deploy
+              ./prisma-server.sh npx prisma migrate reset --force
+              ./prisma-server.sh npm run prisma:migrate:deploy
               if [ $? -ne 0 ]; then
                 echo "❌ Database migration failed after reset!"
                 echo "💡 Manual intervention may be required"
                 exit 1
               fi
             fi
-            cd web && echo "✅ Migrations completed successfully"
-            cd ..
+            echo "✅ Migrations completed successfully"
 
             # Initialize and seed database
-            cd web && echo "🌱 Initializing database..."
-            cd web && ./prisma-server.sh npm run db:init
-            cd web && echo "🌱 Seeding database with initial data..."
-            cd web && ./prisma-server.sh npm run prisma:seed || echo "⚠️ Database seeding failed, but continuing..."
+            echo "🌱 Initializing database..."
+            ./prisma-server.sh npm run db:init
+            echo "🌱 Seeding database with initial data..."
+            ./prisma-server.sh npm run prisma:seed || echo "⚠️ Database seeding failed, but continuing..."
             cd ..
 
-            # Build application (Next.js will automatically load .env.production)
-            cd web && npm run build
-            if [ $? -ne 0 ]; then
-              echo "Build failed!"
-              exit 1
-            fi
-            cd ..
+            # Application is already built from test job - no need to build again!
+            echo "✅ Using pre-built application from test job"
 
             # Stop existing PM2 processes
             pm2 delete marinaobuv 2>/dev/null || true
@@ -335,7 +327,8 @@ jobs:
 
             # Database connectivity health check
             echo "🔍 Testing database connectivity..."
-            cd web && ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
+            cd web
+            ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
             if [ $? -eq 0 ]; then
               echo "✅ Database connectivity verified"
             else
@@ -344,11 +337,13 @@ jobs:
               
               # Fix database authentication issues
               echo "🔧 Fixing database authentication issues..."
+              cd ..
               export $(cat web/.env | grep -v '^#' | xargs)
               ./scripts/fix-database-auth.sh
               
               # Test connection again
-              cd web && ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
+              cd web
+              ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
               if [ $? -eq 0 ]; then
                 echo "✅ Database connection restored"
               else
