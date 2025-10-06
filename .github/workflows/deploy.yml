@@ -1,134 +1,134 @@
 name: Deploy
 
 on:
-    push:
-        branches: ["main"]
-    workflow_dispatch:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Check SSH port reachability
-              run: |
-                sudo apt-get update -y && sudo apt-get install -y netcat-openbsd
-                nc -vz ${{ secrets.SSH_HOST }} ${{ secrets.SSH_PORT }}
+      - name: Check SSH port reachability
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y netcat-openbsd
+          nc -vz ${{ secrets.SSH_HOST }} ${{ secrets.SSH_PORT }}
 
-            - name: Remote deploy
-              uses: appleboy/ssh-action@v1.1.0
-              with:
-                host: ${{ secrets.SSH_HOST }}
-                username: ${{ secrets.SSH_USER }}
-                key: ${{ secrets.SSH_PRIVATE_KEY }}
-                port: ${{ secrets.SSH_PORT }}
-                script_stop: true
-                script: |
-                  set -euo pipefail
+      - name: Remote deploy
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
 
-                  # Check if application directory exists
-                  if [ ! -d "/var/www/marinaobuv" ]; then
-                      echo "Setting up application directory..."
-                      sudo mkdir -p /var/www/marinaobuv
-                      sudo chown -R $USER:$USER /var/www/marinaobuv
-                      git clone https://github.com/singladno/marinaobuv.git /var/www/marinaobuv
-                  fi
+            # Check if application directory exists
+            if [ ! -d "/var/www/marinaobuv" ]; then
+                echo "Setting up application directory..."
+                sudo mkdir -p /var/www/marinaobuv
+                sudo chown -R $USER:$USER /var/www/marinaobuv
+                git clone https://github.com/singladno/marinaobuv.git /var/www/marinaobuv
+            fi
 
-                  # Navigate to application directory
-                  cd /var/www/marinaobuv
+            # Navigate to application directory
+            cd /var/www/marinaobuv
 
-                  # Pull latest changes
-                  git pull origin main
+            # Pull latest changes
+            git pull origin main
 
-                  # Use existing environment file instead of GitHub Secrets
-                  echo "🔧 Using environment file for configuration..."
-                  if [ -f "web/.env" ]; then
-                      echo "✅ Found existing .env file"
-                  elif [ -f "web/env.example" ]; then
-                      echo "📋 Using env.example as template for environment"
-                      cp web/env.example web/.env
-                      echo "⚠️ Please update web/.env with your actual values!"
-                  else
-                      echo "❌ No environment file found!"
-                      echo "Please ensure web/.env or web/env.example exists"
-                      exit 1
-                  fi
+            # Use existing environment file instead of GitHub Secrets
+            echo "🔧 Using environment file for configuration..."
+            if [ -f "web/.env" ]; then
+                echo "✅ Found existing .env file"
+            elif [ -f "web/env.example" ]; then
+                echo "📋 Using env.example as template for environment"
+                cp web/env.example web/.env
+                echo "⚠️ Please update web/.env with your actual values!"
+            else
+                echo "❌ No environment file found!"
+                echo "Please ensure web/.env or web/env.example exists"
+                exit 1
+            fi
 
-                  # Show which env keys are present (names only)
-                  echo "Env keys on server:" && cut -d= -f1 web/.env | paste -sd, -
+            # Show which env keys are present (names only)
+            echo "Env keys on server:" && cut -d= -f1 web/.env | paste -sd, -
 
-                  # Verify database
-                  echo "🔍 Verifying database connectivity..."
-                  cd web
-                  if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
-                    echo "✅ Database connectivity verified"
-                  else
-                    echo "❌ Database connectivity failed!"
-                    echo "🔧 Attempting to fix database connection..."
-                    cd ..
-                    export $(cat web/.env | grep -v '^#' | xargs)
-                    ./scripts/fix-database-auth.sh || true
-                    cd web
-                    if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
-                      echo "✅ Database connection restored"
-                    else
-                      echo "❌ Database connection could not be restored"
-                      echo "🔍 Database connection details:"
-                      echo "Host: $DB_HOST"
-                      echo "Port: $DB_PORT"
-                      echo "Database: $DB_NAME"
-                      echo "User: $DB_USER"
-                      echo "🔍 Testing direct PostgreSQL connection..."
-                      PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" || echo "Direct connection failed"
-                      pm2 logs marinaobuv --lines 50 || true
-                      exit 1
-                    fi
-                  fi
-                  cd ..
+            # Verify database
+            echo "🔍 Verifying database connectivity..."
+            cd web
+            if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
+              echo "✅ Database connectivity verified"
+            else
+              echo "❌ Database connectivity failed!"
+              echo "🔧 Attempting to fix database connection..."
+              cd ..
+              export $(cat web/.env | grep -v '^#' | xargs)
+              ./scripts/fix-database-auth.sh || true
+              cd web
+              if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
+                echo "✅ Database connection restored"
+              else
+                echo "❌ Database connection could not be restored"
+                echo "🔍 Database connection details:"
+                echo "Host: $DB_HOST"
+                echo "Port: $DB_PORT"
+                echo "Database: $DB_NAME"
+                echo "User: $DB_USER"
+                echo "🔍 Testing direct PostgreSQL connection..."
+                PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" || echo "Direct connection failed"
+                pm2 logs marinaobuv --lines 50 || true
+                exit 1
+              fi
+            fi
+            cd ..
 
-                  # Run comprehensive diagnostics (with timeout) if script exists
-                  echo "🔍 Running comprehensive diagnostics..."
-                  if [ -f scripts/diagnose-domain-issues.sh ]; then
-                    chmod +x scripts/diagnose-domain-issues.sh
-                    timeout 60 ./scripts/diagnose-domain-issues.sh || echo "⚠️ Diagnostics completed with timeout"
-                  else
-                    echo "ℹ️ diagnose-domain-issues.sh not found, skipping"
-                  fi
+            # Run comprehensive diagnostics (with timeout) if script exists
+            echo "🔍 Running comprehensive diagnostics..."
+            if [ -f scripts/diagnose-domain-issues.sh ]; then
+              chmod +x scripts/diagnose-domain-issues.sh
+              timeout 60 ./scripts/diagnose-domain-issues.sh || echo "⚠️ Diagnostics completed with timeout"
+            else
+              echo "ℹ️ diagnose-domain-issues.sh not found, skipping"
+            fi
 
-                  # Fix common hosting issues (with timeout) if script exists
-                  echo "🔧 Fixing common hosting issues..."
-                  if [ -f scripts/fix-hosting-issues.sh ]; then
-                    chmod +x scripts/fix-hosting-issues.sh
-                    timeout 60 ./scripts/fix-hosting-issues.sh || echo "⚠️ Hosting fixes completed with timeout"
-                  else
-                    echo "ℹ️ fix-hosting-issues.sh not found, skipping"
-                  fi
+            # Fix common hosting issues (with timeout) if script exists
+            echo "🔧 Fixing common hosting issues..."
+            if [ -f scripts/fix-hosting-issues.sh ]; then
+              chmod +x scripts/fix-hosting-issues.sh
+              timeout 60 ./scripts/fix-hosting-issues.sh || echo "⚠️ Hosting fixes completed with timeout"
+            else
+              echo "ℹ️ fix-hosting-issues.sh not found, skipping"
+            fi
 
-                  # Final status check
-                  echo "📊 Final deployment status:"
-                  echo "PM2 Status:"
-                  pm2 status || true
-                  echo ""
-                  echo "Nginx Status:"
-                  sudo systemctl status nginx --no-pager -l || true
-                  echo ""
-                  echo "Port 3000 Status:"
-                  netstat -tlnp | grep :3000 || echo "Port 3000 not listening"
-                  echo ""
-                  echo "Nginx Configuration Test:"
-                  sudo nginx -t || true
-                  echo ""
-                  echo "Domain Test (HTTPS):"
-                  timeout 30 curl -f https://marina-obuv.ru/api/health || echo "HTTPS domain access failed"
-                  echo "Domain Test (HTTP redirect):"
-                  timeout 30 curl -f http://marina-obuv.ru/api/health || echo "HTTP redirect test failed"
+            # Final status check
+            echo "📊 Final deployment status:"
+            echo "PM2 Status:"
+            pm2 status || true
+            echo ""
+            echo "Nginx Status:"
+            sudo systemctl status nginx --no-pager -l || true
+            echo ""
+            echo "Port 3000 Status:"
+            netstat -tlnp | grep :3000 || echo "Port 3000 not listening"
+            echo ""
+            echo "Nginx Configuration Test:"
+            sudo nginx -t || true
+            echo ""
+            echo "Domain Test (HTTPS):"
+            timeout 30 curl -f https://marina-obuv.ru/api/health || echo "HTTPS domain access failed"
+            echo "Domain Test (HTTP redirect):"
+            timeout 30 curl -f http://marina-obuv.ru/api/health || echo "HTTP redirect test failed"
 
-                  echo ""
-                  echo "🎉 Deployment completed successfully!"
-                  echo "✅ Application is running on port 3000"
-                  echo "✅ HTTPS is configured and working"
-                  echo "✅ Nginx is properly configured"
-                  echo "✅ PM2 is managing the application"
+            echo ""
+            echo "🎉 Deployment completed successfully!"
+            echo "✅ Application is running on port 3000"
+            echo "✅ HTTPS is configured and working"
+            echo "✅ Nginx is properly configured"
+            echo "✅ PM2 is managing the application"
