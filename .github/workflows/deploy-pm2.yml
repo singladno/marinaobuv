@@ -39,6 +39,9 @@ jobs:
         run: |
           cd web
           npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://marina-obuv.ru
+          NEXT_PUBLIC_BRAND_NAME: MarinaObuv
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

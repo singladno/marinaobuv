@@ -8,14 +8,17 @@ const isBuildContext =
 const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']),
-    NEXT_PUBLIC_SITE_URL: z
-      .string()
-      .url('NEXT_PUBLIC_SITE_URL must be a valid URL')
-      .refine(
-        val =>
-          process.env.NODE_ENV !== 'production' || val.startsWith('https://'),
-        'In production, NEXT_PUBLIC_SITE_URL must start with https://'
-      ),
+    NEXT_PUBLIC_SITE_URL: isBuildContext
+      ? z.string().url('NEXT_PUBLIC_SITE_URL must be a valid URL').optional()
+      : z
+          .string()
+          .url('NEXT_PUBLIC_SITE_URL must be a valid URL')
+          .refine(
+            val =>
+              process.env.NODE_ENV !== 'production' ||
+              val.startsWith('https://'),
+            'In production, NEXT_PUBLIC_SITE_URL must start with https://'
+          ),
     NEXT_PUBLIC_BRAND_NAME: z.string().min(1).default('MarinaObuv'),
 
     // Whapi.cloud API - removed (no longer used)
