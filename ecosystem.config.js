@@ -16,7 +16,7 @@ module.exports = {
         NODE_ENV: "production",
         PORT: 3000,
         HOSTNAME: "0.0.0.0",
-        // Environment variables will be loaded from .env.production
+        // Environment variables will be loaded from .env
         // Make sure to set SMS_API_KEY in your production environment
       },
       // Logging configuration

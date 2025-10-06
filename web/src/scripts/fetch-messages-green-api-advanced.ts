@@ -291,53 +291,8 @@ async function fetchMessagesAdvanced(
       }
     });
 
-    // Add delay to respect rate limits
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // 3. Get last outgoing messages
-    const outgoingMessages = await getLastOutgoingMessages(chatId, 100);
-    console.log(`📤 Retrieved ${outgoingMessages.length} outgoing messages`);
-
-    // Filter by time and add to collection
-    const filteredOutgoing = outgoingMessages.filter(
-      msg => msg.timestamp >= startTime && msg.timestamp <= endTime
-    );
-    console.log(
-      `📤 ${filteredOutgoing.length} outgoing messages within time range`
-    );
-
-    filteredOutgoing.forEach(msg => {
-      if (!seenMessageIds.has(msg.idMessage)) {
-        seenMessageIds.add(msg.idMessage);
-        allMessages.push(msg);
-      }
-    });
-
-    // Add delay to respect rate limits
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // 4. Still use GetChatHistory as fallback for comprehensive coverage
-    console.log(
-      `📚 Using GetChatHistory as fallback for comprehensive coverage...`
-    );
-    const chatHistoryMessages = await greenApiFetcher.getChatHistory({
-      chatId,
-      count: 100,
-    });
-
-    const filteredHistory = chatHistoryMessages.filter(
-      msg => msg.timestamp >= startTime && msg.timestamp <= endTime
-    );
-    console.log(
-      `📚 Retrieved ${filteredHistory.length} messages from chat history`
-    );
-
-    filteredHistory.forEach(msg => {
-      if (!seenMessageIds.has(msg.idMessage)) {
-        seenMessageIds.add(msg.idMessage);
-        allMessages.push(msg);
-      }
-    });
+    // Log total messages fetched before deduplication
+    console.log(`📊 Total messages fetched: ${allMessages.length}`);
   } catch (error) {
     console.error(`❌ Error in advanced message fetching:`, error);
   }
