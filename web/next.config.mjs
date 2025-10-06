@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-// Force-load only .env and override any other env files in production
-dotenv.config({ path: '.env', override: true });
 import path from 'path';
 
 function computeRemotePatterns() {
