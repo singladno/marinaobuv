@@ -3,6 +3,7 @@
 ## Problem Analysis
 
 The server was experiencing database authentication failures with the error:
+
 ```
 Authentication failed against database server at `localhost`, the provided database credentials for `marinaobuv_user` are not valid.
 ```
@@ -18,12 +19,14 @@ The GitHub Actions deployment workflow was not properly setting up the PostgreSQ
 **File**: `.github/workflows/deploy-pm2.yml`
 
 **Changes**:
+
 - Added database setup script execution during deployment
 - Improved database connectivity health checks
 - Added automatic database user and permission creation
 - Enhanced error handling and recovery procedures
 
 **Key improvements**:
+
 ```yaml
 # Use the database setup script
 echo "🔧 Running database setup script..."
@@ -39,6 +42,7 @@ export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 **Purpose**: Automatically sets up PostgreSQL database and user with proper permissions
 
 **Features**:
+
 - Parses DATABASE_URL to extract connection details
 - Creates database user with proper authentication
 - Creates database with correct ownership
@@ -53,6 +57,7 @@ export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 **Purpose**: Fixes database authentication issues by recreating user and permissions
 
 **Features**:
+
 - Drops and recreates database user
 - Grants comprehensive privileges (database, schema, tables, sequences)
 - Sets default privileges for future objects
@@ -64,6 +69,7 @@ export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 **File**: `web/prisma-server.sh`
 
 **Improvements**:
+
 - Better environment file detection
 - DATABASE_URL validation
 - Enhanced error messages
@@ -72,6 +78,7 @@ export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 ### 5. New Package.json Scripts
 
 **Added scripts**:
+
 - `npm run db:setup` - Run database setup locally
 - `npm run db:fix-auth` - Fix database authentication issues locally
 - `npm run server:db:fix` - Fix database authentication on remote server
@@ -83,11 +90,13 @@ export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 The deployment process now includes:
 
 1. **Pre-deployment Checks**
+
    - PostgreSQL service verification
    - DATABASE_URL validation
    - Database connectivity testing
 
 2. **Database Setup**
+
    - User creation with proper authentication
    - Database creation with correct ownership
    - Privilege granting (database, schema, tables, sequences)
@@ -125,16 +134,19 @@ The deployment process includes automatic recovery:
 If automatic recovery fails:
 
 1. **Check PostgreSQL Service**:
+
    ```bash
    sudo systemctl status postgresql
    ```
 
 2. **Verify Database User**:
+
    ```bash
    sudo -u postgres psql -c "\du"
    ```
 
 3. **Test Connection**:
+
    ```bash
    PGPASSWORD="your_password" psql -h localhost -U marinaobuv_user -d marinaobuv_db -c "SELECT 1;"
    ```
@@ -150,6 +162,7 @@ If automatic recovery fails:
 ### Health Check Endpoint
 
 The application includes a health check endpoint at `/api/health` that:
+
 - Tests database connectivity
 - Returns appropriate HTTP status codes
 - Provides detailed error information
@@ -157,6 +170,7 @@ The application includes a health check endpoint at `/api/health` that:
 ### Logs
 
 Database issues are logged in:
+
 - PM2 logs: `pm2 logs marinaobuv`
 - Application logs: `web/logs/marinaobuv-error.log`
 - System logs: `journalctl -u postgresql`

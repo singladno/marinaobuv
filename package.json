@@ -41,7 +41,7 @@
     "server:prisma": "ssh -i ~/.ssh/id_rsa_marinaobuv -L 5555:127.0.0.1:5555 ubuntu@158.160.143.162",
     "server:env": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'echo \"--- /var/www/marinaobuv/web/.env ---\"; sed -n \"1,240p\" /var/www/marinaobuv/web/.env'",
     "server:restart": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'cd /var/www/marinaobuv && pm2 reload marinaobuv --update-env'",
-    "server:db:fix": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'cd /var/www/marinaobuv && export DATABASE_URL=\"$(grep DATABASE_URL web/.env.production | cut -d= -f2-)\" && ./scripts/fix-database-auth.sh'",
+    "server:db:fix": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'cd /var/www/marinaobuv && export DATABASE_URL=\"$(grep DATABASE_URL web/.env | cut -d= -f2-)\" && ./scripts/fix-database-auth.sh'",
     "server:reload:all": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'cd /var/www/marinaobuv && pm2 startOrReload ecosystem.config.js --env production --update-env && pm2 save'"
   },
   "keywords": [
