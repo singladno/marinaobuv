@@ -1,33 +1,56 @@
-import path from 'path'
+import dotenv from 'dotenv';
+// Force-load only .env and override any other env files in production
+dotenv.config({ path: '.env', override: true });
+import path from 'path';
 
 function computeRemotePatterns() {
-  const patterns = []
-  const cdn = process.env.CDN_BASE_URL
-  const endpoint = process.env.S3_ENDPOINT
-  const bucket = process.env.S3_BUCKET
+  const patterns = [];
+  const cdn = process.env.CDN_BASE_URL;
+  const endpoint = process.env.S3_ENDPOINT;
+  const bucket = process.env.S3_BUCKET;
 
   // Wasabi S3
-  patterns.push({ protocol: 'https', hostname: 's3.eu-central-1.wasabisys.com', pathname: '/**' })
+  patterns.push({
+    protocol: 'https',
+    hostname: 's3.eu-central-1.wasabisys.com',
+    pathname: '/**',
+  });
 
   // Yandex Cloud Storage
-  patterns.push({ protocol: 'https', hostname: 'storage.yandexcloud.net', pathname: '/**' })
-  patterns.push({ protocol: 'https', hostname: 'sw-media-1105.storage.yandexcloud.net', pathname: '/**' })
+  patterns.push({
+    protocol: 'https',
+    hostname: 'storage.yandexcloud.net',
+    pathname: '/**',
+  });
+  patterns.push({
+    protocol: 'https',
+    hostname: 'sw-media-1105.storage.yandexcloud.net',
+    pathname: '/**',
+  });
 
   if (cdn) {
     try {
-      const u = new URL(cdn)
-      patterns.push({ protocol: 'https', hostname: u.hostname, pathname: '/**' })
+      const u = new URL(cdn);
+      patterns.push({
+        protocol: 'https',
+        hostname: u.hostname,
+        pathname: '/**',
+      });
     } catch {}
   }
 
   if (endpoint && bucket) {
     try {
-      const host = new URL(endpoint).hostname
-      patterns.push({ protocol: 'https', hostname: `${bucket}.${host}`, pathname: '/**' })
+      const host = new URL(endpoint).hostname;
+      patterns.push({
+        protocol: 'https',
+        hostname: `${bucket}.${host}`,
+        pathname: '/**',
+      });
     } catch {}
   }
 
-  return patterns
+  return patterns;
 }
 
 /** @type {import('next').NextConfig} */
@@ -49,8 +72,6 @@ const nextConfig = {
     pagesBufferLength: 2,
   },
   outputFileTracingRoot: path.join(process.cwd(), '..'),
-}
+};
 
-export default nextConfig
-
-
+export default nextConfig;
