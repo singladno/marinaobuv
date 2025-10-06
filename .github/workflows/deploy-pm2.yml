@@ -167,9 +167,13 @@ jobs:
             fi
             cd ..
 
-            # Skip reinstalling dependencies to keep devDependencies (tsx, prisma) from artifacts
-            # If needed in future, use: cd web && npm ci --ignore-scripts
-            :
+            # Ensure DB user/password match DATABASE_URL
+            echo "🔧 Ensuring database user credentials match DATABASE_URL..."
+            ./scripts/fix-database-auth.sh || echo "⚠️ Could not auto-fix DB auth; proceeding to Prisma steps"
+
+            # Install dependencies including dev (required for tsx/typescript used by scripts)
+            cd web && npm ci --ignore-scripts
+            cd ..
 
             # Generate Prisma client with proper environment
             cd web
