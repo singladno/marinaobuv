@@ -5,30 +5,44 @@ import { Upload } from '@aws-sdk/lib-storage';
 
 import { env } from './env';
 
-// Type guards for required S3 environment variables
-if (!env.S3_ENDPOINT) {
-  throw new Error('S3_ENDPOINT is required');
-}
-if (!env.S3_REGION) {
-  throw new Error('S3_REGION is required');
-}
-if (!env.S3_ACCESS_KEY) {
-  throw new Error('S3_ACCESS_KEY is required');
-}
-if (!env.S3_SECRET_KEY) {
-  throw new Error('S3_SECRET_KEY is required');
+// Check if we're in a build context (GitHub Actions or build process)
+const isBuildContext =
+  process.env.NODE_ENV === 'production' &&
+  (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true');
+
+// Type guards for required S3 environment variables - skip during build
+if (!isBuildContext) {
+  if (!env.S3_ENDPOINT) {
+    throw new Error('S3_ENDPOINT is required');
+  }
+  if (!env.S3_REGION) {
+    throw new Error('S3_REGION is required');
+  }
+  if (!env.S3_ACCESS_KEY) {
+    throw new Error('S3_ACCESS_KEY is required');
+  }
+  if (!env.S3_SECRET_KEY) {
+    throw new Error('S3_SECRET_KEY is required');
+  }
 }
 
-// Initialize S3 client for Yandex Object Storage
-const s3Client = new S3Client({
-  endpoint: env.S3_ENDPOINT,
-  region: env.S3_REGION,
-  credentials: {
-    accessKeyId: env.S3_ACCESS_KEY,
-    secretAccessKey: env.S3_SECRET_KEY,
-  },
-  forcePathStyle: true,
-});
+// Initialize S3 client for Yandex Object Storage - only if not in build context
+const s3Client =
+  !isBuildContext &&
+  env.S3_ENDPOINT &&
+  env.S3_REGION &&
+  env.S3_ACCESS_KEY &&
+  env.S3_SECRET_KEY
+    ? new S3Client({
+        endpoint: env.S3_ENDPOINT,
+        region: env.S3_REGION,
+        credentials: {
+          accessKeyId: env.S3_ACCESS_KEY,
+          secretAccessKey: env.S3_SECRET_KEY,
+        },
+        forcePathStyle: true,
+      })
+    : null;
 
 /**
  * Generate public URL for S3 object
@@ -83,6 +97,14 @@ export async function putBuffer(
   buffer: Buffer,
   contentType: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
+  // Skip S3 operations during build
+  if (isBuildContext || !s3Client) {
+    return {
+      success: false,
+      error: 'S3 operations not available during build',
+    };
+  }
+
   try {
     const upload = new Upload({
       client: s3Client,
@@ -118,6 +140,14 @@ export async function putBase64(
   base64Data: string,
   contentType: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
+  // Skip S3 operations during build
+  if (isBuildContext || !s3Client) {
+    return {
+      success: false,
+      error: 'S3 operations not available during build',
+    };
+  }
+
   try {
     // Remove data URL prefix if present
     const base64 = base64Data.replace(/^data:[^;]+;base64,/, '');
@@ -146,6 +176,14 @@ export async function putFromUrl(
   error?: string;
   isExpired?: boolean;
 }> {
+  // Skip S3 operations during build
+  if (isBuildContext || !s3Client) {
+    return {
+      success: false,
+      error: 'S3 operations not available during build',
+    };
+  }
+
   try {
     const response = await fetch(url);
 
