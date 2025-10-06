@@ -294,8 +294,12 @@ jobs:
             sudo ufw allow 443/tcp
             sudo ufw --force enable || echo "⚠️ Firewall configuration failed"
 
-            # Start PM2 application
-            pm2 start ecosystem.config.js --env production
+            # Load runtime environment for PM2
+            echo "🔧 Exporting environment for PM2 runtime..."
+            export $(cat web/.env | grep -v '^#' | xargs)
+
+            # Start PM2 application with updated env
+            pm2 start ecosystem.config.js --env production --update-env
             if [ $? -ne 0 ]; then
               echo "PM2 start failed!"
               pm2 logs marinaobuv --lines 50
