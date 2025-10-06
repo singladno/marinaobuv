@@ -30,9 +30,19 @@ export function useImageModalKeyboard({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
-        onImageSelect(String(Math.max(0, currentIndex - 1)));
+        e.preventDefault();
+        const prevIndex = Math.max(0, currentIndex - 1);
+        const prevImage = images[prevIndex];
+        if (prevImage) {
+          onImageSelect(prevImage.id);
+        }
       } else if (e.key === 'ArrowRight') {
-        onImageSelect(String(Math.min(images.length - 1, currentIndex + 1)));
+        e.preventDefault();
+        const nextIndex = Math.min(images.length - 1, currentIndex + 1);
+        const nextImage = images[nextIndex];
+        if (nextImage) {
+          onImageSelect(nextImage.id);
+        }
       } else if (e.key === ' ') {
         // Spacebar to select/deselect current image
         e.preventDefault();

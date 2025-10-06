@@ -12,6 +12,7 @@ interface ImageGridProps {
   onImageToggle?: (imageId: string, isActive: boolean) => Promise<void>;
   onReload?: () => void;
   onImageClick: (index: number) => void;
+  singleRow?: boolean;
 }
 
 export function ImageGrid({
@@ -20,12 +21,16 @@ export function ImageGrid({
   onImageToggle,
   onReload,
   onImageClick,
+  singleRow,
 }: ImageGridProps) {
   const [hoveredImages, setHoveredImages] = React.useState<Set<string>>(
     new Set()
   );
 
-  const { handleImageToggle } = useImageHandling({
+  // Keep element refs for precise positioning of the floating action button
+  const imageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+
+  const { handleImageToggle, isUpdating } = useImageHandling({
     draftId,
     onImageToggle,
     onReload,
@@ -44,11 +49,20 @@ export function ImageGrid({
 
   return (
     <>
-      <div className="flex flex-wrap gap-1">
+      <div
+        className={
+          singleRow
+            ? 'flex flex-nowrap gap-1 overflow-x-auto'
+            : 'flex flex-wrap gap-1'
+        }
+      >
         {activeImages.map((image, index) => (
           <div
             key={image.id}
             className="relative"
+            ref={el => {
+              imageRefs.current[image.id] = el;
+            }}
             onMouseEnter={() =>
               setHoveredImages(prev => new Set(prev).add(image.id))
             }
@@ -71,7 +85,7 @@ export function ImageGrid({
               <ImageActionButton
                 imageId={image.id}
                 isActive={image.isActive !== false}
-                isUpdating={false}
+                isUpdating={isUpdating === image.id}
                 onToggle={handleImageToggle}
                 onMouseEnter={() =>
                   setHoveredImages(prev => new Set(prev).add(image.id))
@@ -83,7 +97,7 @@ export function ImageGrid({
                     return newSet;
                   })
                 }
-                imageRef={null}
+                imageRef={imageRefs.current[image.id] || null}
               />
             )}
           </div>
@@ -93,11 +107,20 @@ export function ImageGrid({
       {inactiveImages.length > 0 && (
         <div className="mt-2">
           <div className="text-xs text-gray-500">Скрытые:</div>
-          <div className="flex flex-wrap gap-1">
+          <div
+            className={
+              singleRow
+                ? 'flex flex-nowrap gap-1 overflow-x-auto'
+                : 'flex flex-wrap gap-1'
+            }
+          >
             {inactiveImages.map(image => (
               <div
                 key={image.id}
                 className="relative opacity-50"
+                ref={el => {
+                  imageRefs.current[image.id] = el;
+                }}
                 onMouseEnter={() =>
                   setHoveredImages(prev => new Set(prev).add(image.id))
                 }
@@ -127,7 +150,7 @@ export function ImageGrid({
                   <ImageActionButton
                     imageId={image.id}
                     isActive={image.isActive !== false}
-                    isUpdating={false}
+                    isUpdating={isUpdating === image.id}
                     onToggle={handleImageToggle}
                     onMouseEnter={() =>
                       setHoveredImages(prev => new Set(prev).add(image.id))
@@ -139,7 +162,7 @@ export function ImageGrid({
                         return newSet;
                       })
                     }
-                    imageRef={null}
+                    imageRef={imageRefs.current[image.id] || null}
                   />
                 )}
               </div>

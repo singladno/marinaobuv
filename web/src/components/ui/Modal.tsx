@@ -9,6 +9,7 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   zIndex?: string;
+  headerContent?: React.ReactNode;
 }
 
 export function Modal({
@@ -19,6 +20,7 @@ export function Modal({
   size = 'md',
   className = '',
   zIndex = 'z-50',
+  headerContent,
 }: ModalProps) {
   React.useEffect(() => {
     if (!isOpen) return;
@@ -68,12 +70,15 @@ export function Modal({
           {/* Header */}
           <div className="bg-card flex-shrink-0 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <h2
-                id="modal-title"
-                className="text-lg font-semibold text-gray-900 dark:text-white"
-              >
-                {title}
-              </h2>
+              <div className="flex items-center gap-4">
+                <h2
+                  id="modal-title"
+                  className="text-lg font-semibold text-gray-900 dark:text-white"
+                >
+                  {title}
+                </h2>
+                {headerContent}
+              </div>
               <button
                 onClick={onClose}
                 className="rounded-card p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"

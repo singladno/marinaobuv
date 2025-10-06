@@ -25,10 +25,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 antialiased dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-40">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(156,146,172,0.15)_1px,transparent_0)] bg-[length:20px_20px]"></div>
+      <body className="bg-background text-foreground min-h-screen antialiased">
+        {/* Background Pattern (light/dark optimized) */}
+        <div className="pointer-events-none absolute inset-0">
+          {/* Light mode subtle grid */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(156,146,172,0.12)_1px,transparent_0)] bg-[length:20px_20px] opacity-25 dark:opacity-0"></div>
+          {/* Dark mode subtle grid */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] bg-[length:20px_20px] opacity-0 dark:opacity-20"></div>
         </div>
 
         <div className="relative min-h-screen">

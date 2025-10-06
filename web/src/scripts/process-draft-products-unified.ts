@@ -63,7 +63,7 @@ async function processBatchWithTimeout(
   processor: UnifiedOpenAIProcessor,
   messageIds: string[],
   timeoutMs: number
-): Promise<{ anyProcessed: boolean }> {
+): Promise<{ anyProcessed: boolean; finalizedMessageIds: string[] }> {
   return new Promise(async (resolve, reject) => {
     const timeout = setTimeout(() => {
       console.log(`⏰ Batch timed out after ${timeoutMs / 1000}s, skipping...`);
@@ -163,18 +163,22 @@ async function main() {
 
       try {
         // Process this batch with timeout protection; returns whether any group produced a product
-        const { anyProcessed } = await processBatchWithTimeout(
-          processor,
-          messageIds,
-          15 * 60 * 1000
-        );
+        const { anyProcessed, finalizedMessageIds } =
+          await processBatchWithTimeout(processor, messageIds, 15 * 60 * 1000);
 
-        // Mark messages as processed only if the batch produced at least one product/group
-        if (anyProcessed) {
+        // Mark messages as processed only for those finalized (created product OR invalidated after analysis)
+        if (
+          anyProcessed &&
+          finalizedMessageIds &&
+          finalizedMessageIds.length > 0
+        ) {
           await prisma.whatsAppMessage.updateMany({
-            where: { id: { in: messageIds } },
+            where: { id: { in: finalizedMessageIds } },
             data: { processed: true },
           });
+          console.log(
+            `✅ Marked ${finalizedMessageIds.length} messages as processed (finalized)`
+          );
         }
 
         processedCount += messageIds.length;

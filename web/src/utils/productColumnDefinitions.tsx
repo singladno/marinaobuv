@@ -5,7 +5,7 @@ import { ProductArticleCell } from '@/components/features/ProductArticleCell';
 import { ProductCategoryCell } from '@/components/features/ProductCategoryCell';
 import { ProductDateCell } from '@/components/features/ProductDateCell';
 import { ProductGenderCell } from '@/components/features/ProductGenderCell';
-import { ProductImageCell } from '@/components/features/ProductImageCell';
+import { ProductImagesCell } from '@/components/features/ProductImagesCell';
 import { ProductNameCell } from '@/components/features/ProductNameCell';
 import { ProductPriceCell } from '@/components/features/ProductPriceCell';
 import { ProductSeasonCell } from '@/components/features/ProductSeasonCell';
@@ -70,11 +70,11 @@ export function createProductColumnDefinitions({
       },
     }),
 
-    // Images column - show all images
+    // Images column - show row of images with hover toggles and modal
     columnHelper.accessor('images', {
       id: 'images',
       header: 'Изображения',
-      cell: ({ row }) => <ProductImageCell product={row.original} />,
+      cell: ({ row }) => <ProductImagesCell product={row.original} />,
     }),
 
     // Name column

@@ -100,18 +100,20 @@ export function ImageModal({
       title="Изображения"
       size="xl"
       className="!max-w-none"
+      headerContent={
+        <ImageModalHeader
+          selectedCount={selectedImages.size}
+          onSelectAll={selectAllImages}
+          onDeselectAll={deselectAllImages}
+          onBulkDelete={handleBulkDelete}
+          onBulkSplit={handleBulkSplit}
+          isBulkDeleting={isBulkDeleting}
+          isBulkSplitting={isBulkSplitting}
+          hasBulkDelete={!!onBulkDelete}
+          hasBulkSplit={!!onBulkSplit}
+        />
+      }
     >
-      <ImageModalHeader
-        selectedCount={selectedImages.size}
-        onSelectAll={selectAllImages}
-        onDeselectAll={deselectAllImages}
-        onBulkDelete={handleBulkDelete}
-        onBulkSplit={handleBulkSplit}
-        isBulkDeleting={isBulkDeleting}
-        isBulkSplitting={isBulkSplitting}
-        hasBulkDelete={!!onBulkDelete}
-        hasBulkSplit={!!onBulkSplit}
-      />
       <div className="relative">
         {/* Navigation buttons */}
         <ImageModalNavigation

@@ -23,7 +23,6 @@ export function PortalDeleteButton({
   return createPortal(
     <div
       className="fixed z-50 p-1"
-
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,
@@ -38,7 +37,7 @@ export function PortalDeleteButton({
         aria-label="Удалить размер"
       >
         <svg
-          className="h-2.5 w-2.5"
+          className="block h-3 w-3"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

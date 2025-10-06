@@ -38,7 +38,8 @@ export function ImageThumbnail({
   // const isS3 = isS3Image(image.url);
   // const sanitizedUrl = sanitizeImageUrl(image.url);
 
-  const isActive = image.isActive === true;
+  // Treat undefined as active; only dim when explicitly marked inactive
+  const isActive = image.isActive !== false;
   const imageOpacity = isActive ? 'opacity-100' : 'opacity-30';
 
   const borderClasses = image.isPrimary

@@ -10,7 +10,10 @@ import { prisma } from '../lib/db-node';
 import { env } from '../lib/env';
 import { greenApiFetcher } from '../lib/green-api-fetcher';
 
-async function processMessage(message: any): Promise<void> {
+async function processMessage(
+  message: any,
+  counters: { newSaved: number; duplicates: number }
+): Promise<void> {
   try {
     // Skip system messages
     if (message.type === 'group_invite') {
@@ -27,6 +30,7 @@ async function processMessage(message: any): Promise<void> {
     });
 
     if (existing) {
+      counters.duplicates += 1;
       return;
     }
 
@@ -53,6 +57,7 @@ async function processMessage(message: any): Promise<void> {
     console.log(
       `✅ Saved ${message.typeMessage}${mediaUrl ? ' with media' : ''}`
     );
+    counters.newSaved += 1;
   } catch (error) {
     console.error(`❌ Error processing ${message.idMessage}:`, error);
   }
@@ -135,12 +140,16 @@ async function main() {
 
     // Process filtered messages
     let processed = 0;
+    const counters = { newSaved: 0, duplicates: 0 };
     for (const message of messages) {
-      await processMessage(message);
+      await processMessage(message, counters);
       processed++;
     }
 
     console.log(`\n🎉 DONE! Processed ${processed} messages`);
+    console.log(
+      `🆕 New saved: ${counters.newSaved}, 🔁 Duplicates skipped: ${counters.duplicates}`
+    );
     console.log(
       '💡 ONE API call got everything - using downloadUrl from API response!'
     );

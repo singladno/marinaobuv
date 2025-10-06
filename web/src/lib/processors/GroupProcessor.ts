@@ -25,7 +25,7 @@ export class GroupProcessor {
     group: MessageGroup,
     index: number,
     total: number
-  ): Promise<boolean> {
+  ): Promise<{ ok: boolean; finalizedMessageIds: string[] }> {
     console.log(`\n🔄 Processing group ${index}/${total}: ${group.groupId}`);
     console.log(`   📝 Context: ${group.productContext}`);
     console.log(`   📊 Confidence: ${group.confidence}`);
@@ -38,7 +38,7 @@ export class GroupProcessor {
       );
       if (messages.length === 0) {
         console.log(`   ⚠️  No messages found for group ${group.groupId}`);
-        return false;
+        return { ok: false, finalizedMessageIds: [] };
       }
 
       // Check if already processed
@@ -48,7 +48,7 @@ export class GroupProcessor {
         console.log(
           `   ⏭️  Draft products already exist for group ${group.groupId}`
         );
-        return true;
+        return { ok: true, finalizedMessageIds: group.messageIds };
       }
 
       // Extract text content first
@@ -69,7 +69,8 @@ export class GroupProcessor {
         console.log(
           `   ⚠️  No text content or images found in group ${group.groupId}`
         );
-        return false;
+        // Consider analyzed but invalidated
+        return { ok: true, finalizedMessageIds: group.messageIds };
       }
 
       // Analyze with OpenAI using original WhatsApp URLs
@@ -82,7 +83,8 @@ export class GroupProcessor {
 
       if (!analysisResult) {
         console.log(`   ❌ Failed to analyze group ${group.groupId}`);
-        return false;
+        // Treat as invalidated (no valid product info)
+        return { ok: true, finalizedMessageIds: group.messageIds };
       }
 
       console.log(`   ✅ LLM analysis successful, validation passed!`);
@@ -107,10 +109,10 @@ export class GroupProcessor {
       });
 
       console.log(`✅ Successfully processed group ${group.groupId}`);
-      return true;
+      return { ok: true, finalizedMessageIds: group.messageIds };
     } catch (error) {
       console.error(`❌ Error processing group ${group.groupId}:`, error);
-      return false;
+      return { ok: false, finalizedMessageIds: [] };
     }
   }
 }

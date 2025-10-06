@@ -33,7 +33,12 @@
     "server:parser-logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'tail -n 200 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
     "server:logs": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'pm2 logs marinaobuv'",
     "server:cron-status": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'systemctl status cron --no-pager || systemctl status crond --no-pager; echo \"--- enabled ---\"; systemctl is-enabled cron || systemctl is-enabled crond; echo \"--- recent logs (last hour) ---\"; journalctl -u cron --since \"1 hour ago\" --no-pager -n 200 || journalctl -u crond --since \"1 hour ago\" --no-pager -n 200'",
-    "server:check-parsers": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep && echo \"--- PM2 Processes ---\" && pm2 list | grep -E \"(parsing|cron|tsx)\" || echo \"No parser processes found\"'"
+    "server:check-parsers": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep && echo \"--- PM2 Processes ---\" && pm2 list | grep -E \"(parsing|cron|tsx)\" || echo \"No parser processes found\"'",
+    "server:prisma": "ssh -i ~/.ssh/id_rsa_marinaobuv -L 5555:127.0.0.1:5555 ubuntu@158.160.143.162",
+    "server:env": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'echo \"--- /var/www/marinaobuv/web/.env ---\"; sed -n \"1,240p\" /var/www/marinaobuv/web/.env'",
+    "server:restart": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'cd /var/www/marinaobuv && pm2 reload marinaobuv --update-env'",
+    "server:reload:all": "ssh -i ~/.ssh/id_rsa_marinaobuv ubuntu@158.160.143.162 'cd /var/www/marinaobuv && pm2 startOrReload ecosystem.config.js --env production --update-env && pm2 save'",
+    "db:local:user": "bash web/scripts/setup-local-db-user.sh"
   },
   "keywords": [
     "nextjs",
