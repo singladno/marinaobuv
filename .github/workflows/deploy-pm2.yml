@@ -167,9 +167,9 @@ jobs:
             fi
             cd ..
 
-            # Install production dependencies only (no devDependencies needed since we have pre-built artifacts)
-            cd web && npm ci --production --ignore-scripts
-            cd ..
+            # Skip reinstalling dependencies to keep devDependencies (tsx, prisma) from artifacts
+            # If needed in future, use: cd web && npm ci --ignore-scripts
+            :
 
             # Generate Prisma client with proper environment
             cd web
@@ -361,15 +361,23 @@ jobs:
             fi
             cd ..
 
-            # Run comprehensive diagnostics (with timeout)
+            # Run comprehensive diagnostics (with timeout) if script exists
             echo "🔍 Running comprehensive diagnostics..."
-            chmod +x scripts/diagnose-domain-issues.sh
-            timeout 60 ./scripts/diagnose-domain-issues.sh || echo "⚠️ Diagnostics completed with timeout"
+            if [ -f scripts/diagnose-domain-issues.sh ]; then
+              chmod +x scripts/diagnose-domain-issues.sh
+              timeout 60 ./scripts/diagnose-domain-issues.sh || echo "⚠️ Diagnostics completed with timeout"
+            else
+              echo "ℹ️ diagnose-domain-issues.sh not found, skipping"
+            fi
 
-            # Fix common hosting issues (with timeout)
+            # Fix common hosting issues (with timeout) if script exists
             echo "🔧 Fixing common hosting issues..."
-            chmod +x scripts/fix-hosting-issues.sh
-            timeout 60 ./scripts/fix-hosting-issues.sh || echo "⚠️ Hosting fixes completed with timeout"
+            if [ -f scripts/fix-hosting-issues.sh ]; then
+              chmod +x scripts/fix-hosting-issues.sh
+              timeout 60 ./scripts/fix-hosting-issues.sh || echo "⚠️ Hosting fixes completed with timeout"
+            else
+              echo "ℹ️ fix-hosting-issues.sh not found, skipping"
+            fi
 
             # Final status check
             echo "📊 Final deployment status:"
