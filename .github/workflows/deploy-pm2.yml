@@ -152,10 +152,8 @@ jobs:
               exit 1
             fi
 
-            # Use the database setup script
-            echo "🔧 Running database setup script..."
-            chmod +x scripts/setup-database.sh
-            ./scripts/setup-database.sh
+            # Skip database setup (managed manually outside deploy)
+            echo "ℹ️ Skipping database setup (handled manually)"
 
             # Test database connection
             echo "🔍 Testing database connection..."
@@ -167,9 +165,8 @@ jobs:
             fi
             cd ..
 
-            # Ensure DB user/password match DATABASE_URL
-            echo "🔧 Ensuring database user credentials match DATABASE_URL..."
-            ./scripts/fix-database-auth.sh || echo "⚠️ Could not auto-fix DB auth; proceeding to Prisma steps"
+            # Skip DB auth modification during deploy
+            echo "ℹ️ Skipping DB auth modification during deploy"
 
             # Install dependencies including dev (required for tsx/typescript used by scripts)
             cd web && npm ci --ignore-scripts
@@ -184,9 +181,8 @@ jobs:
             echo "🔍 Verifying database connection..."
             ./prisma-server.sh npx prisma db pull --print || echo "⚠️ Database connection test failed, but continuing..."
 
-            # Backup database before migrations
-            echo "💾 Creating database backup..."
-            ./prisma-server.sh npm run db:backup || echo "⚠️ Database backup failed, but continuing..."
+            # Skip backup (requires tsx); do backups manually or on cron
+            echo "ℹ️ Skipping DB backup during deploy"
 
             # Check migration status and run database migrations
             echo "🔍 Checking migration status..."
@@ -208,11 +204,8 @@ jobs:
             fi
             echo "✅ Migrations completed successfully"
 
-            # Initialize and seed database
-            echo "🌱 Initializing database..."
-            ./prisma-server.sh npm run db:init
-            echo "🌱 Seeding database with initial data..."
-            ./prisma-server.sh npm run prisma:seed || echo "⚠️ Database seeding failed, but continuing..."
+            # Skip init/seed (requires tsx); run manually when needed
+            echo "ℹ️ Skipping DB init/seed during deploy"
             cd ..
 
             # Application is already built from test job - no need to build again!
