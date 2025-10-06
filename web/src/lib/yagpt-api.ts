@@ -11,17 +11,17 @@ export async function normalizeTextToDraft(
   text: string
 ): Promise<ProductDraft | null> {
   try {
-  // Type guards for required environment variables
-  if (!env.YC_FOLDER_ID) {
-    throw new Error('YC_FOLDER_ID is required');
-  }
-  if (!env.YC_IAM_TOKEN && !env.YC_API_KEY) {
-    throw new Error('Either YC_IAM_TOKEN or YC_API_KEY is required');
-  }
+    // Type guards for required environment variables
+    if (!env.YC_FOLDER_ID) {
+      throw new Error('YC_FOLDER_ID is required');
+    }
+    if (!env.YC_IAM_TOKEN && !env.YC_API_KEY) {
+      throw new Error('Either YC_IAM_TOKEN or YC_API_KEY is required');
+    }
 
-  const authHeader = env.YC_IAM_TOKEN
-    ? `Bearer ${env.YC_IAM_TOKEN}`
-    : `Api-Key ${env.YC_API_KEY}`;
+    const authHeader = env.YC_IAM_TOKEN
+      ? `Bearer ${env.YC_IAM_TOKEN}`
+      : `Api-Key ${env.YC_API_KEY}`;
 
     const response = await fetch(
       `https://llm.api.cloud.yandex.net/foundationModels/v1/completion`,

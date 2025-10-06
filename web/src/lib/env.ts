@@ -18,22 +18,7 @@ const schema = z
       ),
     NEXT_PUBLIC_BRAND_NAME: z.string().min(1).default('MarinaObuv'),
 
-    // Whapi.cloud API - make optional during build
-    WHAPI_BASE_URL: isBuildContext
-      ? z.string().url('WHAPI_BASE_URL must be a valid URL').optional()
-      : z.string().url('WHAPI_BASE_URL must be a valid URL'),
-    WHAPI_TOKEN: isBuildContext
-      ? z.string().min(1, 'WHAPI_TOKEN is required').optional()
-      : z.string().min(1, 'WHAPI_TOKEN is required'),
-    WHAPI_WEBHOOK_SECRET: isBuildContext
-      ? z
-          .string()
-          .min(32, 'WHAPI_WEBHOOK_SECRET must be at least 32 characters')
-          .optional()
-      : z
-          .string()
-          .min(32, 'WHAPI_WEBHOOK_SECRET must be at least 32 characters'),
-    WHAPI_VERIFY_TOKEN: z.string().optional(),
+    // Whapi.cloud API - removed (no longer used)
 
     // Green API
     GREEN_API_INSTANCE_ID: z.string().optional(),
@@ -154,11 +139,7 @@ const raw = {
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
   NEXT_PUBLIC_BRAND_NAME: process.env.NEXT_PUBLIC_BRAND_NAME ?? 'MarinaObuv',
 
-  // Whapi.cloud API
-  WHAPI_BASE_URL: process.env.WHAPI_BASE_URL,
-  WHAPI_TOKEN: process.env.WHAPI_TOKEN,
-  WHAPI_WEBHOOK_SECRET: process.env.WHAPI_WEBHOOK_SECRET,
-  WHAPI_VERIFY_TOKEN: process.env.WHAPI_VERIFY_TOKEN,
+  // Whapi.cloud API - removed (no longer used)
 
   // Green API
   GREEN_API_INSTANCE_ID: process.env.GREEN_API_INSTANCE_ID,
