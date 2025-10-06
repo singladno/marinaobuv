@@ -81,15 +81,37 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Test SSH Connection
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 30s
+          command_timeout: 30s
+          debug: true
+          use_insecure_cipher: false
+          cipher: aes128-ctr,aes192-ctr,aes256-ctr
+          script: |
+            echo "🔍 Testing SSH connection..."
+            echo "Current user: $(whoami)"
+            echo "Current directory: $(pwd)"
+            echo "Server info: $(uname -a)"
+            echo "✅ SSH connection successful!"
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.RUSSIAN_HOST }}
-          username: ${{ secrets.RUSSIAN_USERNAME }}
-          key: ${{ secrets.RUSSIAN_SSH_KEY }}
-          port: ${{ secrets.RUSSIAN_SSH_PORT }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
           timeout: 600s
           command_timeout: 600s
+          debug: true
+          use_insecure_cipher: false
+          cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script: |
             # Check if application directory exists
             if [ ! -d "/var/www/marinaobuv" ]; then
