@@ -6,6 +6,7 @@ import './load-env';
 import { spawn } from 'node:child_process';
 
 import { prisma } from '../lib/db-node';
+import { ParsingCoordinator } from '../lib/services/parsing-coordinator';
 
 async function run(
   command: string,
@@ -263,30 +264,24 @@ async function main() {
   try {
     console.log(`[cron] Starting hourly job at ${startTime.toISOString()}`);
 
-    // Clean up any stuck processes first (run before guard to clear stale 'running')
-    await cleanupStuckProcesses();
-
-    // Single-instance guard: if another parser is running, skip
-    const alreadyRunning = await prisma.parsingHistory.count({
-      where: { status: 'running' },
+    // Use the new parsing coordinator to check if we can proceed
+    const guardResult = await ParsingCoordinator.canStartParsing({
+      type: 'cron',
     });
-    if (alreadyRunning > 0) {
-      console.log(
-        `[cron] Detected ${alreadyRunning} running parser(s). Skipping this start.`
-      );
+
+    if (!guardResult.canProceed) {
+      console.log(`[cron] ${guardResult.reason}`);
+      if (guardResult.runningProcesses) {
+        console.log(`[cron] Running processes:`);
+        guardResult.runningProcesses.forEach(p => {
+          console.log(`  - ${p.type} (${p.duration}s) - ${p.id}`);
+        });
+      }
       return;
     }
 
-    // Create parsing history record
-    const parsingHistory = await prisma.parsingHistory.create({
-      data: {
-        startedAt: startTime,
-        status: 'running',
-        messagesRead: 0,
-        productsCreated: 0,
-      },
-    });
-    parsingHistoryId = parsingHistory.id;
+    // Create parsing history record with proper metadata
+    parsingHistoryId = await ParsingCoordinator.createParsingHistory('cron');
 
     // Check how many parsers are currently running (for logging purposes)
     const runningParsers = await prisma.parsingHistory.count({

@@ -3,6 +3,7 @@ import { env } from '../env';
 import OpenAI from 'openai';
 import { createGroupingPrompt } from '../prompts/grouping-prompt';
 import { GreenApiFetcher } from '../green-api-fetcher';
+import { ModelConfigService } from './model-config-service';
 
 export interface MessageGroup {
   groupId: string;
@@ -61,7 +62,7 @@ export class MessageGroupingService {
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: ModelConfigService.getModelForTask('grouping'),
         messages: [
           {
             role: 'system',
@@ -73,7 +74,8 @@ export class MessageGroupingService {
             content: prompt,
           },
         ],
-        temperature: 0.1,
+        temperature: ModelConfigService.getTemperatureForTask('grouping'),
+        max_tokens: ModelConfigService.getMaxTokensForTask('grouping'),
         response_format: { type: 'json_object' },
       });
 

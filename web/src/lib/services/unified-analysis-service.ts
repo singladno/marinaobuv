@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 import { AnalysisPromptService } from './analysis-prompt-service';
 import { AnalysisValidationService } from './analysis-validation-service';
 import { PerImageColorService } from './per-image-color-service';
+import { ModelConfigService } from './model-config-service';
 
 export interface AnalysisResult {
   name: string;
@@ -209,9 +210,10 @@ export class UnifiedAnalysisService {
 
       const openai = await this.getOpenAI();
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: ModelConfigService.getModelForTask('analysis'),
         messages,
-        temperature: 0.1,
+        temperature: ModelConfigService.getTemperatureForTask('analysis'),
+        max_tokens: ModelConfigService.getMaxTokensForTask('analysis'),
         response_format: { type: 'json_object' },
       });
 
@@ -277,7 +279,7 @@ export class UnifiedAnalysisService {
     try {
       const openai = await this.getOpenAI();
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: ModelConfigService.getModelForTask('analysis'),
         messages: [
           {
             role: 'system',
@@ -288,7 +290,8 @@ export class UnifiedAnalysisService {
             content: `Context: ${context}\n\nText content: ${textContent}`,
           },
         ],
-        temperature: 0.1,
+        temperature: ModelConfigService.getTemperatureForTask('analysis'),
+        max_tokens: ModelConfigService.getMaxTokensForTask('analysis'),
         response_format: { type: 'json_object' },
       });
 

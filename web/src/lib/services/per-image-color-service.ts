@@ -3,6 +3,7 @@
  */
 import { env } from '../env';
 import OpenAI from 'openai';
+import { ModelConfigService } from './model-config-service';
 
 export interface ImageColorResult {
   url: string;
@@ -171,12 +172,13 @@ Rules:
           // Race between the API call and timeout
           const response = (await Promise.race([
             (await this.getOpenAI()).chat.completions.create({
-              model: 'gpt-4o',
+              model: ModelConfigService.getModelForTask('color'),
               messages: [
                 { role: 'system', content: systemPrompt },
                 userMessage,
               ],
-              temperature: 0.2,
+              temperature: ModelConfigService.getTemperatureForTask('color'),
+              max_tokens: ModelConfigService.getMaxTokensForTask('color'),
               response_format: { type: 'json_object' },
             }),
             timeoutPromise,

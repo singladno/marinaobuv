@@ -281,17 +281,20 @@ model ParsingHistory {
   id                String    @id @default(cuid())
   startedAt         DateTime  @default(now())
   completedAt       DateTime?
-  status            String    @default("running") // running, completed, failed
+  status            String    @default("running") // running, completed, failed, cancelled
   messagesRead      Int       @default(0)
   productsCreated   Int       @default(0)
   errorMessage      String?
   duration          Int?      // in seconds
+  triggeredBy       String?   // 'manual' or 'cron'
+  reason            String?   // Reason for manual parsing
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   @@index([startedAt])
   @@index([status])
   @@index([createdAt])
+  @@index([triggeredBy])
 }
 
 enum Role {
