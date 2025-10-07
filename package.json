@@ -46,7 +46,10 @@
     "server:crons:install": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && bash -s' < scripts/install-crons.sh",
     "server:backup:run-now": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v '^#' ./.env | xargs) && npx tsx scripts/backup-database.ts'",
     "server:backup:logs": "ssh -l ubuntu 130.193.56.134 'tail -n 200 -f /var/www/marinaobuv/web/logs/backup.log'",
-    "server:cron:list": "ssh -l ubuntu 130.193.56.134 'crontab -l'"
+    "server:cron:list": "ssh -l ubuntu 130.193.56.134 'crontab -l'",
+    "server:disk": "ssh -l ubuntu 130.193.56.134 'df -h'",
+    "server:memory": "ssh -l ubuntu 130.193.56.134 'free -h'",
+    "server:space": "ssh -l ubuntu 130.193.56.134 'echo \"=== Disk Usage ===\" && df -h && echo \"=== Memory Usage ===\" && free -h && echo \"=== Project Size ===\" && du -sh /var/www/marinaobuv && echo \"=== Node Modules Size ===\" && du -sh /var/www/marinaobuv/web/node_modules && echo \"=== Backups Size ===\" && du -sh /var/www/marinaobuv/web/backups'"
   },
   "keywords": [
     "nextjs",
