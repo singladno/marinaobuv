@@ -16,7 +16,7 @@ fi
 EXISTING=$(crontab -l 2>/dev/null || true)
 
 # Remove any lines with markers present in the config to avoid duplicates
-MARKERS=$(grep -oE '# JOB:[A-Za-z0-9_-]+' "$CONF_FILE" | awk '{print $2}' | sed 's/# //g' | sort -u || true)
+MARKERS=$(grep -o '# JOB:[^ ]\+' "$CONF_FILE" | awk '{print $2}' | sed 's/# //g' | sort -u || true)
 FILTERED="$EXISTING"
 if [ -n "$MARKERS" ]; then
   while read -r MARK; do
