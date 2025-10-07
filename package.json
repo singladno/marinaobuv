@@ -38,7 +38,7 @@
     "db:fix-auth": "chmod +x scripts/fix-database-auth.sh && ./scripts/fix-database-auth.sh",
     "server:cron-status": "ssh -l ubuntu 130.193.56.134 'systemctl status cron --no-pager || systemctl status crond --no-pager; echo \"--- enabled ---\"; systemctl is-enabled cron || systemctl is-enabled crond; echo \"--- recent logs (last hour) ---\"; journalctl -u cron --since \"1 hour ago\" --no-pager -n 200 || journalctl -u crond --since \"1 hour ago\" --no-pager -n 200'",
     "server:check-parsers": "ssh -l ubuntu 130.193.56.134 'ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep && echo \"--- PM2 Processes ---\" && pm2 list | grep -E \"(parsing|cron|tsx)\" || echo \"No parser processes found\"'",
-    "server:prisma": "ssh -L 5555:127.0.0.1:5555 -l ubuntu 130.193.56.134",
+    "server:prisma": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v '^#' .env | xargs) && nohup npx prisma studio --hostname 127.0.0.1 --port 5555 >/dev/null 2>&1 & sleep 2 && ss -ltnp | grep :5555 || echo studio-not-running' && ssh -N -L 5555:127.0.0.1:5555 -l ubuntu 130.193.56.134",
     "server:env": "ssh -l ubuntu 130.193.56.134 'echo \"--- /var/www/marinaobuv/web/.env ---\"; sed -n \"1,240p\" /var/www/marinaobuv/web/.env'",
     "server:restart": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && pm2 reload marinaobuv --update-env'",
     "server:db:fix": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && export DATABASE_URL=\"$(grep DATABASE_URL web/.env | cut -d= -f2-)\" && ./scripts/fix-database-auth.sh'",
