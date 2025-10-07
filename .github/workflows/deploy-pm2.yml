@@ -300,6 +300,10 @@ jobs:
             sudo ufw allow 443/tcp
             sudo ufw --force enable || echo "⚠️ Firewall configuration failed"
 
+            # Install/refresh server cron jobs from repository config
+            echo "🕒 Installing cron jobs from scripts/cron-jobs.conf..."
+            bash -s < scripts/install-crons.sh || echo "⚠️ Cron installation step failed"
+
             # Load runtime environment for PM2
             echo "🔧 Exporting environment for PM2 runtime..."
             export $(cat web/.env | grep -v '^#' | xargs)

@@ -30,8 +30,8 @@ async function backupDatabase() {
     const username = url.username;
     const password = url.password;
 
-    // Create backup directory
-    const backupDir = path.join(process.cwd(), 'backups');
+    // Create backup directory in project root (../backups relative to web/)
+    const backupDir = path.resolve(process.cwd(), '..', 'backups');
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
@@ -51,15 +51,15 @@ async function backupDatabase() {
 
     console.log(`✅ Database backup created: ${backupFile}`);
 
-    // Clean up old backups (keep only last 5)
+    // Clean up old backups (keep only last 3)
     const backupFiles = fs
       .readdirSync(backupDir)
       .filter(file => file.startsWith('backup-') && file.endsWith('.sql'))
       .sort()
       .reverse();
 
-    if (backupFiles.length > 5) {
-      const filesToDelete = backupFiles.slice(5);
+    if (backupFiles.length > 3) {
+      const filesToDelete = backupFiles.slice(3);
       for (const file of filesToDelete) {
         fs.unlinkSync(path.join(backupDir, file));
         console.log(`🗑️ Deleted old backup: ${file}`);
