@@ -263,6 +263,17 @@ async function main() {
   try {
     console.log(`[cron] Starting hourly job at ${startTime.toISOString()}`);
 
+    // Single-instance guard: if another parser is running, skip
+    const alreadyRunning = await prisma.parsingHistory.count({
+      where: { status: 'running' },
+    });
+    if (alreadyRunning > 0) {
+      console.log(
+        `[cron] Detected ${alreadyRunning} running parser(s). Skipping this start.`
+      );
+      return;
+    }
+
     // Clean up any stuck processes first
     await cleanupStuckProcesses();
 
