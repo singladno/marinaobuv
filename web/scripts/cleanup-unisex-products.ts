@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 async function cleanupUnisexProducts() {
   console.log('🔍 Finding products with UNISEX gender...');
-  
+
   // Find products with UNISEX gender
   const unisexProducts = await prisma.product.findMany({
     where: {
@@ -24,7 +24,7 @@ async function cleanupUnisexProducts() {
 
   if (unisexProducts.length > 0) {
     console.log('\n🔄 Updating UNISEX products to MALE...');
-    
+
     const result = await prisma.product.updateMany({
       where: {
         gender: 'UNISEX' as any
@@ -56,7 +56,7 @@ async function cleanupUnisexProducts() {
 
   if (unisexDrafts.length > 0) {
     console.log('\n🔄 Updating UNISEX draft products to MALE...');
-    
+
     const result = await prisma.waDraftProduct.updateMany({
       where: {
         gender: 'UNISEX' as any
