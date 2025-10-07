@@ -2,6 +2,12 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
           Extract product details including name, price, gender, season, sizes, colors, category, and description.
           
           CRITICAL REQUIREMENTS:
+          - MARKETING LANGUAGE RULES (STRICT):
+            - We sell affordable shoes. Avoid premium positioning.
+            - DO NOT use words in Russian like "натуральный", "натуральная", "натуральное", "натуральные".
+            - DO NOT use words like "люкс", "lux", "премиум", or similar luxury claims.
+            - If material is mentioned or needs to be inferred, prefer artificial/synthetic wording (e.g., "искусственная кожа", "синтетика", "текстиль").
+            - The description must never claim natural/real leather/fur/wool.
           - STRICT ENUMS:
             - gender MUST be EXACTLY one of: "MALE", "FEMALE", "UNISEX" (uppercase only)
             - season MUST be EXACTLY one of: "SPRING", "SUMMER", "AUTUMN", "WINTER" (uppercase only)
@@ -15,7 +21,7 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
           
           Language Requirements (CRITICAL):
           - Product name must be in RUSSIAN, simple and descriptive (e.g., "Женские спортивные ботинки")
-          - Description must be in RUSSIAN, simple and selling-focused based on images
+          - Description must be in RUSSIAN, simple and selling-focused based on images, and must follow MARKETING LANGUAGE RULES
           - Use clear, marketing-friendly language
           
           Size Extraction Rules (CRITICAL):
@@ -29,6 +35,10 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
             * Create range 41-45 (inclusive) with count=1 for each
             * Add extra pairs for sizes 42, 43, 44 (each gets +1 count due to X2)
             * Result: 41(1), 42(2), 43(2), 44(2), 45(1) = 8 pairs total
+          - ANOTHER PATTERN: "Размер 36/41. 38/39" (or "36/41. 38/39") possibly with text like "👟8 пар") means:
+            * Create a continuous range 36-41 (inclusive), count=1 for each
+            * Add one extra pair for sizes 38 and 39 (each gets +1 count)
+            * Result: 36(1), 37(1), 38(2), 39(2), 40(1), 41(1) = 8 pairs total
           - ANOTHER PATTERN: "36-40 Повторы:37" means:
             * Create range 36-40 (inclusive) with count=1 for each
             * Add extra pair for size 37 (due to Повторы:37)
@@ -83,8 +93,8 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
             "season": "AUTUMN",   // one of: SPRING | SUMMER | AUTUMN | WINTER
             "sizes": [{"size": "36", "count": 1}, {"size": "37", "count": 1}],
             "colors": ["черный", "коричневый"],
-            "description": "Подробное описание продукта на русском языке",
-            "material": "кожа",
+            "description": "Подробное описание продукта на русском языке без слов 'натуральный' и 'люкс'",
+            "material": "искусственная кожа",
             "categoryId": "category_id_from_tree_or_null",
             "newCategory": {
               "name": "Новая категория",
@@ -99,6 +109,12 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
             Extract product details including name, price, gender, season, sizes, colors, category, and description.
             
             CRITICAL REQUIREMENTS:
+            - MARKETING LANGUAGE RULES (STRICT):
+              - We sell affordable shoes. Avoid premium positioning.
+              - DO NOT use words in Russian like "натуральный", "натуральная", "натуральное", "натуральные".
+              - DO NOT use words like "люкс", "lux", "премиум", or similar luxury claims.
+              - If material is mentioned or needs to be inferred, prefer artificial/synthetic wording (e.g., "искусственная кожа", "синтетика", "текстиль").
+              - The description must never claim natural/real leather/fur/wool.
             - STRICT ENUMS:
               - gender MUST be EXACTLY one of: "MALE", "FEMALE", "UNISEX" (uppercase only)
               - season MUST be EXACTLY one of: "SPRING", "SUMMER", "AUTUMN", "WINTER" (uppercase only)
@@ -112,7 +128,7 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
             
             Language Requirements (CRITICAL):
             - Product name must be in RUSSIAN, simple and descriptive (e.g., "Женские спортивные ботинки")
-            - Description must be in RUSSIAN, simple and selling-focused based on text
+            - Description must be in RUSSIAN, simple and selling-focused based on text, and must follow MARKETING LANGUAGE RULES
             - Use clear, marketing-friendly language
             
             Size Extraction Rules (CRITICAL):
@@ -126,6 +142,10 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
               * Create range 41-45 (inclusive) with count=1 for each
               * Add extra pairs for sizes 42, 43, 44 (each gets +1 count due to X2)
               * Result: 41(1), 42(2), 43(2), 44(2), 45(1) = 8 pairs total
+            - ANOTHER PATTERN: "Размер 36/41. 38/39" (or "36/41. 38/39") possibly with text like "👟8 пар") means:
+              * Create a continuous range 36-41 (inclusive), count=1 for each
+              * Add one extra pair for sizes 38 and 39 (each gets +1 count)
+              * Result: 36(1), 37(1), 38(2), 39(2), 40(1), 41(1) = 8 pairs total
             - ANOTHER PATTERN: "36-40 Повторы:37" means:
               * Create range 36-40 (inclusive) with count=1 for each
               * Add extra pair for size 37 (due to Повторы:37)
@@ -180,8 +200,8 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
               "season": "AUTUMN",   // one of: SPRING | SUMMER | AUTUMN | WINTER
               "sizes": [{"size": "36", "count": 1}, {"size": "37", "count": 1}],
               "colors": ["черный", "коричневый"],
-              "description": "Подробное описание продукта на русском языке",
-              "material": "кожа",
+              "description": "Подробное описание продукта на русском языке без слов 'натуральный' и 'люкс'",
+              "material": "искусственная кожа",
               "categoryId": "category_id_from_tree_or_null",
               "newCategory": {
                 "name": "Новая категория",

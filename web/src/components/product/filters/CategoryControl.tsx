@@ -69,6 +69,7 @@ export default function CategoryControl({
                 selectedIds={value}
                 onToggle={toggle}
                 level={0}
+                searchTerm={query}
               />
             ))
           : filtered.map(option => {

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { rub } from '@/lib/format';
 
 type Props = {
@@ -19,8 +20,25 @@ export function ProductPricing({
   quantity,
   onQuantityChange,
 }: Props) {
-  // Calculate total available stock across all sizes
-  const totalStock = sizes.reduce((total, sizeObj) => total + sizeObj.count, 0);
+  // Merge duplicate sizes to avoid duplicate React keys and show summed counts
+  const mergedSizes = useMemo(() => {
+    const sizeToCount = new Map<string, number>();
+    for (const sizeObj of sizes) {
+      const sizeKey = String(sizeObj.size);
+      const current = sizeToCount.get(sizeKey) ?? 0;
+      sizeToCount.set(sizeKey, current + Number(sizeObj.count || 0));
+    }
+    return Array.from(sizeToCount.entries()).map(([size, count]) => ({
+      size,
+      count,
+    }));
+  }, [sizes]);
+
+  // Calculate total available stock across all merged sizes
+  const totalStock = mergedSizes.reduce(
+    (total, sizeObj) => total + sizeObj.count,
+    0
+  );
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity >= 1 && newQuantity <= totalStock) {
@@ -47,7 +65,7 @@ export function ProductPricing({
       <div className="space-y-3">
         <h3 className="font-medium">Размеры</h3>
         <div className="flex flex-wrap gap-2">
-          {sizes.map(sizeObj => (
+          {mergedSizes.map(sizeObj => (
             <div
               key={sizeObj.size}
               className="relative flex items-center justify-center rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm"

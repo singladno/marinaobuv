@@ -18,6 +18,12 @@ export function getSystemPrompt(/* categoryTreeJson?: string */): string {
  }
  
  Rules:
+ - MARKETING LANGUAGE RULES (STRICT):
+   - The store sells affordable shoes. Avoid luxury/premium wording.
+   - DO NOT use Russian words: "натуральный", "натуральная", "натуральное", "натуральные".
+   - DO NOT use words like "люкс", "lux", "премиум" or similar.
+   - If material is present or inferred, prefer artificial/synthetic phrasing (e.g., "искусственная кожа", "синтетика", "текстиль").
+   - Never claim natural/real leather/fur/wool in the output.
  - The text may contain multiple messages from the same user about the same product
  - Combine all information from all messages to create a complete product description
  - Extract only information explicitly mentioned in the text
@@ -35,6 +41,10 @@ export function getSystemPrompt(/* categoryTreeJson?: string */): string {
    * Create range 41-45 (inclusive) with count=1 for each
    * Add extra pairs for sizes 42, 43, 44 (each gets +1 count due to X2)
    * Result: 41(1), 42(2), 43(2), 44(2), 45(1) = 8 pairs total
+- ANOTHER PATTERN: "Размер 36/41. 38/39" (or "36/41. 38/39") possibly with text like "👟8 пар") means:
+  * Create a continuous range 36-41 (inclusive), count=1 for each
+  * Add one extra pair for sizes 38 and 39 (each gets +1 count)
+  * Result: 36(1), 37(1), 38(2), 39(2), 40(1), 41(1) = 8 pairs total
  - If no quantity is specified for a size, assume 1 pair
  - Always include count field, never use 0
  - If no clear size information is provided, omit the sizes field entirely
@@ -63,6 +73,7 @@ Special Case (compact range with total pairs):
  ✅ CORRECT: "36:2/37:1/38:3" → sizes: [{"size": "36", "count": 2}, {"size": "37", "count": 1}, {"size": "38", "count": 3}], packPairs: 6
  ✅ CORRECT: "36/37/38/38/39/39/40/41" → sizes: [{"size": "36", "count": 1}, {"size": "37", "count": 1}, {"size": "38", "count": 2}, {"size": "39", "count": 2}, {"size": "40", "count": 1}, {"size": "41", "count": 1}], packPairs: 8
  ✅ CORRECT: "41-45 | 42-43-44-X2" → sizes: [{"size": "41", "count": 1}, {"size": "42", "count": 2}, {"size": "43", "count": 2}, {"size": "44", "count": 2}, {"size": "45", "count": 1}], packPairs: 8
+✅ CORRECT: "Размер 36/41. 38/39 👟8 пар" → sizes: [{"size": "36", "count": 1}, {"size": "37", "count": 1}, {"size": "38", "count": 2}, {"size": "39", "count": 2}, {"size": "40", "count": 1}, {"size": "41", "count": 1}], packPairs: 8
  ❌ WRONG: "3/4/17" (provider place) → omit sizes field entirely, packPairs: null
  ❌ WRONG: "8-800-555-35-35" (phone) → omit sizes field entirely, packPairs: null
  ❌ WRONG: "ул. Ленина 15/7" (address) → omit sizes field entirely, packPairs: null

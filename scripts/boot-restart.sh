@@ -18,13 +18,10 @@ export NODE_ENV=production
 
 log "Starting boot recovery script"
 
-# 1) Git: ensure HTTPS remote, stash local changes and pull latest main
+# 1) Git: force HTTPS remote (avoid SSH keys), stash local changes and pull latest main
 if [ -d .git ]; then
-  # Switch to HTTPS remote if SSH is configured (avoids ssh key issues on servers)
-  if git remote -v | grep -q "git@github.com:"; then
-    log "Switching git remote to HTTPS"
-    git remote set-url origin https://github.com/singladno/marinaobuv.git || true
-  fi
+  log "Setting git remote to HTTPS"
+  git remote set-url origin https://github.com/singladno/marinaobuv.git || true
   if ! git diff --quiet || ! git diff --cached --quiet; then
     log "Stashing local changes before pull"
     git stash push -u -m auto-stash-on-boot || true
@@ -34,12 +31,12 @@ if [ -d .git ]; then
 fi
 
 # 2) Install production deps (idempotent), disable husky/prepare scripts in prod
-log "Installing production dependencies in web/ (HUSKY=0, --ignore-scripts)"
+log "Installing production dependencies in web/ (HUSKY=0, NPM_CONFIG_IGNORE_SCRIPTS=1)"
 cd web
 if [ -f package-lock.json ]; then
-  HUSKY=0 npm ci --omit=dev --ignore-scripts --no-audit --no-fund || HUSKY=0 npm install --omit=dev --ignore-scripts --no-audit --no-fund
+  HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=1 npm ci --omit=dev --no-audit --no-fund || HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=1 npm install --omit=dev --no-audit --no-fund
 else
-  HUSKY=0 npm install --omit=dev --ignore-scripts --no-audit --no-fund
+  HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=1 npm install --omit=dev --no-audit --no-fund
 fi
 
 # Ensure tsx exists for cron/scripts
