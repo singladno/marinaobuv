@@ -304,7 +304,6 @@ enum Role {
 enum Gender {
   FEMALE
   MALE
-  UNISEX
 }
 
 enum Season {
