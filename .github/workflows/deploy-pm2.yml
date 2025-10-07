@@ -217,6 +217,17 @@ jobs:
             fi
             echo "✅ Migrations completed successfully"
 
+            # Run centralized migrations (schema + data)
+            echo "🔄 Running centralized migrations..."
+            ./prisma-server.sh npx tsx src/scripts/run-migrations.ts
+            if [ $? -ne 0 ]; then
+              echo "❌ Centralized migration failed!"
+              echo "🔧 Migration failed, but continuing with deployment..."
+              echo "💡 You may need to run the migration manually"
+            else
+              echo "✅ Centralized migrations completed successfully"
+            fi
+
             # Skip init/seed (requires tsx); run manually when needed
             echo "ℹ️ Skipping DB init/seed during deploy"
             cd ..

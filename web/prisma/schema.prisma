@@ -315,3 +315,11 @@ enum Season {
   AUTUMN
   WINTER
 }
+
+model MigrationHistory {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  executedAt DateTime @default(now())
+  
+  @@map("MigrationHistory")
+}
