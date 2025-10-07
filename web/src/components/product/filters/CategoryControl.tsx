@@ -3,13 +3,17 @@
 import { useMemo, useState } from 'react';
 
 import { Checkbox } from '@/components/ui/Checkbox';
+import { getIndentationClass } from '@/utils/categoryUtils';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
+import { CategoryTreeNode } from './CategoryTreeNode';
 
 import FilterPill from './FilterPill';
 
 type Props = {
   value: string[];
   onChange: (value: string[]) => void;
-  options: string[];
+  options: { id: string; label: string; level?: number }[]; // kept for flat list fallback
+  tree?: CategoryNode[]; // preferred: pass full tree
   label?: string;
 };
 
@@ -17,6 +21,7 @@ export default function CategoryControl({
   value,
   onChange,
   options,
+  tree,
   label = 'Категория',
 }: Props) {
   const count = value.length;
@@ -25,14 +30,14 @@ export default function CategoryControl({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return options;
-    return options.filter(o => o.toLowerCase().includes(q));
+    return options.filter(o => o.label.toLowerCase().includes(q));
   }, [options, query]);
 
-  const toggle = (item: string) => {
-    if (value.includes(item)) {
-      onChange(value.filter(v => v !== item));
+  const toggle = (id: string) => {
+    if (value.includes(id)) {
+      onChange(value.filter(v => v !== id));
     } else {
-      onChange([...value, item]);
+      onChange([...value, id]);
     }
   };
 
@@ -55,26 +60,37 @@ export default function CategoryControl({
         />
       </div>
       <div className="max-h-80 overflow-auto p-3">
-        {filtered.map(option => {
-          const checked = value.includes(option);
-          return (
-            <label
-              key={option}
-              className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-gray-50"
-              onClick={e => e.stopPropagation()}
-            >
-              <Checkbox
-                checked={checked}
-                onCheckedChange={() => toggle(option)}
+        {/* Preferred: show collapsible tree when provided */}
+        {Array.isArray(tree) && tree?.length
+          ? tree.map((n: CategoryNode) => (
+              <CategoryTreeNode
+                key={n.id}
+                node={n}
+                selectedIds={value}
+                onToggle={toggle}
+                level={0}
               />
-              <span
-                className={`text-sm ${checked ? 'font-medium text-purple-700' : 'text-gray-800'}`}
-              >
-                {option}
-              </span>
-            </label>
-          );
-        })}
+            ))
+          : filtered.map(option => {
+              const checked = value.includes(option.id);
+              return (
+                <label
+                  key={option.id}
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg py-2 hover:bg-gray-50 ${getIndentationClass(option.level || 0)}`}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={() => toggle(option.id)}
+                  />
+                  <span
+                    className={`text-sm ${checked ? 'font-medium text-purple-700' : 'text-gray-800'}`}
+                  >
+                    {option.label}
+                  </span>
+                </label>
+              );
+            })}
       </div>
     </FilterPill>
   );

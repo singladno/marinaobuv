@@ -5,6 +5,8 @@ import { useMemo } from 'react';
 import CategoryControl from '@/components/product/filters/CategoryControl';
 import PriceControl from '@/components/product/filters/PriceControl';
 import SortControl from '@/components/product/filters/SortControl';
+import { useCategories } from '@/contexts/CategoriesContext';
+import { flattenCategoryTree } from '@/utils/categoryUtils';
 import type { FilterOptions } from '@/types/filters';
 
 type TopFiltersBarProps = {
@@ -13,19 +15,18 @@ type TopFiltersBarProps = {
   onClear: () => void;
 };
 
-const CATEGORY_OPTIONS = [
-  'Обувь',
-  'Аксессуары',
-  'Спорт',
-  'Классика',
-  'Повседневная',
-];
-
 export default function TopFiltersBar({
   filters,
   onChange,
   onClear,
 }: TopFiltersBarProps) {
+  const { categories } = useCategories();
+
+  const categoryOptions = useMemo(() => {
+    const flat = flattenCategoryTree(categories);
+    return flat.map(c => ({ id: c.id, label: c.label, level: c.level }));
+  }, [categories]);
+
   const hasActive = useMemo(() => {
     return (
       filters.categories.length > 0 ||
@@ -44,7 +45,8 @@ export default function TopFiltersBar({
       <CategoryControl
         value={filters.categories}
         onChange={categories => onChange({ categories })}
-        options={CATEGORY_OPTIONS}
+        options={categoryOptions}
+        tree={categories}
       />
 
       <PriceControl

@@ -263,6 +263,9 @@ async function main() {
   try {
     console.log(`[cron] Starting hourly job at ${startTime.toISOString()}`);
 
+    // Clean up any stuck processes first (run before guard to clear stale 'running')
+    await cleanupStuckProcesses();
+
     // Single-instance guard: if another parser is running, skip
     const alreadyRunning = await prisma.parsingHistory.count({
       where: { status: 'running' },
@@ -273,9 +276,6 @@ async function main() {
       );
       return;
     }
-
-    // Clean up any stuck processes first
-    await cleanupStuckProcesses();
 
     // Create parsing history record
     const parsingHistory = await prisma.parsingHistory.create({

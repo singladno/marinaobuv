@@ -103,3 +103,8 @@ dist
 # Temporary folders
 tmp/
 temp/
+
+# Local backups
+backups/
+web/backups/
+*.sql

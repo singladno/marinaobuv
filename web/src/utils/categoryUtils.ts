@@ -54,3 +54,24 @@ export function getIndentationClass(level: number): string {
 
   return indentationClasses[Math.min(level, indentationClasses.length - 1)];
 }
+
+export type FlatCategoryOption = {
+  id: string;
+  label: string;
+  level: number;
+};
+
+// Flattens the nested category tree into a simple list for checkable UI controls
+export function flattenCategoryTree(
+  categories: CategoryNode[],
+  level = 0
+): FlatCategoryOption[] {
+  const result: FlatCategoryOption[] = [];
+  for (const node of categories) {
+    result.push({ id: node.id, label: node.name, level });
+    if (node.children && node.children.length > 0) {
+      result.push(...flattenCategoryTree(node.children, level + 1));
+    }
+  }
+  return result;
+}
