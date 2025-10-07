@@ -7,7 +7,7 @@ export interface DraftProductData {
   pricePair: number | null;
   currency: string;
   // removed from DB
-  gender: 'FEMALE' | 'MALE' | 'UNISEX' | null;
+  gender: 'FEMALE' | 'MALE' | null;
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description: string | null;
   sizes: Array<{ size: string; stock: number }> | null;

@@ -101,7 +101,7 @@ export interface SecondAnalysisData {
   name: string | null;
   imageColors: string[];
   material: string | null;
-  gender: 'FEMALE' | 'MALE' | 'UNISEX' | null;
+  gender: 'FEMALE' | 'MALE' | null;
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   categoryId: string | null;
   newCategory?: NewCategoryRequest;

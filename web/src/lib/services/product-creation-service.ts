@@ -100,8 +100,8 @@ export class ProductCreationService {
   /**
    * Map AI gender response to valid Prisma enum values
    */
-  mapGender(aiGender: string | undefined | null): 'MALE' | 'FEMALE' | 'UNISEX' {
-    return mapGender(aiGender || 'UNISEX');
+  mapGender(aiGender: string | undefined | null): 'MALE' | 'FEMALE' {
+    return mapGender(aiGender || 'MALE');
   }
 
   /**

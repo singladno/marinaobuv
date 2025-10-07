@@ -7,7 +7,7 @@ export interface Product {
   pricePair: number; // in rubles
   currency: string;
   material: string | null;
-  gender: 'FEMALE' | 'MALE' | 'UNISEX' | null;
+  gender: 'FEMALE' | 'MALE' | null;
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description: string | null;
   availabilityCheckedAt: Date | null;
@@ -38,7 +38,7 @@ export interface ProductUpdateData {
   pricePair?: number; // in rubles
   currency?: string;
   material?: string | null;
-  gender?: 'FEMALE' | 'MALE' | 'UNISEX' | null;
+  gender?: 'FEMALE' | 'MALE' | null;
   season?: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description?: string | null;
   isActive?: boolean;

@@ -27,8 +27,6 @@ export function ProductGenderCell({
         return 'Женский';
       case 'MALE':
         return 'Мужской';
-      case 'UNISEX':
-        return 'Унисекс';
       default:
         return '-';
     }
@@ -40,7 +38,6 @@ export function ProductGenderCell({
       const genderMap: Record<string, string | null> = {
         Женский: 'FEMALE',
         Мужской: 'MALE',
-        Унисекс: 'UNISEX',
         '-': null,
       };
       await onUpdateProduct(product.id, { gender: genderMap[value] || null });

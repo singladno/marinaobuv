@@ -128,7 +128,7 @@ async function processMessageGroupToDraft(
       pricePair: productDraft.pricePair || null,
       currency: 'RUB',
       gender: productDraft.gender
-        ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
+        ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE')
         : null,
       season: productDraft.season
         ? (productDraft.season.toUpperCase() as

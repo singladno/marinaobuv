@@ -9,7 +9,6 @@ interface GenderSelectCellProps {
 const GENDER_OPTIONS = [
   { value: 'FEMALE', label: 'Женская' },
   { value: 'MALE', label: 'Мужская' },
-  { value: 'UNISEX', label: 'Унисекс' },
 ];
 
 export function GenderSelectCell({

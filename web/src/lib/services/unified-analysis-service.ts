@@ -10,7 +10,7 @@ export interface AnalysisResult {
   name: string;
   price: number;
   currency: string;
-  gender: 'MALE' | 'FEMALE' | 'UNISEX';
+  gender: 'MALE' | 'FEMALE';
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER';
   sizes: Array<{ size: string; count: number }>;
   colors: string[];

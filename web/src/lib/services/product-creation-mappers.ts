@@ -38,7 +38,7 @@ export function mapSeason(
 /**
  * Map AI gender response to valid Prisma enum values
  */
-export function mapGender(aiGender: string): 'MALE' | 'FEMALE' | 'UNISEX' {
+export function mapGender(aiGender: string): 'MALE' | 'FEMALE' {
   const gender = aiGender.toUpperCase();
 
   if (gender.includes('MALE') || gender.includes('МУЖСКОЙ')) {
@@ -47,12 +47,8 @@ export function mapGender(aiGender: string): 'MALE' | 'FEMALE' | 'UNISEX' {
   if (gender.includes('FEMALE') || gender.includes('ЖЕНСКИЙ')) {
     return 'FEMALE';
   }
-  if (gender.includes('UNISEX') || gender.includes('УНИСЕКС')) {
-    return 'UNISEX';
-  }
-
-  // Default fallback
-  return 'UNISEX';
+  // Default to MALE if gender is unclear
+  return 'MALE';
 }
 
 /**

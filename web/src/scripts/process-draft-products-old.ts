@@ -232,7 +232,7 @@ async function processMessageGroupToDraft(
       pricePair: productDraft.pricePair || null,
       currency: 'RUB',
       gender: productDraft.gender
-        ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
+        ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE')
         : null,
       season: productDraft.season
         ? (productDraft.season.toUpperCase() as
@@ -417,7 +417,7 @@ async function processMessageToDraft(messageId: string): Promise<void> {
       priceBox: productDraft.priceBox || null,
       material: productDraft.material || null,
       gender: productDraft.gender
-        ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
+        ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE')
         : null,
       season: productDraft.season
         ? (productDraft.season.toUpperCase() as

@@ -67,7 +67,7 @@ export function convertToProductData(productDraft: any): DraftProductData {
 
     // material: productDraft.material || null, // Commented out as it's not in DraftProductData
     gender: productDraft.gender
-      ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE' | 'UNISEX')
+      ? (productDraft.gender.toUpperCase() as 'FEMALE' | 'MALE')
       : null,
     season: productDraft.season
       ? (productDraft.season.toUpperCase() as
