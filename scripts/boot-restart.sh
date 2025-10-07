@@ -61,14 +61,39 @@ pm2 scale marinaobuv 1 || true
 pm2 delete prisma-studio || true
 pm2 save || true
 
-# 4) Nginx: ensure proxy to localhost:3000 if conf exists
-if [ -f /etc/nginx/conf.d/marinaobuv.conf ]; then
-  if grep -q "proxy_pass http://web:3000;" /etc/nginx/conf.d/marinaobuv.conf; then
+# 4) Nginx: ensure proxy to localhost:3000
+NGINX_CONF="/etc/nginx/conf.d/marinaobuv.conf"
+if [ -f "$NGINX_CONF" ]; then
+  if grep -q "proxy_pass http://web:3000;" "$NGINX_CONF"; then
     log "Rewriting nginx upstream to 127.0.0.1:3000"
-    sudo sed -i 's|proxy_pass http://web:3000;|proxy_pass http://127.0.0.1:3000;|g' /etc/nginx/conf.d/marinaobuv.conf || true
+    sudo sed -i 's|proxy_pass http://web:3000;|proxy_pass http://127.0.0.1:3000;|g' "$NGINX_CONF" || true
   fi
-  sudo nginx -t && sudo systemctl restart nginx || true
+else
+  log "Writing nginx site config at $NGINX_CONF"
+  sudo tee "$NGINX_CONF" >/dev/null <<'EOF'
+server {
+    listen 80;
+    server_name marina-obuv.ru www.marina-obuv.ru;
+
+    location /health {
+        proxy_pass http://127.0.0.1:3000/api/health;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
 fi
+sudo nginx -t && sudo systemctl restart nginx || true
 
 # 5) Install/refresh cron jobs
 if [ -f scripts/install-crons.sh ]; then
@@ -93,9 +118,17 @@ curl -s -I http://127.0.0.1:3000 | head -n1 || true
 log "Checking nginx /health"
 curl -s -I http://127.0.0.1/health | head -n1 || curl -s -I http://127.0.0.1 | head -n1 || true
 
+# 8) Remove/disable legacy VPN services not used anymore
+for svc in openvpn@client.service openvpn.service wireguard.service marinaobuv-surfshark.service; do
+  if systemctl list-unit-files | awk '{print $1}' | grep -qx "$svc"; then
+    log "Disabling legacy service: $svc"
+    sudo systemctl disable --now "$svc" || true
+  fi
+done
+
 log "Boot recovery script completed"
 
-# 8) Ensure this script runs on every reboot (idempotent systemd unit)
+# 9) Ensure this script runs on every reboot (idempotent systemd unit)
 UNIT_FILE="/etc/systemd/system/marinaobuv-boot.service"
 if [ ! -f "$UNIT_FILE" ]; then
   log "Installing systemd unit to auto-run this script on reboot"
