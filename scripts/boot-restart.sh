@@ -18,8 +18,13 @@ export NODE_ENV=production
 
 log "Starting boot recovery script"
 
-# 1) Git: stash local changes and pull latest main
+# 1) Git: ensure HTTPS remote, stash local changes and pull latest main
 if [ -d .git ]; then
+  # Switch to HTTPS remote if SSH is configured (avoids ssh key issues on servers)
+  if git remote -v | grep -q "git@github.com:"; then
+    log "Switching git remote to HTTPS"
+    git remote set-url origin https://github.com/singladno/marinaobuv.git || true
+  fi
   if ! git diff --quiet || ! git diff --cached --quiet; then
     log "Stashing local changes before pull"
     git stash push -u -m auto-stash-on-boot || true
@@ -28,13 +33,13 @@ if [ -d .git ]; then
   git pull --rebase || true
 fi
 
-# 2) Install production deps (idempotent)
-log "Installing production dependencies in web/"
+# 2) Install production deps (idempotent), disable husky/prepare scripts in prod
+log "Installing production dependencies in web/ (HUSKY=0, --ignore-scripts)"
 cd web
 if [ -f package-lock.json ]; then
-  npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund
+  HUSKY=0 npm ci --omit=dev --ignore-scripts --no-audit --no-fund || HUSKY=0 npm install --omit=dev --ignore-scripts --no-audit --no-fund
 else
-  npm install --omit=dev --no-audit --no-fund
+  HUSKY=0 npm install --omit=dev --ignore-scripts --no-audit --no-fund
 fi
 
 # Ensure tsx exists for cron/scripts
@@ -92,5 +97,33 @@ log "Checking nginx /health"
 curl -s -I http://127.0.0.1/health | head -n1 || curl -s -I http://127.0.0.1 | head -n1 || true
 
 log "Boot recovery script completed"
+
+# 8) Ensure this script runs on every reboot (idempotent systemd unit)
+UNIT_FILE="/etc/systemd/system/marinaobuv-boot.service"
+if [ ! -f "$UNIT_FILE" ]; then
+  log "Installing systemd unit to auto-run this script on reboot"
+  sudo tee "$UNIT_FILE" >/dev/null <<'EOF'
+[Unit]
+Description=MarinaObuv boot recovery
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/var/www/marinaobuv
+ExecStart=/bin/bash /var/www/marinaobuv/scripts/boot-restart.sh
+StandardOutput=journal
+StandardError=journal
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  sudo systemctl daemon-reload || true
+  sudo systemctl enable marinaobuv-boot.service || true
+fi
+
+log "Systemd unit installed/enabled. Done."
 
 
