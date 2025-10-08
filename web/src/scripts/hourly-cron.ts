@@ -306,7 +306,7 @@ async function main() {
     // 1) Fetch recent WhatsApp messages into DB using optimized Green API (with timeout)
     console.log('[cron] Starting message fetching with optimized Green API...');
     await runWithTimeout(
-      'tsx',
+      './node_modules/.bin/tsx',
       ['src/scripts/fetch-messages-green-api-optimized.ts'],
       5 * 60 * 1000,
       { PARSING_HISTORY_ID: parsingHistoryId }
@@ -315,9 +315,13 @@ async function main() {
     // 2) Convert messages to draft products (with graceful timeout)
     console.log('[cron] Starting product processing...');
     // IMPORTANT: Never terminate the parser mid-run; let it complete all messages
-    await run('tsx', ['src/scripts/process-draft-products-unified.ts'], {
-      PARSING_HISTORY_ID: parsingHistoryId,
-    });
+    await run(
+      './node_modules/.bin/tsx',
+      ['src/scripts/process-draft-products-unified.ts'],
+      {
+        PARSING_HISTORY_ID: parsingHistoryId,
+      }
+    );
     console.log('[cron] Processing completed successfully');
 
     // Get final counts
