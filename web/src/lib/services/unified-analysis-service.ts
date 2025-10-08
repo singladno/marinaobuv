@@ -111,6 +111,20 @@ export class UnifiedAnalysisService {
     );
   }
 
+  private isRateLimitError(e: unknown): boolean {
+    const err = e as any;
+    const message: string = err?.message || '';
+    const status: number = err?.status || err?.error?.status;
+    const code: string = err?.code || err?.error?.code;
+    return (
+      message.includes('Rate limit') ||
+      message.includes('rate_limit_exceeded') ||
+      message.includes('429') ||
+      status === 429 ||
+      code === 'rate_limit_exceeded'
+    );
+  }
+
   private async performAnalysisWithRetry(
     textContent: string,
     imageUrls: string[],
@@ -123,6 +137,16 @@ export class UnifiedAnalysisService {
       attempt += 1;
       try {
         console.log(`   🔁 OpenAI analysis attempt ${attempt}/${maxAttempts}`);
+
+        // Add rate limiting delay before each request
+        const delayMs = env.OPENAI_REQUEST_DELAY_MS || 2000; // Default 2 seconds
+        if (attempt > 1) {
+          console.log(
+            `   ⏳ Rate limiting: waiting ${delayMs}ms before request...`
+          );
+          await this.sleep(delayMs);
+        }
+
         return await this.performAnalysis(textContent, imageUrls, context);
       } catch (e) {
         lastError = e;
@@ -134,6 +158,17 @@ export class UnifiedAnalysisService {
           await this.sleep(backoffMs);
           continue;
         }
+
+        // Handle rate limit errors with longer delays
+        if (this.isRateLimitError(e)) {
+          const rateLimitDelay = 60000; // 1 minute for rate limits
+          console.warn(
+            `   ⚠️  Rate limit hit. Waiting ${rateLimitDelay}ms before retry...`
+          );
+          await this.sleep(rateLimitDelay);
+          continue;
+        }
+
         console.error('   ❌ Non-retryable error during analysis:', e);
         throw e;
       }

@@ -61,6 +61,13 @@ export class MessageGroupingService {
     const prompt = createGroupingPrompt(messagesForGPT);
 
     try {
+      // Add rate limiting delay before grouping request
+      const delayMs = env.OPENAI_REQUEST_DELAY_MS || 2000;
+      console.log(
+        `⏳ Rate limiting: waiting ${delayMs}ms before grouping request...`
+      );
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+
       const response = await this.openai.chat.completions.create({
         model: ModelConfigService.getModelForTask('grouping'),
         messages: [
@@ -84,38 +91,78 @@ export class MessageGroupingService {
         throw new Error('No content in OpenAI response');
       }
 
-      const result = JSON.parse(content);
-      const groups = result.groups || [];
+      // Validate and clean JSON content
+      let cleanedContent = content.trim();
 
-      console.log(`✅ OpenAI identified ${groups.length} product groups`);
-
-      // Log detailed information about each group
-      for (let i = 0; i < groups.length; i++) {
-        const group = groups[i];
-        console.log(`\n📦 Group ${i + 1}/${groups.length}: ${group.groupId}`);
-        console.log(`   📝 Context: ${group.productContext}`);
-        console.log(`   📊 Confidence: ${group.confidence}`);
-        console.log(`   📨 Messages (${group.messageIds.length}):`);
-
-        // Get message details for this group
-        const groupMessages = messages.filter(msg =>
-          group.messageIds.includes(msg.id)
-        );
-        for (const msg of groupMessages) {
-          const messageType = msg.type || 'text';
-          const hasImage =
-            (msg.type === 'image' || msg.type === 'imageMessage') &&
-            !!msg.mediaUrl;
-          const hasText = msg.text && msg.text.trim();
-          const sender = msg.fromName || msg.from || 'Unknown';
-
-          console.log(
-            `     ${messageType} from ${sender}${hasImage ? ' (with media)' : ''}${hasText ? ' (with text)' : ''}`
-          );
+      // Try to extract JSON from the response if it's wrapped in markdown
+      if (cleanedContent.includes('```json')) {
+        const jsonMatch = cleanedContent.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          cleanedContent = jsonMatch[1].trim();
+        }
+      } else if (cleanedContent.includes('```')) {
+        const jsonMatch = cleanedContent.match(/```\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          cleanedContent = jsonMatch[1].trim();
         }
       }
 
-      return groups;
+      // Validate JSON before parsing
+      try {
+        // Check if the content looks like valid JSON
+        if (
+          !cleanedContent.startsWith('{') &&
+          !cleanedContent.startsWith('[')
+        ) {
+          throw new Error('Response does not appear to be valid JSON');
+        }
+
+        const result = JSON.parse(cleanedContent);
+        const groups = result.groups || [];
+
+        console.log(`✅ OpenAI identified ${groups.length} product groups`);
+
+        // Log detailed information about each group
+        for (let i = 0; i < groups.length; i++) {
+          const group = groups[i];
+          console.log(`\n📦 Group ${i + 1}/${groups.length}: ${group.groupId}`);
+          console.log(`   📝 Context: ${group.productContext}`);
+          console.log(`   📊 Confidence: ${group.confidence}`);
+          console.log(`   📨 Messages (${group.messageIds.length}):`);
+
+          // Get message details for this group
+          const groupMessages = messages.filter(msg =>
+            group.messageIds.includes(msg.id)
+          );
+          for (const msg of groupMessages) {
+            const messageType = msg.type || 'text';
+            const hasImage =
+              (msg.type === 'image' || msg.type === 'imageMessage') &&
+              !!msg.mediaUrl;
+            const hasText = msg.text && msg.text.trim();
+            const sender = msg.fromName || msg.from || 'Unknown';
+
+            console.log(
+              `     ${messageType} from ${sender}${hasImage ? ' (with media)' : ''}${hasText ? ' (with text)' : ''}`
+            );
+          }
+        }
+
+        return groups;
+      } catch (jsonError) {
+        console.error('❌ JSON parsing error:', jsonError);
+        console.error(
+          '📄 Raw content (first 500 chars):',
+          cleanedContent.substring(0, 500)
+        );
+        console.error(
+          '📄 Raw content (last 500 chars):',
+          cleanedContent.substring(Math.max(0, cleanedContent.length - 500))
+        );
+        throw new Error(
+          `Failed to parse OpenAI response as JSON: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`
+        );
+      }
     } catch (error) {
       console.error('❌ Error grouping messages with OpenAI:', error);
       return [];

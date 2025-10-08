@@ -17,7 +17,9 @@ export class ParsingProgressService {
 
   constructor(parsingHistoryId?: string) {
     this.parsingHistoryId = parsingHistoryId || null;
-    this.baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // Use HTTP for localhost development, HTTPS for production
+    const nextAuthUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    this.baseUrl = nextAuthUrl.replace('https://localhost', 'http://localhost');
   }
 
   /**
@@ -39,6 +41,10 @@ export class ParsingProgressService {
     }
 
     try {
+      console.log(
+        `📡 Updating parsing progress at: ${this.baseUrl}/api/admin/parsing-progress`
+      );
+
       const response = await fetch(
         `${this.baseUrl}/api/admin/parsing-progress`,
         {

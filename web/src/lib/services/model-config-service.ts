@@ -61,7 +61,7 @@ export class ModelConfigService {
       case 'analysis':
         return 2000; // Sufficient for product analysis
       case 'grouping':
-        return 1000; // Sufficient for grouping results
+        return 4000; // Increased for large grouping responses
       case 'color':
         return 500; // Minimal for color detection
       case 'vision':

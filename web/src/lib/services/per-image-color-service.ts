@@ -161,6 +161,15 @@ Rules:
             `   🔄 Color analysis attempt ${attempt}/${maxRetries}...`
           );
 
+          // Add rate limiting delay
+          if (attempt > 1) {
+            const delayMs = 3000; // 3 seconds for color analysis
+            console.log(
+              `   ⏳ Rate limiting: waiting ${delayMs}ms before color analysis...`
+            );
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+
           // Create a timeout promise
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(
