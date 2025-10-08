@@ -197,12 +197,21 @@ jobs:
             # Skip backup (requires tsx); do backups manually or on cron
             echo "ℹ️ Skipping DB backup during deploy"
 
-            # Use robust migration system
+            # Use robust migration system with STRICT validation
             echo "🚀 Running robust migration system..."
             # Ensure scripts exist and are executable
             if [ ! -f "scripts/robust-migration-system.sh" ]; then
               echo "❌ Migration script not found, using fallback migration method"
               ./prisma-server.sh npm run prisma:migrate:deploy
+              # CRITICAL: Validate that migrations actually worked
+              echo "🔍 Validating migration success..."
+              if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
+                echo "✅ Fallback migration validation passed"
+              else
+                echo "❌ Fallback migration failed - database schema is incorrect!"
+                echo "💡 Deployment FAILED - migrations did not work"
+                exit 1
+              fi
             else
               chmod +x scripts/robust-migration-system.sh
               if ./scripts/robust-migration-system.sh; then
@@ -217,7 +226,7 @@ jobs:
                   echo "✅ Migration system recovered successfully"
                 else
                   echo "❌ Migration system failed after recovery!"
-                  echo "💡 Manual intervention required - check database state"
+                  echo "💡 DEPLOYMENT FAILED - migrations could not be fixed"
                   exit 1
                 fi
               fi
@@ -403,13 +412,39 @@ jobs:
               echo "ℹ️ fix-hosting-issues.sh not found, skipping"
             fi
 
+            # CRITICAL: Final application health check
+            echo "🔍 Performing final application health check..."
+            sleep 10  # Wait for application to fully start
+            
+            # Test database connectivity and schema
+            echo "🔍 Testing database schema..."
+            if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
+              echo "✅ Database schema validation passed"
+            else
+              echo "❌ CRITICAL: Database schema is still broken!"
+              echo "💡 DEPLOYMENT FAILED - application will not work"
+              exit 1
+            fi
+            
+            # Test application endpoints
+            echo "🔍 Testing application endpoints..."
+            if curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "✅ Health endpoint working"
+            else
+              echo "❌ CRITICAL: Health endpoint failed!"
+              echo "💡 DEPLOYMENT FAILED - application is not responding"
+              exit 1
+            fi
+            
             # Verify webhook deployment
             echo "🔍 Verifying webhook deployment..."
             chmod +x scripts/verify-webhook-deployment.sh
             if ./scripts/verify-webhook-deployment.sh; then
               echo "✅ Webhook verification completed successfully"
             else
-              echo "⚠️ Webhook verification failed, but continuing with deployment"
+              echo "❌ CRITICAL: Webhook verification failed!"
+              echo "💡 DEPLOYMENT FAILED - webhook is not working"
+              exit 1
             fi
 
             # Final status check
