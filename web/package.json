@@ -18,6 +18,8 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "migrate:run": "tsx src/scripts/run-migrations.ts",
+    "migrate:validate": "../scripts/validate-migrations.sh",
+    "migrate:robust": "../scripts/robust-migration-system.sh",
     "prisma:reset": "prisma migrate reset --force",
     "db:init": "tsx scripts/init-database.ts",
     "db:backup": "tsx scripts/backup-database.ts",

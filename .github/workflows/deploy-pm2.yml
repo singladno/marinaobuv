@@ -197,35 +197,24 @@ jobs:
             # Skip backup (requires tsx); do backups manually or on cron
             echo "ℹ️ Skipping DB backup during deploy"
 
-            # Check migration status and run database migrations
-            echo "🔍 Checking migration status..."
-            ./prisma-server.sh npx prisma migrate status
-            echo "🚀 Running database migrations..."
-            ./prisma-server.sh npm run prisma:migrate:deploy
-            if [ $? -ne 0 ]; then
-              echo "❌ Database migration failed!"
+            # Use robust migration system
+            echo "🚀 Running robust migration system..."
+            chmod +x scripts/robust-migration-system.sh
+            if ./scripts/robust-migration-system.sh; then
+              echo "✅ Robust migration system completed successfully"
+            else
+              echo "❌ Robust migration system failed!"
               echo "🔧 Attempting database recovery..."
               ./prisma-server.sh npm run db:recover
               echo "🔧 Attempting to reset and re-run migrations..."
               ./prisma-server.sh npx prisma migrate reset --force
-              ./prisma-server.sh npm run prisma:migrate:deploy
-              if [ $? -ne 0 ]; then
-                echo "❌ Database migration failed after reset!"
-                echo "💡 Manual intervention may be required"
+              if ./scripts/robust-migration-system.sh; then
+                echo "✅ Migration system recovered successfully"
+              else
+                echo "❌ Migration system failed after recovery!"
+                echo "💡 Manual intervention required - check database state"
                 exit 1
               fi
-            fi
-            echo "✅ Migrations completed successfully"
-
-            # Run centralized migrations (schema + data)
-            echo "🔄 Running centralized migrations..."
-            ./prisma-server.sh npx tsx src/scripts/run-migrations.ts
-            if [ $? -ne 0 ]; then
-              echo "❌ Centralized migration failed!"
-              echo "🔧 Migration failed, but continuing with deployment..."
-              echo "💡 You may need to run the migration manually"
-            else
-              echo "✅ Centralized migrations completed successfully"
             fi
 
             # Skip init/seed (requires tsx); run manually when needed
