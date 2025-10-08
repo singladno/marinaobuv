@@ -127,6 +127,24 @@ jobs:
             # Pull latest changes
             git pull origin main
 
+            # Ensure all scripts are executable
+            echo "🔧 Setting execute permissions for all scripts..."
+            chmod +x scripts/*.sh 2>/dev/null || echo "No scripts found in scripts directory"
+            chmod +x web/src/scripts/*.sh 2>/dev/null || echo "No scripts found in web/src/scripts directory"
+            echo "✅ Script permissions set"
+
+            # Verify critical scripts exist
+            echo "🔍 Verifying critical scripts exist..."
+            if [ -f "scripts/verify-webhook-deployment.sh" ]; then
+              echo "✅ Webhook verification script found"
+            else
+              echo "❌ CRITICAL: Webhook verification script not found!"
+              echo "Available files in scripts directory:"
+              ls -la scripts/ || echo "No scripts directory found"
+              echo "💡 DEPLOYMENT FAILED - required script missing"
+              exit 1
+            fi
+
             # Use existing environment file instead of GitHub Secrets
             echo "🔧 Using environment file for configuration..."
             if [ -f "web/.env" ]; then
@@ -512,12 +530,24 @@ jobs:
 
             # Verify webhook deployment
             echo "🔍 Verifying webhook deployment..."
-            chmod +x scripts/verify-webhook-deployment.sh
-            if ./scripts/verify-webhook-deployment.sh; then
-              echo "✅ Webhook verification completed successfully"
+
+            # Check if webhook script exists and make it executable
+            if [ -f "scripts/verify-webhook-deployment.sh" ]; then
+              chmod +x scripts/verify-webhook-deployment.sh
+              echo "✅ Webhook verification script found and made executable"
+              
+              if ./scripts/verify-webhook-deployment.sh; then
+                echo "✅ Webhook verification completed successfully"
+              else
+                echo "❌ CRITICAL: Webhook verification failed!"
+                echo "💡 DEPLOYMENT FAILED - webhook is not working"
+                exit 1
+              fi
             else
-              echo "❌ CRITICAL: Webhook verification failed!"
-              echo "💡 DEPLOYMENT FAILED - webhook is not working"
+              echo "❌ CRITICAL: Webhook verification script not found!"
+              echo "Available scripts:"
+              ls -la scripts/ || echo "No scripts directory found"
+              echo "💡 DEPLOYMENT FAILED - webhook script missing"
               exit 1
             fi
 
