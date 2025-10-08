@@ -60,18 +60,10 @@ const schema = z
 
     // OpenAI Vision
     OPENAI_API_KEY: z.string().optional(),
+    OPENAI_REQUEST_DELAY_MS: z.string().optional(),
     OPENAI_VISION_MODEL: z.string().optional(),
     OPENAI_BASE_URL: z.string().url().optional(),
     OPENAI_PROXY: z.string().optional(),
-    OPENAI_REQUEST_DELAY_MS: z
-      .string()
-      .optional()
-      .transform(val => {
-        if (!val) return 0;
-        const ms = parseInt(val, 10);
-        if (Number.isNaN(ms) || ms < 0) return 0;
-        return ms;
-      }),
 
     // Concurrency tuning (optional)
     MEDIA_REFRESH_CONCURRENCY: z
@@ -90,6 +82,17 @@ const schema = z
         if (!val) return 4;
         const parsed = parseInt(val, 10);
         if (isNaN(parsed) || parsed < 1 || parsed > 20) return 4;
+        return parsed;
+      }),
+
+    // Grouping batch size (max messages per grouping request)
+    GROUPING_MAX_MESSAGES_PER_CALL: z
+      .string()
+      .optional()
+      .transform(val => {
+        if (!val) return 100;
+        const parsed = parseInt(val, 10);
+        if (isNaN(parsed) || parsed < 10) return 100;
         return parsed;
       }),
 
@@ -169,11 +172,11 @@ const raw = {
   OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL,
   OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
   OPENAI_PROXY: process.env.OPENAI_PROXY,
-  OPENAI_REQUEST_DELAY_MS: process.env.OPENAI_REQUEST_DELAY_MS,
 
   // Concurrency tuning (optional)
   MEDIA_REFRESH_CONCURRENCY: process.env.MEDIA_REFRESH_CONCURRENCY,
   IMAGE_DOWNLOAD_CONCURRENCY: process.env.IMAGE_DOWNLOAD_CONCURRENCY,
+  GROUPING_MAX_MESSAGES_PER_CALL: process.env.GROUPING_MAX_MESSAGES_PER_CALL,
 
   // Target Group Chat ID for Processing
   TARGET_GROUP_ID: process.env.TARGET_GROUP_ID,

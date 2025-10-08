@@ -6,6 +6,7 @@ import './load-env';
 import { spawn } from 'node:child_process';
 
 import { prisma } from '../lib/db-node';
+import { tryAcquireParserLock, releaseParserLock } from '../lib/advisory-lock';
 import { ParsingCoordinator } from '../lib/services/parsing-coordinator';
 
 async function run(
@@ -261,8 +262,16 @@ async function main() {
   const startTime = new Date();
   let parsingHistoryId: string | null = null;
 
+  let lockAcquired = false;
   try {
     console.log(`[cron] Starting hourly job at ${startTime.toISOString()}`);
+
+    // Try to acquire advisory lock to prevent overlapping runs
+    lockAcquired = await tryAcquireParserLock();
+    if (!lockAcquired) {
+      console.log('[cron] Another parser instance holds the lock; exiting.');
+      return;
+    }
 
     // Use the new parsing coordinator to check if we can proceed
     const guardResult = await ParsingCoordinator.canStartParsing({
@@ -312,12 +321,12 @@ async function main() {
       { PARSING_HISTORY_ID: parsingHistoryId }
     ); // 5 minute timeout for fetching (much faster now!)
 
-    // 2) Convert messages to draft products (with graceful timeout)
-    console.log('[cron] Starting product processing...');
+    // 2) Convert messages to draft products using batch processing (with graceful timeout)
+    console.log('[cron] Starting batch-enabled product processing...');
     // IMPORTANT: Never terminate the parser mid-run; let it complete all messages
     await run(
       './node_modules/.bin/tsx',
-      ['src/scripts/process-draft-products-unified.ts'],
+      ['src/scripts/process-draft-products-batch-v2.ts'],
       {
         PARSING_HISTORY_ID: parsingHistoryId,
       }
@@ -413,6 +422,9 @@ async function main() {
 
     process.exitCode = 1;
   } finally {
+    if (lockAcquired) {
+      await releaseParserLock();
+    }
     await prisma.$disconnect();
   }
 }

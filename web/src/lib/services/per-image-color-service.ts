@@ -4,6 +4,7 @@
 import { env } from '../env';
 import OpenAI from 'openai';
 import { ModelConfigService } from './model-config-service';
+import { withRetry, sleep } from '../../utils/retry';
 
 export interface ImageColorResult {
   url: string;
@@ -71,8 +72,28 @@ export class PerImageColorService {
     }
   }
 
+  private async downloadImageBuffer(url: string): Promise<Buffer | null> {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MarinaObuv/1.0)' },
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (error) {
+      console.error(`   ❌ Failed to download image buffer ${url}:`, error);
+      return null;
+    }
+  }
+
   /**
-   * Analyze each image individually to determine its color
+   * Analyze each image individually to determine its color (LLM-based)
    */
   async analyzeImageColors(imageUrls: string[]): Promise<ImageColorResult[]> {
     if (imageUrls.length === 0) {
@@ -137,111 +158,154 @@ Rules:
   { "images": [ { "color": "черный" | null }, ... ] }
 - Do NOT include explanations or any extra fields.`;
 
-      const userMessage = {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `Analyze these ${successfulImages.length} images for color detection:`,
-          },
-          ...successfulImages.map(img => ({
-            type: 'image_url',
-            image_url: { url: img.base64! },
-          })),
-        ],
-      };
+      // Configurable batching: send images one-by-one by default
+      const batchSizeEnv = process.env.MAX_COLOR_IMAGES_PER_CALL;
+      const batchSize = batchSizeEnv ? parseInt(batchSizeEnv, 10) || 1 : 1;
 
-      // Retry logic for image analysis
-      const maxRetries = 2;
-      let lastError: any = null;
+      // Prepare result array in original order
+      const colorResults: ImageColorResult[] = imageUrls.map(url => ({
+        url,
+        color: null,
+      }));
 
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          console.log(
-            `   🔄 Color analysis attempt ${attempt}/${maxRetries}...`
-          );
-
-          // Add rate limiting delay
-          if (attempt > 1) {
-            const delayMs = 3000; // 3 seconds for color analysis
+      // Helper to process a single batch with retry
+      const processBatch = async (
+        batch: Array<{ url: string; base64: string }>,
+        indices: number[]
+      ) => {
+        const maxRetries = 2;
+        let lastError: any = null;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
             console.log(
-              `   ⏳ Rate limiting: waiting ${delayMs}ms before color analysis...`
+              `   🔄 Color analysis batch attempt ${attempt}/${maxRetries} (size=${batch.length})...`
             );
-            await new Promise(resolve => setTimeout(resolve, delayMs));
-          }
 
-          // Create a timeout promise
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(
-              () => reject(new Error('Request timeout after 90 seconds')),
-              90000 // Increased timeout since we're using base64
-            );
-          });
-
-          // Race between the API call and timeout
-          const response = (await Promise.race([
-            (await this.getOpenAI()).chat.completions.create({
-              model: ModelConfigService.getModelForTask('color'),
-              messages: [
-                { role: 'system', content: systemPrompt },
-                userMessage,
-              ],
-              temperature: ModelConfigService.getTemperatureForTask('color'),
-              max_tokens: ModelConfigService.getMaxTokensForTask('color'),
-              response_format: { type: 'json_object' },
-            }),
-            timeoutPromise,
-          ])) as any;
-
-          const content = response.choices[0]?.message?.content;
-          if (!content) {
-            throw new Error('No content in OpenAI response');
-          }
-
-          const result = JSON.parse(content) as {
-            images?: Array<{ color?: string | null }>;
-          };
-
-          // Map results back to original URLs in order
-          const colorResults: ImageColorResult[] = imageUrls.map(url => {
-            const successfulIndex = successfulImages.findIndex(
-              img => img.url === url
-            );
-            if (successfulIndex === -1) {
-              // This image failed to download
-              return { url, color: null };
+            if (attempt > 1) {
+              const delayMs = Math.min(10_000, 500 * 2 ** (attempt - 2));
+              console.log(
+                `   ⏳ Backoff ${delayMs}ms before color analysis...`
+              );
+              await sleep(delayMs);
             }
 
-            const imageResult = result.images?.[successfulIndex];
-            return {
-              url,
-              color:
-                imageResult?.color && imageResult.color.trim()
-                  ? imageResult.color.trim()
-                  : null,
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(
+                () => reject(new Error('Request timeout after 90 seconds')),
+                90000
+              );
+            });
+
+            // no per-request artificial delays; retries handle rate limits
+
+            const userMessage = {
+              role: 'user' as const,
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze these ${batch.length} images for color detection:`,
+                },
+                ...batch.map(img => ({
+                  type: 'image_url',
+                  image_url: { url: img.base64 },
+                })),
+              ],
             };
-          });
 
-          console.log(
-            `   ✅ Color analysis completed for ${imageUrls.length} images`
-          );
-          return colorResults;
-        } catch (error) {
-          lastError = error;
-          console.error(
-            `   ❌ Color analysis attempt ${attempt} failed:`,
-            error
-          );
+            const response = (await Promise.race([
+              withRetry(signal =>
+                this.getOpenAI().then(client =>
+                  client.chat.completions.create({
+                    model: ModelConfigService.getModelForTask('color'),
+                    messages: [
+                      { role: 'system', content: systemPrompt },
+                      userMessage,
+                    ],
+                    temperature:
+                      ModelConfigService.getTemperatureForTask('color'),
+                    max_tokens: ModelConfigService.getMaxTokensForTask('color'),
+                    response_format: { type: 'json_object' },
+                    // OpenAI SDK doesn't take AbortSignal directly; timeout handled outside
+                  })
+                )
+              ),
+              timeoutPromise,
+            ])) as any;
 
-          if (attempt < maxRetries) {
-            console.log(`   🔄 Retrying color analysis...`);
-            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before retry
+            const content = response.choices[0]?.message?.content;
+            if (!content) {
+              throw new Error('No content in OpenAI response');
+            }
+            const result = JSON.parse(content) as {
+              images?: Array<{ color?: string | null }>;
+            };
+
+            // Apply results to original positions
+            indices.forEach((originalIdx, i) => {
+              const imageResult = result.images?.[i];
+              colorResults[originalIdx] = {
+                url: imageUrls[originalIdx],
+                color:
+                  imageResult?.color && imageResult.color.trim()
+                    ? imageResult.color.trim()
+                    : null,
+              };
+            });
+
+            return; // batch done
+          } catch (error) {
+            lastError = error;
+            console.error(
+              `   ❌ Color analysis batch attempt ${attempt} failed:`,
+              error
+            );
+            if (attempt < maxRetries) {
+              const waitMs = Math.min(60_000, 1000 * 2 ** (attempt - 1));
+              console.log(
+                `   ⏳ Waiting ${waitMs}ms before retrying color analysis batch...`
+              );
+              await sleep(waitMs);
+            }
           }
         }
+        // If all attempts failed for this batch, leave colors as null for these indices
+        if (lastError) throw lastError;
+      };
+
+      // Build batches from successful images
+      const batches: Array<Array<{ url: string; base64: string }>> = [];
+      const indexBatches: Array<number[]> = [];
+      let tmp: Array<{ url: string; base64: string }> = [];
+      let tmpIdx: number[] = [];
+      successfulImages.forEach((img, idx) => {
+        tmp.push({ url: img.url, base64: img.base64! });
+        // map back to original index
+        const originalIdx = imageUrls.findIndex(u => u === img.url);
+        tmpIdx.push(originalIdx);
+        if (tmp.length === Math.max(1, batchSize)) {
+          batches.push(tmp);
+          indexBatches.push(tmpIdx);
+          tmp = [];
+          tmpIdx = [];
+        }
+      });
+      if (tmp.length) {
+        batches.push(tmp);
+        indexBatches.push(tmpIdx);
       }
 
-      // If all attempts failed, throw the last error
-      throw lastError;
+      // Process batches sequentially to control TPM
+      for (let i = 0; i < batches.length; i++) {
+        console.log(
+          `   🎯 Processing color batch ${i + 1}/${batches.length} (size=${batches[i].length})`
+        );
+        await processBatch(batches[i], indexBatches[i]);
+      }
+
+      console.log(
+        `   ✅ Color analysis completed for ${imageUrls.length} images (batched)`
+      );
+      return colorResults;
     } catch (error) {
       console.error('Error analyzing image colors:', error);
 

@@ -9,6 +9,7 @@ import {
   createSlug,
   mapSeason,
   mapGender,
+  inferGenderFromSizes,
 } from './product-creation-mappers';
 
 interface CreateDraftProductFromAnalysisParams {
@@ -57,7 +58,10 @@ export class ProductCreationCore {
         article: articleNumber,
         description: analysis.description || '',
         material: analysis.material || '',
-        gender: mapGender(analysis.gender || 'MALE'),
+        // Determine gender conservatively: use AI value if present, else infer from sizes
+        gender: analysis.gender
+          ? mapGender(analysis.gender)
+          : inferGenderFromSizes(analysis.sizes as any) || undefined,
         season: mapSeason(analysis.season || 'AUTUMN'),
         pricePair: analysis.price || 0,
         providerDiscount: analysis.providerDiscount || 0,
@@ -68,6 +72,7 @@ export class ProductCreationCore {
         source: sourceMessageIds,
         gptRequest: '',
         rawGptResponse: undefined,
+        rawGptResponse2: analysis as any,
         aiStatus: 'ai_completed',
         aiProcessedAt: new Date(),
       },
@@ -262,7 +267,9 @@ export class ProductCreationCore {
         categoryId: category.id,
         description: analysis.description || '',
         material: analysis.material || '',
-        gender: mapGender(analysis.gender || 'MALE'),
+        gender: analysis.gender
+          ? mapGender(analysis.gender)
+          : inferGenderFromSizes(analysis.sizes as any) || undefined,
         season: mapSeason(analysis.season || 'AUTUMN'),
         pricePair: analysis.price || 0,
         currency: 'RUB',

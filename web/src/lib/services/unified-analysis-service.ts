@@ -1,6 +1,7 @@
 import { getCategoryTree } from '../catalog-categories';
 import { env } from '../env';
 import OpenAI from 'openai';
+import { withRetry, sleep } from '../../utils/retry';
 
 import { AnalysisPromptService } from './analysis-prompt-service';
 import { AnalysisValidationService } from './analysis-validation-service';
@@ -137,35 +138,25 @@ export class UnifiedAnalysisService {
       attempt += 1;
       try {
         console.log(`   🔁 OpenAI analysis attempt ${attempt}/${maxAttempts}`);
-
-        // Add rate limiting delay before each request
-        const delayMs = env.OPENAI_REQUEST_DELAY_MS || 2000; // Default 2 seconds
-        if (attempt > 1) {
-          console.log(
-            `   ⏳ Rate limiting: waiting ${delayMs}ms before request...`
-          );
-          await this.sleep(delayMs);
-        }
-
         return await this.performAnalysis(textContent, imageUrls, context);
       } catch (e) {
         lastError = e;
-        const backoffMs = 1000 * Math.pow(2, attempt - 1);
+        const backoffMs = Math.min(60_000, 1000 * 2 ** (attempt - 1));
         if (this.isImageDownloadError(e)) {
           console.warn(
             `   ⚠️  Image download error from OpenAI on attempt ${attempt}. Retrying in ${backoffMs}ms...`
           );
-          await this.sleep(backoffMs);
+          await sleep(backoffMs);
           continue;
         }
 
         // Handle rate limit errors with longer delays
         if (this.isRateLimitError(e)) {
-          const rateLimitDelay = 60000; // 1 minute for rate limits
+          const rateLimitDelay = Math.min(60_000, backoffMs);
           console.warn(
             `   ⚠️  Rate limit hit. Waiting ${rateLimitDelay}ms before retry...`
           );
-          await this.sleep(rateLimitDelay);
+          await sleep(rateLimitDelay);
           continue;
         }
 
@@ -228,7 +219,17 @@ export class UnifiedAnalysisService {
         `   📸 Processing ${validImageUrls.length} valid image URLs for analysis`
       );
 
-      for (const imageUrl of validImageUrls) {
+      // Limit number of images passed to LLM vision to reduce tokens
+      const maxLlmImagesEnv = process.env.MAX_LLM_IMAGES;
+      const maxLlmImages = maxLlmImagesEnv
+        ? Math.max(0, parseInt(maxLlmImagesEnv, 10) || 0)
+        : 4; // default 4 images to LLM
+      const llmImageUrls =
+        maxLlmImages > 0
+          ? validImageUrls.slice(0, maxLlmImages)
+          : validImageUrls;
+
+      for (const imageUrl of llmImageUrls) {
         userMessage.content.push({
           type: 'image_url',
           image_url: { url: imageUrl },
@@ -244,13 +245,15 @@ export class UnifiedAnalysisService {
       messages.push(userMessage);
 
       const openai = await this.getOpenAI();
-      const response = await openai.chat.completions.create({
-        model: ModelConfigService.getModelForTask('analysis'),
-        messages,
-        temperature: ModelConfigService.getTemperatureForTask('analysis'),
-        max_tokens: ModelConfigService.getMaxTokensForTask('analysis'),
-        response_format: { type: 'json_object' },
-      });
+      const response = (await withRetry(() =>
+        openai.chat.completions.create({
+          model: ModelConfigService.getModelForTask('analysis'),
+          messages,
+          temperature: ModelConfigService.getTemperatureForTask('analysis'),
+          max_tokens: ModelConfigService.getMaxTokensForTask('analysis'),
+          response_format: { type: 'json_object' },
+        })
+      )) as any;
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
@@ -259,7 +262,7 @@ export class UnifiedAnalysisService {
 
       const result = JSON.parse(content);
 
-      // Analyze each image individually for color detection
+      // Analyze ALL images individually for color detection
       let imageColors: Array<{ url: string; color: string | null }> = [];
       try {
         console.log(

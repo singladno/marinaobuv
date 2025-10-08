@@ -48,9 +48,27 @@
     "server:backup:run-now": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v '^#' ./.env | xargs) && npx tsx scripts/backup-database.ts'",
     "server:backup:logs": "ssh -l ubuntu 130.193.56.134 'tail -n 200 -f /var/www/marinaobuv/web/logs/backup.log'",
     "server:cron:list": "ssh -l ubuntu 130.193.56.134 'crontab -l'",
+    "server:cron:stop": "ssh -l ubuntu 130.193.56.134 'crontab -r && echo \"Cron jobs removed\"'",
+    "server:cron:start": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && bash -s' < scripts/install-crons.sh && echo \"Cron jobs reinstalled\"",
+    "server:cron:disable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && echo \"DISABLE_CRON_PARSING=true\" >> .env && echo \"DISABLE_CRON_QUEUE=true\" >> .env && echo \"DISABLE_CRON_BACKUP=true\" >> .env && echo \"All cron jobs disabled via environment variables\"'",
+    "server:cron:enable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && sed -i \"/DISABLE_CRON_/d\" .env && echo \"All cron jobs enabled\"'",
     "server:disk": "ssh -l ubuntu 130.193.56.134 'df -h'",
     "server:memory": "ssh -l ubuntu 130.193.56.134 'free -h'",
-    "server:space": "ssh -l ubuntu 130.193.56.134 'echo \"=== Disk Usage ===\" && df -h && echo \"=== Memory Usage ===\" && free -h && echo \"=== Project Size ===\" && du -sh /var/www/marinaobuv && echo \"=== Node Modules Size ===\" && du -sh /var/www/marinaobuv/web/node_modules && echo \"=== Backups Size ===\" && du -sh /var/www/marinaobuv/web/backups'"
+    "server:space": "ssh -l ubuntu 130.193.56.134 'echo \"=== Disk Usage ===\" && df -h && echo \"=== Memory Usage ===\" && free -h && echo \"=== Project Size ===\" && du -sh /var/www/marinaobuv && echo \"=== Node Modules Size ===\" && du -sh /var/www/marinaobuv/web/node_modules && echo \"=== Backups Size ===\" && du -sh /var/www/marinaobuv/web/backups'",
+    "logs:cron": "cd web && tail -f logs/parsing-cron.log logs/batch-poll.log",
+    "logs:poll": "cd web && tail -f logs/batch-poll.log",
+    "parse:batch": "cd web && npx tsx src/scripts/process-draft-products-batch-v2.ts",
+    "batch:poll": "cd web && npx tsx src/scripts/batch-poll-v2.ts",
+    "batch:cancel": "cd web && npx tsx src/scripts/cancel-batches.ts",
+    "batch:status": "cd web && npx tsx src/scripts/batch-status.ts",
+    "cron:start": "cd web && npx tsx src/scripts/local-cron-runner.ts & tail -f logs/parsing-cron.log logs/batch-poll.log",
+    "cron:logs": "tail -f web/logs/parsing-cron.log",
+    "webhook:configure": "cd web && npx tsx src/scripts/configure-webhook.ts",
+    "webhook:configure:local": "cd web && npx tsx src/scripts/configure-webhook-local.ts",
+    "webhook:test": "cd web && npx tsx src/scripts/test-webhook.ts",
+    "webhook:test:local": "curl http://localhost:3000/api/webhooks/green-api",
+    "logs:parse:recent": "cd web && tail -n 100 logs/parsing-cron.log",
+    "logs:parse:all": "cd web && cat logs/parsing-cron.log"
   },
   "keywords": [
     "nextjs",
@@ -61,7 +79,7 @@
   "author": "MarinaObuv Team",
   "license": "Private",
   "devDependencies": {
-    "pm2": "^5.3.0"
+    "pm2": "^6.0.13"
   },
   "engines": {
     "node": ">=20.0.0",

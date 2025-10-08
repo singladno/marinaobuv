@@ -7,6 +7,7 @@
 
 import './load-env';
 import { prisma } from '../lib/db-node';
+import { ParsingProgressService } from '../lib/services/parsing-progress-service';
 import { env } from '../lib/env';
 import { greenApiFetcher } from '../lib/green-api-fetcher';
 
@@ -80,16 +81,8 @@ async function main() {
   console.log(`🎯 Target group: ${chatId}`);
 
   try {
-    // Check if instance is ready
-    const isReady = await greenApiFetcher.isReady();
-    if (!isReady) {
-      console.log('⚠️  Enabling Green API settings...');
-      await greenApiFetcher.enableMessageFetching();
-      await new Promise(resolve => setTimeout(resolve, 10000)); // Wait longer to avoid rate limits
-    }
-
     // ONE API CALL GETS EVERYTHING!
-    const fetchHours = env.MESSAGE_FETCH_HOURS;
+    const fetchHours = 12; // Use 12 hours to catch older messages
     const fetchMinutes = Math.round(fetchHours * 60);
     console.log(
       `\n⏰⏰⏰ TIME WINDOW: ${fetchHours} hours (${fetchMinutes} minutes) ⏰⏰⏰\n`
@@ -137,6 +130,13 @@ async function main() {
     console.log(
       `🎯 Filtered to ${messages.length} messages from target group: ${chatId}`
     );
+
+    // Update parsing progress with messages fetched (if PARSING_HISTORY_ID provided)
+    const parsingHistoryId = process.env.PARSING_HISTORY_ID;
+    if (parsingHistoryId) {
+      const progress = new ParsingProgressService(parsingHistoryId);
+      await progress.updateMessagesRead(messages.length);
+    }
 
     // Process filtered messages
     let processed = 0;

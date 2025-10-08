@@ -16,9 +16,9 @@ IMAGE LIMIT RULE (CRITICAL):
 - Most single products are represented by 2-4 images, rarely more than 6
 
 TIMESTAMP ANALYSIS (ENHANCED):
-- Messages for the same product are typically sent within 1-5 minutes of each other
-- Time gaps of 10+ minutes often indicate different products
-- Time gaps of 30+ minutes almost certainly indicate different products
+- Messages for the same product are typically sent within 1-2 seconds of each other
+- Time gaps of 10+ seconds often indicate different products
+- Time gaps of 30+ seconds almost certainly indicate different products
 - Look for natural breaks in message flow - these often separate different products
 - If you see a cluster of images followed by a long pause, then more messages, split at the pause
 
@@ -41,10 +41,6 @@ MIXED SEQUENCE PATTERN (CRITICAL NEW RULE):
   * If text is sent at the same time as the second group of images → text describes the second group
   * If text is sent between two image groups → analyze content to determine which group it describes
   * If text is sent much later than images → it might describe a different product entirely
-- Common patterns and their correct grouping:
-  * [Image A1] + [Image A2] + [Text] + [Image B1] + [Image B2] (text sent with B group) → Group 1: [Image A1] + [Image A2], Group 2: [Text] + [Image B1] + [Image B2]
-  * [Image A1] + [Text] + [Image B1] + [Image B2] (text sent between groups) → Group 1: [Image A1] + [Text], Group 2: [Image B1] + [Image B2]
-  * [Image A1] + [Image A2] + [Image A3] + [Text] (text sent after all images) → Group 1: [Image A1] + [Image A2] + [Image A3] + [Text]
 - EDGE CASE: Single image at start might be cut from previous batch
   * If you see: [Single Image] + [Text] + [Multiple Images] → the single image might be orphaned
   * Check if single image has similar timing to the text and multiple images
@@ -56,25 +52,10 @@ MIXED SEQUENCE PATTERN (CRITICAL NEW RULE):
 - Only create groups where text descriptions clearly match the images
 - When in doubt, err on the side of separating products rather than mixing them
 
-SINGLE IMAGE EDGE CASE EXCLUSION (CRITICAL NEW RULE):
-- EXCLUDE single images that appear to be edge cases from previous batches
-- Pattern to exclude: [1 Image] + [Text] + [Several Images] 
-- This pattern suggests the single image is from a different batch and should be excluded
-- If you see: [Single Image] + [Text] + [Multiple Images] → EXCLUDE the single image
-- Only process: [Text] + [Multiple Images] (skip the single image entirely)
-- This prevents mixing products from different batches
-- The single image is likely an orphaned image from a previous batch
-- CRITICAL: When you see this pattern, create groups only for the [Text] + [Multiple Images] part
-- Skip the single image completely - do not create any group containing it
-
 VALID GROUP REQUIREMENTS (STRICT):
-- EVERY group MUST contain BOTH images AND text messages - this is MANDATORY
-- Groups with ONLY images are INVALID - they cannot be processed into products
-- Groups with ONLY text are INVALID - they cannot be processed into products
-- Text messages MUST include: price, sizes, amount, or product descriptions
-- Images MUST show the actual product being described in the text
-- Each group must be a complete product unit that can be processed into a catalog entry
-- If you cannot create a group with both images and text, DO NOT create that group
+- EVERY group MUST contain BOTH images AND text messages — this is MANDATORY
+- Groups with ONLY images are INVALID — they must be skipped entirely
+- Groups with ONLY text are INVALID — they must be skipped entirely
 
 GROUPING STRATEGY:
 - FIRST: Analyze timing patterns - use timeAgo field to determine which images text describes
@@ -103,22 +84,6 @@ GROUPING STRATEGY:
 - ENFORCE the 5-6 image limit - if a group exceeds this, split it based on timestamps and content
 - ENFORCE timing patterns - use timeAgo to determine correct image-text associations
 - CRITICAL: Only create groups that have BOTH images AND text - incomplete groups are useless for product processing
-
-VALIDATION RULES (MANDATORY):
-- Before creating any group, verify it contains at least 1 image AND at least 1 text message
-- Text messages must contain product information (price, sizes, description, etc.)
-- Images must show the product being described in the text
-- CRITICAL: Text descriptions must clearly match the images in the same group
-- CRITICAL: Use timing analysis (timeAgo field) to determine which images the text describes
-- If text timing suggests it describes different images, split the group accordingly
-- ABSOLUTELY FORBIDDEN: Groups with only images OR only text - these are INVALID and must be skipped
-- If you cannot form a complete group (images + text), skip those messages entirely
-- It's better to have fewer, complete groups than many incomplete groups
-- Each group must be processable into a complete product catalog entry
-- NEVER mix images from different products in the same group
-- When in doubt about which images a text describes, use timing analysis first, then err on the side of separation
-- Handle edge cases: single images at batch boundaries might be orphaned - skip them if they can't form complete groups
-- REMEMBER: Incomplete groups are worse than no groups - skip them entirely
 `;
 
 export const GROUPING_RESPONSE_FORMAT = `
@@ -129,7 +94,7 @@ RESPONSE (JSON only):
       "groupId": "group_1", 
       "messageIds": ["msg_id_1", "msg_id_4"],
       "productContext": "Brief description of the product",
-      "confidence": 0.95
+      "confidence": Number
     }
   ]
 }`;

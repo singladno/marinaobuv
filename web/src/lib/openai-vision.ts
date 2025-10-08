@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { withRetry, sleep } from '../utils/retry';
 
 import { env } from './env';
 
@@ -80,77 +81,50 @@ Rules:
     };
 
   try {
-    // Retry with backoff on 429
-    const maxRetries = 3;
-    let attempt = 0;
-    while (true) {
-      try {
-        const resp = await openai.chat.completions.create(requestPayload);
-        const content =
-          (resp as OpenAI.Chat.Completions.ChatCompletion).choices[0]?.message
-            ?.content ?? '';
-        if (!content) return null;
+    // Retry with exponential backoff for robustness
+    const resp = await withRetry(() =>
+      openai.chat.completions.create(requestPayload)
+    );
+    const content =
+      (resp as OpenAI.Chat.Completions.ChatCompletion).choices[0]?.message
+        ?.content ?? '';
+    if (!content) return null;
 
-        const json = JSON.parse(content as string) as {
-          images?: Array<{ url?: string; color?: string | null }>;
-        };
+    const json = JSON.parse(content as string) as {
+      images?: Array<{ url?: string; color?: string | null }>;
+    };
 
-        const images: Array<{
-          url: string;
-          isFalseImage: boolean;
-          color?: string | null;
-        }> = Array.isArray(json?.images)
-          ? json.images.map((img, idx) => ({
-              url:
-                typeof img?.url === 'string' ? img.url : imageUrls[idx] || '',
-              isFalseImage: false,
-              color:
-                typeof img?.color === 'string' && img.color.trim()
-                  ? img.color.trim()
-                  : null,
-            }))
-          : imageUrls.map(u => ({ url: u, isFalseImage: false, color: null }));
+    const images: Array<{
+      url: string;
+      isFalseImage: boolean;
+      color?: string | null;
+    }> = Array.isArray(json?.images)
+      ? json.images.map((img, idx) => ({
+          url: typeof img?.url === 'string' ? img.url : imageUrls[idx] || '',
+          isFalseImage: false,
+          color:
+            typeof img?.color === 'string' && img.color.trim()
+              ? img.color.trim()
+              : null,
+        }))
+      : imageUrls.map(u => ({ url: u, isFalseImage: false, color: null }));
 
-        // Determine dominant product color, if any
-        const colorCounts = images.reduce<Record<string, number>>((acc, im) => {
-          if (im.color) acc[im.color] = (acc[im.color] || 0) + 1;
-          return acc;
-        }, {});
-        const productColor =
-          Object.entries(colorCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-          null;
-        const normalizedName = draft.name || 'Не указано';
+    // Determine dominant product color, if any
+    const colorCounts = images.reduce<Record<string, number>>((acc, im) => {
+      if (im.color) acc[im.color] = (acc[im.color] || 0) + 1;
+      return acc;
+    }, {});
+    const productColor =
+      Object.entries(colorCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    const normalizedName = draft.name || 'Не указано';
 
-        // Optional inter-request delay to respect org limits
-        const delayMs = env.OPENAI_REQUEST_DELAY_MS || 0;
-        if (delayMs > 0) {
-          await new Promise(r => setTimeout(r, delayMs));
-        }
-
-        return {
-          normalizedName,
-          productColor,
-          images,
-          requestPayload,
-          rawResponse: resp,
-        };
-      } catch (err: any) {
-        if (err?.status === 429 && attempt < maxRetries) {
-          const headerMs = err?.headers?.get?.('retry-after-ms');
-          const headerSec = err?.headers?.get?.('retry-after');
-          const retryMs = headerMs
-            ? parseInt(headerMs, 10)
-            : headerSec
-              ? parseFloat(headerSec) * 1000
-              : 1500;
-          const backoff = 500 * Math.pow(2, attempt);
-          await new Promise(r => setTimeout(r, Math.max(retryMs, backoff)));
-          attempt++;
-          continue;
-        }
-        throw err;
-      }
-    }
+    return {
+      normalizedName,
+      productColor,
+      images,
+      requestPayload,
+      rawResponse: resp,
+    };
   } catch (e) {
     console.error('OpenAI vision validation failed:', e);
     return null;

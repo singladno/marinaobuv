@@ -1,7 +1,7 @@
 import { prisma } from '../db-node';
 import { env } from '../env';
 import OpenAI from 'openai';
-import { createGroupingPrompt } from '../prompts/grouping-prompt';
+import { createGroupingPrompt } from '../gpt-grouping-prompt';
 import { GreenApiFetcher } from '../green-api-fetcher';
 import { ModelConfigService } from './model-config-service';
 
@@ -58,58 +58,57 @@ export class MessageGroupingService {
     await this.refreshMediaUrls(messages);
 
     const messagesForGPT = this.prepareMessagesForGPT(messages);
-    const prompt = createGroupingPrompt(messagesForGPT);
+    // Revert to using PROCESSING_BATCH_SIZE for grouping request size
+    const maxPerCall = env.PROCESSING_BATCH_SIZE || 100;
+    const batches: (typeof messagesForGPT)[] = [] as any;
+    for (let i = 0; i < messagesForGPT.length; i += maxPerCall) {
+      batches.push(messagesForGPT.slice(i, i + maxPerCall));
+    }
 
     try {
-      // Add rate limiting delay before grouping request
-      const delayMs = env.OPENAI_REQUEST_DELAY_MS || 2000;
-      console.log(
-        `⏳ Rate limiting: waiting ${delayMs}ms before grouping request...`
-      );
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      const allGroups: MessageGroup[] = [];
+      for (let b = 0; b < batches.length; b++) {
+        const prompt = createGroupingPrompt(batches[b]);
 
-      const response = await this.openai.chat.completions.create({
-        model: ModelConfigService.getModelForTask('grouping'),
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert at analyzing WhatsApp messages to group them by product. Return only valid JSON.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: ModelConfigService.getTemperatureForTask('grouping'),
-        max_tokens: ModelConfigService.getMaxTokensForTask('grouping'),
-        response_format: { type: 'json_object' },
-      });
+        // Add rate limiting delay before grouping request
+        const delayMs = parseInt(env.OPENAI_REQUEST_DELAY_MS || '2000');
+        console.log(
+          `⏳ Rate limiting: waiting ${delayMs}ms before grouping request (batch ${b + 1}/${batches.length})...`
+        );
+        await new Promise(resolve => setTimeout(resolve, delayMs));
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No content in OpenAI response');
-      }
+        const response = await this.openai.chat.completions.create({
+          model: ModelConfigService.getModelForTask('grouping'),
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are an expert at analyzing WhatsApp messages to group them by product. Return only valid JSON.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: ModelConfigService.getTemperatureForTask('grouping'),
+          max_tokens: ModelConfigService.getMaxTokensForTask('grouping'),
+          response_format: { type: 'json_object' },
+        });
 
-      // Validate and clean JSON content
-      let cleanedContent = content.trim();
-
-      // Try to extract JSON from the response if it's wrapped in markdown
-      if (cleanedContent.includes('```json')) {
-        const jsonMatch = cleanedContent.match(/```json\s*([\s\S]*?)\s*```/);
-        if (jsonMatch) {
-          cleanedContent = jsonMatch[1].trim();
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error('No content in OpenAI response');
         }
-      } else if (cleanedContent.includes('```')) {
-        const jsonMatch = cleanedContent.match(/```\s*([\s\S]*?)\s*```/);
-        if (jsonMatch) {
-          cleanedContent = jsonMatch[1].trim();
-        }
-      }
 
-      // Validate JSON before parsing
-      try {
-        // Check if the content looks like valid JSON
+        let cleanedContent = content.trim();
+        if (cleanedContent.includes('```json')) {
+          const jsonMatch = cleanedContent.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) cleanedContent = jsonMatch[1].trim();
+        } else if (cleanedContent.includes('```')) {
+          const jsonMatch = cleanedContent.match(/```\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) cleanedContent = jsonMatch[1].trim();
+        }
+
         if (
           !cleanedContent.startsWith('{') &&
           !cleanedContent.startsWith('[')
@@ -117,52 +116,59 @@ export class MessageGroupingService {
           throw new Error('Response does not appear to be valid JSON');
         }
 
-        const result = JSON.parse(cleanedContent);
-        const groups = result.groups || [];
+        const parsed = JSON.parse(cleanedContent);
+        let groups = (parsed.groups || []) as MessageGroup[];
 
-        console.log(`✅ OpenAI identified ${groups.length} product groups`);
-
-        // Log detailed information about each group
-        for (let i = 0; i < groups.length; i++) {
-          const group = groups[i];
-          console.log(`\n📦 Group ${i + 1}/${groups.length}: ${group.groupId}`);
-          console.log(`   📝 Context: ${group.productContext}`);
-          console.log(`   📊 Confidence: ${group.confidence}`);
-          console.log(`   📨 Messages (${group.messageIds.length}):`);
-
-          // Get message details for this group
-          const groupMessages = messages.filter(msg =>
-            group.messageIds.includes(msg.id)
-          );
-          for (const msg of groupMessages) {
-            const messageType = msg.type || 'text';
-            const hasImage =
-              (msg.type === 'image' || msg.type === 'imageMessage') &&
-              !!msg.mediaUrl;
-            const hasText = msg.text && msg.text.trim();
-            const sender = msg.fromName || msg.from || 'Unknown';
-
-            console.log(
-              `     ${messageType} from ${sender}${hasImage ? ' (with media)' : ''}${hasText ? ' (with text)' : ''}`
+        // Post-filter: drop any groups that don't contain BOTH at least one text and one image message
+        if (groups.length > 0) {
+          const messageById = new Map(messages.map(m => [m.id, m]));
+          groups = groups.filter(group => {
+            const groupMessages = (group.messageIds || [])
+              .map(id => messageById.get(id))
+              .filter(Boolean) as any[];
+            const hasImage = groupMessages.some(
+              m =>
+                (m.type === 'image' || m.type === 'imageMessage') &&
+                !!m.mediaUrl
             );
-          }
+            const hasText = groupMessages.some(
+              m => !!(m.text && m.text.trim())
+            );
+            return hasImage && hasText;
+          });
         }
-
-        return groups;
-      } catch (jsonError) {
-        console.error('❌ JSON parsing error:', jsonError);
-        console.error(
-          '📄 Raw content (first 500 chars):',
-          cleanedContent.substring(0, 500)
+        console.log(
+          `✅ OpenAI identified ${groups.length} product groups in batch ${b + 1}/${batches.length}`
         );
-        console.error(
-          '📄 Raw content (last 500 chars):',
-          cleanedContent.substring(Math.max(0, cleanedContent.length - 500))
-        );
-        throw new Error(
-          `Failed to parse OpenAI response as JSON: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`
-        );
+        allGroups.push(...groups);
       }
+
+      // Detailed logs
+      for (let i = 0; i < allGroups.length; i++) {
+        const group = allGroups[i];
+        console.log(
+          `\n📦 Group ${i + 1}/${allGroups.length}: ${group.groupId}`
+        );
+        console.log(`   📝 Context: ${group.productContext}`);
+        console.log(`   📊 Confidence: ${group.confidence}`);
+        console.log(`   📨 Messages (${group.messageIds.length}):`);
+        const groupMessages = messages.filter(msg =>
+          group.messageIds.includes(msg.id)
+        );
+        for (const msg of groupMessages) {
+          const messageType = msg.type || 'text';
+          const hasImage =
+            (msg.type === 'image' || msg.type === 'imageMessage') &&
+            !!msg.mediaUrl;
+          const hasText = msg.text && msg.text.trim();
+          const sender = msg.fromName || msg.from || 'Unknown';
+          console.log(
+            `     ${messageType} from ${sender}${hasImage ? ' (with media)' : ''}${hasText ? ' (with text)' : ''}`
+          );
+        }
+      }
+
+      return allGroups;
     } catch (error) {
       console.error('❌ Error grouping messages with OpenAI:', error);
       return [];

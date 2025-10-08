@@ -20,6 +20,8 @@ export async function runWithTimeout(
     const child = spawn(command, args, {
       env: { ...process.env, ...extraEnv },
       stdio: 'inherit',
+      // Force unbuffered output
+      shell: false,
     });
 
     let isResolved = false;

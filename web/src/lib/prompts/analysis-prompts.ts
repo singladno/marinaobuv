@@ -11,12 +11,15 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
           - STRICT ENUMS:
             - gender MUST be EXACTLY one of: "MALE", "FEMALE" (uppercase only) - NO UNISEX ALLOWED
             - season MUST be EXACTLY one of: "SPRING", "SUMMER", "AUTUMN", "WINTER" (uppercase only)
-            - ALWAYS determine gender - if unclear from image/text, use size-based decision:
-              * Sizes 35-40 typically indicate FEMALE
-              * Sizes 41-45 typically indicate MALE
-              * If no sizes available, analyze visual design: feminine features (heels, decorative elements) = FEMALE, masculine features (bulky, simple design) = MALE
+            - GENDER DETERMINATION PRIORITY (CRITICAL):
+              1) If TEXT explicitly states gender (e.g., "женские", "мужские") — USE TEXT. This overrides any size/design inference.
+              2) If TEXT is not explicit but IMAGES clearly indicate gender — USE IMAGE judgement (heels/decorative vs. bulky/simple).
+              3) Only if gender cannot be determined from TEXT or IMAGES, use size-based hints:
+                 * Sizes 35-40 typically indicate FEMALE
+                 * Sizes 41-45 typically indicate MALE
             - If season unclear → use "AUTUMN".
-          - ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
+          - SIZES ARE MANDATORY. ONLY output sizes if they are explicitly present in text/images and you are 100% sure they are shoe sizes. If no sizes are present, leave the "sizes" field EMPTY or omit it (DO NOT invent or infer sizes). Products without sizes will be skipped by the system.
+          - When sizes are present, ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
           - ALWAYS calculate packPairs from sizes (sum of all count values)
           - ALWAYS provide a proper product name in RUSSIAN based on images and text
           - ALWAYS provide a detailed description in RUSSIAN based on images and text
@@ -123,12 +126,15 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
             - STRICT ENUMS:
               - gender MUST be EXACTLY one of: "MALE", "FEMALE" (uppercase only) - NO UNISEX ALLOWED
               - season MUST be EXACTLY one of: "SPRING", "SUMMER", "AUTUMN", "WINTER" (uppercase only)
-              - ALWAYS determine gender - if unclear from text, use size-based decision:
-                * Sizes 35-40 typically indicate FEMALE
-                * Sizes 41-45 typically indicate MALE
-                * If no sizes available, analyze design context: feminine features (heels, decorative elements) = FEMALE, masculine features (bulky, simple design) = MALE
+              - GENDER DETERMINATION PRIORITY (CRITICAL):
+                1) If TEXT explicitly states gender (e.g., "женские", "мужские") — USE TEXT. This overrides size/design inference.
+                2) Only if TEXT is not explicit, use size-based hints:
+                   * Sizes 35-40 typically indicate FEMALE
+                   * Sizes 41-45 typically indicate MALE
+                3) If neither applies, analyze design context (heels/decorative vs. bulky/simple).
               - If season unclear → use "AUTUMN".
-            - ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
+            - SIZES ARE MANDATORY. ONLY output sizes if they are explicitly present in text and you are 100% sure they are shoe sizes. If no sizes are present, leave the "sizes" field EMPTY or omit it (DO NOT invent or infer sizes). Products without sizes will be skipped by the system.
+            - When sizes are present, ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
             - ALWAYS calculate packPairs from sizes (sum of all count values)
             - ALWAYS provide a proper product name in RUSSIAN based on text
             - ALWAYS provide a detailed description in RUSSIAN based on text

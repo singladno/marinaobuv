@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db-node';
+import { env } from '../../../../lib/env';
 
 /**
  * Green API Webhook Handler
@@ -35,6 +36,23 @@ async function handleIncomingMessage(payload: any) {
     console.log('⚠️  Invalid message data, skipping');
     return;
   }
+
+  // Extract chat ID and check if it's our target group
+  const chatId = senderData?.chatId || null;
+  if (!chatId) {
+    console.log('⚠️  No chat ID found, skipping');
+    return;
+  }
+
+  // Filter messages to only process our target group
+  if (chatId !== env.TARGET_GROUP_ID) {
+    console.log(
+      `⚠️  Message from different group (${chatId}), skipping. Target: ${env.TARGET_GROUP_ID}`
+    );
+    return;
+  }
+
+  console.log(`🎯 Processing message from target group: ${chatId}`);
 
   // Extract media information if present
   let mediaUrl: string | null = null;
@@ -75,7 +93,6 @@ async function handleIncomingMessage(payload: any) {
   // Extract sender information
   const from = senderData?.sender || null;
   const fromName = senderData?.senderName || null;
-  const chatId = senderData?.chatId || null;
 
   try {
     // Check if message already exists
