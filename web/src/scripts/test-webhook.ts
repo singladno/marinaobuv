@@ -8,7 +8,7 @@ import './load-env';
 import { env } from '../lib/env';
 
 async function testWebhook() {
-  const webhookUrl = 'https://www.marina-obuv.ru/api/webhooks/green-api';
+  const webhookUrl = 'https://marina-obuv.ru/api/webhooks/green-api';
 
   console.log('🧪 Testing webhook endpoint...');
   console.log(`🎯 Webhook URL: ${webhookUrl}`);

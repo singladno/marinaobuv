@@ -67,9 +67,11 @@
     "cron:start": "cd web && npx tsx src/scripts/local-cron-runner.ts & tail -f logs/parsing-cron.log logs/batch-poll.log",
     "cron:logs": "tail -f web/logs/parsing-cron.log",
     "webhook:configure": "cd web && npx tsx src/scripts/configure-webhook.ts",
-    "webhook:configure:local": "cd web && npx tsx src/scripts/configure-webhook-local.ts",
     "webhook:test": "cd web && npx tsx src/scripts/test-webhook.ts",
-    "webhook:test:local": "curl http://localhost:3000/api/webhooks/green-api",
+    "webhook:configure:server": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && npx tsx src/scripts/configure-webhook.ts'",
+    "webhook:test:server": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && npx tsx src/scripts/test-webhook.ts'",
+    "webhook:check:server": "curl -f https://marina-obuv.ru/api/webhooks/green-api || echo 'Webhook endpoint not responding'",
+    "webhook:logs:server": "ssh -l ubuntu 130.193.56.134 'tail -n 50 /var/www/marinaobuv/web/logs/marinaobuv-out.log | grep -i webhook'",
     "logs:parse:recent": "cd web && tail -n 100 logs/parsing-cron.log",
     "logs:parse:all": "cd web && cat logs/parsing-cron.log"
   },
