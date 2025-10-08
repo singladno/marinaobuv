@@ -209,8 +209,15 @@ jobs:
                 echo "✅ Fallback migration validation passed"
               else
                 echo "❌ Fallback migration failed - database schema is incorrect!"
-                echo "💡 Deployment FAILED - migrations did not work"
-                exit 1
+                echo "🔧 Attempting force schema synchronization..."
+                chmod +x scripts/force-schema-sync.sh
+                if ./scripts/force-schema-sync.sh; then
+                  echo "✅ Force schema sync completed successfully"
+                else
+                  echo "❌ Force schema sync failed!"
+                  echo "💡 DEPLOYMENT FAILED - could not fix database schema"
+                  exit 1
+                fi
               fi
             else
               chmod +x scripts/robust-migration-system.sh
@@ -226,8 +233,15 @@ jobs:
                   echo "✅ Migration system recovered successfully"
                 else
                   echo "❌ Migration system failed after recovery!"
-                  echo "💡 DEPLOYMENT FAILED - migrations could not be fixed"
-                  exit 1
+                  echo "🔧 Attempting force schema synchronization..."
+                  chmod +x scripts/force-schema-sync.sh
+                  if ./scripts/force-schema-sync.sh; then
+                    echo "✅ Force schema sync completed successfully"
+                  else
+                    echo "❌ Force schema sync failed!"
+                    echo "💡 DEPLOYMENT FAILED - could not fix database schema"
+                    exit 1
+                  fi
                 fi
               fi
             fi
@@ -415,7 +429,7 @@ jobs:
             # CRITICAL: Final application health check
             echo "🔍 Performing final application health check..."
             sleep 10  # Wait for application to fully start
-            
+
             # Test database connectivity and schema
             echo "🔍 Testing database schema..."
             if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
@@ -425,7 +439,7 @@ jobs:
               echo "💡 DEPLOYMENT FAILED - application will not work"
               exit 1
             fi
-            
+
             # Test application endpoints
             echo "🔍 Testing application endpoints..."
             if curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
@@ -435,7 +449,7 @@ jobs:
               echo "💡 DEPLOYMENT FAILED - application is not responding"
               exit 1
             fi
-            
+
             # Verify webhook deployment
             echo "🔍 Verifying webhook deployment..."
             chmod +x scripts/verify-webhook-deployment.sh
