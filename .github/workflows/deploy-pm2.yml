@@ -199,21 +199,27 @@ jobs:
 
             # Use robust migration system
             echo "🚀 Running robust migration system..."
-            chmod +x scripts/robust-migration-system.sh
-            if ./scripts/robust-migration-system.sh; then
-              echo "✅ Robust migration system completed successfully"
+            # Ensure scripts exist and are executable
+            if [ ! -f "scripts/robust-migration-system.sh" ]; then
+              echo "❌ Migration script not found, using fallback migration method"
+              ./prisma-server.sh npm run prisma:migrate:deploy
             else
-              echo "❌ Robust migration system failed!"
-              echo "🔧 Attempting database recovery..."
-              ./prisma-server.sh npm run db:recover
-              echo "🔧 Attempting to reset and re-run migrations..."
-              ./prisma-server.sh npx prisma migrate reset --force
+              chmod +x scripts/robust-migration-system.sh
               if ./scripts/robust-migration-system.sh; then
-                echo "✅ Migration system recovered successfully"
+                echo "✅ Robust migration system completed successfully"
               else
-                echo "❌ Migration system failed after recovery!"
-                echo "💡 Manual intervention required - check database state"
-                exit 1
+                echo "❌ Robust migration system failed!"
+                echo "🔧 Attempting database recovery..."
+                ./prisma-server.sh npm run db:recover
+                echo "🔧 Attempting to reset and re-run migrations..."
+                ./prisma-server.sh npx prisma migrate reset --force
+                if ./scripts/robust-migration-system.sh; then
+                  echo "✅ Migration system recovered successfully"
+                else
+                  echo "❌ Migration system failed after recovery!"
+                  echo "💡 Manual intervention required - check database state"
+                  exit 1
+                fi
               fi
             fi
 
