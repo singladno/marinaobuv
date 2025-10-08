@@ -107,6 +107,11 @@ print_status "Copying application files..."
 cp -r . $APP_DIR/
 cd $APP_DIR
 
+# 7.1. Set execute permissions for scripts
+print_status "Setting execute permissions for scripts..."
+chmod +x scripts/*.sh
+chmod +x web/src/scripts/*.sh 2>/dev/null || true
+
 # 8. Install dependencies
 print_status "Installing dependencies..."
 npm install
@@ -377,7 +382,22 @@ else
 fi
 cd $APP_DIR
 
-# 26. Final status check
+# 26. Verify webhook script exists and is executable
+print_status "Verifying webhook deployment script..."
+if [ -f "scripts/verify-webhook-deployment.sh" ]; then
+    if [ -x "scripts/verify-webhook-deployment.sh" ]; then
+        print_success "Webhook verification script is ready"
+    else
+        print_warning "Webhook script exists but not executable, fixing..."
+        chmod +x scripts/verify-webhook-deployment.sh
+        print_success "Webhook script permissions fixed"
+    fi
+else
+    print_error "Webhook verification script not found!"
+    exit 1
+fi
+
+# 27. Final status check
 print_status "Performing final status check..."
 
 # Check PM2 status
@@ -402,6 +422,15 @@ else
     print_error "PostgreSQL is not running"
 fi
 
+# 28. Run webhook verification
+print_status "Running webhook verification..."
+if ./scripts/verify-webhook-deployment.sh; then
+    print_success "Webhook verification passed!"
+else
+    print_warning "Webhook verification failed, but deployment completed"
+    print_status "You may need to manually check the webhook endpoint"
+fi
+
 print_success "🎉 MarinaObuv deployment completed!"
 print_status "Your application should now be running at:"
 print_status "http://$(curl -s ifconfig.me)"
@@ -412,6 +441,7 @@ print_status "  Deploy updates: $APP_DIR/deploy.sh"
 print_status "  PM2 logs: pm2 logs marinaobuv"
 print_status "  PM2 status: pm2 status"
 print_status "  Restart app: pm2 restart marinaobuv"
+print_status "  Test webhook: ./scripts/verify-webhook-deployment.sh"
 print_status ""
 print_status "Next steps:"
 print_status "1. Configure your domain DNS to point to this server"

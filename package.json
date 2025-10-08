@@ -71,6 +71,7 @@
     "webhook:check": "curl -f https://marina-obuv.ru/api/webhooks/green-api || echo 'Webhook endpoint not responding'",
     "webhook:logs": "ssh -l ubuntu 130.193.56.134 'tail -n 50 /var/www/marinaobuv/web/logs/marinaobuv-out.log | grep -i webhook'",
     "webhook:verify:server": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && ./scripts/verify-webhook-deployment.sh'",
+    "webhook:test:local": "./scripts/test-webhook-local.sh",
     "logs:parse:recent": "cd web && tail -n 100 logs/parsing-cron.log",
     "logs:parse:all": "cd web && cat logs/parsing-cron.log"
   },
