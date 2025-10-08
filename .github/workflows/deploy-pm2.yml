@@ -210,13 +210,30 @@ jobs:
               else
                 echo "❌ Fallback migration failed - database schema is incorrect!"
                 echo "🔧 Attempting force schema synchronization..."
-                chmod +x scripts/force-schema-sync.sh
-                if ./scripts/force-schema-sync.sh; then
-                  echo "✅ Force schema sync completed successfully"
+                if [ -f "scripts/force-schema-sync.sh" ]; then
+                  chmod +x scripts/force-schema-sync.sh
+                  if ./scripts/force-schema-sync.sh; then
+                    echo "✅ Force schema sync completed successfully"
+                  else
+                    echo "❌ Force schema sync failed!"
+                    echo "💡 DEPLOYMENT FAILED - could not fix database schema"
+                    exit 1
+                  fi
                 else
-                  echo "❌ Force schema sync failed!"
-                  echo "💡 DEPLOYMENT FAILED - could not fix database schema"
-                  exit 1
+                  echo "🔧 Force schema sync script not found, applying manual fixes..."
+                  # Manual schema fixes
+                  echo "Adding missing analysisBatchId column..."
+                  ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"analysisBatchId\" TEXT;" || echo "Column may already exist"
+                  echo "Adding missing colorBatchId column..."
+                  ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"colorBatchId\" TEXT;" || echo "Column may already exist"
+                  echo "Adding missing batchProcessingStatus column..."
+                  ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"batchProcessingStatus\" TEXT DEFAULT 'pending';" || echo "Column may already exist"
+                  echo "Adding missing indexes..."
+                  ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_analysisBatchId_key\" ON \"Product\"(\"analysisBatchId\");" || echo "Index may already exist"
+                  ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_colorBatchId_key\" ON \"Product\"(\"colorBatchId\");" || echo "Index may already exist"
+                  echo "Regenerating Prisma client..."
+                  ./prisma-server.sh npm run prisma:generate
+                  echo "✅ Manual schema fixes completed"
                 fi
               fi
             else
@@ -234,13 +251,30 @@ jobs:
                 else
                   echo "❌ Migration system failed after recovery!"
                   echo "🔧 Attempting force schema synchronization..."
-                  chmod +x scripts/force-schema-sync.sh
-                  if ./scripts/force-schema-sync.sh; then
-                    echo "✅ Force schema sync completed successfully"
+                  if [ -f "scripts/force-schema-sync.sh" ]; then
+                    chmod +x scripts/force-schema-sync.sh
+                    if ./scripts/force-schema-sync.sh; then
+                      echo "✅ Force schema sync completed successfully"
+                    else
+                      echo "❌ Force schema sync failed!"
+                      echo "💡 DEPLOYMENT FAILED - could not fix database schema"
+                      exit 1
+                    fi
                   else
-                    echo "❌ Force schema sync failed!"
-                    echo "💡 DEPLOYMENT FAILED - could not fix database schema"
-                    exit 1
+                    echo "🔧 Force schema sync script not found, applying manual fixes..."
+                    # Manual schema fixes
+                    echo "Adding missing analysisBatchId column..."
+                    ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"analysisBatchId\" TEXT;" || echo "Column may already exist"
+                    echo "Adding missing colorBatchId column..."
+                    ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"colorBatchId\" TEXT;" || echo "Column may already exist"
+                    echo "Adding missing batchProcessingStatus column..."
+                    ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"batchProcessingStatus\" TEXT DEFAULT 'pending';" || echo "Column may already exist"
+                    echo "Adding missing indexes..."
+                    ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_analysisBatchId_key\" ON \"Product\"(\"analysisBatchId\");" || echo "Index may already exist"
+                    ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_colorBatchId_key\" ON \"Product\"(\"colorBatchId\");" || echo "Index may already exist"
+                    echo "Regenerating Prisma client..."
+                    ./prisma-server.sh npm run prisma:generate
+                    echo "✅ Manual schema fixes completed"
                   fi
                 fi
               fi
