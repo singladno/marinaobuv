@@ -463,15 +463,18 @@ jobs:
             # CRITICAL: Final application health check
             echo "🔍 Performing final application health check..."
             sleep 10  # Wait for application to fully start
-            
+
             # Test database connectivity and schema
             echo "🔍 Testing database schema..."
+            cd web
             if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
               echo "✅ Database schema validation passed"
+              cd ..
             else
               echo "❌ CRITICAL: Database schema is still broken!"
               echo "🔧 Attempting final schema fix..."
               # Final attempt to fix schema
+              cd web
               echo "Adding missing analysisBatchId column..."
               ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"analysisBatchId\" TEXT;" || echo "Column may already exist"
               echo "Adding missing colorBatchId column..."
@@ -483,6 +486,7 @@ jobs:
               ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_colorBatchId_key\" ON \"Product\"(\"colorBatchId\");" || echo "Index may already exist"
               echo "Regenerating Prisma client..."
               ./prisma-server.sh npm run prisma:generate
+              cd ..
               echo "Restarting application..."
               pm2 restart marinaobuv
               sleep 10
