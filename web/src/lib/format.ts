@@ -9,7 +9,6 @@ export function rub(rubles: number): string {
 export const genderRu: Record<string, string> = {
   FEMALE: 'Женский',
   MALE: 'Мужской',
-  UNISEX: 'Унисекс',
 };
 
 export const seasonRu: Record<string, string> = {

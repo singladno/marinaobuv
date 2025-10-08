@@ -39,7 +39,7 @@ export const ProductDraftSchema = z.object({
     .optional()
     .transform(val => (val === null ? undefined : val)),
   gender: z
-    .enum(['female', 'male', 'unisex'])
+    .enum(['female', 'male'])
     .nullable()
     .optional()
     .transform(val => (val === null ? undefined : val)),

@@ -61,7 +61,6 @@ export function ProductGenderCell({
       options={[
         { value: 'Женский', label: 'Женский' },
         { value: 'Мужской', label: 'Мужской' },
-        { value: 'Унисекс', label: 'Унисекс' },
         { value: '-', label: '-' },
       ]}
       disabled={disabled}

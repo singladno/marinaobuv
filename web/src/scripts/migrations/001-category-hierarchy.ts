@@ -203,22 +203,18 @@ async function migrateProducts() {
     // Autumn mappings
     'autumn/mens': 'obuv/mens/autumn',
     'autumn/womens': 'obuv/womens/autumn',
-    'autumn/unisex': 'obuv/mens/autumn', // Map unisex to mens autumn
 
     // Spring mappings
     'spring/mens': 'obuv/mens/spring',
     'spring/womens': 'obuv/womens/spring',
-    'spring/unisex': 'obuv/mens/spring', // Map unisex to mens spring
 
     // Summer mappings
     'summer/mens': 'obuv/mens/summer',
     'summer/womens': 'obuv/womens/summer',
-    'summer/unisex': 'obuv/mens/summer', // Map unisex to mens summer
 
     // Winter mappings
     'winter/mens': 'obuv/mens/winter',
     'winter/womens': 'obuv/womens/winter',
-    'winter/unisex': 'obuv/mens/winter', // Map unisex to mens winter
   };
 
   let migratedCount = 0;
@@ -268,7 +264,6 @@ async function deactivateOldCategories() {
         { slug: 'spring' },
         { slug: 'summer' },
         { slug: 'winter' },
-        { slug: { contains: 'unisex' } },
       ],
     },
   });
@@ -324,7 +319,6 @@ export async function down() {
           { slug: 'spring' },
           { slug: 'summer' },
           { slug: 'winter' },
-          { slug: { contains: 'unisex' } },
         ],
       },
       data: { isActive: true },

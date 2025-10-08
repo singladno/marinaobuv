@@ -9,9 +9,13 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
             - If material is mentioned or needs to be inferred, prefer artificial/synthetic wording (e.g., "искусственная кожа", "синтетика", "текстиль").
             - The description must never claim natural/real leather/fur/wool.
           - STRICT ENUMS:
-            - gender MUST be EXACTLY one of: "MALE", "FEMALE", "UNISEX" (uppercase only)
+            - gender MUST be EXACTLY one of: "MALE", "FEMALE" (uppercase only) - NO UNISEX ALLOWED
             - season MUST be EXACTLY one of: "SPRING", "SUMMER", "AUTUMN", "WINTER" (uppercase only)
-            - If gender is unclear → use "UNISEX". If season unclear → use "AUTUMN".
+            - ALWAYS determine gender - if unclear from image/text, use size-based decision:
+              * Sizes 35-40 typically indicate FEMALE
+              * Sizes 41-45 typically indicate MALE
+              * If no sizes available, analyze visual design: feminine features (heels, decorative elements) = FEMALE, masculine features (bulky, simple design) = MALE
+            - If season unclear → use "AUTUMN".
           - ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
           - ALWAYS calculate packPairs from sizes (sum of all count values)
           - ALWAYS provide a proper product name in RUSSIAN based on images and text
@@ -21,6 +25,7 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
           
           Language Requirements (CRITICAL):
           - Product name must be in RUSSIAN, simple and descriptive (e.g., "Женские спортивные ботинки")
+          - NEVER use "Унисекс" or "унисекс" in product names - always specify gender (Женские/Мужские)
           - Description must be in RUSSIAN, simple and selling-focused based on images, and must follow MARKETING LANGUAGE RULES
           - Use clear, marketing-friendly language
           
@@ -89,7 +94,7 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
             "name": "Название продукта на русском",
             "price": 100,
             "currency": "RUB",
-            "gender": "UNISEX",  // one of: MALE | FEMALE | UNISEX
+            "gender": "FEMALE",  // one of: MALE | FEMALE (NO UNISEX)
             "season": "AUTUMN",   // one of: SPRING | SUMMER | AUTUMN | WINTER
             "sizes": [{"size": "36", "count": 1}, {"size": "37", "count": 1}],
             "colors": ["черный", "коричневый"],
@@ -116,9 +121,13 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
               - If material is mentioned or needs to be inferred, prefer artificial/synthetic wording (e.g., "искусственная кожа", "синтетика", "текстиль").
               - The description must never claim natural/real leather/fur/wool.
             - STRICT ENUMS:
-              - gender MUST be EXACTLY one of: "MALE", "FEMALE", "UNISEX" (uppercase only)
+              - gender MUST be EXACTLY one of: "MALE", "FEMALE" (uppercase only) - NO UNISEX ALLOWED
               - season MUST be EXACTLY one of: "SPRING", "SUMMER", "AUTUMN", "WINTER" (uppercase only)
-              - If gender is unclear → use "UNISEX". If season unclear → use "AUTUMN".
+              - ALWAYS determine gender - if unclear from text, use size-based decision:
+                * Sizes 35-40 typically indicate FEMALE
+                * Sizes 41-45 typically indicate MALE
+                * If no sizes available, analyze design context: feminine features (heels, decorative elements) = FEMALE, masculine features (bulky, simple design) = MALE
+              - If season unclear → use "AUTUMN".
             - ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
             - ALWAYS calculate packPairs from sizes (sum of all count values)
             - ALWAYS provide a proper product name in RUSSIAN based on text
@@ -128,6 +137,7 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
             
             Language Requirements (CRITICAL):
             - Product name must be in RUSSIAN, simple and descriptive (e.g., "Женские спортивные ботинки")
+            - NEVER use "Унисекс" or "унисекс" in product names - always specify gender (Женские/Мужские)
             - Description must be in RUSSIAN, simple and selling-focused based on text, and must follow MARKETING LANGUAGE RULES
             - Use clear, marketing-friendly language
             
@@ -196,7 +206,7 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
               "name": "Название продукта на русском",
               "price": 100,
               "currency": "RUB",
-              "gender": "UNISEX",  // one of: MALE | FEMALE | UNISEX
+              "gender": "FEMALE",  // one of: MALE | FEMALE (NO UNISEX)
               "season": "AUTUMN",   // one of: SPRING | SUMMER | AUTUMN | WINTER
               "sizes": [{"size": "36", "count": 1}, {"size": "37", "count": 1}],
               "colors": ["черный", "коричневый"],
