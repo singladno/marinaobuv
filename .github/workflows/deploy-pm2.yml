@@ -310,6 +310,10 @@ jobs:
             echo "ℹ️ Skipping DB init/seed during deploy"
             cd ..
 
+            # Stop existing PM2 processes BEFORE rebuilding to avoid race with next start
+            echo "🛑 Stopping PM2 app before rebuild..."
+            pm2 delete marinaobuv 2>/dev/null || true
+
             # Rebuild application on server to ensure all routes are present
             echo "🔧 Rebuilding application on server to ensure routes are included..."
             cd web
@@ -318,8 +322,7 @@ jobs:
             cd ..
             echo "✅ Server-side build completed"
 
-            # Stop existing PM2 processes
-            pm2 delete marinaobuv 2>/dev/null || true
+            # PM2 already stopped above; continue to start fresh below
 
             # Setup HTTPS and nginx configuration
             echo "🔒 Setting up HTTPS and nginx configuration..."
