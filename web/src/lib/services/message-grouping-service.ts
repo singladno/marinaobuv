@@ -242,7 +242,7 @@ export class MessageGroupingService {
       index: index + 1,
       sender: msg.fromName || msg.from || 'Unknown',
       type: msg.type || 'text',
-      text: msg.text || '',
+      text: (msg.text && msg.text !== 'null' && msg.text.trim()) ? msg.text : '',
       hasImage:
         (msg.type === 'image' || msg.type === 'imageMessage') && !!msg.mediaUrl,
       imageUrl: msg.mediaUrl,

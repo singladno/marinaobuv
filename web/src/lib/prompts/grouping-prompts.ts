@@ -10,12 +10,16 @@ CORE REQUIREMENTS:
 COMMON PATTERNS:
 1. Text first, then images: [Text] → [Image] → [Image] → [Image]
 2. Images first, then text: [Image] → [Image] → [Text]
+3. Multiple text messages: [Text] → [Text] → [Image] → [Image]
+4. Mixed pattern: [Image] → [Text] → [Text] → [Image] → [Text]
 
 
 GROUPING RULES:
 - EVERY group MUST contain BOTH images AND text messages — this is MANDATORY
 - Groups with ONLY images are INVALID — they must be skipped entirely
 - Groups with ONLY text are INVALID — they must be skipped entirely
+- A group can have 2-3 text messages describing the same product
+- A group can have multiple images of the same product
 - Use timestamp field: messages sent within 1-2 seconds are usually same product
 - Time gaps of 30+ seconds often indicate different products
 - Look for natural breaks in message flow
