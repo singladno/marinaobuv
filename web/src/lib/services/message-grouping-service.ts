@@ -69,9 +69,13 @@ export class MessageGroupingService {
       const allGroups: MessageGroup[] = [];
       for (let b = 0; b < batches.length; b++) {
         const prompt = createGroupingPrompt(batches[b]);
-        
-        console.log(`📝 Prompt for batch ${b + 1}/${batches.length} (first 1000 chars):`);
-        console.log(`   ${prompt.substring(0, 1000)}${prompt.length > 1000 ? '...' : ''}`);
+
+        console.log(
+          `📝 Prompt for batch ${b + 1}/${batches.length} (first 1000 chars):`
+        );
+        console.log(
+          `   ${prompt.substring(0, 1000)}${prompt.length > 1000 ? '...' : ''}`
+        );
 
         // Add rate limiting delay before grouping request
         const delayMs = parseInt(env.OPENAI_REQUEST_DELAY_MS || '2000');
@@ -81,11 +85,17 @@ export class MessageGroupingService {
         await new Promise(resolve => setTimeout(resolve, delayMs));
 
         console.log(`🔍 Sending request to OpenAI API...`);
-        console.log(`   Model: ${ModelConfigService.getModelForTask('grouping')}`);
-        console.log(`   Temperature: ${ModelConfigService.getTemperatureForTask('grouping')}`);
-        console.log(`   Max tokens: ${ModelConfigService.getMaxTokensForTask('grouping')}`);
+        console.log(
+          `   Model: ${ModelConfigService.getModelForTask('grouping')}`
+        );
+        console.log(
+          `   Temperature: ${ModelConfigService.getTemperatureForTask('grouping')}`
+        );
+        console.log(
+          `   Max tokens: ${ModelConfigService.getMaxTokensForTask('grouping')}`
+        );
         console.log(`   Messages in batch: ${batches[b].length}`);
-        
+
         const response = await this.openai.chat.completions.create({
           model: ModelConfigService.getModelForTask('grouping'),
           messages: [
@@ -114,7 +124,9 @@ export class MessageGroupingService {
         }
 
         console.log(`📄 Raw response content (first 500 chars):`);
-        console.log(`   ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}`);
+        console.log(
+          `   ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}`
+        );
 
         let cleanedContent = content.trim();
         if (cleanedContent.includes('```json')) {
@@ -126,7 +138,9 @@ export class MessageGroupingService {
         }
 
         console.log(`🧹 Cleaned content (first 500 chars):`);
-        console.log(`   ${cleanedContent.substring(0, 500)}${cleanedContent.length > 500 ? '...' : ''}`);
+        console.log(
+          `   ${cleanedContent.substring(0, 500)}${cleanedContent.length > 500 ? '...' : ''}`
+        );
 
         if (
           !cleanedContent.startsWith('{') &&
@@ -158,10 +172,14 @@ export class MessageGroupingService {
               (m: any) => !!(m.text && m.text.trim())
             );
             const passesFilter = hasImage && hasText;
-            console.log(`   Group ${group.groupId}: ${groupMessages.length} messages, hasImage: ${hasImage}, hasText: ${hasText}, passes: ${passesFilter}`);
+            console.log(
+              `   Group ${group.groupId}: ${groupMessages.length} messages, hasImage: ${hasImage}, hasText: ${hasText}, passes: ${passesFilter}`
+            );
             return passesFilter;
           });
-          console.log(`🔍 Post-filtering complete: ${originalCount} → ${groups.length} groups`);
+          console.log(
+            `🔍 Post-filtering complete: ${originalCount} → ${groups.length} groups`
+          );
         }
         console.log(
           `✅ OpenAI identified ${groups.length} product groups in batch ${b + 1}/${batches.length}`
@@ -184,10 +202,12 @@ export class MessageGroupingService {
         for (const msg of groupMessages) {
           const messageType = (msg as any).type || 'text';
           const hasImage =
-            ((msg as any).type === 'image' || (msg as any).type === 'imageMessage') &&
+            ((msg as any).type === 'image' ||
+              (msg as any).type === 'imageMessage') &&
             !!(msg as any).mediaUrl;
           const hasText = (msg as any).text && (msg as any).text.trim();
-          const sender = (msg as any).fromName || (msg as any).from || 'Unknown';
+          const sender =
+            (msg as any).fromName || (msg as any).from || 'Unknown';
           console.log(
             `     ${messageType} from ${sender}${hasImage ? ' (with media)' : ''}${hasText ? ' (with text)' : ''}`
           );
