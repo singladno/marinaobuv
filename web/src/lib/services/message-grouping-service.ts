@@ -84,41 +84,38 @@ export class MessageGroupingService {
         );
         await new Promise(resolve => setTimeout(resolve, delayMs));
 
-        console.log(`🔍 Sending request to OpenAI API...`);
+        console.log(`🔍 Sending request to OpenAI GPT-5 Responses API...`);
         console.log(
           `   Model: ${ModelConfigService.getModelForTask('grouping')}`
         );
         console.log(
-          `   Temperature: ${ModelConfigService.getTemperatureForTask('grouping')}`
+          `   Reasoning effort: ${ModelConfigService.getReasoningEffortForTask('grouping')}`
         );
         console.log(
-          `   Max tokens: ${ModelConfigService.getMaxTokensForTask('grouping')}`
+          `   Text verbosity: ${ModelConfigService.getTextVerbosityForTask('grouping')}`
+        );
+        console.log(
+          `   Max output tokens: ${ModelConfigService.getMaxOutputTokensForTask('grouping')}`
         );
         console.log(`   Messages in batch: ${batches[b].length}`);
 
-        const response = await this.openai.chat.completions.create({
+        const response = await this.openai.responses.create({
           model: ModelConfigService.getModelForTask('grouping'),
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are an expert at analyzing WhatsApp messages to group them by product. Return only valid JSON.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: ModelConfigService.getTemperatureForTask('grouping'),
-          max_tokens: ModelConfigService.getMaxTokensForTask('grouping'),
-          response_format: { type: 'json_object' },
+          input: prompt,
+          reasoning: {
+            effort: ModelConfigService.getReasoningEffortForTask('grouping')
+          },
+          text: {
+            verbosity: ModelConfigService.getTextVerbosityForTask('grouping')
+          },
+          max_output_tokens: ModelConfigService.getMaxOutputTokensForTask('grouping')
         });
 
-        console.log(`📥 Received response from OpenAI API`);
+        console.log(`📥 Received response from OpenAI GPT-5 API`);
         console.log(`   Usage: ${JSON.stringify(response.usage)}`);
-        console.log(`   Finish reason: ${response.choices[0]?.finish_reason}`);
+        console.log(`   Finish reason: ${response.finish_reason}`);
 
-        const content = response.choices[0]?.message?.content;
+        const content = response.output_text;
         if (!content) {
           throw new Error('No content in OpenAI response');
         }
@@ -242,7 +239,7 @@ export class MessageGroupingService {
       index: index + 1,
       sender: msg.fromName || msg.from || 'Unknown',
       type: msg.type || 'text',
-      text: (msg.text && msg.text !== 'null' && msg.text.trim()) ? msg.text : '',
+      text: msg.text && msg.text !== 'null' && msg.text.trim() ? msg.text : '',
       hasImage:
         (msg.type === 'image' || msg.type === 'imageMessage') && !!msg.mediaUrl,
       imageUrl: msg.mediaUrl,

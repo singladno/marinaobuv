@@ -215,24 +215,23 @@ Rules:
             const response = (await Promise.race([
               withRetry(signal =>
                 this.getOpenAI().then(client =>
-                  client.chat.completions.create({
+                  client.responses.create({
                     model: ModelConfigService.getModelForTask('color'),
-                    messages: [
-                      { role: 'system', content: systemPrompt },
-                      userMessage,
-                    ],
-                    temperature:
-                      ModelConfigService.getTemperatureForTask('color'),
-                    max_tokens: ModelConfigService.getMaxTokensForTask('color'),
-                    response_format: { type: 'json_object' },
-                    // OpenAI SDK doesn't take AbortSignal directly; timeout handled outside
+                    input: userMessage.content[0].text,
+                    reasoning: {
+                      effort: ModelConfigService.getReasoningEffortForTask('color')
+                    },
+                    text: {
+                      verbosity: ModelConfigService.getTextVerbosityForTask('color')
+                    },
+                    max_output_tokens: ModelConfigService.getMaxOutputTokensForTask('color')
                   })
                 )
               ),
               timeoutPromise,
             ])) as any;
 
-            const content = response.choices[0]?.message?.content;
+            const content = response.output_text;
             if (!content) {
               throw new Error('No content in OpenAI response');
             }

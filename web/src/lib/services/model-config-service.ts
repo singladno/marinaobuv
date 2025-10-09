@@ -32,29 +32,49 @@ export class ModelConfigService {
   }
 
   /**
-   * Get temperature setting for different tasks
+   * Get reasoning effort for GPT-5 models
    */
-  static getTemperatureForTask(
+  static getReasoningEffortForTask(
     task: 'analysis' | 'grouping' | 'color' | 'vision'
-  ): number {
+  ): 'minimal' | 'low' | 'medium' | 'high' {
     switch (task) {
       case 'analysis':
-        return 0.1; // Low temperature for consistent product analysis
+        return 'high'; // High reasoning for complex product analysis
       case 'grouping':
-        return 0.1; // Low temperature for consistent grouping
+        return 'low'; // Low reasoning for fast message grouping
       case 'color':
-        return 0.2; // Slightly higher for color creativity
+        return 'minimal'; // Minimal reasoning for simple color detection
       case 'vision':
-        return 0.1; // Low temperature for consistent vision analysis
+        return 'medium'; // Medium reasoning for vision analysis
       default:
-        return 0.1;
+        return 'medium';
     }
   }
 
   /**
-   * Get max tokens for different tasks (cost optimization)
+   * Get text verbosity for GPT-5 models
    */
-  static getMaxTokensForTask(
+  static getTextVerbosityForTask(
+    task: 'analysis' | 'grouping' | 'color' | 'vision'
+  ): 'low' | 'medium' | 'high' {
+    switch (task) {
+      case 'analysis':
+        return 'high'; // High verbosity for detailed product analysis
+      case 'grouping':
+        return 'low'; // Low verbosity for concise grouping responses
+      case 'color':
+        return 'low'; // Low verbosity for simple color detection
+      case 'vision':
+        return 'medium'; // Medium verbosity for vision analysis
+      default:
+        return 'medium';
+    }
+  }
+
+  /**
+   * Get max output tokens for different tasks
+   */
+  static getMaxOutputTokensForTask(
     task: 'analysis' | 'grouping' | 'color' | 'vision'
   ): number {
     switch (task) {

@@ -246,16 +246,20 @@ export class UnifiedAnalysisService {
 
       const openai = await this.getOpenAI();
       const response = (await withRetry(() =>
-        openai.chat.completions.create({
+        openai.responses.create({
           model: ModelConfigService.getModelForTask('analysis'),
-          messages,
-          temperature: ModelConfigService.getTemperatureForTask('analysis'),
-          max_tokens: ModelConfigService.getMaxTokensForTask('analysis'),
-          response_format: { type: 'json_object' },
+          input: userMessage.content[0].text,
+          reasoning: {
+            effort: ModelConfigService.getReasoningEffortForTask('analysis')
+          },
+          text: {
+            verbosity: ModelConfigService.getTextVerbosityForTask('analysis')
+          },
+          max_output_tokens: ModelConfigService.getMaxOutputTokensForTask('analysis')
         })
       )) as any;
 
-      const content = response.choices[0]?.message?.content;
+      const content = response.output_text;
       if (!content) {
         throw new Error('No content in OpenAI response');
       }
