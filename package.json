@@ -53,7 +53,7 @@
     "server:cron:list": "ssh -l ubuntu 130.193.56.134 'crontab -l'",
     "server:cron:stop": "ssh -l ubuntu 130.193.56.134 'crontab -r && echo \"Cron jobs removed\"'",
     "server:cron:start": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && bash -s' < scripts/install-crons.sh && echo \"Cron jobs reinstalled\"",
-    "server:cron:disable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && echo \"DISABLE_CRON_PARSING=true\" >> .env && echo \"DISABLE_CRON_QUEUE=true\" >> .env && echo \"DISABLE_CRON_BACKUP=true\" >> .env && echo \"All cron jobs disabled via environment variables\"'",
+    "server:cron:disable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && echo \"DISABLE_CRON_PARSING=true\" >> .env && echo \"DISABLE_CRON_QUEUE=true\" >> .env && echo \"DISABLE_CRON_BACKUP=true\" >> .env && echo \"DISABLE_CRON_BATCH_POLL=true\" >> .env && echo \"All cron jobs disabled via environment variables\"'",
     "server:cron:enable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && sed -i \"/DISABLE_CRON_/d\" .env && echo \"All cron jobs enabled\"'",
     "server:disk": "ssh -l ubuntu 130.193.56.134 'df -h'",
     "server:memory": "ssh -l ubuntu 130.193.56.134 'free -h'",

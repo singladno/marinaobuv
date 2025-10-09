@@ -390,6 +390,16 @@ if [ -f "src/scripts/deploy-cron.sh" ]; then
 else
     print_warning "Parsing cron script not found, skipping cron setup"
 fi
+
+# 26. Install/update all cron jobs (including batch polling)
+print_status "Installing/updating all cron jobs..."
+cd $APP_DIR
+if [ -f "scripts/install-crons.sh" ]; then
+    bash scripts/install-crons.sh
+    print_success "All cron jobs installed (parsing, queue polling, batch polling, backup)"
+else
+    print_warning "Cron installation script not found"
+fi
 cd $APP_DIR
 
 # 26. Verify webhook script exists and is executable
