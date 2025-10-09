@@ -32,7 +32,7 @@
     "server:parse": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && NODE_ENV=production npx tsx src/scripts/hourly-cron.ts'",
     "env:deploy": "scp web/.env ubuntu@130.193.56.134:/var/www/marinaobuv/web/.env",
     "logs:parse": "cd web && tail -f logs/parsing-cron.log",
-    "server:parser-logs": "ssh -l ubuntu 130.193.56.134 'tail -n 50 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
+    "server:parser-logs": "ssh -l ubuntu 130.193.56.134 'tail -n 200 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
     "server:parser-logs-recent": "ssh -l ubuntu 130.193.56.134 'tail -n 20 /var/www/marinaobuv/web/logs/parsing-cron.log | grep -E \"(Starting|Completed|Error|✅|❌|📊)\" | tail -10'",
     "migrate:validate": "cd web && npm run migrate:validate",
     "migrate:robust": "cd web && npm run migrate:robust",
