@@ -103,12 +103,13 @@ export class MessageGroupingService {
           model: ModelConfigService.getModelForTask('grouping'),
           input: prompt,
           reasoning: {
-            effort: ModelConfigService.getReasoningEffortForTask('grouping')
+            effort: ModelConfigService.getReasoningEffortForTask('grouping'),
           },
           text: {
-            verbosity: ModelConfigService.getTextVerbosityForTask('grouping')
+            verbosity: ModelConfigService.getTextVerbosityForTask('grouping'),
           },
-          max_output_tokens: ModelConfigService.getMaxOutputTokensForTask('grouping')
+          max_output_tokens:
+            ModelConfigService.getMaxOutputTokensForTask('grouping'),
         });
 
         console.log(`📥 Received response from OpenAI GPT-5 API`);

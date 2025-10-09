@@ -250,12 +250,13 @@ export class UnifiedAnalysisService {
           model: ModelConfigService.getModelForTask('analysis'),
           input: userMessage.content[0].text,
           reasoning: {
-            effort: ModelConfigService.getReasoningEffortForTask('analysis')
+            effort: ModelConfigService.getReasoningEffortForTask('analysis'),
           },
           text: {
-            verbosity: ModelConfigService.getTextVerbosityForTask('analysis')
+            verbosity: ModelConfigService.getTextVerbosityForTask('analysis'),
           },
-          max_output_tokens: ModelConfigService.getMaxOutputTokensForTask('analysis')
+          max_output_tokens:
+            ModelConfigService.getMaxOutputTokensForTask('analysis'),
         })
       )) as any;
 

@@ -219,12 +219,15 @@ Rules:
                     model: ModelConfigService.getModelForTask('color'),
                     input: userMessage.content[0].text,
                     reasoning: {
-                      effort: ModelConfigService.getReasoningEffortForTask('color')
+                      effort:
+                        ModelConfigService.getReasoningEffortForTask('color'),
                     },
                     text: {
-                      verbosity: ModelConfigService.getTextVerbosityForTask('color')
+                      verbosity:
+                        ModelConfigService.getTextVerbosityForTask('color'),
                     },
-                    max_output_tokens: ModelConfigService.getMaxOutputTokensForTask('color')
+                    max_output_tokens:
+                      ModelConfigService.getMaxOutputTokensForTask('color'),
                   })
                 )
               ),
