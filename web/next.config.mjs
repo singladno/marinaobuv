@@ -69,6 +69,15 @@ const nextConfig = {
     pagesBufferLength: 2,
   },
   outputFileTracingRoot: path.join(process.cwd(), '..'),
+  webpack: (config) => {
+    // Ensure '@' alias resolves to src for both server and client builds
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@': path.resolve(__dirname, 'src'),
+    };
+    return config;
+  },
 };
 
 export default nextConfig;
