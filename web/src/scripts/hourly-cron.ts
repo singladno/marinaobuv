@@ -312,14 +312,14 @@ async function main() {
     });
     const initialProductCount = await prisma.product.count();
 
-    // 1) Fetch recent WhatsApp messages into DB using optimized Green API (with timeout)
-    console.log('[cron] Starting message fetching with optimized Green API...');
-    await runWithTimeout(
-      './node_modules/.bin/tsx',
-      ['src/scripts/fetch-messages-green-api-optimized.ts'],
-      5 * 60 * 1000,
-      { PARSING_HISTORY_ID: parsingHistoryId }
-    ); // 5 minute timeout for fetching (much faster now!)
+    console.log(
+      `[cron] Found ${initialMessageCount} unprocessed messages from webhooks`
+    );
+
+    // 1) Messages are now automatically saved via webhooks - no need to fetch
+    console.log(
+      '[cron] Messages are automatically saved via webhooks, skipping fetch step'
+    );
 
     // 2) Convert messages to draft products using batch processing (with graceful timeout)
     console.log('[cron] Starting batch-enabled product processing...');

@@ -99,20 +99,7 @@ const schema = z
     // Target Group Chat ID for Processing
     TARGET_GROUP_ID: z.string().optional(),
 
-    // Message Fetch Configuration
-    MESSAGE_FETCH_HOURS: z
-      .string()
-      .optional()
-      .transform(val => {
-        if (!val) return 24; // Default to 24 hours
-        const parsed = parseFloat(val);
-        if (isNaN(parsed) || parsed <= 0) {
-          throw new Error(
-            'MESSAGE_FETCH_HOURS must be a positive number (supports decimals like 3.5)'
-          );
-        }
-        return parsed;
-      }),
+    // Message Fetch Configuration - REMOVED: Messages now saved via webhooks
 
     // Processing Configuration
     PROCESSING_BATCH_SIZE: z
@@ -182,7 +169,6 @@ const raw = {
   TARGET_GROUP_ID: process.env.TARGET_GROUP_ID,
 
   // Message Fetch Configuration
-  MESSAGE_FETCH_HOURS: process.env.MESSAGE_FETCH_HOURS,
 
   // Processing Configuration
   PROCESSING_BATCH_SIZE: process.env.PROCESSING_BATCH_SIZE,
