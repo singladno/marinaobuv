@@ -147,7 +147,7 @@ export class BatchProcessorV2 {
 
       // Prepare image URLs
       const imageUrls = messages
-        .filter(m => m.type === 'image' && m.mediaUrl)
+        .filter(m => m.type === 'imageMessage' && m.mediaUrl)
         .map(m => m.mediaUrl!);
 
       if (textContents && imageUrls.length > 0) {
