@@ -1,6 +1,10 @@
 import { prisma } from '../db-node';
 import { submitBatchFromLines } from '../batch/openai-batch';
-import { buildAnalysisLine, buildColorLine, serializeLines } from '../batch/batch-builder';
+import {
+  buildAnalysisLine,
+  buildColorLine,
+  serializeLines,
+} from '../batch/batch-builder';
 
 /**
  * Service for handling batch retries and resubmission
@@ -54,25 +58,28 @@ export class BatchRetryService {
     // Resubmit analysis batch if we have text content
     if (textContents && imageUrls.length > 0) {
       console.log(`📊 Resubmitting analysis batch for product ${productId}...`);
-      
+
       const analysisLine = buildAnalysisLine(
         newAnalysisBatchId,
         textContents,
         imageUrls,
         `Product context for ${productId}`
       );
-      
+
       const analysisContent = serializeLines([analysisLine]);
-      const analysisBatchId = await submitBatchFromLines(analysisContent, 'analysis');
+      const analysisBatchId = await submitBatchFromLines(
+        analysisContent,
+        'analysis'
+      );
       batchJobs.push(analysisBatchId);
-      
+
       console.log(`✅ Analysis batch resubmitted: ${analysisBatchId}`);
     }
 
     // Resubmit color batch if we have images
     if (imageUrls.length > 0) {
       console.log(`🎨 Resubmitting color batch for product ${productId}...`);
-      
+
       const colorLines: string[] = [];
       for (let i = 0; i < imageUrls.length; i++) {
         const colorLine = buildColorLine(
@@ -81,16 +88,18 @@ export class BatchRetryService {
         );
         colorLines.push(serializeLines([colorLine]));
       }
-      
+
       const colorContent = colorLines.join('\n');
       const colorBatchId = await submitBatchFromLines(colorContent, 'colors');
       batchJobs.push(colorBatchId);
-      
+
       console.log(`✅ Color batch resubmitted: ${colorBatchId}`);
     }
 
-    console.log(`🎉 Successfully resubmitted ${batchJobs.length} batches for product ${productId}`);
-    
+    console.log(
+      `🎉 Successfully resubmitted ${batchJobs.length} batches for product ${productId}`
+    );
+
     return {
       analysisBatchId: batchJobs.find(id => id.includes('analysis')),
       colorBatchId: batchJobs.find(id => id.includes('color')),
@@ -130,7 +139,9 @@ export class BatchRetryService {
         });
 
         if (existingBatches.length > 0) {
-          console.log(`⏳ Product ${product.id} already has running batches, skipping...`);
+          console.log(
+            `⏳ Product ${product.id} already has running batches, skipping...`
+          );
           continue;
         }
 
@@ -143,7 +154,10 @@ export class BatchRetryService {
 
         resubmittedCount++;
       } catch (error) {
-        console.error(`❌ Failed to resubmit batch for product ${product.id}:`, error);
+        console.error(
+          `❌ Failed to resubmit batch for product ${product.id}:`,
+          error
+        );
       }
     }
 

@@ -9,12 +9,14 @@ async function main() {
   console.log('🔄 Starting batch retry process...');
 
   const retryService = new BatchRetryService();
-  
+
   try {
     const resubmittedCount = await retryService.resubmitAllFailedBatches();
-    
+
     if (resubmittedCount > 0) {
-      console.log(`🎉 Successfully resubmitted ${resubmittedCount} failed batches`);
+      console.log(
+        `🎉 Successfully resubmitted ${resubmittedCount} failed batches`
+      );
     } else {
       console.log('✅ No failed batches found to resubmit');
     }

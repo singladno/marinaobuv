@@ -114,10 +114,17 @@ async function handleFailedBatch(job: any) {
   // Resubmit the batch with new IDs
   try {
     const retryService = new BatchRetryService();
-    await retryService.resubmitFailedBatch(product.id, newAnalysisBatchId, newColorBatchId);
+    await retryService.resubmitFailedBatch(
+      product.id,
+      newAnalysisBatchId,
+      newColorBatchId
+    );
     console.log(`✅ Product ${product.id} batch resubmitted successfully`);
   } catch (error) {
-    console.error(`❌ Failed to resubmit batch for product ${product.id}:`, error);
+    console.error(
+      `❌ Failed to resubmit batch for product ${product.id}:`,
+      error
+    );
   }
 }
 

@@ -12,6 +12,10 @@ export class BatchProcessor {
     batchMessageIds: string[],
     startGroupCounter: number
   ): Promise<MessageGroup[]> {
+    console.log(
+      `   📥 Processing batch of ${batchMessageIds.length} message IDs`
+    );
+
     // Get all messages with their content
     const messages = await prisma.whatsAppMessage.findMany({
       where: { id: { in: batchMessageIds } },
@@ -27,9 +31,34 @@ export class BatchProcessor {
       orderBy: { createdAt: 'asc' },
     });
 
+    console.log(`   📊 Retrieved ${messages.length} messages from database`);
+
     if (messages.length === 0) {
+      console.log(`   ⚠️  No messages found for batch IDs`);
       return [];
     }
+
+    // Log message details
+    const textMessages = messages.filter(
+      m => m.text && m.text.trim().length > 0
+    );
+    const imageMessages = messages.filter(
+      m => m.type === 'image' && m.mediaUrl
+    );
+    const otherMessages = messages.filter(m => !m.text && m.type !== 'image');
+
+    console.log(`   📝 Text messages: ${textMessages.length}`);
+    console.log(`   🖼️  Image messages: ${imageMessages.length}`);
+    console.log(`   📄 Other messages: ${otherMessages.length}`);
+
+    // Show sample messages
+    console.log(`   📋 Sample messages:`);
+    messages.slice(0, 3).forEach((msg, i) => {
+      const preview = msg.text
+        ? msg.text.substring(0, 50) + '...'
+        : `[${msg.type}]`;
+      console.log(`     ${i + 1}. ${msg.fromName || msg.from}: ${preview}`);
+    });
 
     // Prepare messages for GPT analysis (limit text length to avoid token limits)
     const messagesForGPT = messages.map((msg, index) => ({
@@ -44,8 +73,19 @@ export class BatchProcessor {
       timeAgo: this.getTimeAgo(msg.createdAt, messages[0].createdAt), // Relative time from first message
     }));
 
+    console.log(
+      `   🔄 Prepared ${messagesForGPT.length} messages for GPT analysis`
+    );
+    console.log(
+      `   📊 Message types: ${[...new Set(messagesForGPT.map(m => m.type))].join(', ')}`
+    );
+    console.log(
+      `   👥 Senders: ${[...new Set(messagesForGPT.map(m => m.sender))].join(', ')}`
+    );
+
     // Create prompt for GPT
     const gptPrompt = createGroupingPrompt(messagesForGPT);
+    console.log(`   📝 Created GPT prompt (${gptPrompt.length} characters)`);
 
     try {
       const parsed = await callGPTForGrouping(gptPrompt);
