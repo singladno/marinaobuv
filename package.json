@@ -60,6 +60,8 @@
     "server:space": "ssh -l ubuntu 130.193.56.134 'echo \"=== Disk Usage ===\" && df -h && echo \"=== Memory Usage ===\" && free -h && echo \"=== Project Size ===\" && du -sh /var/www/marinaobuv && echo \"=== Node Modules Size ===\" && du -sh /var/www/marinaobuv/web/node_modules && echo \"=== Backups Size ===\" && du -sh /var/www/marinaobuv/web/backups'",
     "logs:cron": "cd web && tail -f logs/parsing-cron.log logs/batch-poll.log",
     "logs:poll": "cd web && tail -f logs/batch-poll.log",
+    "logs:batch": "cd web && echo \"=== Batch Poll Logs (last 50 lines) ===\" && tail -n 50 logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs found\" && echo \"=== Live Batch Poll Logs ===\" && tail -f logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs to follow\"",
+    "logs:batch:history": "cd web && echo \"=== Batch Poll History (last 100 lines) ===\" && tail -n 100 logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs found\"",
     "parse:batch": "cd web && npx tsx src/scripts/process-draft-products-batch-v2.ts",
     "batch:poll": "cd web && npx tsx src/scripts/batch-poll-v2.ts",
     "batch:cancel": "cd web && npx tsx src/scripts/cancel-batches.ts",
@@ -80,6 +82,8 @@
     "server:batch:status": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/batch-status.ts'",
     "server:batch:run": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/process-draft-products-batch-v2.ts'",
     "server:batch:poll": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/batch-poll-v2.ts'",
+    "server:batch:logs": "ssh -l ubuntu 130.193.56.134 'echo \"=== Batch Poll Logs (last 50 lines) ===\" && tail -n 50 /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs found\" && echo \"=== Live Batch Poll Logs ===\" && tail -f /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs to follow\"'",
+    "server:batch:logs:history": "ssh -l ubuntu 130.193.56.134 'echo \"=== Batch Poll History (last 100 lines) ===\" && tail -n 100 /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs found\"'",
     "server:parser:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== Parser Status ===\" && ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep || echo \"No parser processes running\"'",
     "server:system:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== System Status ===\" && echo \"CPU: $(top -bn1 | grep \"Cpu(s)\" | awk \"{print $2}\" | awk -F\"%\" \"{print $1}\")\" && echo \"Memory: $(free -h | awk \"/^Mem:/ {print $3 \"/\" $2}\")\" && echo \"Disk: $(df -h / | awk \"NR==2 {print $3 \"/\" $2 \\\" (\\\" $5 \\\")\\\"}\")\"'"
   },
