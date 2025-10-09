@@ -217,7 +217,7 @@ Rules:
                 this.getOpenAI().then(client =>
                   client.responses.create({
                     model: ModelConfigService.getModelForTask('color'),
-                    input: userMessage.content[0].text,
+                    input: (userMessage.content.find(c => c.type === 'text') as any)?.text || '',
                     reasoning: {
                       effort:
                         ModelConfigService.getReasoningEffortForTask('color'),
