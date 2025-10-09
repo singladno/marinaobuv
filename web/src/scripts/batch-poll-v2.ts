@@ -158,37 +158,83 @@ async function main() {
     if (b.status === 'completed') {
       console.log(`✅ Batch ${job.batchId} completed, processing results...`);
 
-      const filePath = await downloadBatchResults((b as any).output_file_id!);
-      const content = await fs.promises.readFile(filePath, 'utf8');
+      const outputFileId = (b as any).output_file_id;
 
-      for (const line of content.trim().split('\n')) {
-        const row = JSON.parse(line);
-        const customId = row.custom_id as string;
-        const result = row.response?.body?.choices?.[0]?.message?.content;
+      if (!outputFileId) {
+        console.warn(
+          `⚠️ Batch ${job.batchId} completed but has no output file ID. This indicates a failed batch - marking for retry.`
+        );
 
-        if (result) {
-          try {
-            const parsedResult = JSON.parse(result);
-
-            if (customId.startsWith('analysis_')) {
-              await processAnalysisResult(customId, parsedResult);
-            } else if (customId.startsWith('color_')) {
-              await processColorResult(customId, parsedResult);
-            }
-          } catch (error) {
-            console.error(`❌ Error parsing result for ${customId}:`, error);
-          }
-        }
+        // Mark as failed so it gets retried with new batch IDs
+        await prisma.gptBatchJob.update({
+          where: { id: job.id },
+          data: {
+            status: 'failed',
+            outputFileId: null,
+          },
+        });
+        console.log(
+          `🔄 Marked batch ${job.batchId} as failed (will be retried)`
+        );
+        continue;
       }
 
-      await prisma.gptBatchJob.update({
-        where: { id: job.id },
-        data: {
-          status: 'completed',
-          outputFileId: (b as any).output_file_id ?? null,
-        },
-      });
-      console.log(`✅ Processed results for batch ${job.batchId}`);
+      try {
+        const filePath = await downloadBatchResults(outputFileId);
+        const content = await fs.promises.readFile(filePath, 'utf8');
+
+        for (const line of content.trim().split('\n')) {
+          if (!line.trim()) continue; // Skip empty lines
+
+          try {
+            const row = JSON.parse(line);
+            const customId = row.custom_id as string;
+            const result = row.response?.body?.choices?.[0]?.message?.content;
+
+            if (result) {
+              try {
+                const parsedResult = JSON.parse(result);
+
+                if (customId.startsWith('analysis_')) {
+                  await processAnalysisResult(customId, parsedResult);
+                } else if (customId.startsWith('color_')) {
+                  await processColorResult(customId, parsedResult);
+                }
+              } catch (error) {
+                console.error(
+                  `❌ Error parsing result for ${customId}:`,
+                  error
+                );
+              }
+            }
+          } catch (error) {
+            console.error(
+              `❌ Error parsing batch result line: ${line.substring(0, 100)}...`,
+              error
+            );
+          }
+        }
+
+        await prisma.gptBatchJob.update({
+          where: { id: job.id },
+          data: {
+            status: 'completed',
+            outputFileId: outputFileId,
+          },
+        });
+        console.log(`✅ Processed results for batch ${job.batchId}`);
+      } catch (error) {
+        console.error(
+          `❌ Error downloading or processing results for batch ${job.batchId}:`,
+          error
+        );
+
+        // Mark as failed if we can't process the results
+        await prisma.gptBatchJob.update({
+          where: { id: job.id },
+          data: { status: 'failed' },
+        });
+      }
     } else if (
       b.status === 'failed' ||
       b.status === 'cancelled' ||

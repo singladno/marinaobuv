@@ -85,7 +85,10 @@ export function buildColorLine(customId: string, imageUrl: string): BatchLine {
         {
           role: 'user',
           content: [
-            { type: 'text', text: 'Detect shoe color for this image.' },
+            {
+              type: 'text',
+              text: 'Detect shoe color for this image and return JSON response.',
+            },
             { type: 'image_url', image_url: { url: imageUrl } },
           ],
         },

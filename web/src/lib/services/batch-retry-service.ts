@@ -57,14 +57,14 @@ export class BatchRetryService {
 
     const batchJobs: string[] = [];
 
-    // Resubmit analysis batch if we have text content
-    if (textContents && imageUrls.length > 0) {
+    // Resubmit analysis batch if we have text content (images are optional)
+    if (textContents) {
       console.log(`📊 Resubmitting analysis batch for product ${productId}...`);
 
       const analysisLine = buildAnalysisLine(
         newAnalysisBatchId,
         textContents,
-        imageUrls,
+        imageUrls, // Can be empty array
         `Product context for ${productId}`
       );
 
@@ -76,6 +76,10 @@ export class BatchRetryService {
       batchJobs.push(analysisBatchId);
 
       console.log(`✅ Analysis batch resubmitted: ${analysisBatchId}`);
+    } else {
+      console.log(
+        `⚠️ No text content found for product ${productId}, skipping analysis batch`
+      );
     }
 
     // Resubmit color batch if we have images

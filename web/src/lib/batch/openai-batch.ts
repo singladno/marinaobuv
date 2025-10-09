@@ -73,10 +73,22 @@ export async function pollBatch(batchId: string) {
 export async function downloadBatchResults(
   outputFileId: string
 ): Promise<string> {
+  if (!outputFileId || outputFileId === 'null') {
+    throw new Error(`Invalid output file ID: ${outputFileId}`);
+  }
+
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-  const res = await withRetry(() => openai.files.content(outputFileId));
-  const buf = Buffer.from(await (res as any).arrayBuffer());
-  const out = `/tmp/batch-results-${outputFileId}.jsonl`;
-  await fs.promises.writeFile(out, buf);
-  return out;
+
+  try {
+    const res = await withRetry(() => openai.files.content(outputFileId));
+    const buf = Buffer.from(await (res as any).arrayBuffer());
+    const out = `/tmp/batch-results-${outputFileId}.jsonl`;
+    await fs.promises.writeFile(out, buf);
+    return out;
+  } catch (error) {
+    console.error(
+      `Failed to download batch results for file ID: ${outputFileId}`
+    );
+    throw error;
+  }
 }
