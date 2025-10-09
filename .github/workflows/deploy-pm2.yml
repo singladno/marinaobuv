@@ -124,8 +124,16 @@ jobs:
             # Navigate to application directory
             cd /var/www/marinaobuv
 
-            # Pull latest changes
-            git pull origin main
+            # Force-refresh repository to avoid untracked/dirty tree issues
+            echo "🔁 Refreshing repository from origin/main..."
+            git fetch origin main
+            # Backup untracked files list for debugging
+            echo "📋 Untracked files before cleanup:" || true
+            git ls-files --others --exclude-standard || true
+            # Discard local changes and untracked files, then reset to origin/main
+            git reset --hard origin/main
+            git clean -fd
+            echo "✅ Repository reset to origin/main"
 
             # Ensure all scripts are executable
             echo "🔧 Setting execute permissions for all scripts..."
