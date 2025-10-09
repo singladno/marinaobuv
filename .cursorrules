@@ -1,9 +1,11 @@
 # MarinaObuv Project Rules for Cursor AI
 
 ## CRITICAL RULE: Component Size Limit
+
 Components must not exceed 120 lines of code. This is enforced by ESLint and must be followed strictly.
 
 ## When to Decompose Components
+
 - Component exceeds 120 lines
 - Component has multiple responsibilities
 - Component has complex state management
@@ -11,12 +13,14 @@ Components must not exceed 120 lines of code. This is enforced by ESLint and mus
 - Component renders multiple distinct sections
 
 ## Decomposition Strategies
+
 1. Extract custom hooks for state logic (move to `hooks/` directory)
 2. Create sub-components for distinct UI sections
 3. Extract utility functions to `utils/` directory
-4. Split complex components into multiple files
+4. Split complex components into multiple files.
 
 ## File Structure
+
 ```
 web/src/
 ├── app/                 # Next.js app directory
@@ -30,12 +34,14 @@ web/src/
 ```
 
 ## Naming Conventions
+
 - Components: PascalCase (e.g., `UserProfile.tsx`)
 - Hooks: camelCase starting with "use" (e.g., `useUserData.ts`)
 - Utils: camelCase (e.g., `formatDate.ts`)
 - Types: PascalCase (e.g., `User.ts`)
 
 ## Code Quality Rules
+
 - ESLint enforces max-lines: 120
 - Prettier formats code automatically
 - TypeScript provides type safety
@@ -45,6 +51,7 @@ web/src/
 ## Examples
 
 ### ❌ Bad - Component too large
+
 ```tsx
 // UserDashboard.tsx - 200+ lines
 const UserDashboard = () => {
@@ -54,6 +61,7 @@ const UserDashboard = () => {
 ```
 
 ### ✅ Good - Decomposed component
+
 ```tsx
 // UserDashboard.tsx - 50 lines
 const UserDashboard = () => {
@@ -83,6 +91,7 @@ export const useOrders = (userId: string) => {
 ```
 
 ## Technology Stack
+
 - Next.js 15.5.3 with App Router
 - TypeScript
 - Tailwind CSS 4
@@ -90,7 +99,9 @@ export const useOrders = (userId: string) => {
 - ESLint + Prettier
 
 ## AI Agent Instructions
+
 When working on this project:
+
 1. Always check component size - if approaching 120 lines, decompose
 2. Extract custom hooks for complex state logic
 3. Create sub-components for distinct UI sections
@@ -103,6 +114,7 @@ When working on this project:
 10. Keep components focused and maintainable
 
 ## Enforcement
+
 - ESLint max-lines rule catches violations
 - Pre-commit hooks prevent large components
 - Code reviews check component size
