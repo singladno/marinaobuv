@@ -7,6 +7,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: marinaobuv-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -65,6 +69,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    timeout-minutes: 60
 
     steps:
       - name: Checkout code
@@ -216,7 +221,7 @@ jobs:
             cd web
             echo "🔧 Generating Prisma client..."
             ./prisma-server.sh npm run prisma:generate
-            
+
             # Verify Prisma client was generated
             if [ ! -f "node_modules/@prisma/client/index.js" ]; then
               echo "❌ Prisma client not generated properly!"
@@ -339,7 +344,7 @@ jobs:
             mkdir -p logs
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
-            npm ci --ignore-scripts
+            npm ci
             npm run build
             cd ..
             echo "✅ Server-side build completed"
