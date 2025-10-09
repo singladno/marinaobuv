@@ -43,7 +43,7 @@
     "typecheck:watch": "nodemon --watch src --ext ts,tsx --exec \"npm run typecheck\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "pre-commit": "lint-staged && npm run typecheck",
     "setup:local": "../run-local.sh",
     "docker:up": "docker-compose -f ../docker-compose.local.yml up -d",
