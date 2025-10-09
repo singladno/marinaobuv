@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { prisma } from '../lib/db-node';
 import { pollBatch, downloadBatchResults } from '../lib/batch/openai-batch';
 import { BatchProductService } from '../lib/services/batch-product-service';
+import { BatchRetryService } from '../lib/services/batch-retry-service';
 
 /**
  * Updated batch polling service that uses product batch IDs
@@ -110,9 +111,14 @@ async function handleFailedBatch(job: any) {
     },
   });
 
-  // TODO: Resubmit the batch with new IDs
-  // This would require recreating the batch requests
-  console.log(`✅ Product ${product.id} ready for retry with new batch IDs`);
+  // Resubmit the batch with new IDs
+  try {
+    const retryService = new BatchRetryService();
+    await retryService.resubmitFailedBatch(product.id, newAnalysisBatchId, newColorBatchId);
+    console.log(`✅ Product ${product.id} batch resubmitted successfully`);
+  } catch (error) {
+    console.error(`❌ Failed to resubmit batch for product ${product.id}:`, error);
+  }
 }
 
 async function main() {
