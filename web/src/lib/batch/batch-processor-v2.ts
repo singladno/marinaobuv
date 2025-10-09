@@ -100,6 +100,14 @@ export class BatchProcessorV2 {
       batchRequests.colorLines.length === 0
     ) {
       console.log(`⚠️  No batch requests to submit.`);
+      console.log(`❌ This means products were created but no batches can be submitted.`);
+      console.log(`❌ These products will remain inactive forever!`);
+      console.log(`❌ This is a critical error - check image types and content.`);
+      
+      // Clean up orphaned products
+      console.log(`🧹 Cleaning up orphaned products...`);
+      await this.cleanupOrphanedProducts(productResults);
+      
       return { anyProcessed: false, finalizedMessageIds: [] };
     }
 
@@ -201,5 +209,36 @@ export class BatchProcessorV2 {
     }
 
     return batchJobs;
+  }
+
+  /**
+   * Clean up orphaned products that can't have batches submitted
+   */
+  private async cleanupOrphanedProducts(
+    productResults: Array<{
+      productId: string;
+      analysisBatchId: string;
+      colorBatchId: string;
+      messageIds: string[];
+    }>
+  ) {
+    for (const product of productResults) {
+      try {
+        // Delete the orphaned product
+        await prisma.product.delete({
+          where: { id: product.productId },
+        });
+        
+        // Mark messages as unprocessed so they can be retried
+        await prisma.whatsAppMessage.updateMany({
+          where: { id: { in: product.messageIds } },
+          data: { processed: false },
+        });
+        
+        console.log(`🗑️  Cleaned up orphaned product ${product.productId}`);
+      } catch (error) {
+        console.error(`❌ Failed to cleanup product ${product.productId}:`, error);
+      }
+    }
   }
 }
