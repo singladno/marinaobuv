@@ -1,4 +1,4 @@
-import { MessageGrouper } from './grouping/MessageGrouper';
+import { MessageGroupingService } from './services/message-grouping-service';
 
 export interface MessageGroup {
   groupId: string;
@@ -13,6 +13,6 @@ export interface MessageGroup {
 export async function groupMessagesWithGPT(
   messageIds: string[]
 ): Promise<MessageGroup[]> {
-  const grouper = new MessageGrouper();
-  return await grouper.groupMessagesWithGPT(messageIds);
+  const grouper = new MessageGroupingService();
+  return await grouper.groupMessages(messageIds);
 }
