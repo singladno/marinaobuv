@@ -53,8 +53,8 @@
     "server:cron:list": "ssh -l ubuntu 130.193.56.134 'crontab -l'",
     "server:cron:stop": "ssh -l ubuntu 130.193.56.134 'crontab -r && echo \"Cron jobs removed\"'",
     "server:cron:start": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && bash -s' < scripts/install-crons.sh && echo \"Cron jobs reinstalled\"",
-    "server:cron:disable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && echo \"DISABLE_CRON_PARSING=true\" >> .env && echo \"DISABLE_CRON_QUEUE=true\" >> .env && echo \"DISABLE_CRON_BACKUP=true\" >> .env && echo \"DISABLE_CRON_BATCH_POLL=true\" >> .env && echo \"All cron jobs disabled via environment variables\"'",
-    "server:cron:enable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && sed -i \"/DISABLE_CRON_/d\" .env && echo \"All cron jobs enabled\"'",
+    "server:cron:disable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && grep -q \"DISABLE_CRON_PARSING\" .env || echo \"DISABLE_CRON_PARSING=true\" >> .env && grep -q \"DISABLE_CRON_QUEUE\" .env || echo \"DISABLE_CRON_QUEUE=true\" >> .env && grep -q \"DISABLE_CRON_BACKUP\" .env || echo \"DISABLE_CRON_BACKUP=true\" >> .env && grep -q \"DISABLE_CRON_BATCH_POLL\" .env || echo \"DISABLE_CRON_BATCH_POLL=true\" >> .env && echo \"All cron jobs disabled via environment variables\"'",
+    "server:cron:enable": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && echo \"Removing all DISABLE_CRON_ variables...\" && sed -i \"/^DISABLE_CRON_/d\" .env && echo \"All cron jobs enabled\"'",
     "server:disk": "ssh -l ubuntu 130.193.56.134 'df -h'",
     "server:memory": "ssh -l ubuntu 130.193.56.134 'free -h'",
     "server:space": "ssh -l ubuntu 130.193.56.134 'echo \"=== Disk Usage ===\" && df -h && echo \"=== Memory Usage ===\" && free -h && echo \"=== Project Size ===\" && du -sh /var/www/marinaobuv && echo \"=== Node Modules Size ===\" && du -sh /var/www/marinaobuv/web/node_modules && echo \"=== Backups Size ===\" && du -sh /var/www/marinaobuv/web/backups'",
@@ -88,7 +88,7 @@
     "server:batch:logs": "ssh -l ubuntu 130.193.56.134 'echo \"=== Batch Poll Logs (last 50 lines) ===\" && tail -n 50 /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs found\" && echo \"=== Live Batch Poll Logs ===\" && tail -f /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs to follow\"'",
     "server:batch:logs:history": "ssh -l ubuntu 130.193.56.134 'echo \"=== Batch Poll History (last 100 lines) ===\" && tail -n 100 /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs found\"'",
     "server:parser:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== Parser Status ===\" && ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep || echo \"No parser processes running\"'",
-    "server:parser:stop": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && echo \"DISABLE_CRON_PARSING=true\" >> .env && echo \"Stopping parser processes...\" && ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep | awk \"{print \\$2}\" | xargs -r kill -TERM 2>/dev/null || echo \"No parser processes found\"'",
+    "server:parser:stop": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && grep -q \"DISABLE_CRON_PARSING\" .env || echo \"DISABLE_CRON_PARSING=true\" >> .env && echo \"Stopping parser processes...\" && ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep | awk \"{print \\$2}\" | xargs -r kill -TERM 2>/dev/null || echo \"No parser processes found\"'",
     "server:system:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== System Status ===\" && echo \"CPU: $(top -bn1 | grep \"Cpu(s)\" | awk \"{print $2}\" | awk -F\"%\" \"{print $1}\")\" && echo \"Memory: $(free -h | awk \"/^Mem:/ {print $3 \"/\" $2}\")\" && echo \"Disk: $(df -h / | awk \"NR==2 {print $3 \"/\" $2 \\\" (\\\" $5 \\\")\\\"}\")\"'"
   },
   "keywords": [
