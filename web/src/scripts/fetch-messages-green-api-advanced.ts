@@ -429,7 +429,7 @@ async function main() {
   }
 
   const targetGroupId = env.TARGET_GROUP_ID;
-  const fetchHours = env.MESSAGE_FETCH_HOURS || 7;
+  const fetchHours = 7; // Fixed hours since webhooks handle real-time message saving
 
   console.log(`🎯 Target group: ${targetGroupId}`);
   console.log(`⏰ Fetch hours: ${fetchHours}`);
