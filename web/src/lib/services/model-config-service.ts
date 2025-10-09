@@ -16,18 +16,18 @@ export class ModelConfigService {
     if (env.OPENAI_COLOR_MODEL) return env.OPENAI_COLOR_MODEL;
     if (env.OPENAI_VISION_MODEL) return env.OPENAI_VISION_MODEL;
 
-    // Default optimized models
+    // Default optimized models (updated to GPT-5 series for better cost/performance)
     switch (task) {
       case 'analysis':
-        return 'gpt-4o-mini'; // 97% cost reduction, maintains quality
+        return 'gpt-5-mini'; // Better quality for complex product analysis
       case 'grouping':
-        return 'gpt-3.5-turbo'; // 90% cost reduction, sufficient for text
+        return 'gpt-5-nano'; // 77% cheaper than gpt-3.5-turbo, better performance
       case 'color':
-        return 'gpt-4o-mini'; // 97% cost reduction, good for simple vision
+        return 'gpt-5-nano'; // 40% cheaper than gpt-4o-mini, sufficient for color detection
       case 'vision':
-        return 'gpt-4o-mini'; // 97% cost reduction, maintains vision capabilities
+        return 'gpt-5-mini'; // Better vision capabilities than gpt-4o-mini
       default:
-        return 'gpt-4o-mini';
+        return 'gpt-5-mini';
     }
   }
 
