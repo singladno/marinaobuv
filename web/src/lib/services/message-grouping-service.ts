@@ -71,9 +71,11 @@ export class MessageGroupingService {
         const prompt = createGroupingPrompt(batches[b]);
 
         console.log(
-          `📝 Prompt for batch ${b + 1}/${batches.length} (full content):`
+          `📝 Prompt for batch ${b + 1}/${batches.length} (first 1000 chars):`
         );
-        console.log(`   ${prompt}`);
+        console.log(
+          `   ${prompt.substring(0, 1000)}${prompt.length > 1000 ? '...' : ''}`
+        );
 
         // Add rate limiting delay before grouping request
         const delayMs = parseInt(env.OPENAI_REQUEST_DELAY_MS || '2000');
@@ -121,8 +123,10 @@ export class MessageGroupingService {
           throw new Error('No content in OpenAI response');
         }
 
-        console.log(`📄 Raw response content (full content):`);
-        console.log(`   ${content}`);
+        console.log(`📄 Raw response content (first 500 chars):`);
+        console.log(
+          `   ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}`
+        );
 
         let cleanedContent = content.trim();
         if (cleanedContent.includes('```json')) {
@@ -133,8 +137,10 @@ export class MessageGroupingService {
           if (jsonMatch) cleanedContent = jsonMatch[1].trim();
         }
 
-        console.log(`🧹 Cleaned content (full content):`);
-        console.log(`   ${cleanedContent}`);
+        console.log(`🧹 Cleaned content (first 500 chars):`);
+        console.log(
+          `   ${cleanedContent.substring(0, 500)}${cleanedContent.length > 500 ? '...' : ''}`
+        );
 
         if (
           !cleanedContent.startsWith('{') &&
