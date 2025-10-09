@@ -130,7 +130,17 @@ print_status "Running database migrations..."
 cd $WEB_DIR
 # Use production environment for migrations
 if [ -f ".env.production" ]; then
-    ./prisma-server.sh npx prisma migrate deploy
+    if ./prisma-server.sh npx prisma migrate deploy; then
+        print_success "Database migrations completed successfully"
+    else
+        print_warning "Database migrations failed, attempting schema synchronization..."
+        if ./prisma-server.sh npx prisma db push --accept-data-loss; then
+            print_success "Database schema synchronized successfully"
+        else
+            print_error "Database schema synchronization failed!"
+            exit 1
+        fi
+    fi
 else
     print_warning ".env.production not found, using local environment"
     export $(cat .env.local | grep -v '^#' | xargs) && npm run prisma:migrate

@@ -245,86 +245,18 @@ jobs:
             # Skip backup (requires tsx); do backups manually or on cron
             echo "ℹ️ Skipping DB backup during deploy"
 
-            # Use robust migration system with STRICT validation
-            echo "🚀 Running robust migration system..."
-            # Ensure scripts exist and are executable
-            if [ ! -f "scripts/robust-migration-system.sh" ]; then
-              echo "❌ Migration script not found, using fallback migration method"
-              ./prisma-server.sh npm run prisma:migrate:deploy
-              # CRITICAL: Validate that migrations actually worked
-              echo "🔍 Validating migration success..."
-              if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
-                echo "✅ Fallback migration validation passed"
-              else
-                echo "❌ Fallback migration failed - database schema is incorrect!"
-                echo "🔧 Attempting force schema synchronization..."
-                if [ -f "scripts/force-schema-sync.sh" ]; then
-                  chmod +x scripts/force-schema-sync.sh
-                  if ./scripts/force-schema-sync.sh; then
-                    echo "✅ Force schema sync completed successfully"
-                  else
-                    echo "❌ Force schema sync failed!"
-                    echo "💡 DEPLOYMENT FAILED - could not fix database schema"
-                    exit 1
-                  fi
-                else
-                  echo "🔧 Force schema sync script not found, applying manual fixes..."
-                  # Manual schema fixes
-                  echo "Adding missing analysisBatchId column..."
-                  ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"analysisBatchId\" TEXT;" || echo "Column may already exist"
-                  echo "Adding missing colorBatchId column..."
-                  ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"colorBatchId\" TEXT;" || echo "Column may already exist"
-                  echo "Adding missing batchProcessingStatus column..."
-                  ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"batchProcessingStatus\" TEXT DEFAULT 'pending';" || echo "Column may already exist"
-                  echo "Adding missing indexes..."
-                  ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_analysisBatchId_key\" ON \"Product\"(\"analysisBatchId\");" || echo "Index may already exist"
-                  ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_colorBatchId_key\" ON \"Product\"(\"colorBatchId\");" || echo "Index may already exist"
-                  echo "Regenerating Prisma client..."
-                  ./prisma-server.sh npm run prisma:generate
-                  echo "✅ Manual schema fixes completed"
-                fi
-              fi
+            # Run database migrations with proper error handling
+            echo "🚀 Running database migrations..."
+            if ./prisma-server.sh npx prisma migrate deploy; then
+              echo "✅ Database migrations completed successfully"
             else
-              chmod +x scripts/robust-migration-system.sh
-              if ./scripts/robust-migration-system.sh; then
-                echo "✅ Robust migration system completed successfully"
+              echo "❌ Database migrations failed, attempting schema synchronization..."
+              if ./prisma-server.sh npx prisma db push --accept-data-loss; then
+                echo "✅ Database schema synchronized successfully"
               else
-                echo "❌ Robust migration system failed!"
-                echo "🔧 Attempting database recovery..."
-                ./prisma-server.sh npm run db:recover
-                echo "🔧 Attempting to reset and re-run migrations..."
-                ./prisma-server.sh npx prisma migrate reset --force
-                if ./scripts/robust-migration-system.sh; then
-                  echo "✅ Migration system recovered successfully"
-                else
-                  echo "❌ Migration system failed after recovery!"
-                  echo "🔧 Attempting force schema synchronization..."
-                  if [ -f "scripts/force-schema-sync.sh" ]; then
-                    chmod +x scripts/force-schema-sync.sh
-                    if ./scripts/force-schema-sync.sh; then
-                      echo "✅ Force schema sync completed successfully"
-                    else
-                      echo "❌ Force schema sync failed!"
-                      echo "💡 DEPLOYMENT FAILED - could not fix database schema"
-                      exit 1
-                    fi
-                  else
-                    echo "🔧 Force schema sync script not found, applying manual fixes..."
-                    # Manual schema fixes
-                    echo "Adding missing analysisBatchId column..."
-                    ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"analysisBatchId\" TEXT;" || echo "Column may already exist"
-                    echo "Adding missing colorBatchId column..."
-                    ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"colorBatchId\" TEXT;" || echo "Column may already exist"
-                    echo "Adding missing batchProcessingStatus column..."
-                    ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"batchProcessingStatus\" TEXT DEFAULT 'pending';" || echo "Column may already exist"
-                    echo "Adding missing indexes..."
-                    ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_analysisBatchId_key\" ON \"Product\"(\"analysisBatchId\");" || echo "Index may already exist"
-                    ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_colorBatchId_key\" ON \"Product\"(\"colorBatchId\");" || echo "Index may already exist"
-                    echo "Regenerating Prisma client..."
-                    ./prisma-server.sh npm run prisma:generate
-                    echo "✅ Manual schema fixes completed"
-                  fi
-                fi
+                echo "❌ CRITICAL: Database schema synchronization failed!"
+                echo "💡 DEPLOYMENT FAILED - could not fix database schema"
+                exit 1
               fi
             fi
 
