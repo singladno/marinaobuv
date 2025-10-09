@@ -310,8 +310,13 @@ jobs:
             echo "ℹ️ Skipping DB init/seed during deploy"
             cd ..
 
-            # Application is already built from test job - no need to build again!
-            echo "✅ Using pre-built application from test job"
+            # Rebuild application on server to ensure all routes are present
+            echo "🔧 Rebuilding application on server to ensure routes are included..."
+            cd web
+            npm ci --ignore-scripts
+            npm run build
+            cd ..
+            echo "✅ Server-side build completed"
 
             # Stop existing PM2 processes
             pm2 delete marinaobuv 2>/dev/null || true

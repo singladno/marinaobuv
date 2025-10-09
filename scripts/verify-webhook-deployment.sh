@@ -71,12 +71,23 @@ check_application_status() {
         return 1
     fi
     
-    # Check if port 3000 is listening
-    if netstat -tlnp | grep -q ":3000"; then
-        log_success "Port 3000 is listening"
+    # Check if port 3000 is listening (prefer ss, fallback to netstat)
+    if command -v ss >/dev/null 2>&1; then
+        if ss -tlnp | grep -q ":3000"; then
+            log_success "Port 3000 is listening"
+        else
+            log_error "Port 3000 is not listening"
+            return 1
+        fi
+    elif command -v netstat >/dev/null 2>&1; then
+        if netstat -tlnp | grep -q ":3000"; then
+            log_success "Port 3000 is listening"
+        else
+            log_error "Port 3000 is not listening"
+            return 1
+        fi
     else
-        log_error "Port 3000 is not listening"
-        return 1
+        log_warning "Neither ss nor netstat available to verify listening ports; skipping port check"
     fi
     
     return 0
