@@ -71,11 +71,9 @@ export class MessageGroupingService {
         const prompt = createGroupingPrompt(batches[b]);
 
         console.log(
-          `📝 Prompt for batch ${b + 1}/${batches.length} (first 1000 chars):`
+          `📝 Prompt for batch ${b + 1}/${batches.length} (full content):`
         );
-        console.log(
-          `   ${prompt.substring(0, 1000)}${prompt.length > 1000 ? '...' : ''}`
-        );
+        console.log(`   ${prompt}`);
 
         // Add rate limiting delay before grouping request
         const delayMs = parseInt(env.OPENAI_REQUEST_DELAY_MS || '2000');
@@ -123,10 +121,8 @@ export class MessageGroupingService {
           throw new Error('No content in OpenAI response');
         }
 
-        console.log(`📄 Raw response content (first 500 chars):`);
-        console.log(
-          `   ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}`
-        );
+        console.log(`📄 Raw response content (full content):`);
+        console.log(`   ${content}`);
 
         let cleanedContent = content.trim();
         if (cleanedContent.includes('```json')) {
@@ -137,10 +133,8 @@ export class MessageGroupingService {
           if (jsonMatch) cleanedContent = jsonMatch[1].trim();
         }
 
-        console.log(`🧹 Cleaned content (first 500 chars):`);
-        console.log(
-          `   ${cleanedContent.substring(0, 500)}${cleanedContent.length > 500 ? '...' : ''}`
-        );
+        console.log(`🧹 Cleaned content (full content):`);
+        console.log(`   ${cleanedContent}`);
 
         if (
           !cleanedContent.startsWith('{') &&
@@ -154,7 +148,7 @@ export class MessageGroupingService {
         let groups = (parsed.groups || []) as MessageGroup[];
         console.log(`📊 Found ${groups.length} groups in parsed response`);
 
-        // Post-filter: drop any groups that don't contain BOTH at least one text and one image message
+        // Post-filter: drop any groups that don't contain BOTH at least one text message AND one image message
         if (groups.length > 0) {
           console.log(`🔍 Post-filtering ${groups.length} groups...`);
           const messageById = new Map(messages.map((m: any) => [m.id, m]));

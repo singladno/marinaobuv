@@ -10,6 +10,17 @@ import { BatchProcessorV2 } from '../lib/batch/batch-processor-v2';
 async function main() {
   console.log('🚀 Starting collision-free batch processing...');
 
+  // Get total unprocessed messages count first
+  const totalUnprocessed = await prisma.whatsAppMessage.count({
+    where: {
+      processed: false,
+      type: { in: ['textMessage', 'imageMessage'] },
+      OR: [{ text: { not: null } }, { mediaUrl: { not: null } }],
+    },
+  });
+
+  console.log(`📊 Total unprocessed messages: ${totalUnprocessed}`);
+
   let totalProcessed = 0;
   let batchNumber = 1;
 
@@ -32,7 +43,7 @@ async function main() {
     }
 
     console.log(
-      `📊 Batch ${batchNumber}: Found ${unprocessedMessages.length} unprocessed messages`
+      `📊 Batch ${batchNumber}: Found ${unprocessedMessages.length}/${totalUnprocessed} unprocessed messages`
     );
 
     const messageIds = unprocessedMessages.map(m => m.id);
@@ -48,7 +59,11 @@ async function main() {
         batchNumber++;
       } else {
         console.log(`⚠️  Batch ${batchNumber}: No messages were processed`);
-        break;
+        console.log(
+          `💡 This batch had no valid product groups, continuing to next batch...`
+        );
+        batchNumber++;
+        // Don't break - continue to next batch
       }
     } catch (error) {
       console.error(`❌ Batch ${batchNumber} failed:`, error);
