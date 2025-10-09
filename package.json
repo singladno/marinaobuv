@@ -69,11 +69,19 @@
     "webhook:configure": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && npx tsx src/scripts/configure-webhook.ts'",
     "webhook:test": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && npx tsx src/scripts/test-webhook.ts'",
     "webhook:check": "curl -f https://marina-obuv.ru/api/webhooks/green-api || echo 'Webhook endpoint not responding'",
-    "webhook:logs": "ssh -l ubuntu 130.193.56.134 'tail -n 50 /var/www/marinaobuv/web/logs/marinaobuv-out.log | grep -i webhook'",
+    "webhook:logs": "ssh -l ubuntu 130.193.56.134 'echo \"=== Recent Webhook Activity (last 50 lines) ===\" && tail -n 50 /var/www/marinaobuv/web/logs/marinaobuv-out.log | grep -E \"(webhook|Green API|✅|❌|🔔|📷|🎯)\" && echo \"=== Live Webhook Logs ===\" && tail -f /var/www/marinaobuv/web/logs/marinaobuv-out.log | grep -E \"(webhook|Green API|✅|❌|🔔|📷|🎯)\"'",
+    "webhook:logs:history": "ssh -l ubuntu 130.193.56.134 'echo \"=== Webhook History (last 100 lines) ===\" && tail -n 100 /var/www/marinaobuv/web/logs/marinaobuv-out.log | grep -E \"(webhook|Green API|✅|❌|🔔|📷|🎯)\"'",
     "webhook:verify:server": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && ./scripts/verify-webhook-deployment.sh'",
     "webhook:ensure": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && ./scripts/ensure-webhook-config.sh'",
     "logs:parse:recent": "cd web && tail -n 100 logs/parsing-cron.log",
-    "logs:parse:all": "cd web && cat logs/parsing-cron.log"
+    "logs:parse:all": "cd web && cat logs/parsing-cron.log",
+    "server:cron:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== Cron Service Status ===\" && systemctl status cron --no-pager || systemctl status crond --no-pager; echo \"=== Enabled Cron Jobs ===\" && crontab -l 2>/dev/null | grep -E \"(marinaobuv|parsing|batch)\" || echo \"No cron jobs found\"'",
+    "server:cron:jobs": "ssh -l ubuntu 130.193.56.134 'echo \"=== All Cron Jobs ===\" && crontab -l 2>/dev/null || echo \"No crontab found\"'",
+    "server:batch:status": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/batch-status.ts'",
+    "server:batch:run": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/process-draft-products-batch-v2.ts'",
+    "server:batch:poll": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/batch-poll-v2.ts'",
+    "server:parser:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== Parser Status ===\" && ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep || echo \"No parser processes running\"'",
+    "server:system:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== System Status ===\" && echo \"CPU: $(top -bn1 | grep \"Cpu(s)\" | awk \"{print $2}\" | awk -F\"%\" \"{print $1}\")\" && echo \"Memory: $(free -h | awk \"/^Mem:/ {print $3 \"/\" $2}\")\" && echo \"Disk: $(df -h / | awk \"NR==2 {print $3 \"/\" $2 \\\" (\\\" $5 \\\")\\\"}\")\"'"
   },
   "keywords": [
     "nextjs",

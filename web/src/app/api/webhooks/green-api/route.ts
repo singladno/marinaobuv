@@ -9,10 +9,8 @@ import { env } from '../../../../lib/env';
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
-    console.log(
-      '🔔 Green API webhook received:',
-      JSON.stringify(payload, null, 2)
-    );
+    // Reduced logging to prevent main thread clutter
+    console.log(`🔔 Webhook: ${payload.typeWebhook} from ${payload.senderData?.chatId || 'unknown'}`);
 
     // Check if this is an incoming message
     if (payload.typeWebhook === 'incomingMessageReceived') {
@@ -46,13 +44,9 @@ async function handleIncomingMessage(payload: any) {
 
   // Filter messages to only process our target group
   if (chatId !== env.TARGET_GROUP_ID) {
-    console.log(
-      `⚠️  Message from different group (${chatId}), skipping. Target: ${env.TARGET_GROUP_ID}`
-    );
+    // Reduced logging for non-target groups
     return;
   }
-
-  console.log(`🎯 Processing message from target group: ${chatId}`);
 
   // Extract media information if present
   let mediaUrl: string | null = null;
@@ -69,9 +63,7 @@ async function handleIncomingMessage(payload: any) {
     mediaCaption = messageData.caption || null;
     mediaThumbnail = messageData.jpegThumbnail || null;
 
-    if (mediaUrl) {
-      console.log(`📷 Found media URL: ${mediaUrl}`);
-    }
+    // Media URL found (reduced logging)
   }
   // Fallback: Check for file message data (alternative structure)
   else if (messageData.fileMessageData) {
@@ -82,9 +74,7 @@ async function handleIncomingMessage(payload: any) {
     mediaCaption = fileData.caption || null;
     mediaThumbnail = fileData.jpegThumbnail || null;
 
-    if (mediaUrl) {
-      console.log(`📷 Found media URL in fileMessageData: ${mediaUrl}`);
-    }
+    // Media URL found in fileMessageData (reduced logging)
   }
 
   // Extract text content
