@@ -23,9 +23,6 @@ export class BatchRetryService {
     // Get the product with its messages
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      include: {
-        sourceMessageIds: true,
-      },
     });
 
     if (!product) {
@@ -33,8 +30,13 @@ export class BatchRetryService {
     }
 
     // Get the original messages for this product
+    const sourceMessageIds = product.sourceMessageIds as string[] | null;
+    if (!sourceMessageIds || sourceMessageIds.length === 0) {
+      throw new Error(`No source message IDs found for product ${productId}`);
+    }
+
     const messages = await prisma.whatsAppMessage.findMany({
-      where: { id: { in: product.sourceMessageIds } },
+      where: { id: { in: sourceMessageIds } },
       orderBy: { createdAt: 'asc' },
     });
 

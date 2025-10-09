@@ -69,6 +69,9 @@ export class MessageGroupingService {
       const allGroups: MessageGroup[] = [];
       for (let b = 0; b < batches.length; b++) {
         const prompt = createGroupingPrompt(batches[b]);
+        
+        console.log(`📝 Prompt for batch ${b + 1}/${batches.length} (first 1000 chars):`);
+        console.log(`   ${prompt.substring(0, 1000)}${prompt.length > 1000 ? '...' : ''}`);
 
         // Add rate limiting delay before grouping request
         const delayMs = parseInt(env.OPENAI_REQUEST_DELAY_MS || '2000');
@@ -77,6 +80,12 @@ export class MessageGroupingService {
         );
         await new Promise(resolve => setTimeout(resolve, delayMs));
 
+        console.log(`🔍 Sending request to OpenAI API...`);
+        console.log(`   Model: ${ModelConfigService.getModelForTask('grouping')}`);
+        console.log(`   Temperature: ${ModelConfigService.getTemperatureForTask('grouping')}`);
+        console.log(`   Max tokens: ${ModelConfigService.getMaxTokensForTask('grouping')}`);
+        console.log(`   Messages in batch: ${batches[b].length}`);
+        
         const response = await this.openai.chat.completions.create({
           model: ModelConfigService.getModelForTask('grouping'),
           messages: [
@@ -95,10 +104,17 @@ export class MessageGroupingService {
           response_format: { type: 'json_object' },
         });
 
+        console.log(`📥 Received response from OpenAI API`);
+        console.log(`   Usage: ${JSON.stringify(response.usage)}`);
+        console.log(`   Finish reason: ${response.choices[0]?.finish_reason}`);
+
         const content = response.choices[0]?.message?.content;
         if (!content) {
           throw new Error('No content in OpenAI response');
         }
+
+        console.log(`📄 Raw response content (first 500 chars):`);
+        console.log(`   ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}`);
 
         let cleanedContent = content.trim();
         if (cleanedContent.includes('```json')) {
@@ -109,6 +125,9 @@ export class MessageGroupingService {
           if (jsonMatch) cleanedContent = jsonMatch[1].trim();
         }
 
+        console.log(`🧹 Cleaned content (first 500 chars):`);
+        console.log(`   ${cleanedContent.substring(0, 500)}${cleanedContent.length > 500 ? '...' : ''}`);
+
         if (
           !cleanedContent.startsWith('{') &&
           !cleanedContent.startsWith('[')
@@ -117,25 +136,32 @@ export class MessageGroupingService {
         }
 
         const parsed = JSON.parse(cleanedContent);
+        console.log(`🔍 Parsed JSON structure:`, Object.keys(parsed));
         let groups = (parsed.groups || []) as MessageGroup[];
+        console.log(`📊 Found ${groups.length} groups in parsed response`);
 
         // Post-filter: drop any groups that don't contain BOTH at least one text and one image message
         if (groups.length > 0) {
-          const messageById = new Map(messages.map(m => [m.id, m]));
+          console.log(`🔍 Post-filtering ${groups.length} groups...`);
+          const messageById = new Map(messages.map((m: any) => [m.id, m]));
+          const originalCount = groups.length;
           groups = groups.filter(group => {
             const groupMessages = (group.messageIds || [])
               .map(id => messageById.get(id))
               .filter(Boolean) as any[];
             const hasImage = groupMessages.some(
-              m =>
+              (m: any) =>
                 (m.type === 'image' || m.type === 'imageMessage') &&
                 !!m.mediaUrl
             );
             const hasText = groupMessages.some(
-              m => !!(m.text && m.text.trim())
+              (m: any) => !!(m.text && m.text.trim())
             );
-            return hasImage && hasText;
+            const passesFilter = hasImage && hasText;
+            console.log(`   Group ${group.groupId}: ${groupMessages.length} messages, hasImage: ${hasImage}, hasText: ${hasText}, passes: ${passesFilter}`);
+            return passesFilter;
           });
+          console.log(`🔍 Post-filtering complete: ${originalCount} → ${groups.length} groups`);
         }
         console.log(
           `✅ OpenAI identified ${groups.length} product groups in batch ${b + 1}/${batches.length}`
@@ -152,16 +178,16 @@ export class MessageGroupingService {
         console.log(`   📝 Context: ${group.productContext}`);
         console.log(`   📊 Confidence: ${group.confidence}`);
         console.log(`   📨 Messages (${group.messageIds.length}):`);
-        const groupMessages = messages.filter(msg =>
+        const groupMessages = messages.filter((msg: any) =>
           group.messageIds.includes(msg.id)
         );
         for (const msg of groupMessages) {
-          const messageType = msg.type || 'text';
+          const messageType = (msg as any).type || 'text';
           const hasImage =
-            (msg.type === 'image' || msg.type === 'imageMessage') &&
-            !!msg.mediaUrl;
-          const hasText = msg.text && msg.text.trim();
-          const sender = msg.fromName || msg.from || 'Unknown';
+            ((msg as any).type === 'image' || (msg as any).type === 'imageMessage') &&
+            !!(msg as any).mediaUrl;
+          const hasText = (msg as any).text && (msg as any).text.trim();
+          const sender = (msg as any).fromName || (msg as any).from || 'Unknown';
           console.log(
             `     ${messageType} from ${sender}${hasImage ? ' (with media)' : ''}${hasText ? ' (with text)' : ''}`
           );
