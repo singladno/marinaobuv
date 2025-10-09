@@ -75,24 +75,60 @@ jobs:
     if: github.ref == 'refs/heads/main'
     timeout-minutes: 60
     concurrency:
-      group: deploy-marinaobuv
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
       - name: Cancel previous deployments
+        run: |
+          echo "🛑 Cancelling all previous workflow runs..."
+          gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id' | xargs -I {} gh api repos/${{ github.repository }}/actions/runs/{}/cancel -X POST || echo "No previous runs to cancel"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for cancellations
+        run: |
+          echo "⏳ Waiting for previous runs to be cancelled..."
+          sleep 15
+          echo "✅ Ready to proceed with new deployment"
+
+      - name: Cancel previous deployments (backup)
         uses: nick-invision/retry@v2
         with:
-          timeout_minutes: 5
-          max_attempts: 3
+          timeout_minutes: 10
+          max_attempts: 5
           command: |
             echo "🔄 Checking for previous deployments to cancel..."
-            # Get all running workflows for this repository
-            gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id' | while read run_id; do
-              if [ ! -z "$run_id" ]; then
-                echo "🛑 Cancelling previous deployment run: $run_id"
+
+            # Get all in-progress workflow runs for this repository
+            RUNS=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id')
+
+            if [ ! -z "$RUNS" ]; then
+              echo "🛑 Found previous deployments to cancel: $RUNS"
+              for run_id in $RUNS; do
+                echo "🛑 Cancelling deployment run: $run_id"
                 gh api repos/${{ github.repository }}/actions/runs/$run_id/cancel -X POST || echo "Failed to cancel run $run_id"
+                sleep 2
+              done
+              
+              # Wait a bit for cancellations to take effect
+              echo "⏳ Waiting for cancellations to take effect..."
+              sleep 10
+              
+              # Check if any are still running
+              REMAINING=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id')
+              if [ ! -z "$REMAINING" ]; then
+                echo "⚠️ Some deployments are still running: $REMAINING"
+                echo "🔄 Attempting force cancellation..."
+                for run_id in $REMAINING; do
+                  gh api repos/${{ github.repository }}/actions/runs/$run_id/cancel -X POST || echo "Force cancel failed for run $run_id"
+                done
+              else
+                echo "✅ All previous deployments cancelled successfully"
               fi
-            done
+            else
+              echo "✅ No previous deployments found to cancel"
+            fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
