@@ -18,7 +18,7 @@ async function main() {
     const unprocessedMessages = await prisma.whatsAppMessage.findMany({
       where: {
         processed: false,
-        type: { in: ['text', 'image', 'imageMessage'] },
+        type: { in: ['textMessage', 'imageMessage'] },
         OR: [{ text: { not: null } }, { mediaUrl: { not: null } }],
       },
       orderBy: { createdAt: 'asc' },
