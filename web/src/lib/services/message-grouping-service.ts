@@ -163,17 +163,19 @@ export class MessageGroupingService {
             const groupMessages = (group.messageIds || [])
               .map(id => messageById.get(id))
               .filter(Boolean) as any[];
-            const hasImage = groupMessages.some(
+
+            // Check if the GROUP has both text and image messages (separate messages are fine)
+            const hasImageMessages = groupMessages.some(
               (m: any) =>
                 (m.type === 'image' || m.type === 'imageMessage') &&
                 !!m.mediaUrl
             );
-            const hasText = groupMessages.some(
+            const hasTextMessages = groupMessages.some(
               (m: any) => !!(m.text && m.text.trim())
             );
-            const passesFilter = hasImage && hasText;
+            const passesFilter = hasImageMessages && hasTextMessages;
             console.log(
-              `   Group ${group.groupId}: ${groupMessages.length} messages, hasImage: ${hasImage}, hasText: ${hasText}, passes: ${passesFilter}`
+              `   Group ${group.groupId}: ${groupMessages.length} messages, hasImageMessages: ${hasImageMessages}, hasTextMessages: ${hasTextMessages}, passes: ${passesFilter}`
             );
             return passesFilter;
           });
