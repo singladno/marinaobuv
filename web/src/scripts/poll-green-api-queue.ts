@@ -42,7 +42,8 @@ async function saveMessageFromWebhook(webhook: IncomingWebhook): Promise<void> {
   const mediaCaption =
     messageData.caption || messageData.fileMessageData?.caption || null;
 
-  const text = messageData.textMessage || messageData.extendedTextMessage?.text || null;
+  const text =
+    messageData.textMessage || messageData.extendedTextMessage?.text || null;
   const chatId = senderData.chatId || b.chatId || null;
   const from = senderData.sender || null;
   const fromName = senderData.senderName || null;

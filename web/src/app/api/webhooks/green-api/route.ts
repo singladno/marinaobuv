@@ -10,7 +10,9 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
     // Reduced logging to prevent main thread clutter
-    console.log(`🔔 Webhook: ${payload.typeWebhook} from ${payload.senderData?.chatId || 'unknown'}`);
+    console.log(
+      `🔔 Webhook: ${payload.typeWebhook} from ${payload.senderData?.chatId || 'unknown'}`
+    );
 
     // Check if this is an incoming message
     if (payload.typeWebhook === 'incomingMessageReceived') {
@@ -78,7 +80,8 @@ async function handleIncomingMessage(payload: any) {
   }
 
   // Extract text content - handle both textMessage and extendedTextMessage
-  const text = messageData.textMessage || messageData.extendedTextMessage?.text || null;
+  const text =
+    messageData.textMessage || messageData.extendedTextMessage?.text || null;
 
   // Extract sender information
   const from = senderData?.sender || null;

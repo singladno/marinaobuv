@@ -7,7 +7,7 @@ import { prisma } from '../lib/db-node';
  */
 async function fixEmptyTextMessages() {
   console.log('🔍 Finding messages with empty text but type "textMessage"...');
-  
+
   const emptyTextMessages = await prisma.whatsAppMessage.findMany({
     where: {
       type: 'textMessage',
@@ -38,7 +38,11 @@ async function fixEmptyTextMessages() {
       let extractedText: string | null = null;
 
       // Try different possible text fields in rawPayload
-      if (rawPayload?.textMessage) {
+      if (rawPayload?.messageData?.textMessageData?.textMessage) {
+        extractedText = rawPayload.messageData.textMessageData.textMessage;
+      } else if (rawPayload?.messageData?.textMessage) {
+        extractedText = rawPayload.messageData.textMessage;
+      } else if (rawPayload?.textMessage) {
         extractedText = rawPayload.textMessage;
       } else if (rawPayload?.text) {
         extractedText = rawPayload.text;
@@ -53,11 +57,15 @@ async function fixEmptyTextMessages() {
           where: { id: message.id },
           data: { text: extractedText.trim() },
         });
-        
-        console.log(`✅ Fixed message ${message.id}: "${extractedText.substring(0, 50)}..."`);
+
+        console.log(
+          `✅ Fixed message ${message.id}: "${extractedText.substring(0, 50)}..."`
+        );
         fixed++;
       } else {
-        console.log(`⚠️  No text found in rawPayload for message ${message.id}`);
+        console.log(
+          `⚠️  No text found in rawPayload for message ${message.id}`
+        );
         skipped++;
       }
     } catch (error) {
