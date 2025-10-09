@@ -77,8 +77,8 @@ async function handleIncomingMessage(payload: any) {
     // Media URL found in fileMessageData (reduced logging)
   }
 
-  // Extract text content
-  const text = messageData.textMessage || null;
+  // Extract text content - handle both textMessage and extendedTextMessage
+  const text = messageData.textMessage || messageData.extendedTextMessage?.text || null;
 
   // Extract sender information
   const from = senderData?.sender || null;

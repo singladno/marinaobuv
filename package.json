@@ -83,6 +83,7 @@
     "server:batch:run": "ssh -t -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && stdbuf -oL -eL npx tsx src/scripts/process-draft-products-batch-v2.ts'",
     "server:batch:poll": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/batch-poll-v2.ts'",
     "server:batch:retry": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/batch-retry-all.ts'",
+    "server:fix-text-messages": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/fix-empty-text-messages.ts'",
     "server:batch:logs": "ssh -l ubuntu 130.193.56.134 'echo \"=== Batch Poll Logs (last 50 lines) ===\" && tail -n 50 /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs found\" && echo \"=== Live Batch Poll Logs ===\" && tail -f /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs to follow\"'",
     "server:batch:logs:history": "ssh -l ubuntu 130.193.56.134 'echo \"=== Batch Poll History (last 100 lines) ===\" && tail -n 100 /var/www/marinaobuv/web/logs/batch-poll.log 2>/dev/null || echo \"No batch poll logs found\"'",
     "server:parser:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== Parser Status ===\" && ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep || echo \"No parser processes running\"'",
