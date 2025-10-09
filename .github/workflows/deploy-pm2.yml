@@ -74,8 +74,28 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     timeout-minutes: 60
+    concurrency:
+      group: deploy-marinaobuv
+      cancel-in-progress: true
 
     steps:
+      - name: Cancel previous deployments
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: |
+            echo "🔄 Checking for previous deployments to cancel..."
+            # Get all running workflows for this repository
+            gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id' | while read run_id; do
+              if [ ! -z "$run_id" ]; then
+                echo "🛑 Cancelling previous deployment run: $run_id"
+                gh api repos/${{ github.repository }}/actions/runs/$run_id/cancel -X POST || echo "Failed to cancel run $run_id"
+              fi
+            done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Checkout code
         uses: actions/checkout@v4
 
