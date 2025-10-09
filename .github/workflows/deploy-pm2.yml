@@ -14,6 +14,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set workflow title
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+          echo "workflow_title=$COMMIT_MSG" >> $GITHUB_OUTPUT
+        id: set_title
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
