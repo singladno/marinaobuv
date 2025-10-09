@@ -70,11 +70,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: web/
+      # Skip artifact download: we rebuild on server to avoid stale/overwriting files
+      # - name: Download build artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: build-artifacts
+      #     path: web/
 
       - name: Setup Node.js (for server deployment tools)
         uses: actions/setup-node@v4
@@ -318,6 +319,10 @@ jobs:
             # Rebuild application on server to ensure all routes are present
             echo "🔧 Rebuilding application on server to ensure routes are included..."
             cd web
+            # Ensure path alias '@' resolves during build
+            if ! grep -q '"baseUrl"' tsconfig.json; then
+              jq '.compilerOptions.baseUrl = "."' tsconfig.json > tsconfig.tmp && mv tsconfig.tmp tsconfig.json
+            fi
             # Clear old app logs to avoid confusing tail output later
             mkdir -p logs
             : > logs/marinaobuv-error.log || true
