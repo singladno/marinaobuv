@@ -53,6 +53,8 @@
     "logs": "pm2 logs marinaobuv"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4",
     "@aws-sdk/client-s3": "^3.676.0",
     "@aws-sdk/lib-storage": "^3.888.0",
     "@aws-sdk/s3-request-presigner": "^3.888.0",
@@ -85,7 +87,6 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
     "@types/global-agent": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -102,7 +103,6 @@
     "prettier": "^3.0.0",
     "prettier-plugin-tailwindcss": "^0.5.0",
     "prisma": "^5.19.1",
-    "tailwindcss": "^4",
     "typescript": "^5"
   },
   "lint-staged": {
