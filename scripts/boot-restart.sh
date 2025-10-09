@@ -118,7 +118,23 @@ curl -s -I http://127.0.0.1:3000 | head -n1 || true
 log "Checking nginx /health"
 curl -s -I http://127.0.0.1/health | head -n1 || curl -s -I http://127.0.0.1 | head -n1 || true
 
-# 8) Remove/disable legacy VPN services not used anymore
+# 8) Configure webhook after deployment
+log "Configuring Green API webhook..."
+cd web
+if [ -f ".env" ] && [ -n "$(grep GREEN_API_INSTANCE_ID .env)" ]; then
+  log "Setting up webhook configuration"
+  export $(grep -v '^#' .env | xargs)
+  if npx tsx src/scripts/configure-webhook.ts; then
+    log "Webhook configured successfully"
+  else
+    log "Webhook configuration failed, but continuing"
+  fi
+else
+  log "No Green API credentials found, skipping webhook setup"
+fi
+cd ..
+
+# 9) Remove/disable legacy VPN services not used anymore
 for svc in openvpn@client.service openvpn.service wireguard.service marinaobuv-surfshark.service; do
   if systemctl list-unit-files | awk '{print $1}' | grep -qx "$svc"; then
     log "Disabling legacy service: $svc"

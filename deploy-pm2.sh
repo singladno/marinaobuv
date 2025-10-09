@@ -422,7 +422,23 @@ else
     print_error "PostgreSQL is not running"
 fi
 
-# 28. Run webhook verification
+# 28. Configure webhook after deployment
+print_status "Configuring Green API webhook..."
+cd $WEB_DIR
+if [ -f ".env" ] && [ -n "$(grep GREEN_API_INSTANCE_ID .env)" ]; then
+    print_status "Setting up webhook configuration"
+    export $(grep -v '^#' .env | xargs)
+    if npx tsx src/scripts/configure-webhook.ts; then
+        print_success "Webhook configured successfully"
+    else
+        print_warning "Webhook configuration failed, but deployment completed"
+    fi
+else
+    print_warning "No Green API credentials found, skipping webhook setup"
+fi
+cd $APP_DIR
+
+# 29. Run webhook verification
 print_status "Running webhook verification..."
 if ./scripts/verify-webhook-deployment.sh; then
     print_success "Webhook verification passed!"
