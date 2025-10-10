@@ -214,6 +214,9 @@ export class BatchProductService {
         console.log(
           `❌ Product ${productId} failed final validation - missing required data`
         );
+        console.log(`   Name: ${product.name}`);
+        console.log(`   Price: ${product.pricePair}`);
+        console.log(`   Sizes: ${JSON.stringify(product.sizes)}`);
         await prisma.product.update({
           where: { id: productId },
           data: {
@@ -245,21 +248,30 @@ export class BatchProductService {
     try {
       console.log(`🛑 Cancelling color batch ${colorBatchId} on OpenAI API...`);
 
-      // Cancel the batch directly on OpenAI API
-      await this.openai.batches.cancel(colorBatchId);
-
-      // Update our database record
+      // Find the actual OpenAI batch job for this color batch
+      // The colorBatchId is a custom ID, we need to find the corresponding batch job
       const batchJob = await prisma.gptBatchJob.findFirst({
-        where: { batchId: colorBatchId },
+        where: { 
+          type: 'colors',
+          status: 'running'
+        },
+        orderBy: { createdAt: 'desc' }
       });
 
-      if (batchJob) {
-        await prisma.gptBatchJob.update({
-          where: { id: batchJob.id },
-          data: { status: 'cancelled' },
-        });
-        console.log(`✅ Updated database: cancelled batch job ${batchJob.id}`);
+      if (!batchJob) {
+        console.log(`⚠️ No running color batch job found for ${colorBatchId}`);
+        return;
       }
+
+      // Cancel the batch directly on OpenAI API using the actual batch ID
+      await this.openai.batches.cancel(batchJob.batchId);
+
+      // Update our database record
+      await prisma.gptBatchJob.update({
+        where: { id: batchJob.id },
+        data: { status: 'cancelled' },
+      });
+      console.log(`✅ Updated database: cancelled batch job ${batchJob.id} (OpenAI batch: ${batchJob.batchId})`);
 
       console.log(
         `✅ Successfully cancelled color batch ${colorBatchId} on OpenAI API`
@@ -269,7 +281,11 @@ export class BatchProductService {
 
       // Even if OpenAI cancellation fails, mark as cancelled in our database
       const batchJob = await prisma.gptBatchJob.findFirst({
-        where: { batchId: colorBatchId },
+        where: { 
+          type: 'colors',
+          status: 'running'
+        },
+        orderBy: { createdAt: 'desc' }
       });
 
       if (batchJob) {
