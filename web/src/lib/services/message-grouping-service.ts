@@ -40,6 +40,21 @@ export class MessageGroupingService {
   }
 
   /**
+   * Only treat real text messages as text. Image captions are NOT text.
+   */
+  private getNormalizedText(msg: any): string | null {
+    // Accept only explicit text messages with non-empty `text`
+    if (
+      (msg?.type === 'text' || msg?.type === 'textMessage') &&
+      typeof msg?.text === 'string'
+    ) {
+      const trimmed = msg.text.trim();
+      if (trimmed && trimmed.toLowerCase() !== 'null') return trimmed;
+    }
+    return null;
+  }
+
+  /**
    * Group messages using OpenAI analysis
    */
   async groupMessages(messageIds: string[]): Promise<MessageGroup[]> {
@@ -58,12 +73,47 @@ export class MessageGroupingService {
     await this.refreshMediaUrls(messages);
 
     const messagesForGPT = this.prepareMessagesForGPT(messages);
-    // Revert to using PROCESSING_BATCH_SIZE for grouping request size
+    // Build sender/time-aware segments to avoid splitting related sequences across batches
     const maxPerCall = env.PROCESSING_BATCH_SIZE || 100;
-    const batches: (typeof messagesForGPT)[] = [] as any;
-    for (let i = 0; i < messagesForGPT.length; i += maxPerCall) {
-      batches.push(messagesForGPT.slice(i, i + maxPerCall));
+    const timeGapSeconds = 60; // treat >60s gap as boundary between sequences
+
+    // Ensure chronological order (already asc by createdAt at fetch)
+    const segments: (typeof messagesForGPT)[] = [] as any;
+    let currentSegment: typeof messagesForGPT = [] as any;
+    for (let i = 0; i < messagesForGPT.length; i++) {
+      const curr = messagesForGPT[i];
+      const prev = i > 0 ? messagesForGPT[i - 1] : null;
+      const isBoundary =
+        !prev ||
+        curr.sender !== prev.sender ||
+        (new Date(curr.timestamp).getTime() -
+          new Date(prev.timestamp).getTime()) /
+          1000 >
+          timeGapSeconds;
+      if (isBoundary && currentSegment.length > 0) {
+        segments.push(currentSegment);
+        currentSegment = [] as any;
+      }
+      currentSegment.push(curr);
     }
+    if (currentSegment.length > 0) segments.push(currentSegment);
+
+    // Pack segments into batches without splitting a segment
+    const batches: (typeof messagesForGPT)[] = [] as any;
+    let batch: typeof messagesForGPT = [] as any;
+    for (const seg of segments) {
+      if (batch.length + seg.length > maxPerCall && batch.length > 0) {
+        batches.push(batch);
+        batch = [] as any;
+      }
+      // If a single segment is larger than maxPerCall, still keep it intact in its own batch
+      if (seg.length > maxPerCall) {
+        batches.push(seg);
+      } else {
+        batch.push(...seg);
+      }
+    }
+    if (batch.length > 0) batches.push(batch);
 
     try {
       const allGroups: MessageGroup[] = [];
@@ -99,17 +149,25 @@ export class MessageGroupingService {
         );
         console.log(`   Messages in batch: ${batches[b].length}`);
 
-        const response = await this.openai.responses.create({
-          model: ModelConfigService.getModelForTask('grouping'),
+        const model = ModelConfigService.getModelForTask('grouping');
+        const payload: any = {
+          model,
           input: prompt,
-          reasoning: {
+          max_output_tokens:
+            ModelConfigService.getMaxOutputTokensForTask('grouping'),
+        };
+        if (ModelConfigService.supportsReasoning(model)) {
+          payload.reasoning = {
             effort: ModelConfigService.getReasoningEffortForTask('grouping'),
-          },
-          text: {
+          };
+        }
+        if (ModelConfigService.supportsTextControls(model)) {
+          payload.text = {
             verbosity: ModelConfigService.getTextVerbosityForTask('grouping'),
-          },
-          max_output_tokens: ModelConfigService.getMaxOutputTokensForTask('grouping'),
-        });
+          };
+        }
+
+        const response = await this.openai.responses.create(payload);
 
         console.log(`📥 Received response from OpenAI GPT-5 API`);
         console.log(`   Usage: ${JSON.stringify(response.usage)}`);
@@ -167,9 +225,10 @@ export class MessageGroupingService {
                 (m.type === 'image' || m.type === 'imageMessage') &&
                 !!m.mediaUrl
             );
-            const hasTextMessages = groupMessages.some(
-              (m: any) => !!(m.text && m.text.trim())
-            );
+            const hasTextMessages = groupMessages.some((m: any) => {
+              const t = this.getNormalizedText(m);
+              return !!t;
+            });
             const passesFilter = hasImageMessages && hasTextMessages;
             console.log(
               `   Group ${group.groupId}: ${groupMessages.length} messages, hasImageMessages: ${hasImageMessages}, hasTextMessages: ${hasTextMessages}, passes: ${passesFilter}`

@@ -214,22 +214,30 @@ Rules:
 
             const response = (await Promise.race([
               withRetry(signal =>
-                this.getOpenAI().then(client =>
-                  client.responses.create({
-                    model: ModelConfigService.getModelForTask('color'),
-                    input: (userMessage.content.find(c => c.type === 'text') as any)?.text || '',
-                    reasoning: {
-                      effort:
-                        ModelConfigService.getReasoningEffortForTask('color'),
-                    },
-                    text: {
-                      verbosity:
-                        ModelConfigService.getTextVerbosityForTask('color'),
-                    },
+                this.getOpenAI().then(client => {
+                  const model = ModelConfigService.getModelForTask('color');
+                  const payload: any = {
+                    model,
+                    input:
+                      (userMessage.content.find(c => c.type === 'text') as any)
+                        ?.text || '',
                     max_output_tokens:
                       ModelConfigService.getMaxOutputTokensForTask('color'),
-                  })
-                )
+                  };
+                  if (ModelConfigService.supportsReasoning(model)) {
+                    payload.reasoning = {
+                      effort:
+                        ModelConfigService.getReasoningEffortForTask('color'),
+                    };
+                  }
+                  if (ModelConfigService.supportsTextControls(model)) {
+                    payload.text = {
+                      verbosity:
+                        ModelConfigService.getTextVerbosityForTask('color'),
+                    };
+                  }
+                  return client.responses.create(payload);
+                })
               ),
               timeoutPromise,
             ])) as any;

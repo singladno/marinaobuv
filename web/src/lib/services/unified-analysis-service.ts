@@ -245,20 +245,26 @@ export class UnifiedAnalysisService {
       messages.push(userMessage);
 
       const openai = await this.getOpenAI();
-      const response = (await withRetry(() =>
-        openai.responses.create({
-          model: ModelConfigService.getModelForTask('analysis'),
+      const response = (await withRetry(() => {
+        const model = ModelConfigService.getModelForTask('analysis');
+        const payload: any = {
+          model,
           input: userMessage.content[0].text,
-          reasoning: {
-            effort: ModelConfigService.getReasoningEffortForTask('analysis'),
-          },
-          text: {
-            verbosity: ModelConfigService.getTextVerbosityForTask('analysis'),
-          },
           max_output_tokens:
             ModelConfigService.getMaxOutputTokensForTask('analysis'),
-        })
-      )) as any;
+        };
+        if (ModelConfigService.supportsReasoning(model)) {
+          payload.reasoning = {
+            effort: ModelConfigService.getReasoningEffortForTask('analysis'),
+          };
+        }
+        if (ModelConfigService.supportsTextControls(model)) {
+          payload.text = {
+            verbosity: ModelConfigService.getTextVerbosityForTask('analysis'),
+          };
+        }
+        return openai.responses.create(payload);
+      })) as any;
 
       const content = response.output_text;
       if (!content) {
@@ -321,17 +327,24 @@ export class UnifiedAnalysisService {
   ): Promise<AnalysisResult | null> {
     try {
       const openai = await this.getOpenAI();
-      const response = await openai.responses.create({
-        model: ModelConfigService.getModelForTask('analysis'),
+      const model = ModelConfigService.getModelForTask('analysis');
+      const payload: any = {
+        model,
         input: `Context: ${context}\n\nText content: ${textContent}`,
-        reasoning: {
+        max_output_tokens:
+          ModelConfigService.getMaxOutputTokensForTask('analysis'),
+      };
+      if (ModelConfigService.supportsReasoning(model)) {
+        payload.reasoning = {
           effort: ModelConfigService.getReasoningEffortForTask('analysis'),
-        },
-        text: {
+        };
+      }
+      if (ModelConfigService.supportsTextControls(model)) {
+        payload.text = {
           verbosity: ModelConfigService.getTextVerbosityForTask('analysis'),
-        },
-        max_output_tokens: ModelConfigService.getMaxOutputTokensForTask('analysis'),
-      });
+        };
+      }
+      const response = await openai.responses.create(payload);
 
       const content = response.output_text;
       if (!content) {

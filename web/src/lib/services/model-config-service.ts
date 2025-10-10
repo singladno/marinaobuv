@@ -10,25 +10,35 @@ export class ModelConfigService {
   ): string {
     const env = process.env;
 
-    // Allow override via environment variables
-    if (env.OPENAI_ANALYSIS_MODEL) return env.OPENAI_ANALYSIS_MODEL;
-    if (env.OPENAI_GROUPING_MODEL) return env.OPENAI_GROUPING_MODEL;
-    if (env.OPENAI_COLOR_MODEL) return env.OPENAI_COLOR_MODEL;
-    if (env.OPENAI_VISION_MODEL) return env.OPENAI_VISION_MODEL;
-
-    // Default optimized models (using GPT-5 series for better cost/performance)
+    // Task-specific overrides via environment variables
     switch (task) {
       case 'analysis':
+        if (env.OPENAI_ANALYSIS_MODEL) return env.OPENAI_ANALYSIS_MODEL;
         return 'gpt-5-mini'; // Better quality for complex product analysis
       case 'grouping':
+        if (env.OPENAI_GROUPING_MODEL) return env.OPENAI_GROUPING_MODEL;
         return 'gpt-5-nano'; // 77% cheaper than gpt-3.5-turbo, better performance
       case 'color':
+        if (env.OPENAI_COLOR_MODEL) return env.OPENAI_COLOR_MODEL;
         return 'gpt-5-nano'; // 40% cheaper than gpt-4o-mini, sufficient for color detection
       case 'vision':
+        if (env.OPENAI_VISION_MODEL) return env.OPENAI_VISION_MODEL;
         return 'gpt-5-mini'; // Better vision capabilities than gpt-4o-mini
       default:
         return 'gpt-5-mini';
     }
+  }
+
+  /**
+   * Whether the given model supports Responses API reasoning/text controls
+   */
+  static supportsReasoning(model: string): boolean {
+    // Current GPT-5 family supports reasoning params; older 4o models do not
+    return model.startsWith('gpt-5');
+  }
+
+  static supportsTextControls(model: string): boolean {
+    return model.startsWith('gpt-5');
   }
 
   /**
