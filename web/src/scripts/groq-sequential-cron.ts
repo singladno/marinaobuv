@@ -35,23 +35,24 @@ async function main() {
 
     for (let i = 0; i < messageIds.length; i += batchSize) {
       const batch = messageIds.slice(i, i + batchSize);
-      
-      console.log(`🔄 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(messageIds.length / batchSize)} (${batch.length} messages)`);
-      
+
+      console.log(
+        `🔄 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(messageIds.length / batchSize)} (${batch.length} messages)`
+      );
+
       try {
         const result = await processor.processMessagesToProducts(batch);
-        
+
         if (result.anyProcessed) {
           console.log(`✅ Batch processed successfully`);
         } else {
           console.log(`⚠️ No products created from this batch`);
         }
-        
+
         // Small delay between batches to avoid rate limiting
         if (i + batchSize < messageIds.length) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
-        
       } catch (error) {
         console.error(`❌ Error processing batch:`, error);
         // Continue with next batch even if this one fails
@@ -59,7 +60,6 @@ async function main() {
     }
 
     console.log('🎉 Groq Sequential Processing completed');
-
   } catch (error) {
     console.error('❌ Error in Groq Sequential Processing:', error);
   }
@@ -72,7 +72,7 @@ if (require.main === module) {
       console.log('✅ Groq Sequential Processing finished');
       process.exit(0);
     })
-    .catch((error) => {
+    .catch(error => {
       console.error('❌ Groq Sequential Processing failed:', error);
       process.exit(1);
     });

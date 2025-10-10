@@ -97,29 +97,30 @@ VALIDATION RULES:
 - Each group MUST have both text and image messages
 - If a group has >10 messages, analyze timestamps and split into multiple groups if needed
 - If you see text+images+text+images pattern, create separate groups
-- Each group represents ONE complete product sequence`
+- Each group represents ONE complete product sequence`,
           },
           {
             role: 'user',
             content: `Analyze these WhatsApp messages and group them by product:
 
-${messagesText}`
-          }
+${messagesText}`,
+          },
         ],
         response_format: { type: 'json_object' },
         temperature: 0.1,
       });
 
       const result = JSON.parse(response.choices[0].message.content);
-      
+
       if (!result.groups || !Array.isArray(result.groups)) {
         console.log('❌ Invalid grouping response from Groq');
         return [];
       }
 
-      console.log(`✅ Groq grouped messages into ${result.groups.length} groups`);
+      console.log(
+        `✅ Groq grouped messages into ${result.groups.length} groups`
+      );
       return result.groups;
-
     } catch (error) {
       console.error('❌ Error grouping messages with Groq:', error);
       return [];
@@ -136,7 +137,7 @@ ${messagesText}`
         const sender = msg.senderId || 'unknown';
         const type = msg.type || 'unknown';
         const text = msg.text || '';
-        
+
         return `Message ${index + 1}:
 - ID: ${msg.id}
 - Time: ${timestamp}

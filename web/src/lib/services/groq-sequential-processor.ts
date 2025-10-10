@@ -26,13 +26,15 @@ export class GroqSequentialProcessor {
     anyProcessed: boolean;
     finalizedMessageIds: string[];
   }> {
-    console.log(`🚀 Starting Groq sequential processing for ${messageIds.length} messages`);
+    console.log(
+      `🚀 Starting Groq sequential processing for ${messageIds.length} messages`
+    );
 
     try {
       // Step 1: Group messages using Groq
       console.log('📊 Step 1: Grouping messages...');
       const groups = await this.groupMessagesWithGroq(messageIds);
-      
+
       if (groups.length === 0) {
         console.log('❌ No valid message groups found');
         return { anyProcessed: false, finalizedMessageIds: [] };
@@ -42,41 +44,58 @@ export class GroqSequentialProcessor {
 
       // Step 2: Process each group sequentially
       const processedProducts: string[] = [];
-      
+
       for (const group of groups) {
         try {
-          console.log(`🔄 Processing group ${group.groupId} with ${group.messageIds.length} messages`);
-          
+          console.log(
+            `🔄 Processing group ${group.groupId} with ${group.messageIds.length} messages`
+          );
+
           // Create inactive product
-          const productResult = await this.batchProductService.createInactiveProduct({
-            messageIds: group.messageIds,
-            productContext: group.productContext,
-            confidence: group.confidence,
-          });
+          const productResult =
+            await this.batchProductService.createInactiveProduct({
+              messageIds: group.messageIds,
+              productContext: group.productContext,
+              confidence: group.confidence,
+            });
 
           // Step 3: Analyze product with Groq
-          console.log(`🔍 Step 2: Analyzing product ${productResult.productId}...`);
-          await this.analyzeProductWithGroq(productResult.productId, group.messageIds);
+          console.log(
+            `🔍 Step 2: Analyzing product ${productResult.productId}...`
+          );
+          await this.analyzeProductWithGroq(
+            productResult.productId,
+            group.messageIds
+          );
 
           // Step 4: Detect colors with Groq
-          console.log(`🎨 Step 3: Detecting colors for product ${productResult.productId}...`);
-          await this.detectColorsWithGroq(productResult.productId, group.messageIds);
+          console.log(
+            `🎨 Step 3: Detecting colors for product ${productResult.productId}...`
+          );
+          await this.detectColorsWithGroq(
+            productResult.productId,
+            group.messageIds
+          );
 
           // Step 5: Activate product if both steps completed
           console.log(`✅ Activating product ${productResult.productId}...`);
-          await this.batchProductService.activateProduct(productResult.productId);
+          await this.batchProductService.activateProduct(
+            productResult.productId
+          );
 
           processedProducts.push(productResult.productId);
-          console.log(`✅ Successfully processed product ${productResult.productId}`);
-
+          console.log(
+            `✅ Successfully processed product ${productResult.productId}`
+          );
         } catch (error) {
           console.error(`❌ Error processing group ${group.groupId}:`, error);
         }
       }
 
-      console.log(`🎉 Sequential processing completed: ${processedProducts.length} products processed`);
+      console.log(
+        `🎉 Sequential processing completed: ${processedProducts.length} products processed`
+      );
       return { anyProcessed: true, finalizedMessageIds: messageIds };
-
     } catch (error) {
       console.error('❌ Error in sequential processing:', error);
       return { anyProcessed: false, finalizedMessageIds: [] };
@@ -110,7 +129,10 @@ export class GroqSequentialProcessor {
   /**
    * Analyze product using Groq
    */
-  private async analyzeProductWithGroq(productId: string, messageIds: string[]): Promise<void> {
+  private async analyzeProductWithGroq(
+    productId: string,
+    messageIds: string[]
+  ): Promise<void> {
     const messages = await prisma.whatsAppMessage.findMany({
       where: { id: { in: messageIds } },
       orderBy: { createdAt: 'asc' },
@@ -156,7 +178,7 @@ Rules:
 - Determine gender (male/female/unisex)
 - Determine season (summer/winter/all-season)
 - Extract all available sizes as an array
-- Be precise and accurate`
+- Be precise and accurate`,
           },
           {
             role: 'user',
@@ -167,17 +189,17 @@ Rules:
               },
               ...imageUrls.map(url => ({
                 type: 'image_url',
-                image_url: { url }
-              }))
-            ]
-          }
+                image_url: { url },
+              })),
+            ],
+          },
         ],
         response_format: { type: 'json_object' },
         temperature: 0.1,
       });
 
       const analysisResult = JSON.parse(response.choices[0].message.content);
-      
+
       // Validate analysis result
       if (!this.validationService.validateAnalysisResult(analysisResult)) {
         throw new Error('Analysis validation failed');
@@ -190,7 +212,6 @@ Rules:
       );
 
       console.log(`✅ Product ${productId} analyzed successfully`);
-
     } catch (error) {
       console.error(`❌ Error analyzing product ${productId}:`, error);
       throw error;
@@ -200,7 +221,10 @@ Rules:
   /**
    * Detect colors using Groq
    */
-  private async detectColorsWithGroq(productId: string, messageIds: string[]): Promise<void> {
+  private async detectColorsWithGroq(
+    productId: string,
+    messageIds: string[]
+  ): Promise<void> {
     const messages = await prisma.whatsAppMessage.findMany({
       where: { id: { in: messageIds } },
       orderBy: { createdAt: 'asc' },
@@ -225,21 +249,22 @@ Rules:
           messages: [
             {
               role: 'system',
-              content: 'Return strictly {"images":[{"color":"color_name"}]} for the single provided image. Use Russian color names.'
+              content:
+                'Return strictly {"images":[{"color":"color_name"}]} for the single provided image. Use Russian color names.',
             },
             {
               role: 'user',
               content: [
                 {
                   type: 'text',
-                  text: 'Detect shoe color for this image and return JSON response.'
+                  text: 'Detect shoe color for this image and return JSON response.',
                 },
                 {
                   type: 'image_url',
-                  image_url: { url: imageUrls[i] }
-                }
-              ]
-            }
+                  image_url: { url: imageUrls[i] },
+                },
+              ],
+            },
           ],
           response_format: { type: 'json_object' },
           temperature: 0.1,
@@ -255,10 +280,14 @@ Rules:
         colorResults
       );
 
-      console.log(`✅ Colors detected for product ${productId}: ${colorResults.length} images processed`);
-
+      console.log(
+        `✅ Colors detected for product ${productId}: ${colorResults.length} images processed`
+      );
     } catch (error) {
-      console.error(`❌ Error detecting colors for product ${productId}:`, error);
+      console.error(
+        `❌ Error detecting colors for product ${productId}:`,
+        error
+      );
       throw error;
     }
   }
