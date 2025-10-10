@@ -255,7 +255,7 @@ export class BatchProductService {
           type: 'colors',
           status: 'running',
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       });
 
       if (!batchJob) {
@@ -273,7 +273,9 @@ export class BatchProductService {
         where: { id: batchJob.id },
         data: { status: 'cancelled' },
       });
-      console.log(`✅ Updated database: cancelled batch job ${batchJob.id} (OpenAI batch: ${batchJob.batchId})`);
+      console.log(
+        `✅ Updated database: cancelled batch job ${batchJob.id} (OpenAI batch: ${batchJob.batchId})`
+      );
 
       console.log(
         `✅ Successfully cancelled color batch ${colorBatchId} on OpenAI API`
@@ -287,7 +289,7 @@ export class BatchProductService {
           type: 'colors',
           status: 'running',
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       });
 
       if (batchJob) {
