@@ -1,6 +1,8 @@
 import { prisma } from '../db-node';
 import { generateArticleNumber } from './product-creation-mappers';
 import { createSlug } from './product-creation-mappers';
+import { AnalysisValidationService } from './analysis-validation-service';
+import OpenAI from 'openai';
 
 export interface CreateInactiveProductParams {
   messageIds: string[];
@@ -20,6 +22,15 @@ export interface BatchProductResult {
  * and using unique batch IDs to track analysis and color processing
  */
 export class BatchProductService {
+  private validationService: AnalysisValidationService;
+  private openai: OpenAI;
+
+  constructor() {
+    this.validationService = new AnalysisValidationService();
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
   /**
    * Create an inactive product for a group of messages
    * This product will be activated when both analysis and color batches complete
@@ -100,6 +111,36 @@ export class BatchProductService {
       return;
     }
 
+    // Validate analysis result before updating
+    if (!this.validationService.validateAnalysisResult(analysisResult)) {
+      console.log(`❌ Analysis validation failed for product ${product.id}`);
+      console.log(`❌ Product will be marked as failed and not activated`);
+
+      // Cancel running color batch if it exists
+      if (product.colorBatchId) {
+        console.log(
+          `🛑 Canceling color batch ${product.colorBatchId} for failed product ${product.id}`
+        );
+        await this.cancelColorBatch(product.colorBatchId);
+      }
+
+      // Mark product as failed instead of updating with invalid data
+      await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          batchProcessingStatus: 'failed',
+          name: 'Invalid Product - Missing Required Data',
+          description: 'Product failed validation - missing required fields',
+          colorBatchId: null, // Clear the color batch ID
+        },
+      });
+
+      console.log(
+        `❌ Product ${product.id} marked as failed due to validation`
+      );
+      return;
+    }
+
     // Update product with analysis results
     await prisma.product.update({
       where: { id: product.id },
@@ -158,7 +199,32 @@ export class BatchProductService {
       return;
     }
 
+    // Only activate if both batches completed successfully
     if (product.batchProcessingStatus === 'colors_complete') {
+      // Final validation before activation
+      if (
+        !product.name ||
+        product.name === 'Processing...' ||
+        !product.pricePair ||
+        product.pricePair <= 0 ||
+        !product.sizes ||
+        product.sizes.length === 0
+      ) {
+        console.log(
+          `❌ Product ${productId} failed final validation - missing required data`
+        );
+        await prisma.product.update({
+          where: { id: productId },
+          data: {
+            batchProcessingStatus: 'failed',
+            name: 'Invalid Product - Missing Required Data',
+            description:
+              'Product failed final validation - missing required fields',
+          },
+        });
+        return;
+      }
+
       await prisma.product.update({
         where: { id: productId },
         data: {
@@ -168,6 +234,52 @@ export class BatchProductService {
       });
 
       console.log(`✅ Activated product ${productId}`);
+    }
+  }
+
+  /**
+   * Cancel a running color batch
+   */
+  private async cancelColorBatch(colorBatchId: string): Promise<void> {
+    try {
+      console.log(`🛑 Cancelling color batch ${colorBatchId} on OpenAI API...`);
+
+      // Cancel the batch directly on OpenAI API
+      await this.openai.batches.cancel(colorBatchId);
+
+      // Update our database record
+      const batchJob = await prisma.gptBatchJob.findFirst({
+        where: { batchId: colorBatchId },
+      });
+
+      if (batchJob) {
+        await prisma.gptBatchJob.update({
+          where: { id: batchJob.id },
+          data: { status: 'cancelled' },
+        });
+        console.log(`✅ Updated database: cancelled batch job ${batchJob.id}`);
+      }
+
+      console.log(
+        `✅ Successfully cancelled color batch ${colorBatchId} on OpenAI API`
+      );
+    } catch (error) {
+      console.error(`❌ Error cancelling color batch ${colorBatchId}:`, error);
+
+      // Even if OpenAI cancellation fails, mark as cancelled in our database
+      const batchJob = await prisma.gptBatchJob.findFirst({
+        where: { batchId: colorBatchId },
+      });
+
+      if (batchJob) {
+        await prisma.gptBatchJob.update({
+          where: { id: batchJob.id },
+          data: { status: 'cancelled' },
+        });
+        console.log(
+          `✅ Marked batch job ${batchJob.id} as cancelled in database`
+        );
+      }
     }
   }
 

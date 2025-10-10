@@ -8,8 +8,12 @@ export async function GET(
 ) {
   try {
     const { slug } = await ctx.params;
-    const product = await prisma.product.findUnique({
-      where: { slug },
+    const product = await prisma.product.findFirst({
+      where: { 
+        slug,
+        isActive: true, // Only show active products
+        batchProcessingStatus: 'completed', // Only show fully processed products
+      },
       include: {
         images: {
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],

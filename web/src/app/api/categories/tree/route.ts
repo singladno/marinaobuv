@@ -33,11 +33,14 @@ export async function GET() {
     // Get counts of active products per category
     const grouped = await prisma.product.groupBy({
       by: ['categoryId'],
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        batchProcessingStatus: 'completed', // Only count fully processed products
+      },
       _count: { _all: true },
     });
     const countByCategory = new Map<string, number>(
-      grouped.map(g => [g.categoryId, (g as any)._count._all as number])
+      grouped.map((g: any) => [g.categoryId, g._count._all as number])
     );
 
     type Node = {
@@ -73,8 +76,8 @@ export async function GET() {
     const items = roots
       .map(transform)
       .map(computeTotalAndFilter)
-      .filter(r => r.node !== null)
-      .map(r => r.node as Node);
+      .filter((r: any) => r.node !== null)
+      .map((r: any) => r.node as Node);
 
     return NextResponse.json({ ok: true, items });
   } catch (error) {
