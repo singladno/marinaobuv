@@ -25,10 +25,10 @@ async function main() {
   let batchNumber = 1;
 
   while (true) {
-    // Get unprocessed messages with smart batching to ensure text+image mix
+    // Get unprocessed messages in strict chronological order
     const batchSize = parseInt(process.env.PROCESSING_BATCH_SIZE || '100');
 
-    // First, try to get a batch that includes both text and image messages
+    // Get messages in chronological order - no filtering, no mixing
     const unprocessedMessages = await prisma.whatsAppMessage.findMany({
       where: {
         processed: false,
@@ -36,36 +36,50 @@ async function main() {
         OR: [{ text: { not: null } }, { mediaUrl: { not: null } }],
       },
       orderBy: { createdAt: 'asc' },
-      take: batchSize * 2, // Get more messages to filter from
+      take: batchSize, // Get exactly batchSize messages
     });
 
-    // Filter to ensure we have a good mix of text and image messages
-    const textMessages = unprocessedMessages.filter(
-      m =>
-        m.type === 'textMessage' &&
-        m.text &&
-        m.text.trim() !== '' &&
-        m.text.toLowerCase() !== 'null'
-    );
+    if (unprocessedMessages.length === 0) {
+      console.log('✅ No more unprocessed messages found');
+      console.log(`🎉 Total messages processed: ${totalProcessed}`);
+      break;
+    }
 
-    const imageMessages = unprocessedMessages.filter(
-      m => m.type === 'imageMessage' && m.mediaUrl
-    );
+    // Check if the last message in batch is from the same user as the next unprocessed message
+    // If so, include additional messages from the same user to complete the product sequence
+    let selectedMessages = [...unprocessedMessages];
 
-    // If we have both text and image messages, take a balanced sample
-    let selectedMessages: typeof unprocessedMessages = [];
-    if (textMessages.length > 0 && imageMessages.length > 0) {
-      // Take up to 50% text, 50% images, but prioritize recent messages
-      const maxText = Math.min(Math.ceil(batchSize * 0.5), textMessages.length);
-      const maxImages = Math.min(batchSize - maxText, imageMessages.length);
+    if (selectedMessages.length === batchSize) {
+      const lastMessage = selectedMessages[selectedMessages.length - 1];
+      const nextMessage = await prisma.whatsAppMessage.findFirst({
+        where: {
+          processed: false,
+          type: { in: ['textMessage', 'imageMessage'] },
+          OR: [{ text: { not: null } }, { mediaUrl: { not: null } }],
+          createdAt: { gt: lastMessage.createdAt },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
 
-      selectedMessages = [
-        ...textMessages.slice(0, maxText),
-        ...imageMessages.slice(0, maxImages),
-      ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    } else {
-      // Fallback: just take the first batchSize messages
-      selectedMessages = unprocessedMessages.slice(0, batchSize);
+      // If next message is from the same user, include it and any following messages from same user
+      if (nextMessage && nextMessage.from === lastMessage.from) {
+        const additionalMessages = await prisma.whatsAppMessage.findMany({
+          where: {
+            processed: false,
+            type: { in: ['textMessage', 'imageMessage'] },
+            OR: [{ text: { not: null } }, { mediaUrl: { not: null } }],
+            from: lastMessage.from,
+            createdAt: { gte: nextMessage.createdAt },
+          },
+          orderBy: { createdAt: 'asc' },
+          take: 50, // Limit additional messages to prevent huge batches
+        });
+
+        selectedMessages = [...selectedMessages, ...additionalMessages];
+        console.log(
+          `📊 Extended batch to ${selectedMessages.length} messages to complete product sequence from ${lastMessage.from}`
+        );
+      }
     }
 
     if (unprocessedMessages.length === 0) {
@@ -75,17 +89,17 @@ async function main() {
     }
 
     console.log(
-      `📊 Batch ${batchNumber}: Found ${unprocessedMessages.length}/${totalUnprocessed} unprocessed messages`
+      `📊 Batch ${batchNumber}: Found ${selectedMessages.length}/${totalUnprocessed} unprocessed messages`
     );
 
-    const messageIds = unprocessedMessages.map(m => m.id);
+    const messageIds = selectedMessages.map(m => m.id);
     const processor = new BatchProcessorV2();
 
     try {
       const result = await processor.processMessagesToProducts(messageIds);
 
       if (result.anyProcessed) {
-        totalProcessed += unprocessedMessages.length;
+        totalProcessed += selectedMessages.length;
         console.log(`✅ Batch ${batchNumber} completed successfully`);
         console.log(`📈 Progress: ${totalProcessed} messages processed so far`);
         batchNumber++;
