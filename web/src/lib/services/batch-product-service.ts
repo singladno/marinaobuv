@@ -206,8 +206,9 @@ export class BatchProductService {
         !product.name ||
         product.name === 'Processing...' ||
         !product.pricePair ||
-        product.pricePair <= 0 ||
+        Number(product.pricePair) <= 0 ||
         !product.sizes ||
+        !Array.isArray(product.sizes) ||
         product.sizes.length === 0
       ) {
         console.log(

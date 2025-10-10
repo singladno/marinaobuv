@@ -9,7 +9,7 @@ export async function GET(
   try {
     const { slug } = await ctx.params;
     const product = await prisma.product.findFirst({
-      where: { 
+      where: {
         slug,
         isActive: true, // Only show active products
         batchProcessingStatus: 'completed', // Only show fully processed products
