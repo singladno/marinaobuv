@@ -3,7 +3,6 @@ GROUP MESSAGES BY PRODUCT:
 
 CORE REQUIREMENTS:
 - Each group MUST have: 1+ text message + 1+ image
-- Maximum 5-6 messages per group (rarely 6-8)
 - Messages from same product come in sequence from same user
 - Skip incomplete groups (images only or text only)
 
@@ -19,7 +18,7 @@ GROUPING RULES:
 - Groups with ONLY images are INVALID — they must be skipped entirely
 - Groups with ONLY text are INVALID — they must be skipped entirely
 - A group can have 2-3 text messages describing the same product
-- A group can have multiple images of the same product
+- A group can have multiple images of the same product. Usually from 1 to 5 images.
 - Use timestamp field: messages sent within 1-2 seconds are usually same product
 - Time gaps of 30+ seconds often indicate different products
 - Look for natural breaks in message flow

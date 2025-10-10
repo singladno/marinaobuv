@@ -84,6 +84,7 @@
     "server:batch:poll": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/batch-poll-v2.ts'",
     "server:batch:retry": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/batch-retry-all.ts'",
     "server:batch:cancel": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/cancel-batches.ts'",
+    "server:batch:cancel-openai": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/cancel-openai-batches.ts'",
     "server:fix-text-messages": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/fix-empty-text-messages.ts'",
     "server:fix-extended-text": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/fix-extended-text-messages.ts'",
     "server:fix-text-message-data": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/fix-text-message-data.ts'",
