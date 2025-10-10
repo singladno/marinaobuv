@@ -110,7 +110,7 @@ ${messagesText}`,
         temperature: 0.1,
       });
 
-      const result = JSON.parse(response.choices[0].message.content);
+      const result = JSON.parse(response.choices[0].message.content || '{}');
 
       if (!result.groups || !Array.isArray(result.groups)) {
         console.log('❌ Invalid grouping response from Groq');

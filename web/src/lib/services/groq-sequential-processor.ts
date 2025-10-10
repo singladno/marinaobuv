@@ -1,13 +1,13 @@
 import Groq from 'groq-sdk';
 import { prisma } from '../db-node';
 import { GroqGroupingService } from './groq-grouping-service';
-import { BatchProductService } from './batch-product-service';
+import { SimpleProductService } from './simple-product-service';
 import { AnalysisValidationService } from './analysis-validation-service';
 
 export class GroqSequentialProcessor {
   private groq: Groq;
   private groupingService: GroqGroupingService;
-  private batchProductService: BatchProductService;
+  private batchProductService: SimpleProductService;
   private validationService: AnalysisValidationService;
 
   constructor() {
@@ -15,7 +15,7 @@ export class GroqSequentialProcessor {
       apiKey: process.env.GROQ_API_KEY!,
     });
     this.groupingService = new GroqGroupingService();
-    this.batchProductService = new BatchProductService();
+    this.batchProductService = new SimpleProductService();
     this.validationService = new AnalysisValidationService();
   }
 
@@ -119,7 +119,7 @@ export class GroqSequentialProcessor {
       text: msg.text,
       type: msg.type,
       createdAt: msg.createdAt,
-      senderId: msg.senderId,
+        senderId: msg.providerId,
     }));
 
     // Use existing grouping service but with Groq
@@ -188,7 +188,7 @@ Rules:
                 text: `Product information: ${textContents}`,
               },
               ...imageUrls.map(url => ({
-                type: 'image_url',
+                type: 'image_url' as const,
                 image_url: { url },
               })),
             ],
@@ -198,7 +198,7 @@ Rules:
         temperature: 0.1,
       });
 
-      const analysisResult = JSON.parse(response.choices[0].message.content);
+      const analysisResult = JSON.parse(response.choices[0].message.content || '{}');
 
       // Validate analysis result
       if (!this.validationService.validateAnalysisResult(analysisResult)) {
@@ -270,7 +270,7 @@ Rules:
           temperature: 0.1,
         });
 
-        const colorResult = JSON.parse(response.choices[0].message.content);
+        const colorResult = JSON.parse(response.choices[0].message.content || '{}');
         colorResults.push(colorResult);
       }
 
