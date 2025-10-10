@@ -25,7 +25,10 @@ async function main() {
   let batchNumber = 1;
 
   while (true) {
-    // Get unprocessed messages (include image-only messages)
+    // Get unprocessed messages with smart batching to ensure text+image mix
+    const batchSize = parseInt(process.env.PROCESSING_BATCH_SIZE || '100');
+
+    // First, try to get a batch that includes both text and image messages
     const unprocessedMessages = await prisma.whatsAppMessage.findMany({
       where: {
         processed: false,
@@ -33,8 +36,37 @@ async function main() {
         OR: [{ text: { not: null } }, { mediaUrl: { not: null } }],
       },
       orderBy: { createdAt: 'asc' },
-      take: parseInt(process.env.PROCESSING_BATCH_SIZE || '100'),
+      take: batchSize * 2, // Get more messages to filter from
     });
+
+    // Filter to ensure we have a good mix of text and image messages
+    const textMessages = unprocessedMessages.filter(
+      m =>
+        m.type === 'textMessage' &&
+        m.text &&
+        m.text.trim() !== '' &&
+        m.text.toLowerCase() !== 'null'
+    );
+
+    const imageMessages = unprocessedMessages.filter(
+      m => m.type === 'imageMessage' && m.mediaUrl
+    );
+
+    // If we have both text and image messages, take a balanced sample
+    let selectedMessages: typeof unprocessedMessages = [];
+    if (textMessages.length > 0 && imageMessages.length > 0) {
+      // Take up to 50% text, 50% images, but prioritize recent messages
+      const maxText = Math.min(Math.ceil(batchSize * 0.5), textMessages.length);
+      const maxImages = Math.min(batchSize - maxText, imageMessages.length);
+
+      selectedMessages = [
+        ...textMessages.slice(0, maxText),
+        ...imageMessages.slice(0, maxImages),
+      ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    } else {
+      // Fallback: just take the first batchSize messages
+      selectedMessages = unprocessedMessages.slice(0, batchSize);
+    }
 
     if (unprocessedMessages.length === 0) {
       console.log('✅ No more unprocessed messages found');

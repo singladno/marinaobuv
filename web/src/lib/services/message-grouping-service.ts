@@ -43,9 +43,11 @@ export class MessageGroupingService {
    * Only treat real text messages as text. Image captions are NOT text.
    */
   private getNormalizedText(msg: any): string | null {
-    // Accept only explicit text messages with non-empty `text`
+    // Accept explicit text messages and extendedTextMessage with non-empty `text`
     if (
-      (msg?.type === 'text' || msg?.type === 'textMessage') &&
+      (msg?.type === 'text' ||
+        msg?.type === 'textMessage' ||
+        msg?.type === 'extendedTextMessage') &&
       typeof msg?.text === 'string'
     ) {
       const trimmed = msg.text.trim();

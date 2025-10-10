@@ -81,7 +81,10 @@ async function handleIncomingMessage(payload: any) {
 
   // Extract text content - handle both textMessage and extendedTextMessage
   const text =
-    messageData.textMessage || messageData.extendedTextMessage?.text || null;
+    messageData.textMessage ||
+    messageData.extendedTextMessage?.text ||
+    messageData.extendedTextMessageData?.text ||
+    null;
 
   // Extract sender information
   const from = senderData?.sender || null;

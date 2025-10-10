@@ -50,11 +50,15 @@ export function buildAnalysisLine(
   ];
 
   // Add images to the message
-  for (const imageUrl of imageUrls) {
-    messages[1].content = [
-      { type: 'text', text: messages[1].content },
-      { type: 'image_url', image_url: { url: imageUrl } },
-    ];
+  if (imageUrls.length > 0) {
+    const contentArray: any[] = [{ type: 'text', text: messages[1].content }];
+
+    // Add all images to the content array
+    for (const imageUrl of imageUrls) {
+      contentArray.push({ type: 'image_url', image_url: { url: imageUrl } });
+    }
+
+    messages[1].content = contentArray;
   }
 
   return {
