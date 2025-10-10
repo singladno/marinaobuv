@@ -15,13 +15,13 @@ async function cancelAllOpenAIBatches() {
   try {
     // List all batches from OpenAI
     const batches = await openai.batches.list();
-    
+
     console.log(`📊 Found ${batches.data.length} total batches`);
-    
-    const runningBatches = batches.data.filter(batch => 
-      batch.status === 'in_progress' || batch.status === 'validating'
+
+    const runningBatches = batches.data.filter(
+      batch => batch.status === 'in_progress' || batch.status === 'validating'
     );
-    
+
     if (runningBatches.length === 0) {
       console.log('✅ No running batches found on OpenAI');
       return;
@@ -31,11 +31,13 @@ async function cancelAllOpenAIBatches() {
 
     for (const batch of runningBatches) {
       try {
-        console.log(`🛑 Cancelling batch ${batch.id} (status: ${batch.status})...`);
-        
+        console.log(
+          `🛑 Cancelling batch ${batch.id} (status: ${batch.status})...`
+        );
+
         // Cancel the batch in OpenAI
         await openai.batches.cancel(batch.id);
-        
+
         console.log(`✅ Cancelled batch ${batch.id}`);
       } catch (error) {
         console.error(`❌ Error cancelling batch ${batch.id}:`, error);
