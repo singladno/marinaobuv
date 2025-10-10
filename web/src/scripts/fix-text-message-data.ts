@@ -8,7 +8,7 @@ import { prisma } from '../lib/db-node';
  */
 async function fixTextMessageData() {
   console.log('🔍 Finding textMessage records with empty text...');
-  
+
   const messages = await prisma.whatsAppMessage.findMany({
     where: {
       type: 'textMessage',
@@ -21,9 +21,7 @@ async function fixTextMessageData() {
     },
   });
 
-  console.log(
-    `📊 Found ${messages.length} textMessage records to check`
-  );
+  console.log(`📊 Found ${messages.length} textMessage records to check`);
 
   let fixed = 0;
   let skipped = 0;
