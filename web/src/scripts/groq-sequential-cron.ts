@@ -16,7 +16,7 @@ async function main() {
         type: { in: ['textMessage', 'imageMessage', 'extendedTextMessage'] },
       },
       orderBy: { createdAt: 'desc' },
-      take: 50, // Process up to 50 messages at a time
+      take: parseInt(process.env.PROCESSING_BATCH_SIZE || '50'), // Process messages in batches
     });
 
     if (unprocessedMessages.length === 0) {
@@ -30,7 +30,7 @@ async function main() {
     const processor = new GroqSequentialProcessor();
 
     // Process messages in batches
-    const batchSize = 20; // Process 20 messages at a time
+    const batchSize = parseInt(process.env.PROCESSING_BATCH_SIZE || '20'); // Process messages in batches
     const messageIds = unprocessedMessages.map(m => m.id);
 
     for (let i = 0; i < messageIds.length; i += batchSize) {

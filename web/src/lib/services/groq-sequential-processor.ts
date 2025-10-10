@@ -119,7 +119,7 @@ export class GroqSequentialProcessor {
       text: msg.text,
       type: msg.type,
       createdAt: msg.createdAt,
-        senderId: msg.providerId,
+      senderId: msg.providerId,
     }));
 
     // Use existing grouping service but with Groq
@@ -198,7 +198,9 @@ Rules:
         temperature: 0.1,
       });
 
-      const analysisResult = JSON.parse(response.choices[0].message.content || '{}');
+      const analysisResult = JSON.parse(
+        response.choices[0].message.content || '{}'
+      );
 
       // Validate analysis result
       if (!this.validationService.validateAnalysisResult(analysisResult)) {
@@ -270,7 +272,9 @@ Rules:
           temperature: 0.1,
         });
 
-        const colorResult = JSON.parse(response.choices[0].message.content || '{}');
+        const colorResult = JSON.parse(
+          response.choices[0].message.content || '{}'
+        );
         colorResults.push(colorResult);
       }
 
