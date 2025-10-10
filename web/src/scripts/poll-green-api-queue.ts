@@ -44,6 +44,7 @@ async function saveMessageFromWebhook(webhook: IncomingWebhook): Promise<void> {
 
   const text =
     messageData.textMessage ||
+    messageData.textMessageData?.textMessage ||
     messageData.extendedTextMessage?.text ||
     messageData.extendedTextMessageData?.text ||
     null;
