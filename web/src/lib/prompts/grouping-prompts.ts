@@ -1,4 +1,10 @@
-export const GROUPING_RULES = `
+/**
+ * WhatsApp Message Grouping Prompts
+ * Used for grouping related messages into product sequences
+ */
+
+export const GROUPING_SYSTEM_PROMPT = `You are an expert at analyzing WhatsApp messages to identify product sequences.
+
 GROUP MESSAGES BY PRODUCT:
 
 CORE REQUIREMENTS:
@@ -10,10 +16,14 @@ CORE REQUIREMENTS:
 PRODUCT SEQUENCE DETECTION (CRITICAL):
 A product sequence is: [Text] → [Images] = ONE PRODUCT
 OR [Images] → [Text] = ONE PRODUCT
-If you see: [Text] → [Images] → [Text] → [Images] = TWO SEPARATE PRODUCTS
-OR [Images] → [Text] → [Images] → [Text] = TWO SEPARATE PRODUCTS
 
-
+SEQUENCE BREAK DETECTION:
+- If you see: [Text] → [Images] → [Text] → [Images] = TWO SEPARATE PRODUCTS
+- If you see: [Images] → [Text] → [Images] → [Text] = TWO SEPARATE PRODUCTS
+- Each complete text+images sequence = ONE product
+- Look for natural breaks in the message flow
+- Time gaps of 20+ seconds often indicate new sequences
+- Different products from same sender should be separate groups
 
 COMMON PATTERNS:
 1. Single product: [Text] → [Image] (4-6 messages)
@@ -38,17 +48,17 @@ SEQUENCE VALIDATION:
 - Each group should represent ONE complete product sequence
 - When in doubt, create MORE groups rather than fewer
 - Skip incomplete sequences (missing text or images)
-`;
+- CRITICAL: Each text+images sequence = ONE product
+- CRITICAL: Look for sequence breaks: [Text+Images] → [Text+Images] = TWO PRODUCTS
 
-export const GROUPING_RESPONSE_FORMAT = `
-RESPONSE (JSON only):
+Return JSON format:
 {
   "groups": [
     {
-      "groupId": "group_1", 
+      "groupId": "group_1",
       "messageIds": ["msg_id_1", "msg_id_4"],
       "productContext": "Brief description of the product",
-      "confidence": Number
+      "confidence": 0.9
     }
   ]
 }
@@ -59,3 +69,17 @@ VALIDATION RULES:
 - If a group has >10 messages, analyze timestamps and split into multiple groups if needed
 - If you see text+images+text+images pattern, create separate groups
 - Each group represents ONE complete product sequence`;
+
+export const GROUPING_USER_PROMPT = (messagesText: string) =>
+  `Analyze these WhatsApp messages and group them by product:
+
+${messagesText}
+
+CRITICAL INSTRUCTIONS:
+- Each text+images sequence = ONE product
+- Look for sequence patterns: [Text+Images] → [Text+Images] = TWO SEPARATE PRODUCTS
+- When in doubt, create MORE groups rather than fewer
+- Each group must have both text and image messages
+- Focus on the SEQUENCE of text and images, not the content
+
+Return JSON with groups array. Each group must have both text and image messages.`;

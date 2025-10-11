@@ -27,16 +27,23 @@ export function CategoryTreeNode({
 
   const subtreeMatches = React.useMemo(() => {
     if (!normalizedQuery) return true;
-    const self = node.name.toLowerCase().includes(normalizedQuery);
-    const child = (node.children || []).some(c =>
-      c.name.toLowerCase().includes(normalizedQuery)
-    );
-    const deep = (node.children || []).some(c =>
-      (c.children || []).some(gc =>
-        gc.name.toLowerCase().includes(normalizedQuery)
-      )
-    );
-    return self || child || deep;
+
+    // Recursive function to check if any node in the subtree matches
+    const checkSubtree = (currentNode: CategoryNode): boolean => {
+      // Check if current node matches
+      if (currentNode.name.toLowerCase().includes(normalizedQuery)) {
+        return true;
+      }
+
+      // Recursively check all children
+      if (currentNode.children && currentNode.children.length > 0) {
+        return currentNode.children.some(child => checkSubtree(child));
+      }
+
+      return false;
+    };
+
+    return checkSubtree(node);
   }, [node, normalizedQuery]);
 
   const hasSelectedInSubtree = React.useMemo(() => {

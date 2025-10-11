@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 
 import { useNotifications } from '@/components/ui/NotificationProvider';
+import { useCategoryLookupContext } from '@/contexts/CategoryLookupContext';
 import type { ProductUpdateData } from '@/types/product';
 
 interface UseProductHandlersParams {
@@ -21,17 +22,20 @@ export function useProductHandlers({
   selectedCount,
 }: UseProductHandlersParams) {
   const { addNotification } = useNotifications();
+  const { refreshCategories } = useCategoryLookupContext();
 
   const handleUpdateProduct = useCallback(
     async (id: string, data: ProductUpdateData) => {
       try {
+        const payload = { id, ...data };
+
         // Call the API directly to get proper error handling
         const response = await fetch('/api/admin/products', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ id, ...data }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
@@ -41,8 +45,16 @@ export function useProductHandlers({
 
         const result = await response.json();
 
-        // Update the product in the local state
-        await updateProduct(id, data);
+        // Update the product in the local state with the server response
+        // Filter out relationship fields that cannot be updated
+        const { category, images, _count, ...updateableFields } =
+          result.product;
+        await updateProduct(id, updateableFields);
+
+        // Refresh categories if categoryId was updated
+        if (data.categoryId) {
+          await refreshCategories();
+        }
 
         addNotification({
           type: 'success',

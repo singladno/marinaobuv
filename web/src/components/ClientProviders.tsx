@@ -3,6 +3,7 @@
 import { NotificationProvider } from '@/components/ui/NotificationProvider';
 import { CartProvider } from '@/contexts/CartContext';
 import { CategoriesProvider } from '@/contexts/CategoriesContext';
+import { CategoryLookupProvider } from '@/contexts/CategoryLookupContext';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { HighlightedProductsProvider } from '@/contexts/HighlightedProductsContext';
 import { UserProvider } from '@/contexts/UserContext';
@@ -16,11 +17,13 @@ export function ClientProviders({ children }: ClientProvidersProps) {
     <NotificationProvider>
       <UserProvider>
         <CategoriesProvider>
-          <HighlightedProductsProvider>
-            <FavoritesProvider>
-              <CartProvider>{children}</CartProvider>
-            </FavoritesProvider>
-          </HighlightedProductsProvider>
+          <CategoryLookupProvider>
+            <HighlightedProductsProvider>
+              <FavoritesProvider>
+                <CartProvider>{children}</CartProvider>
+              </FavoritesProvider>
+            </HighlightedProductsProvider>
+          </CategoryLookupProvider>
         </CategoriesProvider>
       </UserProvider>
     </NotificationProvider>

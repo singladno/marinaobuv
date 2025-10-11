@@ -1,6 +1,6 @@
 import {
-  GROUPING_RULES,
-  GROUPING_RESPONSE_FORMAT,
+  GROUPING_SYSTEM_PROMPT,
+  GROUPING_USER_PROMPT,
 } from './prompts/grouping-prompts';
 
 /**
@@ -19,12 +19,10 @@ export function createGroupingPrompt(
     timeAgo: string;
   }>
 ): string {
-  return `Group WhatsApp messages by product. Analyze message patterns and timestamps to create accurate product groups.
+  return `${GROUPING_SYSTEM_PROMPT}
 
 MESSAGES:
 ${JSON.stringify(messagesForGPT, null, 1)}
 
-${GROUPING_RULES}
-
-${GROUPING_RESPONSE_FORMAT}`;
+${GROUPING_USER_PROMPT(JSON.stringify(messagesForGPT, null, 1))}`;
 }

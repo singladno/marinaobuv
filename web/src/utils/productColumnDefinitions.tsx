@@ -4,6 +4,7 @@ import { ProductActionsCell } from '@/components/features/ProductActionsCell';
 import { ProductArticleCell } from '@/components/features/ProductArticleCell';
 import { ProductCategoryCell } from '@/components/features/ProductCategoryCell';
 import { ProductDateCell } from '@/components/features/ProductDateCell';
+import { ProductDescriptionCell } from '@/components/features/ProductDescriptionCell';
 import { ProductGenderCell } from '@/components/features/ProductGenderCell';
 import { ProductImagesCell } from '@/components/features/ProductImagesCell';
 import { ProductNameCell } from '@/components/features/ProductNameCell';
@@ -99,6 +100,18 @@ export function createProductColumnDefinitions({
           disabled={row.original.isActive}
         />
       ),
+    }),
+
+    // Description column
+    columnHelper.accessor('description', {
+      header: 'Описание',
+      cell: ({ row }) => (
+        <ProductDescriptionCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+        />
+      ),
+      size: 300, // Wider column for description
     }),
 
     // Category column

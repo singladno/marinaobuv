@@ -8,6 +8,43 @@ export interface ImageColorMapping {
 
 export class FixedColorMappingService {
   /**
+   * Normalize color names to Russian lowercase
+   */
+  private normalizeColorToRussian(color: string | null): string | null {
+    if (!color) return null;
+
+    const colorLower = color.toLowerCase().trim();
+
+    // English to Russian mapping
+    const englishToRussian: Record<string, string> = {
+      black: 'черный',
+      white: 'белый',
+      red: 'красный',
+      blue: 'синий',
+      green: 'зелёный',
+      yellow: 'желтый',
+      orange: 'оранжевый',
+      brown: 'коричневый',
+      gray: 'серый',
+      grey: 'серый',
+      pink: 'розовый',
+      purple: 'фиолетовый',
+      violet: 'фиолетовый',
+      beige: 'бежевый',
+      burgundy: 'бордовый',
+      navy: 'синий',
+      tan: 'бежевый',
+    };
+
+    // Check if it's an English color
+    if (englishToRussian[colorLower]) {
+      return englishToRussian[colorLower];
+    }
+
+    // If it's already Russian, just ensure lowercase
+    return colorLower;
+  }
+  /**
    * Update product images with proper color mapping
    * Maps each image to its specific detected color
    */
@@ -60,7 +97,7 @@ export class FixedColorMappingService {
 
       // Strategy 1: Try to match by exact URL
       if (urlToColorMap.has(image.url)) {
-        detectedColor = urlToColorMap.get(image.url);
+        detectedColor = urlToColorMap.get(image.url) || null;
         console.log(
           `  🔗 Exact URL match for image ${i + 1}: ${detectedColor}`
         );
@@ -92,13 +129,16 @@ export class FixedColorMappingService {
       }
 
       if (detectedColor) {
+        // Normalize color to Russian lowercase
+        const normalizedColor = this.normalizeColorToRussian(detectedColor);
+
         await prisma.productImage.update({
           where: { id: image.id },
-          data: { color: detectedColor },
+          data: { color: normalizedColor },
         });
         updatedCount++;
         console.log(
-          `  ✅ Updated image ${image.id} (sort: ${image.sort}) with color: ${detectedColor}`
+          `  ✅ Updated image ${image.id} (sort: ${image.sort}) with color: ${detectedColor} → ${normalizedColor}`
         );
       } else {
         console.log(

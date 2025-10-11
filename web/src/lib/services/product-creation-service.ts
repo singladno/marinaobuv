@@ -1,4 +1,4 @@
-import type { AnalysisResult } from '@/lib/services/unified-analysis-service';
+import type { AnalysisResult } from '@/lib/types/analysis-result';
 
 import { ImageData } from './image-processing-service';
 import { ProductCreationCore } from './product-creation-core';

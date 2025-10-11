@@ -2,10 +2,11 @@ import type { Role } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
-import {
-  processDraftImagesForApprovalById,
-  updateDraftImagesWithS3Urls,
-} from '@/lib/draft-approval-image-processor';
+// TODO: Re-implement image processing for draft approval
+// import {
+//   processDraftImagesForApprovalById,
+//   updateDraftImagesWithS3Urls,
+// } from '@/lib/draft-approval-image-processor';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
@@ -59,28 +60,29 @@ export async function POST(req: NextRequest) {
           );
         });
 
+        // TODO: Re-implement image processing for draft approval
         // Process and upload images to S3 before approval
-        console.log(`\n📸 Processing images for draft ${d.id}...`);
-        const processedImages = await processDraftImagesForApprovalById(d.id);
+        // console.log(`\n📸 Processing images for draft ${d.id}...`);
+        // const processedImages = await processDraftImagesForApprovalById(d.id);
 
-        // Update draft images with S3 URLs
-        if (processedImages.length > 0) {
-          console.log(
-            `\n🔄 Updating ${processedImages.length} images with S3 URLs...`
-          );
-          await updateDraftImagesWithS3Urls(processedImages);
-          console.log(
-            `✅ Successfully updated ${processedImages.length} images with S3 URLs for draft ${d.id}`
-          );
+        // // Update draft images with S3 URLs
+        // if (processedImages.length > 0) {
+        //   console.log(
+        //     `\n🔄 Updating ${processedImages.length} images with S3 URLs...`
+        //   );
+        //   await updateDraftImagesWithS3Urls(processedImages);
+        //   console.log(
+        //     `✅ Successfully updated ${processedImages.length} images with S3 URLs for draft ${d.id}`
+        //   );
 
-          // Log new S3 URLs
-          console.log(`   New S3 URLs:`);
-          processedImages.forEach((img, index) => {
-            console.log(`     ${index + 1}. ${img.url}`);
-          });
-        } else {
-          console.log(`⚠️  No images were processed for draft ${d.id}`);
-        }
+        //   // Log new S3 URLs
+        //   console.log(`   New S3 URLs:`);
+        //   processedImages.forEach((img, index) => {
+        //     console.log(`     ${index + 1}. ${img.url}`);
+        //   });
+        // } else {
+        //   console.log(`⚠️  No images were processed for draft ${d.id}`);
+        // }
 
         // Update the draft status to 'approved' after S3 upload
         console.log(`\n✅ Updating draft status to 'approved'...`);

@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { getIndentationClass } from '@/utils/categoryUtils';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import { CategoryTreeNode } from './CategoryTreeNode';
+import { useCategoryLookupContext } from '@/contexts/CategoryLookupContext';
 
 import FilterPill from './FilterPill';
 
@@ -29,25 +30,27 @@ export default function CategoryControl({
   const count = value.length;
   const [query, setQuery] = useState('');
 
-  // Find the selected category name for display
-  const selectedCategoryName = React.useMemo(() => {
-    if (value.length === 0) return null;
-    const selectedId = value[0]; // Get first selected category
-    const findCategoryName = (
-      categories: CategoryNode[],
-      id: string
-    ): string | null => {
-      for (const category of categories) {
-        if (category.id === id) return category.name;
-        if (category.children) {
-          const found = findCategoryName(category.children, id);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    return findCategoryName(tree || [], selectedId);
-  }, [value, tree]);
+  // Get the selected category ID
+  const selectedCategoryId = value.length > 0 ? value[0] : null;
+
+  // Use the efficient lookup context
+  const { getCategoryName } = useCategoryLookupContext();
+
+  // Try to get category name from local options first, then fall back to context
+  const getLocalCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return null;
+
+    // First try to find in local options
+    const localOption = options.find(option => option.id === categoryId);
+    if (localOption) {
+      return localOption.label;
+    }
+
+    // Fall back to context lookup
+    return getCategoryName(categoryId);
+  };
+
+  const selectedCategoryName = getLocalCategoryName(selectedCategoryId);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -57,9 +60,13 @@ export default function CategoryControl({
 
   const toggle = (id: string) => {
     if (value.includes(id)) {
-      onChange(value.filter(v => v !== id));
+      // If clicking the same category, deselect it
+      const newValue = value.filter(v => v !== id);
+      onChange(newValue);
     } else {
-      onChange([...value, id]);
+      // For single-select behavior: replace the current selection with the new one
+      const newValue = [id];
+      onChange(newValue);
     }
   };
 

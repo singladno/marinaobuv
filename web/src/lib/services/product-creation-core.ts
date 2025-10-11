@@ -1,4 +1,4 @@
-import type { AnalysisResult } from '@/lib/services/unified-analysis-service';
+import type { AnalysisResult } from '@/lib/types/analysis-result';
 
 import { prisma } from '../db-node';
 import { getOrCreateProvider } from '../provider-utils';
@@ -184,12 +184,21 @@ export class ProductCreationCore {
     if (analysis.categoryId) {
       // Use existing category - validate it exists
       category = await prisma.category.findUnique({
-        where: { id: analysis.categoryId, isActive: true },
+        where: { id: analysis.categoryId },
+        select: { id: true, name: true, isActive: true },
       });
+
       if (!category) {
         console.log(
-          `⚠️  Category ID ${analysis.categoryId} not found or inactive, falling back to default`
+          `⚠️  Category ID ${analysis.categoryId} not found, falling back to default`
         );
+      } else if (!category.isActive) {
+        console.log(
+          `⚠️  Category ID ${analysis.categoryId} (${category.name}) is inactive, falling back to default`
+        );
+        category = null;
+      } else {
+        console.log(`✅ Using category: ${category.name} (${category.id})`);
       }
     }
 

@@ -1,19 +1,20 @@
-# Unified OpenAI Processor - Refactored Architecture
+# Groq Sequential Processor - Architecture
 
 ## 📁 File Structure
 
-```
+```text
 lib/
 ├── prompts/
-│   ├── grouping-prompt.ts      # OpenAI prompt for message grouping
-│   └── analysis-prompt.ts      # OpenAI prompt for unified analysis
+│   ├── grouping-prompts.ts     # Groq prompts for message grouping
+│   ├── text-analysis-prompts.ts  # Groq prompts for text analysis
+│   └── image-analysis-prompts.ts # Groq prompts for image analysis
 ├── services/
-│   ├── message-grouping-service.ts    # Groups messages using OpenAI
-│   ├── unified-analysis-service.ts    # Analyzes text + images together
-│   ├── image-processing-service.ts    # Handles image upload to S3
+│   ├── groq-sequential-processor.ts    # Main Groq processor
+│   ├── groq-grouping-service.ts       # Groups messages using Groq
+│   ├── simple-product-service.ts      # Handles product creation
 │   └── product-creation-service.ts    # Creates draft products
-├── unified-openai-processor-v2.ts     # Main orchestrator (clean & readable)
-└── unified-openai-processor.ts        # Original (kept for reference)
+└── types/
+    └── analysis-result.ts     # Analysis result interface
 ```
 
 ## 🔧 Architecture Benefits
@@ -44,28 +45,28 @@ lib/
 
 ## 🚀 Usage
 
-The refactored processor maintains the same interface:
+The Groq processor provides the main interface:
 
 ```typescript
-const processor = new UnifiedOpenAIProcessor();
+const processor = new GroqSequentialProcessor(prisma);
 await processor.processMessagesToProducts(messageIds);
 ```
 
 ## 📊 Services Overview
 
-### 1. **MessageGroupingService**
+### 1. **GroqGroupingService**
 
-- Groups WhatsApp messages by product using OpenAI
-- Handles message preparation and GPT analysis
+- Groups WhatsApp messages by product using Groq
+- Handles message preparation and analysis
 - Returns structured message groups
 
-### 2. **UnifiedAnalysisService**
+### 2. **GroqSequentialProcessor**
 
-- Analyzes text and images together
-- Extracts product information (name, price, sizes, colors, etc.)
-- Returns structured analysis results
+- Main orchestrator for the entire process
+- Handles text analysis, image analysis, and product creation
+- Uses Groq for all AI operations
 
-### 3. **ImageProcessingService**
+### 3. **SimpleProductService**
 
 - Downloads images from WhatsApp URLs
 - Uploads images to S3 storage

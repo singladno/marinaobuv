@@ -14,6 +14,44 @@ export interface ImageColorResult {
 export class PerImageColorService {
   private openai: any;
 
+  /**
+   * Normalize color names to Russian lowercase
+   */
+  private normalizeColorToRussian(color: string | null): string | null {
+    if (!color) return null;
+
+    const colorLower = color.toLowerCase().trim();
+
+    // English to Russian mapping
+    const englishToRussian: Record<string, string> = {
+      black: 'черный',
+      white: 'белый',
+      red: 'красный',
+      blue: 'синий',
+      green: 'зелёный',
+      yellow: 'желтый',
+      orange: 'оранжевый',
+      brown: 'коричневый',
+      gray: 'серый',
+      grey: 'серый',
+      pink: 'розовый',
+      purple: 'фиолетовый',
+      violet: 'фиолетовый',
+      beige: 'бежевый',
+      burgundy: 'бордовый',
+      navy: 'синий',
+      tan: 'бежевый',
+    };
+
+    // Check if it's an English color
+    if (englishToRussian[colorLower]) {
+      return englishToRussian[colorLower];
+    }
+
+    // If it's already Russian, just ensure lowercase
+    return colorLower;
+  }
+
   constructor() {
     if (!env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is required');
@@ -168,7 +206,9 @@ EXAMPLES:
 - Brown boot with silver buckles → "коричневый" (main leather)
 - Blue shoe with yellow stitching → "синий" (main material)
 
-Use Russian color names: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый", "желтый", "оранжевый".
+Use ONLY Russian color names in lowercase: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый", "желтый", "оранжевый".
+
+CRITICAL: NEVER use English color names like "black", "white", "red", "blue" - ONLY Russian names in lowercase.
 
 Return STRICT JSON with this shape:
   { "images": [ { "color": "черный" | null }, ... ] }
@@ -286,18 +326,21 @@ Return STRICT JSON with this shape:
             );
             indices.forEach((originalIdx, i) => {
               const imageResult = result.images?.[i];
-              const color =
+              const rawColor =
                 imageResult?.color && imageResult.color.trim()
                   ? imageResult.color.trim()
                   : null;
 
+              // Normalize color to Russian lowercase
+              const normalizedColor = this.normalizeColorToRussian(rawColor);
+
               colorResults[originalIdx] = {
                 url: imageUrls[originalIdx],
-                color,
+                color: normalizedColor,
               };
 
               console.log(
-                `   🎨 Image ${originalIdx + 1}: ${imageUrls[originalIdx].substring(0, 50)}... → ${color || 'null'}`
+                `   🎨 Image ${originalIdx + 1}: ${rawColor} → ${normalizedColor || 'null'}`
               );
             });
 

@@ -2,6 +2,7 @@ import { prisma } from '../db-node';
 import { generateArticleNumber } from './product-creation-mappers';
 import { createSlug } from './product-creation-mappers';
 import { AnalysisValidationService } from './analysis-validation-service';
+import { DeduplicationService } from './deduplication-service';
 
 export interface CreateInactiveProductParams {
   messageIds: string[];
@@ -15,9 +16,49 @@ export interface BatchProductResult {
 
 export class SimpleProductService {
   private validationService: AnalysisValidationService;
+  private deduplicationService: DeduplicationService;
 
   constructor() {
     this.validationService = new AnalysisValidationService();
+    this.deduplicationService = new DeduplicationService();
+  }
+
+  /**
+   * Normalize color names to Russian lowercase
+   */
+  private normalizeColorToRussian(color: string | null): string | null {
+    if (!color) return null;
+
+    const colorLower = color.toLowerCase().trim();
+
+    // English to Russian mapping
+    const englishToRussian: Record<string, string> = {
+      black: 'черный',
+      white: 'белый',
+      red: 'красный',
+      blue: 'синий',
+      green: 'зелёный',
+      yellow: 'желтый',
+      orange: 'оранжевый',
+      brown: 'коричневый',
+      gray: 'серый',
+      grey: 'серый',
+      pink: 'розовый',
+      purple: 'фиолетовый',
+      violet: 'фиолетовый',
+      beige: 'бежевый',
+      burgundy: 'бордовый',
+      navy: 'синий',
+      tan: 'бежевый',
+    };
+
+    // Check if it's an English color
+    if (englishToRussian[colorLower]) {
+      return englishToRussian[colorLower];
+    }
+
+    // If it's already Russian, just ensure lowercase
+    return colorLower;
   }
 
   /**
@@ -36,6 +77,49 @@ export class SimpleProductService {
 
     if (!firstMessage) {
       throw new Error('No messages found for product creation');
+    }
+
+    // Check for duplicates before creating
+    console.log(
+      `🔍 Checking for duplicates for message group: ${messageIds.join(', ')}`
+    );
+
+    const duplicateCheck =
+      await this.deduplicationService.checkForDuplicateProduct(messageIds);
+    if (duplicateCheck.isDuplicate) {
+      console.log(`⚠️  Duplicate detected: ${duplicateCheck.reason}`);
+      console.log(
+        `🔄 Skipping product creation for message group: ${messageIds.join(', ')}`
+      );
+
+      // Mark messages as processed even though we're not creating a product
+      await prisma.whatsAppMessage.updateMany({
+        where: { id: { in: messageIds } },
+        data: {
+          processed: true,
+          aiGroupId: null,
+        },
+      });
+
+      // Return the existing product ID
+      return {
+        productId: duplicateCheck.existingProductId!,
+      };
+    }
+
+    // Check if messages are already processed
+    const processedCheck =
+      await this.deduplicationService.checkMessagesAlreadyProcessed(messageIds);
+    if (processedCheck.isDuplicate) {
+      console.log(`⚠️  Messages already processed: ${processedCheck.reason}`);
+      console.log(
+        `🔄 Skipping product creation for message group: ${messageIds.join(', ')}`
+      );
+
+      // Return a dummy result since we can't create a product
+      return {
+        productId: 'skipped-already-processed',
+      };
     }
 
     // Create inactive product
@@ -165,8 +249,19 @@ export class SimpleProductService {
       ) {
         const firstImage = result.images[0];
         if (firstImage.color) {
-          detectedColors.push(firstImage.color);
-          console.log(`  ✅ Extracted color: ${firstImage.color}`);
+          const normalizedColor = this.normalizeColorToRussian(
+            firstImage.color
+          );
+          if (normalizedColor) {
+            detectedColors.push(normalizedColor);
+            console.log(
+              `  ✅ Extracted color: ${firstImage.color} → ${normalizedColor}`
+            );
+          } else {
+            console.log(
+              `  ⚠️  No valid color after normalization: ${firstImage.color}`
+            );
+          }
         } else {
           console.log(`  ⚠️  No color in first image:`, firstImage);
         }
@@ -236,13 +331,52 @@ export class SimpleProductService {
       analysisResults
     );
 
+    // Process category selection from analysis results
+    let selectedCategoryId: string | null = null;
+    if (analysisResults.length > 0) {
+      const firstAnalysis = analysisResults[0];
+      if (firstAnalysis.categoryId) {
+        // Validate that the category exists
+        const category = await prisma.category.findUnique({
+          where: { id: firstAnalysis.categoryId, isActive: true },
+        });
+
+        if (category) {
+          selectedCategoryId = firstAnalysis.categoryId;
+          console.log(
+            `✅ Selected category: ${category.name} (${category.id})`
+          );
+        } else {
+          console.log(
+            `⚠️ Invalid category ID: ${firstAnalysis.categoryId}, falling back to default`
+          );
+        }
+      }
+    }
+
+    // Fallback to default "Обувь" category if no valid category selected
+    if (!selectedCategoryId) {
+      const defaultCategory = await prisma.category.findFirst({
+        where: { name: 'Обувь', isActive: true },
+      });
+
+      if (defaultCategory) {
+        selectedCategoryId = defaultCategory.id;
+        console.log(`🔄 Using default category: Обувь (${defaultCategory.id})`);
+      } else {
+        console.error(`❌ Default category "Обувь" not found!`);
+        return;
+      }
+    }
+
     // Extract data from analysis results
     let productName = product.name;
     let productDescription = product.description;
     let productGender = product.gender;
     let productSeason = product.season;
     let productMaterial = product.material;
-    let productCategoryId = product.categoryId;
+    // Use the validated category ID
+    const productCategoryId = selectedCategoryId;
     const detectedColors: string[] = [];
 
     // Process each analysis result
@@ -268,9 +402,7 @@ export class SimpleProductService {
       if (result.material && !productMaterial) {
         productMaterial = result.material;
       }
-      if (result.categoryId && !productCategoryId) {
-        productCategoryId = result.categoryId;
-      }
+      // Category is already validated and set above
 
       // Extract colors
       if (result.colors && Array.isArray(result.colors)) {

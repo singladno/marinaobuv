@@ -1,4 +1,4 @@
-import type { AnalysisResult } from './unified-analysis-service';
+import type { AnalysisResult } from '@/lib/types/analysis-result';
 
 /**
  * Service for validating analysis results
@@ -8,13 +8,28 @@ export class AnalysisValidationService {
    * Validate basic required fields
    */
   private validateBasicFields(result: AnalysisResult): boolean {
-    if (!result.name || result.name.trim() === '') {
-      console.log('❌ Validation failed: Missing product name');
+    // Allow null/empty names since they will be provided by image analysis
+    if (
+      result.name !== null &&
+      result.name !== undefined &&
+      result.name.trim() === ''
+    ) {
+      console.log(
+        '❌ Validation failed: Empty product name (should be null if not provided)'
+      );
       return false;
     }
 
-    if (!result.description || result.description.trim() === '') {
-      console.log('❌ Validation failed: Missing product description');
+    // Allow missing description in first request (text analysis)
+    // Description will be provided by image analysis
+    if (
+      result.description !== undefined &&
+      result.description !== null &&
+      result.description.trim() === ''
+    ) {
+      console.log(
+        '❌ Validation failed: Empty product description (should be null if not provided)'
+      );
       return false;
     }
 

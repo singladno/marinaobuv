@@ -5,6 +5,7 @@ export interface ExtendedBatchResult {
   totalCount: number;
   extendedCount: number;
   originalBatchSize: number;
+  nextOffset?: number; // Add next offset for non-overlapping batches
 }
 
 /**
@@ -52,9 +53,10 @@ export async function extendBatchWithConsecutiveMessages(
   const lastMessageSender = lastMessage.from;
 
   // Look for consecutive messages from the same sender after our batch
+  // IMPORTANT: Only include messages that are NOT already processed
   const consecutiveMessages = await prisma.whatsAppMessage.findMany({
     where: {
-      processed: false,
+      processed: false, // CRITICAL: Only unprocessed messages
       type: { in: ['textMessage', 'imageMessage', 'extendedTextMessage'] },
       from: lastMessageSender,
       createdAt: {
@@ -65,16 +67,22 @@ export async function extendBatchWithConsecutiveMessages(
       id: true,
       from: true,
       createdAt: true,
+      processed: true, // Include processed flag to double-check
     },
     orderBy: { createdAt: 'asc' },
   });
 
+  // Double-check: Filter out any messages that might have been processed between queries
+  const unprocessedConsecutiveMessages = consecutiveMessages.filter(
+    msg => !msg.processed
+  );
+
   // Filter consecutive messages (within reasonable time gap)
   const timeGapSeconds = 300; // 5 minutes - if gap is larger, consider it a new sequence
-  const consecutiveFromSameSender: typeof consecutiveMessages = [];
+  const consecutiveFromSameSender: typeof unprocessedConsecutiveMessages = [];
 
-  for (let i = 0; i < consecutiveMessages.length; i++) {
-    const currentMessage = consecutiveMessages[i];
+  for (let i = 0; i < unprocessedConsecutiveMessages.length; i++) {
+    const currentMessage = unprocessedConsecutiveMessages[i];
     const prevMessage =
       i === 0 ? lastMessage : consecutiveFromSameSender[i - 1];
 
@@ -113,12 +121,33 @@ export async function extendBatchWithConsecutiveMessages(
 
 /**
  * Fetches unprocessed messages and extends the batch if there are consecutive messages from the same user
+ * Uses offset-based fetching to prevent overlapping batches
  */
 export async function fetchExtendedBatch(
   batchSize: number,
-  targetGroupId?: string
+  targetGroupId?: string,
+  offset: number = 0
 ): Promise<ExtendedBatchResult> {
-  // First, get the initial batch
+  // Get total count of unprocessed messages for offset calculation
+  const totalUnprocessed = await prisma.whatsAppMessage.count({
+    where: {
+      processed: false,
+      type: { in: ['textMessage', 'imageMessage', 'extendedTextMessage'] },
+      ...(targetGroupId && { chatId: targetGroupId }),
+    },
+  });
+
+  if (totalUnprocessed === 0 || offset >= totalUnprocessed) {
+    return {
+      messageIds: [],
+      totalCount: 0,
+      extendedCount: 0,
+      originalBatchSize: batchSize,
+      nextOffset: offset,
+    };
+  }
+
+  // Fetch messages with offset to prevent overlap
   const initialMessages = await prisma.whatsAppMessage.findMany({
     where: {
       processed: false,
@@ -126,6 +155,7 @@ export async function fetchExtendedBatch(
       ...(targetGroupId && { chatId: targetGroupId }),
     },
     orderBy: { createdAt: 'desc' },
+    skip: offset,
     take: batchSize,
   });
 
@@ -135,11 +165,21 @@ export async function fetchExtendedBatch(
       totalCount: 0,
       extendedCount: 0,
       originalBatchSize: batchSize,
+      nextOffset: offset,
     };
   }
 
   const initialMessageIds = initialMessages.map(m => m.id);
 
-  // Extend the batch with consecutive messages
-  return await extendBatchWithConsecutiveMessages(initialMessageIds, batchSize);
+  // For offset-based batching, we can skip the complex consecutive message extension
+  // since we're processing in order and won't have overlaps
+  const nextOffset = offset + initialMessages.length;
+
+  return {
+    messageIds: initialMessageIds,
+    totalCount: initialMessages.length,
+    extendedCount: 0,
+    originalBatchSize: batchSize,
+    nextOffset,
+  };
 }
