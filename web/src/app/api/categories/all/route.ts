@@ -23,7 +23,17 @@ export async function GET() {
             children: {
               where: { isActive: true },
               orderBy: { sort: 'asc' },
-              select: { id: true, name: true, slug: true, path: true },
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                path: true,
+                children: {
+                  where: { isActive: true },
+                  orderBy: { sort: 'asc' },
+                  select: { id: true, name: true, slug: true, path: true },
+                },
+              },
             },
           },
         },

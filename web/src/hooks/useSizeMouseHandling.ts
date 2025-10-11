@@ -63,7 +63,7 @@ export function useSizeMouseHandling() {
     // Position above the size chip at the top center
     return {
       top: rect.top - 30, // Move higher above the size chip
-      left: rect.left + rect.width / 2 - 12, // Center horizontally (12px is half the button width)
+      left: rect.left + rect.width / 2 - 16, // Center horizontally (16px is half the button width: 24px + 4px padding on each side)
     };
   })();
 

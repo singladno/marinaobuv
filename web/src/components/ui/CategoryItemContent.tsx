@@ -68,17 +68,17 @@ export function CategoryItemContent({
 function getIndentationClass(level: number): string {
   // Support up to 10 levels of nesting with proper Tailwind classes
   const indentationClasses = [
-    'pl-3', // level 0
-    'pl-6', // level 1
-    'pl-9', // level 2
-    'pl-12', // level 3
-    'pl-16', // level 4
-    'pl-20', // level 5
-    'pl-24', // level 6
-    'pl-28', // level 7
-    'pl-32', // level 8
-    'pl-36', // level 9
-    'pl-40', // level 10+
+    'pl-1', // level 0
+    'pl-2', // level 1
+    'pl-3', // level 2
+    'pl-4', // level 3
+    'pl-5', // level 4
+    'pl-6', // level 5
+    'pl-7', // level 6
+    'pl-8', // level 7
+    'pl-9', // level 8
+    'pl-10', // level 9
+    'pl-11', // level 10+
   ];
 
   return indentationClasses[Math.min(level, indentationClasses.length - 1)];

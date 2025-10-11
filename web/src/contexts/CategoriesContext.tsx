@@ -31,7 +31,7 @@ export function CategoriesProvider({
         setLoading(true);
         setError(null);
         const response = await fetch('/api/categories/all', {
-          cache: 'force-cache', // Cache the response to prevent duplicate requests
+          cache: 'no-cache', // Don't cache to get fresh data
         });
         if (!response.ok) {
           throw new Error('Failed to fetch categories');
