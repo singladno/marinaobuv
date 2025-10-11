@@ -118,7 +118,7 @@ export function CategoryTreeNode({
 
       {hasChildren && (
         <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${expanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${expanded ? 'max-h-none opacity-100' : 'max-h-0 opacity-0'}`}
         >
           <div className="pl-6">
             {node.children!.map(child => (

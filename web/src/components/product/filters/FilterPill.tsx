@@ -112,6 +112,7 @@ export default function FilterPill({
       </PopoverTrigger>
       <PopoverContent
         align="start"
+        sideOffset={8}
         className={contentClassName}
         onMouseEnter={openNow}
         onMouseLeave={scheduleClose}
