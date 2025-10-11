@@ -762,6 +762,12 @@ export class GroqSequentialProcessor {
         colorMappings
       );
 
+      // Update product with comprehensive image analysis results (including category validation)
+      await this.batchProductService.updateProductWithImageAnalysis(
+        productId,
+        analysisResults
+      );
+
       // Merge name/description/gender/season from image analysis if missing from first analysis
       await this.mergeGenderSeasonFromImageAnalysis(productId, analysisResults);
 

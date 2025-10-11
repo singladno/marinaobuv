@@ -333,8 +333,10 @@ export class SimpleProductService {
 
     // Process category selection from analysis results
     let selectedCategoryId: string | null = null;
+
     if (analysisResults.length > 0) {
       const firstAnalysis = analysisResults[0];
+
       if (firstAnalysis.categoryId) {
         // Validate that the category exists
         const category = await prisma.category.findUnique({
