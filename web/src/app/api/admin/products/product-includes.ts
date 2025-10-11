@@ -14,6 +14,7 @@ export const productInclude = {
       alt: true,
       sort: true,
       isPrimary: true,
+      isActive: true,
       color: true,
       width: true,
       height: true,

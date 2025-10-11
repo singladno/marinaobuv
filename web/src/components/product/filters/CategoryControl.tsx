@@ -69,7 +69,7 @@ export default function CategoryControl({
       badgeCount={count}
       isActive={count > 0}
       onClear={() => onChange([])}
-      contentClassName="min-w-80 max-w-96 p-0"
+      contentClassName="min-w-80 max-w-96 p-0 max-h-96"
       disabled={disabled}
       displayName={selectedCategoryName || undefined}
     >
@@ -83,7 +83,7 @@ export default function CategoryControl({
           className="h-11 w-full rounded-xl border-0 bg-gray-100 px-4 text-sm outline-none ring-0 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-purple-300"
         />
       </div>
-      <div className="max-h-80 overflow-auto p-3">
+      <div className="max-h-96 overflow-y-auto p-3">
         {/* Preferred: show collapsible tree when provided */}
         {Array.isArray(tree) && tree?.length
           ? tree.map((n: CategoryNode) => (

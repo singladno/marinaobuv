@@ -40,7 +40,13 @@ export function ImageActionButton({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-colors hover:bg-red-600">
+      <div
+        className={`flex h-5 w-5 items-center justify-center rounded-full text-white shadow-lg transition-colors ${
+          isActive
+            ? 'bg-red-500 hover:bg-red-600'
+            : 'bg-green-500 hover:bg-green-600'
+        }`}
+      >
         {isActive ? (
           <button
             onClick={e => onToggle(imageId, false, e)}
@@ -70,7 +76,7 @@ export function ImageActionButton({
           <button
             onClick={e => onToggle(imageId, true, e)}
             disabled={isUpdating}
-            className="flex h-full w-full items-center justify-center rounded-full bg-green-500 hover:bg-green-600 disabled:opacity-50"
+            className="flex h-full w-full items-center justify-center rounded-full disabled:opacity-50"
             title="Восстановить изображение"
           >
             {isUpdating ? (

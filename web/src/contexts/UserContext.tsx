@@ -8,6 +8,8 @@ import {
   ReactNode,
 } from 'react';
 
+import { deduplicateRequest } from '@/lib/request-deduplication';
+
 type CurrentUser = {
   userId: string;
   role: string;
@@ -37,18 +39,24 @@ export function UserProvider({ children }: UserProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchUser = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch('/api/auth/me', { cache: 'no-store' });
-      const json = await res.json();
-      setUser(json.user ?? null);
-    } catch (err) {
-      setError('Ошибка загрузки пользователя');
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+    return deduplicateRequest('fetch-user', async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch('/api/auth/me', {
+          cache: 'no-store',
+        });
+        const json = await res.json();
+        setUser(json.user ?? null);
+        return json.user;
+      } catch (err) {
+        setError('Ошибка загрузки пользователя');
+        setUser(null);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    });
   };
 
   const refreshUser = async () => {

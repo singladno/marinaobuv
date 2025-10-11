@@ -2,17 +2,19 @@ import * as React from 'react';
 
 export function useProductImageToggle({ onReload }: { onReload?: () => void }) {
   const [isUpdating, setIsUpdating] = React.useState<string | null>(null);
-  const [removed, setRemoved] = React.useState<Record<string, boolean>>({});
 
-  const handleDelete = React.useCallback(
-    async (imageId: string, _isActive: boolean) => {
+  const handleToggle = React.useCallback(
+    async (imageId: string, isActive: boolean) => {
       setIsUpdating(imageId);
       try {
         const res = await fetch(`/api/admin/products/images/${imageId}`, {
-          method: 'DELETE',
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ isActive }),
         });
-        if (!res.ok) throw new Error('Failed to delete');
-        setRemoved(prev => ({ ...prev, [imageId]: true }));
+        if (!res.ok) throw new Error('Failed to toggle image status');
         if (onReload) onReload();
       } finally {
         setIsUpdating(null);
@@ -21,5 +23,5 @@ export function useProductImageToggle({ onReload }: { onReload?: () => void }) {
     [onReload]
   );
 
-  return { handleDelete, isUpdating, removed };
+  return { handleToggle, isUpdating };
 }

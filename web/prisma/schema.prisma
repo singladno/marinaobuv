@@ -66,6 +66,7 @@ model ProductImage {
   alt       String?
   sort      Int     @default(0)
   isPrimary Boolean @default(false)
+  isActive  Boolean @default(true)
   color     String?
   width     Int?
   height    Int?

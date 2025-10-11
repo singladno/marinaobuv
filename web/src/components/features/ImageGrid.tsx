@@ -38,8 +38,9 @@ export function ImageGrid({
 
   const activeImages = images?.filter(img => img.isActive !== false) || [];
   const inactiveImages = images?.filter(img => img.isActive === false) || [];
+  const allImages = [...activeImages, ...inactiveImages];
 
-  if (activeImages.length === 0) {
+  if (allImages.length === 0) {
     return (
       <div className="flex h-16 items-center justify-center text-sm text-gray-500">
         Нет изображений
@@ -48,128 +49,59 @@ export function ImageGrid({
   }
 
   return (
-    <>
-      <div
-        className={
-          singleRow
-            ? 'flex flex-nowrap gap-1 overflow-x-auto'
-            : 'flex flex-wrap gap-1'
-        }
-      >
-        {activeImages.map((image, index) => (
-          <div
-            key={image.id}
-            className="relative"
-            ref={el => {
-              imageRefs.current[image.id] = el;
-            }}
-            onMouseEnter={() =>
-              setHoveredImages(prev => new Set(prev).add(image.id))
-            }
-            onMouseLeave={() =>
-              setHoveredImages(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(image.id);
-                return newSet;
-              })
-            }
-          >
-            <ImageThumbnail
-              image={image}
-              onImageClick={onImageClick}
-              onImageToggle={() => {}}
-              isUpdating={false}
-              index={index}
+    <div
+      className={
+        singleRow
+          ? 'flex flex-nowrap gap-1 overflow-x-auto'
+          : 'flex flex-wrap gap-1'
+      }
+    >
+      {allImages.map((image, index) => (
+        <div
+          key={image.id}
+          className={`relative ${image.isActive === false ? 'opacity-50' : ''}`}
+          ref={el => {
+            imageRefs.current[image.id] = el;
+          }}
+          onMouseEnter={() =>
+            setHoveredImages(prev => new Set(prev).add(image.id))
+          }
+          onMouseLeave={() =>
+            setHoveredImages(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(image.id);
+              return newSet;
+            })
+          }
+        >
+          <ImageThumbnail
+            image={image}
+            onImageClick={onImageClick}
+            onImageToggle={() => {}}
+            isUpdating={false}
+            index={index}
+          />
+          {hoveredImages.has(image.id) && (
+            <ImageActionButton
+              imageId={image.id}
+              isActive={image.isActive !== false}
+              isUpdating={isUpdating === image.id}
+              onToggle={handleImageToggle}
+              onMouseEnter={() =>
+                setHoveredImages(prev => new Set(prev).add(image.id))
+              }
+              onMouseLeave={() =>
+                setHoveredImages(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(image.id);
+                  return newSet;
+                })
+              }
+              imageRef={imageRefs.current[image.id] || null}
             />
-            {hoveredImages.has(image.id) && (
-              <ImageActionButton
-                imageId={image.id}
-                isActive={image.isActive !== false}
-                isUpdating={isUpdating === image.id}
-                onToggle={handleImageToggle}
-                onMouseEnter={() =>
-                  setHoveredImages(prev => new Set(prev).add(image.id))
-                }
-                onMouseLeave={() =>
-                  setHoveredImages(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(image.id);
-                    return newSet;
-                  })
-                }
-                imageRef={imageRefs.current[image.id] || null}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {inactiveImages.length > 0 && (
-        <div className="mt-2">
-          <div className="text-xs text-gray-500">Скрытые:</div>
-          <div
-            className={
-              singleRow
-                ? 'flex flex-nowrap gap-1 overflow-x-auto'
-                : 'flex flex-wrap gap-1'
-            }
-          >
-            {inactiveImages.map(image => (
-              <div
-                key={image.id}
-                className="relative opacity-50"
-                ref={el => {
-                  imageRefs.current[image.id] = el;
-                }}
-                onMouseEnter={() =>
-                  setHoveredImages(prev => new Set(prev).add(image.id))
-                }
-                onMouseLeave={() =>
-                  setHoveredImages(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(image.id);
-                    return newSet;
-                  })
-                }
-              >
-                <ImageThumbnail
-                  image={image}
-                  onImageClick={() => {
-                    const activeIndex = activeImages.findIndex(
-                      img => img.id === image.id
-                    );
-                    if (activeIndex !== -1) {
-                      onImageClick(activeIndex);
-                    }
-                  }}
-                  onImageToggle={() => {}}
-                  isUpdating={false}
-                  index={activeImages.findIndex(img => img.id === image.id)}
-                />
-                {hoveredImages.has(image.id) && (
-                  <ImageActionButton
-                    imageId={image.id}
-                    isActive={image.isActive !== false}
-                    isUpdating={isUpdating === image.id}
-                    onToggle={handleImageToggle}
-                    onMouseEnter={() =>
-                      setHoveredImages(prev => new Set(prev).add(image.id))
-                    }
-                    onMouseLeave={() =>
-                      setHoveredImages(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(image.id);
-                        return newSet;
-                      })
-                    }
-                    imageRef={imageRefs.current[image.id] || null}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+          )}
         </div>
-      )}
-    </>
+      ))}
+    </div>
   );
 }
