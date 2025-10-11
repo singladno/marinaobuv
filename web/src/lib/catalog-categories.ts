@@ -12,27 +12,40 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
   const roots = await prisma.category.findMany({
     where: { parentId: null, isActive: true },
     orderBy: { sort: 'asc' },
-    include: {
-      children: {
-        where: { isActive: true },
-        orderBy: { sort: 'asc' },
-      },
-    },
   });
 
-  return roots.map(r => ({
-    id: r.id,
-    name: r.name,
-    slug: r.slug,
-    path: r.path,
-    children: r.children.map(c => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      path: c.path,
-      children: [],
-    })),
-  }));
+  return Promise.all(
+    roots.map(async root => {
+      const children = await getCategoryChildren(root.id);
+      return {
+        id: root.id,
+        name: root.name,
+        slug: root.slug,
+        path: root.path,
+        children,
+      };
+    })
+  );
+}
+
+async function getCategoryChildren(parentId: string): Promise<CategoryNode[]> {
+  const children = await prisma.category.findMany({
+    where: { parentId, isActive: true },
+    orderBy: { sort: 'asc' },
+  });
+
+  return Promise.all(
+    children.map(async child => {
+      const grandChildren = await getCategoryChildren(child.id);
+      return {
+        id: child.id,
+        name: child.name,
+        slug: child.slug,
+        path: child.path,
+        children: grandChildren,
+      };
+    })
+  );
 }
 
 export async function getCategoryByPath(path?: string) {

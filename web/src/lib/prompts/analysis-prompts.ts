@@ -12,6 +12,20 @@ export const SYSTEM_PROMPT = `You are an expert at analyzing product information
           - When sizes are present, ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
           - ALWAYS calculate packPairs from sizes (sum of all count values)
           
+          CATEGORY SELECTION (CRITICAL):
+          - ALWAYS select the DEEPEST/MOST SPECIFIC category from the provided category tree
+          - NEVER select parent categories like "Обувь", "Женская обувь", "Мужская обувь", "Детская обувь"
+          - ALWAYS choose the LOWEST level category (leaf categories with no children)
+          - Look for the most specific category that matches the product type, gender, and season
+          - Examples of CORRECT selections:
+            * Instead of "Обувь" → choose "Обувь - Мужская обувь - Зима - ботинки"
+            * Instead of "Женская обувь" → choose "Обувь - Женская обувь - Лето - сандалии"
+            * Instead of "Мужская обувь" → choose "Обувь - Мужская обувь - Осень - кроссовки"
+          - Consider the exact shoe type: сапоги, ботинки, туфли, кроссовки, сандалии, босоножки
+          - Consider season and gender for maximum accuracy
+          - CRITICAL: Return the EXACT "id" field from the category tree, not the name
+          - ONLY use "newCategory" field if NO suitable leaf category exists in the tree
+          
           Language Requirements (CRITICAL):
           - Use clear, marketing-friendly language
           
@@ -84,6 +98,20 @@ export const TEXT_ONLY_SYSTEM_PROMPT = `You are an expert at analyzing product i
             - SIZES ARE MANDATORY. ONLY output sizes if they are explicitly present in text and you are 100% sure they are shoe sizes. If no sizes are present, leave the "sizes" field EMPTY or omit it (DO NOT invent or infer sizes). Products without sizes will be skipped by the system.
             - When sizes are present, ALWAYS extract sizes with quantities: [{"size": "36", "count": 1}, {"size": "37", "count": 1}]
             - ALWAYS calculate packPairs from sizes (sum of all count values)
+            
+            CATEGORY SELECTION (CRITICAL):
+            - ALWAYS select the DEEPEST/MOST SPECIFIC category from the provided category tree
+            - NEVER select parent categories like "Обувь", "Женская обувь", "Мужская обувь", "Детская обувь"
+            - ALWAYS choose the LOWEST level category (leaf categories with no children)
+            - Look for the most specific category that matches the product type, gender, and season
+            - Examples of CORRECT selections:
+              * Instead of "Обувь" → choose "Обувь - Мужская обувь - Зима - ботинки"
+              * Instead of "Женская обувь" → choose "Обувь - Женская обувь - Лето - сандалии"
+              * Instead of "Мужская обувь" → choose "Обувь - Мужская обувь - Осень - кроссовки"
+            - Consider the exact shoe type: сапоги, ботинки, туфли, кроссовки, сандалии, босоножки
+            - Consider season and gender for maximum accuracy
+            - CRITICAL: Return the EXACT "id" field from the category tree, not the name
+            - ONLY use "newCategory" field if NO suitable leaf category exists in the tree
             
             Language Requirements (CRITICAL):
             - Use clear, marketing-friendly language

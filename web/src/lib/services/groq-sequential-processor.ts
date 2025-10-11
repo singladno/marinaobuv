@@ -3,6 +3,7 @@ import { prisma } from '../db-node';
 import { GroqGroupingService } from './groq-grouping-service';
 import { SimpleProductService } from './simple-product-service';
 import { AnalysisValidationService } from './analysis-validation-service';
+import { FixedColorMappingService } from './fixed-color-mapping-service';
 import { getCategoryTree } from '../catalog-categories';
 import { getGroqConfig } from '../groq-proxy-config';
 import { uploadImage, getObjectKey, getPublicUrl } from '../storage';
@@ -12,12 +13,14 @@ export class GroqSequentialProcessor {
   private groupingService: GroqGroupingService;
   private batchProductService: SimpleProductService;
   private validationService: AnalysisValidationService;
+  private colorMappingService: FixedColorMappingService;
 
   constructor() {
     this.groq = new Groq(getGroqConfig());
     this.groupingService = new GroqGroupingService();
     this.batchProductService = new SimpleProductService();
     this.validationService = new AnalysisValidationService();
+    this.colorMappingService = new FixedColorMappingService();
   }
 
   /**
@@ -114,8 +117,10 @@ export class GroqSequentialProcessor {
             );
           } else {
             console.log(
-              `❌ Product ${productResult.productId} validation failed, keeping inactive`
+              `❌ Product ${productResult.productId} validation failed, deleting invalid product`
             );
+            // Delete the invalid product and its associated data
+            await this.deleteInvalidProduct(productResult.productId);
           }
 
           processedProducts.push(productResult.productId);
@@ -165,6 +170,26 @@ export class GroqSequentialProcessor {
   /**
    * Validate product results after Groq processing
    */
+  private async deleteInvalidProduct(productId: string): Promise<void> {
+    try {
+      console.log(`🗑️ Deleting invalid product ${productId}...`);
+
+      // Delete associated images first
+      const deletedImages = await prisma.productImage.deleteMany({
+        where: { productId },
+      });
+      console.log(`✅ Deleted ${deletedImages.count} product images`);
+
+      // Delete the product
+      await prisma.product.delete({
+        where: { id: productId },
+      });
+      console.log(`✅ Deleted invalid product ${productId}`);
+    } catch (error) {
+      console.error(`❌ Error deleting invalid product ${productId}:`, error);
+    }
+  }
+
   private async validateProductResults(productId: string): Promise<boolean> {
     try {
       const product = await prisma.product.findUnique({
@@ -577,12 +602,16 @@ CRITICAL REQUIREMENTS:
 Category Detection (CRITICAL):
 - ALWAYS try to find a suitable category from the provided category tree FIRST
 - Choose the most SPECIFIC and DETAILED category from the provided category tree
-- ALWAYS select the LOWEST level category (most specific) - ONLY leaf categories (categories with no children)
-- NEVER select parent categories like "Женская обувь", "Мужская обувь", "Детская обувь"
+- ALWAYS select the DEEPEST/MOST SPECIFIC category (leaf categories with no children)
+- NEVER select parent categories like "Обувь", "Женская обувь", "Мужская обувь", "Детская обувь"
 - ALWAYS select the deepest/most specific category available
-- For example: instead of "Женская обувь" choose "Женские сапоги", "Женские туфли", etc.
+- Examples of CORRECT selections:
+  * Instead of "Обувь" → choose "Обувь - Мужская обувь - Зима - ботинки"
+  * Instead of "Женская обувь" → choose "Обувь - Женская обувь - Лето - сандалии"
+  * Instead of "Мужская обувь" → choose "Обувь - Мужская обувь - Осень - кроссовки"
 - Consider the exact shoe type: сапоги, ботинки, туфли, кроссовки, сандалии, босоножки
 - Consider season and style for maximum accuracy
+- CRITICAL: Return the EXACT "id" field from the category tree, not the name
 - ONLY use "newCategory" field if NO suitable leaf category exists in the tree
 - CRITICAL: Only return categories that have NO children (leaf categories only)
 
@@ -640,10 +669,16 @@ Return only valid JSON with the following structure:
         }
       }
 
-      // Update product with comprehensive analysis results
-      await this.batchProductService.updateProductWithImageAnalysis(
+      // Extract proper color mappings from analysis results
+      const colorMappings =
+        this.colorMappingService.extractColorMappingsFromAnalysis(
+          analysisResults
+        );
+
+      // Update product with proper color mapping
+      await this.colorMappingService.updateProductImagesWithColorMapping(
         productId,
-        analysisResults
+        colorMappings
       );
 
       console.log(

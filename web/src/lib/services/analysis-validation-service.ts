@@ -18,8 +18,9 @@ export class AnalysisValidationService {
       return false;
     }
 
+    // Check if price is missing - this should skip the group, not fail validation
     if (result.price === undefined || result.price === null) {
-      console.log('❌ Validation failed: Missing price');
+      console.log('⚠️ Skipping group: No price returned from LLM analysis');
       return false;
     }
 

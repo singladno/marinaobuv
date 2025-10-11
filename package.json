@@ -20,6 +20,7 @@
     "deploy:local": "./scripts/local-deploy.sh",
     "setup:local": "./scripts/setup-local-env.sh",
     "parse:groq": "cd web && tsx src/scripts/groq-sequential-cron.ts",
+    "test:color-fix": "cd web && tsx src/scripts/test-color-fix.ts",
     "health": "curl -s http://localhost:3000/api/health || echo 'Application not responding'",
     "prisma": "cd web && export $(cat .env.local | grep -v '^#' | xargs) && npx prisma studio",
     "prisma:generate": "cd web && npx prisma generate",

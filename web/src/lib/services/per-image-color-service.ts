@@ -148,22 +148,32 @@ export class PerImageColorService {
       );
 
       const systemPrompt = `You are a shoe color analysis expert for a shoe catalog.
-Your ONLY task is to identify the primary color of the SHOE itself in each image, ignoring everything else.
+Your ONLY task is to identify the MAIN/PRIMARY color of the shoe's main material/canvas, ignoring decorative elements.
 
 CRITICAL RULES:
-- Focus ONLY on the shoe/footwear in each image
-- Ignore background colors, lighting, shadows, reflections, or any other objects
-- Ignore the color of the surface the shoe is on (floor, table, etc.)
-- Ignore any text, labels, or packaging in the image
-- Analyze the actual material/leather/fabric color of the shoe
+- Focus ONLY on the shoe's main body material (upper, canvas, leather, fabric)
+- IGNORE decorative elements like logos, stitching, laces, soles, heels, buckles, zippers
+- IGNORE background colors, lighting, shadows, reflections, or any other objects
+- IGNORE the color of the surface the shoe is on (floor, table, etc.)
+- IGNORE any text, labels, or packaging in the image
+- IGNORE small colored details, patterns, or accents
+- Look for the dominant color of the shoe's main material/upper
 - If there are multiple shoes, analyze the most prominent one
-- If the shoe has multiple colors, identify the dominant/main color
-- If the shoe color is unclear or not visible, return null for that image
+- If the shoe has multiple colors, identify the MAIN material color (not decorative accents)
+- If the main shoe color is unclear or not visible, return null for that image
+
+EXAMPLES:
+- Black shoe with white laces and white sole → "черный" (main material)
+- Red sneaker with white logo and white sole → "красный" (main canvas)
+- Brown boot with silver buckles → "коричневый" (main leather)
+- Blue shoe with yellow stitching → "синий" (main material)
 
 Use Russian color names: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый", "желтый", "оранжевый".
 
 Return STRICT JSON with this shape:
   { "images": [ { "color": "черный" | null }, ... ] }
+- CRITICAL: Return colors in the EXACT SAME ORDER as the input images
+- The first color in the array corresponds to the first image, second to second, etc.
 - Do NOT include explanations or any extra fields.`;
 
       // Configurable batching: send images one-by-one by default
@@ -258,16 +268,37 @@ Return STRICT JSON with this shape:
               images?: Array<{ color?: string | null }>;
             };
 
+            // Validate that we got the right number of results
+            if (!result.images || result.images.length !== indices.length) {
+              console.error(
+                `   ❌ Color analysis returned ${result.images?.length || 0} results but expected ${indices.length}`
+              );
+              console.error(`   📊 Expected indices: [${indices.join(', ')}]`);
+              console.error(`   📊 Received results:`, result.images);
+              throw new Error(
+                `Color analysis returned ${result.images?.length || 0} results but expected ${indices.length}`
+              );
+            }
+
             // Apply results to original positions
+            console.log(
+              `   🔍 Mapping ${result.images.length} color results to ${indices.length} images`
+            );
             indices.forEach((originalIdx, i) => {
               const imageResult = result.images?.[i];
+              const color =
+                imageResult?.color && imageResult.color.trim()
+                  ? imageResult.color.trim()
+                  : null;
+
               colorResults[originalIdx] = {
                 url: imageUrls[originalIdx],
-                color:
-                  imageResult?.color && imageResult.color.trim()
-                    ? imageResult.color.trim()
-                    : null,
+                color,
               };
+
+              console.log(
+                `   🎨 Image ${originalIdx + 1}: ${imageUrls[originalIdx].substring(0, 50)}... → ${color || 'null'}`
+              );
             });
 
             return; // batch done

@@ -31,6 +31,8 @@
     "parse": "tsx src/scripts/fetch-messages-green-api-advanced.ts",
     "parse:full": "tsx src/scripts/fetch-messages-green-api-advanced.ts && tsx src/scripts/process-draft-products-unified.ts",
     "parse:groq": "tsx src/scripts/groq-sequential-cron.ts",
+    "test:colors": "tsx src/scripts/test-color-mapping.ts",
+    "test:color-fix": "tsx src/scripts/test-color-fix.ts",
     "cron:hourly": "tsx src/scripts/hourly-cron.ts",
     "cron:start": "tsx src/scripts/local-cron-runner.ts",
     "messages:clean": "tsx src/scripts/clean-messages.ts",

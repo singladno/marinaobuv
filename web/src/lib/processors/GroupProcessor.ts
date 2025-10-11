@@ -82,8 +82,10 @@ export class GroupProcessor {
       );
 
       if (!analysisResult) {
-        console.log(`   ❌ Failed to analyze group ${group.groupId}`);
-        // Treat as invalidated (no valid product info)
+        console.log(
+          `   ⚠️ Skipping group ${group.groupId}: No price returned from LLM analysis`
+        );
+        // Treat as skipped (no price returned)
         return { ok: true, finalizedMessageIds: group.messageIds };
       }
 
