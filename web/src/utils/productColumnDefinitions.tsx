@@ -109,6 +109,7 @@ export function createProductColumnDefinitions({
         <ProductCategoryCell
           product={row.original}
           onUpdateProduct={onUpdateProduct}
+          categories={categories}
         />
       ),
     }),

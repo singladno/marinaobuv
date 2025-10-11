@@ -30,6 +30,7 @@
     "webhook:setup": "tsx src/scripts/setup-green-api-webhook.ts",
     "parse": "tsx src/scripts/fetch-messages-green-api-advanced.ts",
     "parse:full": "tsx src/scripts/fetch-messages-green-api-advanced.ts && tsx src/scripts/process-draft-products-unified.ts",
+    "parse:groq": "tsx src/scripts/groq-sequential-cron.ts",
     "cron:hourly": "tsx src/scripts/hourly-cron.ts",
     "cron:start": "tsx src/scripts/local-cron-runner.ts",
     "messages:clean": "tsx src/scripts/clean-messages.ts",
@@ -53,9 +54,9 @@
     "logs": "pm2 logs marinaobuv"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.676.0",
+    "@aws-sdk/client-s3": "^3.908.0",
     "@aws-sdk/lib-storage": "^3.888.0",
-    "@aws-sdk/s3-request-presigner": "^3.888.0",
+    "@aws-sdk/s3-request-presigner": "^3.908.0",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-popover": "^1.1.15",

@@ -3,6 +3,7 @@
 import React from 'react';
 
 import type { Product, ProductUpdateData } from '@/types/product';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 import { ProductsTableContent } from './ProductsTableContent';
 import { ProductsTableFilters } from './ProductsTableFilters';
@@ -27,6 +28,7 @@ interface ProductsTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onReload: () => void;
+  categories: CategoryNode[];
 }
 
 export function ProductsTable({
@@ -40,6 +42,7 @@ export function ProductsTable({
   onPageChange,
   onPageSizeChange,
   onReload,
+  categories,
 }: ProductsTableProps) {
   return (
     <div className="flex h-full flex-col">
@@ -61,6 +64,7 @@ export function ProductsTable({
               loading={loading}
               error={error}
               onUpdateProduct={onUpdateProduct}
+              categories={categories}
             />
           </table>
         </div>

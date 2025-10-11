@@ -1,27 +1,33 @@
 import * as React from 'react';
-import { useCategories } from '@/hooks/useCategories';
 import type { Product, ProductUpdateData } from '@/types/product';
-
-import { CategorySelector } from '@/components/ui/CategorySelector';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
+
+import CategoryControl from '@/components/product/filters/CategoryControl';
+import { flattenCategoryTree } from '@/utils/categoryUtils';
 
 interface ProductCategoryCellProps {
   product: Product;
   onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
+  categories: CategoryNode[];
 }
 
 export function ProductCategoryCell({
   product,
   onUpdateProduct,
+  categories,
 }: ProductCategoryCellProps) {
-  const { categories } = useCategories();
   const [isSaving, setIsSaving] = React.useState(false);
 
-  const handleCategoryChange = async (categoryId: string | null) => {
+  const categoryOptions = React.useMemo(() => {
+    const flat = flattenCategoryTree(categories);
+    return flat.map(c => ({ id: c.id, label: c.label, level: c.level }));
+  }, [categories]);
+
+  const handleCategoryChange = async (categoryIds: string[]) => {
     setIsSaving(true);
     try {
       await onUpdateProduct(product.id, {
-        categoryId: categoryId || undefined,
+        categoryId: categoryIds.length > 0 ? categoryIds[0] : undefined,
       });
     } finally {
       setIsSaving(false);
@@ -30,11 +36,12 @@ export function ProductCategoryCell({
 
   return (
     <div className="flex items-center space-x-2">
-      <CategorySelector
-        value={product.categoryId}
+      <CategoryControl
+        value={product.categoryId ? [product.categoryId] : []}
         onChange={handleCategoryChange}
-        categories={categories as CategoryNode[]}
-        placeholder="Выберите категорию"
+        options={categoryOptions}
+        tree={categories}
+        label=""
         disabled={isSaving}
       />
       {isSaving && (

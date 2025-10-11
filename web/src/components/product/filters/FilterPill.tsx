@@ -17,6 +17,8 @@ type Props = {
   contentClassName?: string;
   isActive?: boolean;
   onClear?: () => void;
+  disabled?: boolean;
+  displayName?: string; // For showing selected category name
 };
 
 export default function FilterPill({
@@ -26,6 +28,8 @@ export default function FilterPill({
   contentClassName,
   isActive = false,
   onClear,
+  disabled = false,
+  displayName,
 }: Props) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<NodeJS.Timeout | null>(null);
@@ -44,16 +48,33 @@ export default function FilterPill({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={`group h-9 rounded-xl shadow-sm hover:bg-gray-100 ${
+          className={`group h-9 min-w-32 rounded-xl shadow-sm hover:bg-gray-100 ${
             isActive
               ? 'border-purple-300 bg-purple-100 text-purple-700'
               : 'bg-gray-50 text-gray-700'
-          }`}
-          onMouseEnter={openNow}
-          onMouseLeave={scheduleClose}
+          } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+          onMouseEnter={disabled ? undefined : openNow}
+          onMouseLeave={disabled ? undefined : scheduleClose}
+          disabled={disabled}
         >
           <span className="flex items-center gap-2">
-            {badgeCount && badgeCount > 0 ? (
+            {displayName ? (
+              <>
+                <span className="truncate">{displayName}</span>
+                {onClear && (
+                  <span
+                    onClick={e => {
+                      e.stopPropagation();
+                      onClear();
+                    }}
+                    className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-sm hover:bg-purple-200/60"
+                    aria-label="Очистить"
+                  >
+                    ×
+                  </span>
+                )}
+              </>
+            ) : badgeCount && badgeCount > 0 ? (
               <>
                 <span>
                   {label}: {badgeCount}

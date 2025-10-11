@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
     const { productId, contentType, ext, isPrimary, sort } = body.data;
     const key = getObjectKey({ productId, ext });
-    const uploadUrl = await presignPut(key);
+    const uploadUrl = await presignPut(key, contentType);
     const publicUrl = getPublicUrl(key);
 
     return NextResponse.json({

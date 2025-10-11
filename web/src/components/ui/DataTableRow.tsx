@@ -31,21 +31,35 @@ export function DataTableRow<TData>({ row }: DataTableRowProps<TData>) {
       data-product-id={productId}
       className={`border-b border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 ${customRowClass}`}
     >
-      {row.getVisibleCells().map(cell => {
-        const cellMeta = cell.column.columnDef.meta as ColumnMeta;
-        const isFrozenLeft = cellMeta?.frozen === 'left';
-        const isFrozenRight = cellMeta?.frozen === 'right';
+      {row.getVisibleCells().map((cell, index) => {
+        const isFrozenLeft = index === 0; // First column only (select)
+        const isFrozenRight = cell.column.id === 'actions'; // Last column (actions)
 
         return (
           <td
             key={cell.id}
-            className={`px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${
+            className={`whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${
+              cell.column.id === 'images' ? 'overflow-visible' : ''
+            } ${
               isFrozenLeft
-                ? 'sticky left-0 z-10 border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                ? 'sticky left-0 z-10 border-r border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900'
                 : isFrozenRight
-                  ? 'sticky right-0 z-10 border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                  ? 'sticky right-0 z-10 border-l border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900'
                   : ''
             }`}
+            // eslint-disable-next-line react/forbid-dom-props
+            style={{
+              ...(isFrozenLeft
+                ? { left: 0 } // Select column: 0px
+                : isFrozenRight
+                  ? { right: 0 }
+                  : {}),
+              ...((cell.column.columnDef.meta as any)?.width && {
+                width: (cell.column.columnDef.meta as any).width,
+                minWidth: (cell.column.columnDef.meta as any).width,
+                maxWidth: (cell.column.columnDef.meta as any).width,
+              }),
+            }}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </td>

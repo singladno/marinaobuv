@@ -19,6 +19,7 @@
     "deploy": "./deploy-pm2.sh",
     "deploy:local": "./scripts/local-deploy.sh",
     "setup:local": "./scripts/setup-local-env.sh",
+    "parse:groq": "cd web && tsx src/scripts/groq-sequential-cron.ts",
     "health": "curl -s http://localhost:3000/api/health || echo 'Application not responding'",
     "prisma": "cd web && export $(cat .env.local | grep -v '^#' | xargs) && npx prisma studio",
     "prisma:generate": "cd web && npx prisma generate",
@@ -74,7 +75,8 @@
     "server:fix-text-messages": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/fix-empty-text-messages.ts'",
     "server:fix-extended-text": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/fix-extended-text-messages.ts'",
     "server:fix-text-message-data": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/fix-text-message-data.ts'",
-    "server:system:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== System Status ===\" && echo \"CPU: $(top -bn1 | grep \"Cpu(s)\" | awk \"{print $2}\" | awk -F\"%\" \"{print $1}\")\" && echo \"Memory: $(free -h | awk \"/^Mem:/ {print $3 \"/\" $2}\")\" && echo \"Disk: $(df -h / | awk \"NR==2 {print $3 \"/\" $2 \\\" (\\\" $5 \\\")\\\"}\")\"'"
+    "server:system:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== System Status ===\" && echo \"CPU: $(top -bn1 | grep \"Cpu(s)\" | awk \"{print $2}\" | awk -F\"%\" \"{print $1}\")\" && echo \"Memory: $(free -h | awk \"/^Mem:/ {print $3 \"/\" $2}\")\" && echo \"Disk: $(df -h / | awk \"NR==2 {print $3 \"/\" $2 \\\" (\\\" $5 \\\")\\\"}\")\"'",
+    "messages:reset": "cd web && npx tsx src/scripts/mark-messages-unprocessed.ts"
   },
   "keywords": [
     "nextjs",

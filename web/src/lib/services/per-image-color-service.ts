@@ -147,14 +147,22 @@ export class PerImageColorService {
         `   ✅ Successfully downloaded ${successfulImages.length}/${imageUrls.length} images`
       );
 
-      const systemPrompt = `You are an image color detection assistant for a shoe catalog.
-Given a list of images, your ONLY task is: for EACH image, return the color of the shoe shown in that image.
+      const systemPrompt = `You are a shoe color analysis expert for a shoe catalog.
+Your ONLY task is to identify the primary color of the SHOE itself in each image, ignoring everything else.
 
-Rules:
-- Use short Russian color names: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый".
-- If the color is unclear, return null for that image's color.
-- Maintain the exact input order of images.
-- Return STRICT JSON with this shape:
+CRITICAL RULES:
+- Focus ONLY on the shoe/footwear in each image
+- Ignore background colors, lighting, shadows, reflections, or any other objects
+- Ignore the color of the surface the shoe is on (floor, table, etc.)
+- Ignore any text, labels, or packaging in the image
+- Analyze the actual material/leather/fabric color of the shoe
+- If there are multiple shoes, analyze the most prominent one
+- If the shoe has multiple colors, identify the dominant/main color
+- If the shoe color is unclear or not visible, return null for that image
+
+Use Russian color names: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый", "желтый", "оранжевый".
+
+Return STRICT JSON with this shape:
   { "images": [ { "color": "черный" | null }, ... ] }
 - Do NOT include explanations or any extra fields.`;
 

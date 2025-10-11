@@ -18,9 +18,19 @@ export class AnalysisValidationService {
       return false;
     }
 
-    if (!result.price || result.price <= 0) {
-      console.log('❌ Validation failed: Missing or invalid price');
+    if (result.price === undefined || result.price === null) {
+      console.log('❌ Validation failed: Missing price');
       return false;
+    }
+
+    if (result.price < 0) {
+      console.log('❌ Validation failed: Negative price not allowed');
+      return false;
+    }
+
+    // Allow price 0 for now, but log a warning
+    if (result.price === 0) {
+      console.log('⚠️ Warning: Price is 0, this might need manual review');
     }
 
     return true;

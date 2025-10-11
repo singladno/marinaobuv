@@ -1,44 +1,42 @@
-import { useState } from 'react';
-import { MessageSquare } from 'lucide-react';
+'use client';
 
-import { ProductSourceModal } from '@/components/product/ProductSourceModal';
+import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { SourceMessagesModal } from '@/components/features/SourceMessagesModal';
+import type { Product } from '@/types/product';
 
 interface ProductSourceCellProps {
-  sourceMessageIds: string[] | null;
-  productId: string;
-  productName: string;
+  product: Product;
 }
 
-export function ProductSourceCell({
-  sourceMessageIds,
-  productId,
-  productName,
-}: ProductSourceCellProps) {
+export function ProductSourceCell({ product }: ProductSourceCellProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  if (!sourceMessageIds || sourceMessageIds.length === 0) {
-    return <div className="text-sm text-gray-500 dark:text-gray-400">—</div>;
-  }
+  // Check if product has source message IDs
+  const hasSourceMessages =
+    product.sourceMessageIds &&
+    Array.isArray(product.sourceMessageIds) &&
+    product.sourceMessageIds.length > 0;
 
-  const handleViewSource = () => {
-    setIsModalOpen(true);
-  };
+  if (!hasSourceMessages) {
+    return <div className="text-sm text-gray-400">Нет данных</div>;
+  }
 
   return (
     <>
-      <button
-        onClick={handleViewSource}
-        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-        title={`Просмотреть ${sourceMessageIds.length} источник${sourceMessageIds.length === 1 ? '' : sourceMessageIds.length < 5 ? 'а' : 'ов'}`}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsModalOpen(true)}
+        className="text-blue-600 hover:text-blue-800"
       >
-        <MessageSquare className="h-4 w-4" />
-      </button>
+        Показать ({product.sourceMessageIds?.length || 0})
+      </Button>
 
-      <ProductSourceModal
+      <SourceMessagesModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        productId={productId}
-        productName={productName}
+        product={product}
       />
     </>
   );

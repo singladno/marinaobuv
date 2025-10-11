@@ -3,6 +3,7 @@
 import React from 'react';
 
 import type { Product, ProductUpdateData } from '@/types/product';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 import { ProductCategoryCell } from './ProductCategoryCell';
 import { ProductImageCell } from './ProductImageCell';
@@ -13,11 +14,13 @@ import { ProductStatusCell } from './ProductStatusCell';
 interface ProductTableRowProps {
   product: Product;
   onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
+  categories: CategoryNode[];
 }
 
 export function ProductTableRow({
   product,
   onUpdateProduct,
+  categories,
 }: ProductTableRowProps) {
   const formatDate = (date: Date | string) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -40,6 +43,7 @@ export function ProductTableRow({
         <ProductCategoryCell
           product={product}
           onUpdateProduct={onUpdateProduct}
+          categories={categories}
         />
       </td>
       <td className="whitespace-nowrap px-6 py-4">

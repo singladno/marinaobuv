@@ -1,5 +1,7 @@
 import { prisma } from '../lib/db-node';
 import { GroqSequentialProcessor } from '../lib/services/groq-sequential-processor';
+import { fetchExtendedBatch } from '../lib/utils/batch-extender';
+import { env } from '../lib/env';
 
 /**
  * Groq Sequential Processing Cron Job
@@ -9,29 +11,28 @@ async function main() {
   console.log('🚀 Starting Groq Sequential Processing Cron Job...');
 
   try {
-    // Get unprocessed messages
-    const unprocessedMessages = await prisma.whatsAppMessage.findMany({
-      where: {
-        processed: false,
-        type: { in: ['textMessage', 'imageMessage', 'extendedTextMessage'] },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: parseInt(process.env.PROCESSING_BATCH_SIZE || '50'), // Process messages in batches
-    });
+    // Get extended batch of unprocessed messages (includes consecutive messages from same user)
+    const batchSize = env.PROCESSING_BATCH_SIZE;
+    const extendedBatch = await fetchExtendedBatch(
+      batchSize,
+      env.TARGET_GROUP_ID
+    );
 
-    if (unprocessedMessages.length === 0) {
+    if (extendedBatch.totalCount === 0) {
       console.log('✅ No unprocessed messages found');
       return;
     }
 
-    console.log(`📊 Found ${unprocessedMessages.length} unprocessed messages`);
+    console.log(
+      `📊 Found ${extendedBatch.totalCount} unprocessed messages ` +
+        `(original: ${batchSize}, extended: +${extendedBatch.extendedCount})`
+    );
 
     // Initialize processor
     const processor = new GroqSequentialProcessor();
 
-    // Process messages in batches
-    const batchSize = parseInt(process.env.PROCESSING_BATCH_SIZE || '20'); // Process messages in batches
-    const messageIds = unprocessedMessages.map(m => m.id);
+    // Process messages in batches (use original batch size for processing, not extended)
+    const messageIds = extendedBatch.messageIds;
 
     for (let i = 0; i < messageIds.length; i += batchSize) {
       const batch = messageIds.slice(i, i + batchSize);
@@ -66,7 +67,7 @@ async function main() {
 }
 
 // Run the script
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   main()
     .then(() => {
       console.log('✅ Groq Sequential Processing finished');

@@ -7,9 +7,14 @@
  * For now, we'll use the original URL but this can be enhanced with image resizing
  */
 export function getThumbnailUrl(
-  originalUrl: string,
+  originalUrl: string
   /* size: number = 150 */
 ): string {
+  // Fix double https:// issue
+  if (originalUrl && originalUrl.startsWith('https://https://')) {
+    return originalUrl.replace('https://https://', 'https://');
+  }
+
   // For WA parser images, we'll use the original URL for now
   // TODO: Implement image resizing service if needed
   return originalUrl;
@@ -20,6 +25,11 @@ export function getThumbnailUrl(
  * For WA parser images, we can use the original URL
  */
 export function getFullSizeUrl(originalUrl: string): string {
+  // Fix double https:// issue
+  if (originalUrl && originalUrl.startsWith('https://https://')) {
+    return originalUrl.replace('https://https://', 'https://');
+  }
+
   return originalUrl;
 }
 

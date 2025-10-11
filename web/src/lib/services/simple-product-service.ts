@@ -11,8 +11,6 @@ export interface CreateInactiveProductParams {
 
 export interface BatchProductResult {
   productId: string;
-  analysisBatchId: string;
-  colorBatchId: string;
 }
 
 export class SimpleProductService {
@@ -30,10 +28,6 @@ export class SimpleProductService {
     productContext,
     confidence,
   }: CreateInactiveProductParams): Promise<BatchProductResult> {
-    // Generate unique batch IDs
-    const analysisBatchId = `analysis_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const colorBatchId = `color_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-
     // Get the first message for basic info
     const firstMessage = await prisma.whatsAppMessage.findFirst({
       where: { id: { in: messageIds } },
@@ -44,7 +38,7 @@ export class SimpleProductService {
       throw new Error('No messages found for product creation');
     }
 
-    // Create inactive product with batch IDs
+    // Create inactive product
     const product = await prisma.product.create({
       data: {
         name: 'Processing...', // Temporary name, will be updated when analysis completes
@@ -56,8 +50,6 @@ export class SimpleProductService {
         description: 'Product is being processed...',
         isActive: false, // Inactive until processing completes
         sourceMessageIds: messageIds,
-        analysisBatchId,
-        colorBatchId,
         batchProcessingStatus: 'pending',
       },
     });
@@ -72,32 +64,26 @@ export class SimpleProductService {
       },
     });
 
-    console.log(`✅ Created inactive product ${product.id} with batch IDs:`);
-    console.log(`   Analysis: ${analysisBatchId}`);
-    console.log(`   Colors: ${colorBatchId}`);
+    console.log(`✅ Created inactive product ${product.id}`);
 
     return {
       productId: product.id,
-      analysisBatchId,
-      colorBatchId,
     };
   }
 
   /**
-   * Update product when analysis batch completes
+   * Update product when analysis completes
    */
   async updateProductWithAnalysis(
-    analysisBatchId: string,
+    productId: string,
     analysisResult: any
   ): Promise<void> {
     const product = await prisma.product.findUnique({
-      where: { analysisBatchId },
+      where: { id: productId },
     });
 
     if (!product) {
-      console.error(
-        `❌ Product not found for analysis batch ${analysisBatchId}`
-      );
+      console.error(`❌ Product not found: ${productId}`);
       return;
     }
 
@@ -113,7 +99,6 @@ export class SimpleProductService {
           batchProcessingStatus: 'failed',
           name: 'Invalid Product - Missing Required Data',
           description: 'Product failed validation - missing required fields',
-          colorBatchId: null, // Clear the color batch ID
         },
       });
 
@@ -142,22 +127,81 @@ export class SimpleProductService {
   }
 
   /**
-   * Update product when color batch completes
+   * Update product when color detection completes
    */
   async updateProductWithColors(
-    colorBatchId: string,
+    productId: string,
     colorResults: any[]
   ): Promise<void> {
     const product = await prisma.product.findUnique({
-      where: { colorBatchId },
+      where: { id: productId },
+      include: { images: true },
     });
 
     if (!product) {
-      console.error(`❌ Product not found for color batch ${colorBatchId}`);
+      console.error(`❌ Product not found: ${productId}`);
       return;
     }
 
-    // Update product with color results
+    console.log(
+      `🎨 Processing color results for product ${productId}:`,
+      colorResults
+    );
+
+    // Extract colors from color results - each result should have one color
+    const detectedColors: string[] = [];
+
+    console.log('🔍 Debugging color results structure:');
+    console.log('Color results:', JSON.stringify(colorResults, null, 2));
+
+    for (const result of colorResults) {
+      console.log('Processing result:', JSON.stringify(result, null, 2));
+
+      // Each result should have a single color in the images array
+      if (
+        result.images &&
+        Array.isArray(result.images) &&
+        result.images.length > 0
+      ) {
+        const firstImage = result.images[0];
+        if (firstImage.color) {
+          detectedColors.push(firstImage.color);
+          console.log(`  ✅ Extracted color: ${firstImage.color}`);
+        } else {
+          console.log(`  ⚠️  No color in first image:`, firstImage);
+        }
+      } else {
+        console.log(`  ❌ No valid images array in result:`, result);
+      }
+    }
+
+    console.log(`🎨 Detected colors:`, detectedColors);
+
+    // Update product images with detected colors in order
+    let updatedCount = 0;
+    const sortedImages = product.images.sort(
+      (a: any, b: any) => a.sort - b.sort
+    );
+
+    for (
+      let i = 0;
+      i < Math.min(sortedImages.length, detectedColors.length);
+      i++
+    ) {
+      const image = sortedImages[i];
+      const color = detectedColors[i];
+
+      await prisma.productImage.update({
+        where: { id: image.id },
+        data: { color: color },
+      });
+      updatedCount++;
+      console.log(
+        `  ✅ Updated image ${image.id} (sort: ${image.sort}) with color: ${color}`
+      );
+    }
+
+    // Update product batch processing status
     await prisma.product.update({
       where: { id: product.id },
       data: {
@@ -165,7 +209,133 @@ export class SimpleProductService {
       },
     });
 
-    console.log(`✅ Updated product ${product.id} with color results`);
+    console.log(
+      `✅ Updated product ${product.id} with color results: ${updatedCount} images updated`
+    );
+  }
+
+  /**
+   * Update product with comprehensive image analysis results
+   */
+  async updateProductWithImageAnalysis(
+    productId: string,
+    analysisResults: any[]
+  ): Promise<void> {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: { images: true },
+    });
+
+    if (!product) {
+      console.error(`❌ Product not found: ${productId}`);
+      return;
+    }
+
+    console.log(
+      `🎨 Processing image analysis results for product ${productId}:`,
+      analysisResults
+    );
+
+    // Extract data from analysis results
+    let productName = product.name;
+    let productDescription = product.description;
+    let productGender = product.gender;
+    let productSeason = product.season;
+    let productMaterial = product.material;
+    let productCategoryId = product.categoryId;
+    const detectedColors: string[] = [];
+
+    // Process each analysis result
+    for (const result of analysisResults) {
+      console.log(
+        'Processing analysis result:',
+        JSON.stringify(result, null, 2)
+      );
+
+      // Extract product information from the first result
+      if (result.name && !productName) {
+        productName = result.name;
+      }
+      if (result.description && !productDescription) {
+        productDescription = result.description;
+      }
+      if (result.gender && !productGender) {
+        productGender = result.gender;
+      }
+      if (result.season && !productSeason) {
+        productSeason = result.season;
+      }
+      if (result.material && !productMaterial) {
+        productMaterial = result.material;
+      }
+      if (result.categoryId && !productCategoryId) {
+        productCategoryId = result.categoryId;
+      }
+
+      // Extract colors
+      if (result.colors && Array.isArray(result.colors)) {
+        detectedColors.push(...result.colors);
+      }
+    }
+
+    console.log(`🎨 Extracted data:`, {
+      name: productName,
+      description: productDescription,
+      gender: productGender,
+      season: productSeason,
+      material: productMaterial,
+      categoryId: productCategoryId,
+      colors: detectedColors,
+    });
+
+    // Update product with extracted information
+    await prisma.product.update({
+      where: { id: product.id },
+      data: {
+        name: productName,
+        description: productDescription,
+        gender: productGender,
+        season: productSeason,
+        material: productMaterial,
+        categoryId: productCategoryId,
+      },
+    });
+
+    // Update product images with detected colors in order
+    let updatedCount = 0;
+    const sortedImages = product.images.sort(
+      (a: any, b: any) => a.sort - b.sort
+    );
+
+    for (
+      let i = 0;
+      i < Math.min(sortedImages.length, detectedColors.length);
+      i++
+    ) {
+      const image = sortedImages[i];
+      const color = detectedColors[i];
+
+      await prisma.productImage.update({
+        where: { id: image.id },
+        data: { color: color },
+      });
+      updatedCount++;
+      console.log(
+        `  ✅ Updated image ${image.id} (sort: ${image.sort}) with color: ${color}`
+      );
+    }
+
+    // Update product batch processing status
+    await prisma.product.update({
+      where: { id: product.id },
+      data: {
+        batchProcessingStatus: 'colors_complete',
+      },
+    });
+
+    console.log(
+      `✅ Updated product ${product.id} with image analysis: ${updatedCount} images updated`
+    );
   }
 
   /**

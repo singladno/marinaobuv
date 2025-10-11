@@ -3,6 +3,7 @@
 import React from 'react';
 
 import type { Product, ProductUpdateData } from '@/types/product';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
 
 import { ProductTableRow } from './ProductTableRow';
 
@@ -11,6 +12,7 @@ interface ProductsTableContentProps {
   loading: boolean;
   error: string | null;
   onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
+  categories: CategoryNode[];
 }
 
 export function ProductsTableContent({
@@ -18,6 +20,7 @@ export function ProductsTableContent({
   loading,
   error,
   onUpdateProduct,
+  categories,
 }: ProductsTableContentProps) {
   if (loading) {
     return (
@@ -79,6 +82,7 @@ export function ProductsTableContent({
           key={product.id}
           product={product}
           onUpdateProduct={onUpdateProduct}
+          categories={categories}
         />
       ))}
     </tbody>

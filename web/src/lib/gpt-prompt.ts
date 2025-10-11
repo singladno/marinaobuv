@@ -35,8 +35,12 @@ export function getSystemPrompt(/* categoryTreeJson?: string */): string {
  - DO NOT interpret provider place/address as sizes (e.g., "3/4/17" is a market place, NOT sizes)                                                               
  - DO NOT interpret phone numbers, addresses, or coordinates as sizes
  - Look for explicit size mentions like "размеры 36/37/38" or "36,37,38" or "36-38"                                                                             
- - Size patterns: "36/37/38/39/40/41" means 1 pair of each size (36:1, 37:1, 38:1, etc.)                                                                        
- - Size patterns: "36:2/37:1/38:3" means 2 pairs of 36, 1 pair of 37, 3 pairs of 38                                                                             
+- Size patterns: "36/37/38/39/40/41" means 1 pair of each size (36:1, 37:1, 38:1, etc.)
+- Size patterns: "36:2/37:1/38:3" means 2 pairs of 36, 1 pair of 37, 3 pairs of 38
+- NEW PATTERN: "🆕Раз:36/37/38:2/39:2/40/41" means:
+  * Create base sizes: 36, 37, 38, 39, 40, 41 (each with count=1)
+  * Add extra pairs for sizes 38 and 39 (each gets +1 count due to :2)
+  * Result: 36(1), 37(1), 38(2), 39(2), 40(1), 41(1) = 8 pairs total
  - ONE OF THE PATTERNS: "41-45 | 42-43-44-X2" means:
    * Create range 41-45 (inclusive) with count=1 for each
    * Add extra pairs for sizes 42, 43, 44 (each gets +1 count due to X2)

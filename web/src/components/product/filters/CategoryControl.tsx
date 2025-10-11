@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { Checkbox } from '@/components/ui/Checkbox';
 import { getIndentationClass } from '@/utils/categoryUtils';
@@ -15,6 +15,7 @@ type Props = {
   options: { id: string; label: string; level?: number }[]; // kept for flat list fallback
   tree?: CategoryNode[]; // preferred: pass full tree
   label?: string;
+  disabled?: boolean;
 };
 
 export default function CategoryControl({
@@ -23,9 +24,30 @@ export default function CategoryControl({
   options,
   tree,
   label = 'Категория',
+  disabled = false,
 }: Props) {
   const count = value.length;
   const [query, setQuery] = useState('');
+
+  // Find the selected category name for display
+  const selectedCategoryName = React.useMemo(() => {
+    if (value.length === 0) return null;
+    const selectedId = value[0]; // Get first selected category
+    const findCategoryName = (
+      categories: CategoryNode[],
+      id: string
+    ): string | null => {
+      for (const category of categories) {
+        if (category.id === id) return category.name;
+        if (category.children) {
+          const found = findCategoryName(category.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return findCategoryName(tree || [], selectedId);
+  }, [value, tree]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -47,7 +69,9 @@ export default function CategoryControl({
       badgeCount={count}
       isActive={count > 0}
       onClear={() => onChange([])}
-      contentClassName="w-80 p-0"
+      contentClassName="min-w-80 max-w-96 p-0"
+      disabled={disabled}
+      displayName={selectedCategoryName || undefined}
     >
       {/* Search */}
       <div className="p-3">

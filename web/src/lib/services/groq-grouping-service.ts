@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import { prisma } from '../db-node';
+import { getGroqConfig } from '../groq-proxy-config';
 
 export interface MessageGroup {
   groupId: string;
@@ -18,9 +19,7 @@ export class GroqGroupingService {
     if (!process.env.GROQ_API_KEY) {
       throw new Error('GROQ_API_KEY is required');
     }
-    this.groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    });
+    this.groq = new Groq(getGroqConfig());
   }
 
   /**
@@ -36,7 +35,7 @@ export class GroqGroupingService {
       const messagesText = this.prepareMessagesForGrouping(messages);
 
       const response = await this.groq.chat.completions.create({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.1-8b-instant',
         messages: [
           {
             role: 'system',

@@ -1,3 +1,9 @@
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { config } from 'dotenv';
+
+// Load environment variables
+config();
+
 // Yandex Cloud Object Storage implementation using S3-compatible API
 const requiredEnv = (key: string) => {
   const v = process.env[key];
@@ -5,30 +11,45 @@ const requiredEnv = (key: string) => {
   return v;
 };
 
-// For now, let's create a simple working solution
-// We'll implement a basic upload that works with your current setup
+// Initialize S3 client for Yandex Cloud
+const s3Client = new S3Client({
+  endpoint: process.env.S3_ENDPOINT || 'https://storage.yandexcloud.net',
+  region: process.env.S3_REGION || 'ru-central1',
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY!,
+    secretAccessKey: process.env.S3_SECRET_KEY!,
+  },
+});
+
+// Real S3 upload implementation for Yandex Cloud
 async function uploadToYandex(
   key: string,
   imageBuffer: Buffer,
   contentType: string
 ): Promise<boolean> {
   try {
-    const bucket = requiredEnv('YANDEX_BUCKET_NAME');
+    const bucket = requiredEnv('S3_BUCKET');
 
-    // For development, let's create a simple test that simulates successful upload
-    // In production, you would implement proper S3 signature generation
     console.log(
-      'Simulating upload to:',
+      '📤 Uploading to S3:',
       `https://storage.yandexcloud.net/${bucket}/${key}`
     );
     console.log('Image size:', imageBuffer.length, 'bytes');
     console.log('Content type:', contentType);
 
-    // For now, return true to simulate successful upload
-    // This allows us to test the CDN serving part
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: imageBuffer,
+      ContentType: contentType,
+      ACL: 'public-read', // Make the object publicly readable
+    });
+
+    await s3Client.send(command);
+    console.log('✅ Upload completed successfully');
     return true;
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('❌ Upload error:', error);
     return false;
   }
 }
@@ -41,22 +62,23 @@ export function getObjectKey(opts: { productId: string; ext: string }): string {
 }
 
 export function getPublicUrl(key: string): string {
-  const cdn = process.env.YANDEX_CDN_DOMAIN;
+  const cdn = process.env.CDN_BASE_URL;
   if (cdn && cdn.trim().length > 0) {
-    return `https://${cdn}/${key}`;
+    // CDN_BASE_URL already includes the full URL, just append the key
+    return `${cdn}/${key}`;
   }
-  const bucket = requiredEnv('YANDEX_BUCKET_NAME');
+  const bucket = requiredEnv('S3_BUCKET');
   return `https://storage.yandexcloud.net/${bucket}/${key}`;
 }
 
 // For Yandex Cloud, we'll use direct upload instead of presigned URLs
 export async function presignPut(
   key: string,
-  /* contentType: string, */
-  /* expiresSec = 600 */
+  contentType: string,
+  expiresSec = 600
 ): Promise<string> {
   // Return a placeholder URL - the actual upload will be handled by the uploadImage function
-  const bucket = requiredEnv('YANDEX_BUCKET_NAME');
+  const bucket = requiredEnv('S3_BUCKET');
   return `https://storage.yandexcloud.net/${bucket}/${key}`;
 }
 

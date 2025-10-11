@@ -5,7 +5,7 @@ import type { DraftSize } from '@/types/admin';
 import { OptimisticSizesCell } from './OptimisticSizesCell';
 
 interface ProductSizesCellProps {
-  sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
+  sizes: Array<{ size: string; count: number }> | null; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}] or null
   onChange?: (
     next: Array<{ size: string; count: number }>
   ) => Promise<void> | void;
@@ -18,7 +18,7 @@ export function ProductSizesCell({
   disabled = false,
 }: ProductSizesCellProps) {
   // Convert to DraftSize[] format
-  const draftSizes: DraftSize[] = sizes.map((sizeObj, index) => ({
+  const draftSizes: DraftSize[] = (sizes || []).map((sizeObj, index) => ({
     id: `size-${index}`, // Generate temporary ID
     size: sizeObj.size,
     quantity: sizeObj.count,
