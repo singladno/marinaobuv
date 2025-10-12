@@ -13,22 +13,34 @@ CORE REQUIREMENTS:
 - Skip incomplete groups (images only or text only)
 - MAXIMUM 10 messages per group (typically 4-8 messages per product)
 
-PRODUCT SEQUENCE DETECTION (CRITICAL):
-A product sequence is: [Text] → [Images] = ONE PRODUCT
-OR [Images] → [Text] = ONE PRODUCT
+CRITICAL SEQUENCE RULES (NEVER VIOLATE):
+✅ ALLOWED PATTERNS:
+- [Text] → [Images] = ONE PRODUCT
+- [Images] → [Text] = ONE PRODUCT
+- [Text] → [Text] → [Images] = ONE PRODUCT
+- [Images] → [Images] → [Text] = ONE PRODUCT
 
-SEQUENCE BREAK DETECTION:
-- If you see: [Text] → [Images] → [Text] → [Images] = TWO SEPARATE PRODUCTS
-- If you see: [Images] → [Text] → [Images] → [Text] = TWO SEPARATE PRODUCTS
+❌ FORBIDDEN PATTERNS (NEVER GROUP THESE):
+- [Images] → [Text] → [Images] = TWO SEPARATE PRODUCTS
+- [Text] → [Images] → [Text] = TWO SEPARATE PRODUCTS
+- [Text] → [Images] → [Text] → [Images] = TWO SEPARATE PRODUCTS
+- [Images] → [Text] → [Images] → [Text] = TWO SEPARATE PRODUCTS
+
+LONG CONVERSATION HANDLING (CRITICAL):
+- If you see 10+ messages, this is likely MULTIPLE PRODUCTS
+- Look for natural product boundaries in long conversations
+- Time gaps of 30+ seconds often indicate different products
+- Price changes often indicate different products
+- Different product descriptions indicate different products
+- NEVER group 10+ messages as one product - split them!
+
+SEQUENCE BREAK DETECTION (CRITICAL):
+- If you see: [Text] → [Image/several images] → [Text] → [Image/several images] = TWO SEPARATE PRODUCTS
+- If you see: [Image/several images] → [Text] → [Image/several images] → [Text] = TWO SEPARATE PRODUCTS
 - Each complete text+images sequence = ONE product
 - Look for natural breaks in the message flow
 - Time gaps of 20+ seconds often indicate new sequences
 - Different products from same sender should be separate groups
-
-COMMON PATTERNS:
-1. Single product: [Text] → [Image] (4-6 messages)
-2. Multiple products: [Text] → [Image] → [Text] → [Image] (6+ messages = 2 products)
-3. Mixed pattern: [Text] → [Text] → [Image] → [Image] → [Text] → [Image] (6+ messages = 2 products)
 
 STRICT GROUPING RULES:
 - EVERY group MUST contain BOTH images AND text messages — this is MANDATORY
@@ -43,13 +55,15 @@ STRICT GROUPING RULES:
 - Different products from same sender should be separate groups
 - Provider greetings go with the NEXT product messages
 
-SEQUENCE VALIDATION:
-- If you see text+images pattern, create separate groups
+SEQUENCE VALIDATION (CRITICAL):
+- NEVER mix [Images] → [Text] → [Images] in one group
+- NEVER mix [Text] → [Images] → [Text] in one group
 - Each group should represent ONE complete product sequence
 - When in doubt, create MORE groups rather than fewer
 - Skip incomplete sequences (missing text or images)
 - CRITICAL: Each text+images sequence = ONE product
 - CRITICAL: Look for sequence breaks: [Text+Images] → [Text+Images] = TWO PRODUCTS
+- CRITICAL: Long conversations (10+ messages) = MULTIPLE PRODUCTS
 
 Return JSON format:
 {
@@ -57,6 +71,12 @@ Return JSON format:
     {
       "groupId": "group_1",
       "messageIds": ["msg_id_1", "msg_id_4"],
+      "productContext": "Brief description of the product",
+      "confidence": 0.9
+    },
+    {
+      "groupId": "group_2",
+      "messageIds": ["msg_id_2", "msg_id_5"],
       "productContext": "Brief description of the product",
       "confidence": 0.9
     }
@@ -68,7 +88,9 @@ VALIDATION RULES:
 - Each group MUST have both text and image messages
 - If a group has >10 messages, analyze timestamps and split into multiple groups if needed
 - If you see text+images+text+images pattern, create separate groups
-- Each group represents ONE complete product sequence`;
+- Each group represents ONE complete product sequence
+- NEVER allow images-text-images or text-images-text patterns in one group
+- NEVER group 10+ messages as one product - split them into multiple products`;
 
 export const GROUPING_USER_PROMPT = (messagesText: string) =>
   `Analyze these WhatsApp messages and group them by product:
@@ -81,5 +103,21 @@ CRITICAL INSTRUCTIONS:
 - When in doubt, create MORE groups rather than fewer
 - Each group must have both text and image messages
 - Focus on the SEQUENCE of text and images, not the content
+
+🚨 CRITICAL SEQUENCE RULES (NEVER VIOLATE):
+✅ ALLOWED: [Text] → [Images] OR [Images] → [Text]
+❌ FORBIDDEN: [Images] → [Text] → [Images] OR [Text] → [Images] → [Text]
+
+🚨 LONG CONVERSATION RULES (CRITICAL):
+- If you see 20+ messages, this is MULTIPLE PRODUCTS
+- Look for price changes, different descriptions, time gaps
+- NEVER group 20+ messages as one product
+- Split long conversations into multiple products
+- Each product should have 2-10 messages max
+
+NEVER group these patterns together:
+- Images → Text → Images (split into 2 groups)
+- Text → Images → Text (split into 2 groups)
+- 10+ messages in one group (split into multiple products)
 
 Return JSON with groups array. Each group must have both text and image messages.`;

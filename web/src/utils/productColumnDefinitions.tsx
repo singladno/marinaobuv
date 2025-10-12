@@ -6,6 +6,7 @@ import { ProductCategoryCell } from '@/components/features/ProductCategoryCell';
 import { ProductDateCell } from '@/components/features/ProductDateCell';
 import { ProductDescriptionCell } from '@/components/features/ProductDescriptionCell';
 import { ProductGenderCell } from '@/components/features/ProductGenderCell';
+import { ProductGptDebugCell } from '@/components/features/ProductGptDebugCell';
 import { ProductImagesCell } from '@/components/features/ProductImagesCell';
 import { ProductNameCell } from '@/components/features/ProductNameCell';
 import { ProductPriceCell } from '@/components/features/ProductPriceCell';
@@ -206,6 +207,14 @@ export function createProductColumnDefinitions({
     columnHelper.accessor('createdAt', {
       header: 'Создан',
       cell: ({ getValue }) => <ProductDateCell date={getValue()} />,
+    }),
+
+    // GPT Debug column
+    columnHelper.display({
+      id: 'gptDebug',
+      header: 'GPT Debug',
+      cell: ({ row }) => <ProductGptDebugCell product={row.original} />,
+      size: 150,
     }),
 
     // Actions column

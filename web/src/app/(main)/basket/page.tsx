@@ -69,6 +69,10 @@ export default function BasketPage() {
           isPlacingOrder={orderHandlers.isPlacingOrder}
           onRemove={basketState.remove}
           onUpdateQuantity={basketState.updateQuantity}
+          onToggleFavorite={basketState.handleToggleFavorite}
+          favorites={basketState.favorites}
+          updatingItems={basketState.updatingItems}
+          removingItems={basketState.removingItems}
         />
       )}
 

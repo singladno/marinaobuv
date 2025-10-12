@@ -4,8 +4,8 @@
 
 /* Custom scrollbar styles */
 .scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db #f3f4f6;
+  /* Webkit scrollbar styles for better cross-browser support */
+  /* These will be overridden by the @supports rule for modern browsers */
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -24,6 +24,14 @@
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* Modern scrollbar styles with feature detection */
+@supports (scrollbar-width: thin) {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+  }
 }
 
 /* LIGHT MODE */
@@ -480,4 +488,29 @@ a:hover {
 /* Progress bar with data attribute */
 .progress-bar[data-progress] {
   width: attr(data-progress);
+}
+
+/* Color switcher dynamic background */
+.color-swatch {
+  background-color: var(--color-bg);
+}
+
+/* Product gallery dynamic height */
+.product-gallery-main {
+  height: var(--gallery-height);
+}
+
+/* Table cell positioning */
+.table-cell-frozen-left {
+  left: 0;
+}
+
+.table-cell-frozen-right {
+  right: 0;
+}
+
+.table-cell-width {
+  width: var(--cell-width);
+  min-width: var(--cell-width);
+  max-width: var(--cell-width);
 }

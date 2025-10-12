@@ -22,6 +22,7 @@ export function CategoryTreeNode({
   level = 0,
   searchTerm = '',
 }: CategoryTreeNodeProps) {
+  const nodeRef = React.useRef<HTMLDivElement>(null);
   const hasChildren = !!node.children && node.children.length > 0;
   const normalizedQuery = searchTerm.trim().toLowerCase();
 
@@ -54,20 +55,58 @@ export function CategoryTreeNode({
     });
   }, [node, selectedIds]);
 
+  // Helper function to check if this node is in the path to any selected category
+  const isInPathToSelected = React.useMemo(() => {
+    if (!selectedIds.length || !node.children) return false;
+
+    // Recursive function to check if any selectedId is a descendant of this node
+    const hasSelectedDescendant = (children: CategoryNode[]): boolean => {
+      return children.some(child => {
+        if (selectedIds.includes(child.id)) return true;
+        if (child.children && child.children.length > 0) {
+          return hasSelectedDescendant(child.children);
+        }
+        return false;
+      });
+    };
+
+    return hasSelectedDescendant(node.children);
+  }, [node.children, selectedIds]);
+
   const [expanded, setExpanded] = React.useState<boolean>(
-    // By default, everything expanded; also expand when a descendant is selected
-    !normalizedQuery || subtreeMatches || hasSelectedInSubtree
+    // Only expand if in search mode, subtree matches, or in path to selected
+    !normalizedQuery || subtreeMatches || isInPathToSelected
   );
   const checked = selectedIds.includes(node.id);
+  const isParentOfSelected = isInPathToSelected && !checked;
 
   React.useEffect(() => {
     // Expand/collapse in response to search and selection changes
     if (normalizedQuery) {
-      setExpanded(subtreeMatches || hasSelectedInSubtree);
+      setExpanded(subtreeMatches || isInPathToSelected);
     } else {
-      setExpanded(true);
+      // Only expand if this node is in the path to a selected category
+      setExpanded(isInPathToSelected);
     }
-  }, [normalizedQuery, subtreeMatches, hasSelectedInSubtree]);
+  }, [normalizedQuery, subtreeMatches, isInPathToSelected]);
+
+  // Scroll to view when this item is selected
+  React.useEffect(() => {
+    if (checked && nodeRef.current) {
+      // Wait for expansion animations to complete before scrolling
+      const timeoutId = setTimeout(() => {
+        if (nodeRef.current) {
+          nodeRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        }
+      }, 350); // Wait for the 300ms expansion animation + buffer
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [checked]);
 
   if (!subtreeMatches) return null;
 
@@ -90,7 +129,7 @@ export function CategoryTreeNode({
   };
 
   return (
-    <div className="animate-in fade-in-0 duration-150">
+    <div ref={nodeRef} className="animate-in fade-in-0 duration-150">
       <div className={`flex items-center ${getIndentationClass(level)}`}>
         {hasChildren ? (
           <button
@@ -108,7 +147,13 @@ export function CategoryTreeNode({
         )}
 
         <label
-          className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-gray-50"
+          className={`flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-all duration-200 ${
+            checked
+              ? 'bg-purple-50'
+              : isParentOfSelected
+                ? 'bg-blue-50'
+                : 'hover:bg-gray-50'
+          }`}
           onClick={e => e.stopPropagation()}
         >
           <Checkbox
@@ -116,7 +161,13 @@ export function CategoryTreeNode({
             onCheckedChange={() => onToggle(node.id)}
           />
           <span
-            className={`text-sm ${checked ? 'font-medium text-purple-700' : 'text-gray-800'}`}
+            className={`text-sm transition-colors duration-200 ${
+              checked
+                ? 'font-semibold text-purple-800'
+                : isParentOfSelected
+                  ? 'font-medium text-blue-800'
+                  : 'font-medium text-gray-800'
+            }`}
           >
             {renderHighlighted(node.name)}
           </span>

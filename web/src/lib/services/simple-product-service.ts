@@ -3,11 +3,14 @@ import { generateArticleNumber } from './product-creation-mappers';
 import { createSlug } from './product-creation-mappers';
 import { AnalysisValidationService } from './analysis-validation-service';
 import { DeduplicationService } from './deduplication-service';
+import { normalizeColorToRussian } from '@/lib/utils/color-normalization';
 
 export interface CreateInactiveProductParams {
   messageIds: string[];
   productContext: string;
   confidence: number;
+  gptRequest?: string;
+  gptResponse?: string;
 }
 
 export interface BatchProductResult {
@@ -24,50 +27,14 @@ export class SimpleProductService {
   }
 
   /**
-   * Normalize color names to Russian lowercase
-   */
-  private normalizeColorToRussian(color: string | null): string | null {
-    if (!color) return null;
-
-    const colorLower = color.toLowerCase().trim();
-
-    // English to Russian mapping
-    const englishToRussian: Record<string, string> = {
-      black: 'черный',
-      white: 'белый',
-      red: 'красный',
-      blue: 'синий',
-      green: 'зелёный',
-      yellow: 'желтый',
-      orange: 'оранжевый',
-      brown: 'коричневый',
-      gray: 'серый',
-      grey: 'серый',
-      pink: 'розовый',
-      purple: 'фиолетовый',
-      violet: 'фиолетовый',
-      beige: 'бежевый',
-      burgundy: 'бордовый',
-      navy: 'синий',
-      tan: 'бежевый',
-    };
-
-    // Check if it's an English color
-    if (englishToRussian[colorLower]) {
-      return englishToRussian[colorLower];
-    }
-
-    // If it's already Russian, just ensure lowercase
-    return colorLower;
-  }
-
-  /**
    * Create an inactive product for a group of messages
    */
   async createInactiveProduct({
     messageIds,
     productContext,
     confidence,
+    gptRequest,
+    gptResponse,
   }: CreateInactiveProductParams): Promise<BatchProductResult> {
     // Get the first message for basic info
     const firstMessage = await prisma.whatsAppMessage.findFirst({
@@ -135,7 +102,9 @@ export class SimpleProductService {
         isActive: false, // Inactive until processing completes
         sourceMessageIds: messageIds,
         batchProcessingStatus: 'pending',
-      },
+        gptRequest: gptRequest || null,
+        gptResponse: gptResponse || null,
+      } as any,
     });
 
     // Mark messages as processed (they're now linked to this product)
@@ -160,7 +129,9 @@ export class SimpleProductService {
    */
   async updateProductWithAnalysis(
     productId: string,
-    analysisResult: any
+    analysisResult: any,
+    gptRequest?: string,
+    gptResponse?: string
   ): Promise<void> {
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -204,7 +175,10 @@ export class SimpleProductService {
         season: analysisResult.season || null,
         sizes: analysisResult.sizes || [],
         batchProcessingStatus: 'analysis_complete',
-      },
+        // Store GPT debug data
+        gptRequest: gptRequest || null,
+        gptResponse: gptResponse || null,
+      } as any,
     });
 
     console.log(`✅ Updated product ${product.id} with analysis results`);
@@ -249,9 +223,7 @@ export class SimpleProductService {
       ) {
         const firstImage = result.images[0];
         if (firstImage.color) {
-          const normalizedColor = this.normalizeColorToRussian(
-            firstImage.color
-          );
+          const normalizedColor = normalizeColorToRussian(firstImage.color);
           if (normalizedColor) {
             detectedColors.push(normalizedColor);
             console.log(

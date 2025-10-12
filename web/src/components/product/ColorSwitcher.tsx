@@ -103,6 +103,7 @@ export default function ColorSwitcher({
             <span
               aria-hidden
               className="block h-4 w-4 rounded-full"
+              // eslint-disable-next-line @next/next/no-css-tags
               style={{ backgroundColor: bg }}
             />
           </button>

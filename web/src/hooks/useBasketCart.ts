@@ -11,6 +11,7 @@ interface Product {
   images: Array<{ url: string; alt?: string }>;
   category: { name: string };
   article?: string;
+  sizes: Array<{ size: string; count: number }>;
 }
 
 interface CartItemWithProduct {
@@ -104,6 +105,7 @@ export function useBasketCart() {
                 images: product.images || [],
                 category: product.category || { name: 'Unknown' },
                 article: product.article,
+                sizes: product.sizes || [],
               },
             };
           })
@@ -123,6 +125,7 @@ export function useBasketCart() {
             images: [],
             category: { name: 'Unknown' },
             article: undefined,
+            sizes: [],
           },
         }));
         setProducts(productsWithData);

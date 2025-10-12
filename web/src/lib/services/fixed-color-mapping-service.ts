@@ -1,4 +1,5 @@
 import { prisma } from '../db-node';
+import { normalizeColorToRussian } from '@/lib/utils/color-normalization';
 
 export interface ImageColorMapping {
   imageUrl: string;
@@ -7,43 +8,6 @@ export interface ImageColorMapping {
 }
 
 export class FixedColorMappingService {
-  /**
-   * Normalize color names to Russian lowercase
-   */
-  private normalizeColorToRussian(color: string | null): string | null {
-    if (!color) return null;
-
-    const colorLower = color.toLowerCase().trim();
-
-    // English to Russian mapping
-    const englishToRussian: Record<string, string> = {
-      black: 'черный',
-      white: 'белый',
-      red: 'красный',
-      blue: 'синий',
-      green: 'зелёный',
-      yellow: 'желтый',
-      orange: 'оранжевый',
-      brown: 'коричневый',
-      gray: 'серый',
-      grey: 'серый',
-      pink: 'розовый',
-      purple: 'фиолетовый',
-      violet: 'фиолетовый',
-      beige: 'бежевый',
-      burgundy: 'бордовый',
-      navy: 'синий',
-      tan: 'бежевый',
-    };
-
-    // Check if it's an English color
-    if (englishToRussian[colorLower]) {
-      return englishToRussian[colorLower];
-    }
-
-    // If it's already Russian, just ensure lowercase
-    return colorLower;
-  }
   /**
    * Update product images with proper color mapping
    * Maps each image to its specific detected color
@@ -130,7 +94,7 @@ export class FixedColorMappingService {
 
       if (detectedColor) {
         // Normalize color to Russian lowercase
-        const normalizedColor = this.normalizeColorToRussian(detectedColor);
+        const normalizedColor = normalizeColorToRussian(detectedColor);
 
         await prisma.productImage.update({
           where: { id: image.id },
@@ -216,9 +180,9 @@ export class FixedColorMappingService {
     const mappings: ImageColorMapping[] = [];
 
     for (const result of analysisResults) {
-      if (result.imageUrl && result.colors && Array.isArray(result.colors)) {
-        // Take the first color as the primary color for this image
-        const primaryColor = result.colors[0] || null;
+      if (result.imageUrl && result.color) {
+        // Take the single color for this image
+        const primaryColor = result.color;
 
         mappings.push({
           imageUrl: result.imageUrl,

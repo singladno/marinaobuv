@@ -26,26 +26,88 @@ export function ImageModalMainImage({
   onImageToggle,
   isUpdating,
 }: ImageModalMainImageProps) {
+  const [imageError, setImageError] = React.useState(false);
+  const [imageLoading, setImageLoading] = React.useState(true);
   const isActive = currentImage.isActive === true;
   const imageOpacity = isActive ? 'opacity-100' : 'opacity-30';
+
+  // Reset error state when image changes
+  React.useEffect(() => {
+    setImageError(false);
+    setImageLoading(true);
+  }, [currentImage.url]);
+
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoading(false);
+    console.error('Failed to load full-size image:', currentImage.url);
+  };
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+    setImageError(false);
+  };
 
   return (
     <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-800">
       <div className="relative flex items-center">
-        <Image
-          src={currentImage.url}
-          alt={currentImage.alt || `Изображение ${currentIndex + 1}`}
-          width={800}
-          height={600}
-          className={`max-h-[70vh] max-w-full object-contain transition-opacity ${imageOpacity} ${
-            selectedImages.has(currentImage.id) ? 'ring-4 ring-blue-500' : ''
-          }`}
-          onError={e => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            console.error('Failed to load full-size image:', currentImage.url);
-          }}
-        />
+        {imageError ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="mb-4 rounded-full bg-red-100 p-4">
+              <svg
+                className="h-8 w-8 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              Изображение недоступно
+            </h3>
+            <p className="mb-4 text-sm text-gray-600">
+              Не удалось загрузить изображение. Возможно, файл был удален или
+              перемещен.
+            </p>
+            <button
+              onClick={() => {
+                setImageError(false);
+                setImageLoading(true);
+              }}
+              className="rounded-md bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+            >
+              Попробовать снова
+            </button>
+          </div>
+        ) : (
+          <>
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-500"></div>
+              </div>
+            )}
+            <Image
+              src={currentImage.url}
+              alt={currentImage.alt || `Изображение ${currentIndex + 1}`}
+              width={800}
+              height={600}
+              className={`max-h-[70vh] max-w-full object-contain transition-opacity ${imageOpacity} ${
+                selectedImages.has(currentImage.id)
+                  ? 'ring-4 ring-blue-500'
+                  : ''
+              } ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+              onError={handleImageError}
+              onLoad={handleImageLoad}
+              priority={currentIndex === 0}
+            />
+          </>
+        )}
         {/* Selection indicator */}
         {selectedImages.has(currentImage.id) && (
           <div className="absolute left-2 top-2 rounded-full bg-blue-500 p-1">

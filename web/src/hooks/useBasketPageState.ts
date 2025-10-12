@@ -2,13 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useBasketAuth } from './useBasketAuth';
 import { useCart } from '@/contexts/CartContext';
 import { useNotifications } from '@/components/ui/NotificationProvider';
-import { useBasketCart } from './useBasketCart';
+import { useOptimizedBasketCart } from './useOptimizedBasketCart';
 import { useBasketOrder } from './useBasketOrder';
 import { popularTransportCompanies, TransportCompany } from '@/lib/shipping';
 import { useUser } from '@/contexts/UserContext';
 
 export function useBasketPageState() {
-  const cart = useBasketCart();
+  const cart = useOptimizedBasketCart();
   const auth = useBasketAuth();
   const order = useBasketOrder();
   const { userId, setUserId, clear } = useCart();
@@ -156,5 +156,11 @@ export function useBasketPageState() {
     setLoginError,
     otpSent,
     setOtpSent,
+    // updating items state
+    updatingItems: cart.updatingItems,
+    removingItems: cart.removingItems,
+    // favorites state
+    favorites: cart.favorites,
+    handleToggleFavorite: cart.handleToggleFavorite,
   };
 }

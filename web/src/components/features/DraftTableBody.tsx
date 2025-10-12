@@ -40,19 +40,21 @@ export function DraftTableBody({
                           : isFrozenRight
                             ? 'sticky right-0 z-10 border-l border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900'
                             : ''
+                      } ${
+                        isFrozenLeft ? 'table-cell-frozen-left' : ''
+                      } ${isFrozenRight ? 'table-cell-frozen-right' : ''} ${
+                        (cell.column.columnDef.meta as any)?.width
+                          ? 'table-cell-width'
+                          : ''
                       }`}
-                      style={{
-                        ...(isFrozenLeft
-                          ? { left: 0 } // Select column: 0px
-                          : isFrozenRight
-                            ? { right: 0 }
-                            : {}),
-                        ...((cell.column.columnDef.meta as any)?.width && {
-                          width: (cell.column.columnDef.meta as any).width,
-                          minWidth: (cell.column.columnDef.meta as any).width,
-                          maxWidth: (cell.column.columnDef.meta as any).width,
-                        }),
-                      }}
+                      style={
+                        {
+                          ...((cell.column.columnDef.meta as any)?.width && {
+                            '--cell-width': (cell.column.columnDef.meta as any)
+                              .width,
+                          }),
+                        } as React.CSSProperties
+                      }
                     >
                       {flexRender(
                         cell.column.columnDef.cell,

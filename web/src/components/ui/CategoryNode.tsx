@@ -22,15 +22,61 @@ export function CategoryNode({
   searchTerm,
   level = 0,
 }: CategoryNodeProps) {
+  const nodeRef = React.useRef<HTMLDivElement>(null);
+
+  // Helper function to check if this category is in the path to the selected category
+  const isInPathToSelected = React.useMemo(() => {
+    if (!selectedId || !category.children) return false;
+
+    // Recursive function to check if selectedId is a descendant of this category
+    const hasSelectedDescendant = (children: CategoryNode[]): boolean => {
+      return children.some(child => {
+        if (child.id === selectedId) return true;
+        if (child.children && child.children.length > 0) {
+          return hasSelectedDescendant(child.children);
+        }
+        return false;
+      });
+    };
+
+    return hasSelectedDescendant(category.children);
+  }, [category.children, selectedId]);
+
   const [isExpanded, setIsExpanded] = React.useState(
-    searchTerm.length > 0 ||
-      (category.children &&
-        category.children.some(child => child.id === selectedId))
+    searchTerm.length > 0 || isInPathToSelected
   );
   const isSelected = category.id === selectedId;
+  const isParentOfSelected = isInPathToSelected;
   const hasChildren = category.children && category.children.length > 0;
   const isHighlighted =
     searchTerm.length > 0 && category.name.toLowerCase().includes(searchTerm);
+
+  // Update expansion state when selectedId changes
+  React.useEffect(() => {
+    if (searchTerm.length > 0) {
+      setIsExpanded(true);
+    } else {
+      setIsExpanded(isInPathToSelected);
+    }
+  }, [selectedId, searchTerm, isInPathToSelected]);
+
+  // Scroll to view when this item is selected
+  React.useEffect(() => {
+    if (isSelected && nodeRef.current) {
+      // Wait for expansion animations to complete before scrolling
+      const timeoutId = setTimeout(() => {
+        if (nodeRef.current) {
+          nodeRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        }
+      }, 350); // Wait for the 300ms expansion animation + buffer
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isSelected]);
 
   const handleToggle = () => {
     if (hasChildren) {
@@ -43,7 +89,10 @@ export function CategoryNode({
   };
 
   return (
-    <div className="animate-in fade-in-0 slide-in-from-left-1 duration-200">
+    <div
+      ref={nodeRef}
+      className="animate-in fade-in-0 slide-in-from-left-1 duration-200"
+    >
       <div className="flex items-center">
         {hasChildren ? (
           <button
@@ -67,6 +116,7 @@ export function CategoryNode({
         <CategoryItemContent
           category={category}
           isSelected={isSelected}
+          isParentOfSelected={isParentOfSelected}
           isHighlighted={isHighlighted}
           level={level}
           onSelect={handleSelect}

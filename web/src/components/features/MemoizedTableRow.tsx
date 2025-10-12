@@ -46,19 +46,18 @@ export const MemoizedTableRow = ({
                 : isFrozenRight
                   ? 'sticky right-0 z-10 border-l border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900'
                   : ''
-            } ${isProcessing ? 'pointer-events-none' : ''}`}
-            style={{
-              ...(isFrozenLeft
-                ? { left: 0 } // Select column: 0px
-                : isFrozenRight
-                  ? { right: 0 }
-                  : {}),
-              ...(cell.column.columnDef.meta?.width && {
-                width: cell.column.columnDef.meta.width,
-                minWidth: cell.column.columnDef.meta.width,
-                maxWidth: cell.column.columnDef.meta.width,
-              }),
-            }}
+            } ${isProcessing ? 'pointer-events-none' : ''} ${
+              isFrozenLeft ? 'table-cell-frozen-left' : ''
+            } ${isFrozenRight ? 'table-cell-frozen-right' : ''} ${
+              cell.column.columnDef.meta?.width ? 'table-cell-width' : ''
+            }`}
+            style={
+              {
+                ...(cell.column.columnDef.meta?.width && {
+                  '--cell-width': cell.column.columnDef.meta.width,
+                }),
+              } as React.CSSProperties
+            }
           >
             {isProcessing && isFrozenLeft ? (
               // Show AI loader in checkbox column when processing

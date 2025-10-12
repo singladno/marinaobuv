@@ -68,6 +68,7 @@ export function useCatalogPage() {
   };
 
   const handleGridColsChange = (cols: 4 | 5) => {
+    console.log('handleGridColsChange called with:', cols);
     setGridCols(cols);
   };
 

@@ -48,7 +48,9 @@ export class GroqSequentialProcessor {
     try {
       // Step 1: Group messages using Groq
       console.log('📊 Step 1: Grouping messages...');
-      const groups = await this.groupMessagesWithGroq(messageIds);
+      const groupingResult = await this.groupMessagesWithGroqDebug(messageIds);
+      const groups = groupingResult.groups;
+      const debugInfo = groupingResult.debugInfo;
 
       if (groups.length === 0) {
         console.log('❌ No valid message groups found');
@@ -88,6 +90,8 @@ export class GroqSequentialProcessor {
               messageIds: group.messageIds,
               productContext: group.productContext,
               confidence: group.confidence,
+              gptRequest: debugInfo?.request || null,
+              gptResponse: debugInfo?.response || null,
             });
 
           // Skip processing if this is a dummy product ID (already processed)
@@ -98,48 +102,82 @@ export class GroqSequentialProcessor {
             continue;
           }
 
-          // Step 3: Analyze product with Groq
-          console.log(
-            `🔍 Step 2: Analyzing product ${productResult.productId}...`
-          );
-          await this.analyzeProductWithGroq(
-            productResult.productId,
-            group.messageIds
-          );
+          // Set a timeout for the entire processing pipeline
+          const processingTimeout = 10 * 60 * 1000; // 10 minutes
+          const startTime = Date.now();
 
-          // Step 4: Upload images to S3
-          console.log(
-            `📤 Step 3: Uploading images to S3 for product ${productResult.productId}...`
-          );
-          await this.uploadImagesToS3(
-            productResult.productId,
-            group.messageIds
-          );
+          try {
+            // Step 3: Analyze product with Groq
+            console.log(
+              `🔍 Step 2: Analyzing product ${productResult.productId}...`
+            );
+            await this.analyzeProductWithGroq(
+              productResult.productId,
+              group.messageIds
+            );
 
-          // Step 5: Detect colors with Groq
-          console.log(
-            `🎨 Step 4: Detecting colors for product ${productResult.productId}...`
-          );
-          await this.detectColorsWithGroq(
-            productResult.productId,
-            group.messageIds
-          );
+            // Check timeout
+            if (Date.now() - startTime > processingTimeout) {
+              throw new Error('Processing timeout exceeded');
+            }
 
-          // Step 6: Validate results and activate if valid
-          const isValidProduct = await this.validateProductResults(
-            productResult.productId
-          );
-          if (isValidProduct) {
-            console.log(`✅ Activating product ${productResult.productId}...`);
-            await this.batchProductService.activateProduct(
+            // Step 4: Upload images to S3
+            console.log(
+              `📤 Step 3: Uploading images to S3 for product ${productResult.productId}...`
+            );
+            await this.uploadImagesToS3(
+              productResult.productId,
+              group.messageIds
+            );
+
+            // Check timeout
+            if (Date.now() - startTime > processingTimeout) {
+              throw new Error('Processing timeout exceeded');
+            }
+
+            // Step 5: Detect colors with Groq
+            console.log(
+              `🎨 Step 4: Detecting colors for product ${productResult.productId}...`
+            );
+            await this.detectColorsWithGroq(
+              productResult.productId,
+              group.messageIds
+            );
+
+            // Check timeout
+            if (Date.now() - startTime > processingTimeout) {
+              throw new Error('Processing timeout exceeded');
+            }
+
+            // Step 6: Validate results and activate if valid
+            const isValidProduct = await this.validateProductResults(
               productResult.productId
             );
-          } else {
-            console.log(
-              `❌ Product ${productResult.productId} validation failed, deleting invalid product`
+            if (isValidProduct) {
+              console.log(
+                `✅ Activating product ${productResult.productId}...`
+              );
+              await this.batchProductService.activateProduct(
+                productResult.productId
+              );
+            } else {
+              console.log(
+                `❌ Product ${productResult.productId} validation failed, deleting invalid product`
+              );
+              // Delete the invalid product and its associated data
+              await this.deleteInvalidProduct(productResult.productId);
+            }
+          } catch (processingError) {
+            console.error(
+              `❌ Error processing product ${productResult.productId}:`,
+              processingError
             );
-            // Delete the invalid product and its associated data
+            console.log(
+              `🗑️ Cleaning up failed product ${productResult.productId}...`
+            );
+            // Clean up the failed product
             await this.deleteInvalidProduct(productResult.productId);
+            throw processingError; // Re-throw to be caught by outer try-catch
           }
 
           processedProducts.push(productResult.productId);
@@ -184,6 +222,35 @@ export class GroqSequentialProcessor {
 
     // Use existing grouping service but with Groq
     return await this.groupingService.groupMessages(messagesForGrouping);
+  }
+
+  /**
+   * Group messages using Groq with debug info
+   */
+  private async groupMessagesWithGroqDebug(messageIds: string[]): Promise<{
+    groups: any[];
+    debugInfo: any;
+  }> {
+    const messages = await this.prisma.whatsAppMessage.findMany({
+      where: { id: { in: messageIds } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (messages.length === 0) return { groups: [], debugInfo: null };
+
+    // Prepare messages for grouping
+    const messagesForGrouping = messages.map((msg: any) => ({
+      id: msg.id,
+      text: msg.text,
+      type: msg.type,
+      createdAt: msg.createdAt,
+      senderId: msg.providerId,
+    }));
+
+    // Use existing grouping service but with Groq
+    return await this.groupingService.groupMessagesWithDebug(
+      messagesForGrouping
+    );
   }
 
   /**
@@ -377,7 +444,7 @@ export class GroqSequentialProcessor {
           },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.1,
+        temperature: 0.5,
       });
 
       // Add timeout to Groq API call
@@ -404,10 +471,46 @@ export class GroqSequentialProcessor {
         return; // Skip this analysis but continue processing
       }
 
+      // Prepare GPT debug data
+      const gptRequest = JSON.stringify(
+        {
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content: TEXT_ANALYSIS_SYSTEM_PROMPT,
+            },
+            {
+              role: 'user',
+              content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls),
+            },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.5,
+        },
+        null,
+        2
+      );
+
+      const gptResponse = JSON.stringify(
+        {
+          choices: response.choices,
+          usage: response.usage,
+          model: response.model,
+          id: response.id,
+          created: response.created,
+          object: response.object,
+        },
+        null,
+        2
+      );
+
       // Update product with analysis
       await this.batchProductService.updateProductWithAnalysis(
         productId,
-        analysisResult
+        analysisResult,
+        gptRequest,
+        gptResponse
       );
 
       console.log(`✅ Product ${productId} analyzed successfully`);
@@ -682,7 +785,7 @@ export class GroqSequentialProcessor {
               },
             ],
             response_format: { type: 'json_object' },
-            temperature: 0.7,
+            temperature: 0.1,
           });
 
           // Add timeout to Groq API call
@@ -724,7 +827,7 @@ export class GroqSequentialProcessor {
           analysisResults.push(analysisResult);
 
           console.log(
-            `✅ Image ${i + 1} analyzed: ${analysisResult.name || 'No name'} - Colors: ${JSON.stringify(analysisResult.colors || [])}`
+            `✅ Image ${i + 1} analyzed: ${analysisResult.name || 'No name'} - Color: ${analysisResult.color || 'null'}`
           );
         } catch (imageError) {
           console.error(`❌ Error analyzing image ${i + 1}:`, imageError);

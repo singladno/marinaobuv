@@ -47,6 +47,9 @@ model Product {
   analysisBatchId       String?        @unique
   colorBatchId          String?        @unique
   batchProcessingStatus String?        @default("pending") // pending, analysis_complete, colors_complete, completed
+  // GPT debugging fields
+  gptRequest            String?        // Store the GPT request for debugging
+  gptResponse           String?        // Store the GPT response for debugging
   orderItems            OrderItem[]
   category              Category       @relation(fields: [categoryId], references: [id])
   images                ProductImage[]

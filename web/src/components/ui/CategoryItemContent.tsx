@@ -7,6 +7,7 @@ import type { CategoryNode } from './CategorySelector';
 type CategoryItemContentProps = {
   category: CategoryNode;
   isSelected: boolean;
+  isParentOfSelected: boolean;
   isHighlighted: boolean;
   level: number;
   onSelect: () => void;
@@ -15,6 +16,7 @@ type CategoryItemContentProps = {
 export function CategoryItemContent({
   category,
   isSelected,
+  isParentOfSelected,
   isHighlighted,
   level,
   onSelect,
@@ -25,21 +27,23 @@ export function CategoryItemContent({
         level
       )} ${
         isSelected
-          ? 'border border-blue-200 bg-blue-50 text-blue-700 shadow-sm'
-          : isHighlighted
-            ? 'border border-amber-200 bg-amber-50 text-amber-700'
-            : 'hover:bg-gray-50 hover:text-gray-900'
+          ? 'bg-purple-50 text-purple-700'
+          : isParentOfSelected
+            ? 'bg-blue-50 text-blue-700'
+            : isHighlighted
+              ? 'border border-amber-200 bg-amber-50 text-amber-700'
+              : 'hover:bg-gray-50 hover:text-gray-900'
       }`}
     >
       <button
         onClick={onSelect}
-        className="w-full cursor-pointer rounded-md px-1 py-2.5 text-left transition-colors duration-200 disabled:cursor-default"
+        className="w-full cursor-pointer rounded-md px-1 py-2.5 text-left transition-all duration-200 disabled:cursor-default"
         disabled={isSelected}
       >
         <div className="flex items-center">
           {isSelected && (
             <div className="mr-2 flex-shrink-0">
-              <div className="flex h-4 w-4 items-center justify-center rounded-sm bg-blue-500">
+              <div className="flex h-4 w-4 items-center justify-center rounded-sm bg-purple-500 shadow-sm">
                 <svg
                   className="h-2.5 w-2.5 text-white"
                   fill="currentColor"
@@ -55,7 +59,13 @@ export function CategoryItemContent({
             </div>
           )}
           <span
-            className={`text-sm ${isSelected ? 'font-semibold' : 'font-medium'} ${isHighlighted ? 'text-amber-800' : ''}`}
+            className={`text-sm transition-colors duration-200 ${
+              isSelected
+                ? 'font-semibold text-purple-800'
+                : isParentOfSelected
+                  ? 'font-medium text-blue-800'
+                  : 'font-medium'
+            } ${isHighlighted ? 'text-amber-800' : ''}`}
           >
             {category.name}
           </span>

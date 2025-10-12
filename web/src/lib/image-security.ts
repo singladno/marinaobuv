@@ -107,3 +107,25 @@ export function sanitizeImageUrl(url: string): string {
   // Remove any potentially dangerous characters
   return url.replace(/[<>'"]/g, '');
 }
+
+/**
+ * Validate if an image URL is accessible
+ */
+export async function validateImageUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get a fallback image URL when the original fails
+ */
+export function getFallbackImageUrl(): string {
+  return '/images/placeholder.jpg';
+}

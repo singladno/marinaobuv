@@ -20,6 +20,7 @@ interface ProductGridProps {
 }
 
 export function ProductGrid({ products, gridCols, loading }: ProductGridProps) {
+  console.log('ProductGrid gridCols:', gridCols);
   if (loading) {
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -49,8 +50,8 @@ export function ProductGrid({ products, gridCols, loading }: ProductGridProps) {
   }
 
   const gridClasses = {
-    4: 'grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
-    5: 'grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
+    4: 'grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
+    5: 'grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
   };
 
   return (

@@ -68,14 +68,12 @@ export function ProductPricing({
           {mergedSizes.map(sizeObj => (
             <div
               key={sizeObj.size}
-              className="relative flex items-center justify-center rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm"
+              className="flex flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm"
             >
               <span className="font-medium text-gray-900">{sizeObj.size}</span>
-              {sizeObj.count > 1 && (
-                <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
-                  {sizeObj.count}
-                </span>
-              )}
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+                {sizeObj.count}
+              </span>
             </div>
           ))}
         </div>

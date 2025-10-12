@@ -1,4 +1,9 @@
 import { TransportCompany } from '@/lib/shipping';
+import {
+  calculateSubtotal,
+  calculateTotalBoxes,
+  calculateTotalBoxPrice,
+} from '@/utils/pricing-calculations';
 
 interface Product {
   id: string;
@@ -10,6 +15,7 @@ interface Product {
   category: {
     name: string;
   };
+  sizes: Array<{ size: string; count: number }>;
 }
 
 interface CartItemWithProduct {
@@ -72,10 +78,13 @@ export function OrderSummary({
     }).format(price);
   };
 
-  const subtotal = products.reduce(
-    (sum, item) => sum + item.product.pricePair * item.qty,
-    0
-  );
+  // Calculate pricing using utility functions
+  // For order summary, we want to show box-based pricing
+  const totalBoxPrice = calculateTotalBoxPrice(products);
+  const totalBoxes = calculateTotalBoxes(products);
+
+  // Keep the old subtotal for backward compatibility but it should match totalBoxPrice
+  const subtotal = totalBoxPrice;
 
   const shippingCost = selectedTransport?.priceLabel === 'Бесплатно' ? 0 : 250;
   const total = subtotal + shippingCost;
@@ -127,17 +136,10 @@ export function OrderSummary({
       </div>
 
       {/* Order Total */}
-      <div className="rounded-card bg-card shadow-card border-card p-6">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Итого
-        </h3>
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="mb-6 text-xl font-semibold text-gray-900">Итого</h3>
 
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">Товары:</span>
-            <span className="font-medium">{formatPrice(subtotal)}</span>
-          </div>
-
+        <div className="space-y-3">
           {selectedTransport && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">
@@ -147,8 +149,8 @@ export function OrderSummary({
             </div>
           )}
 
-          <div className="border-t border-gray-200 pt-2 dark:border-gray-600">
-            <div className="flex justify-between text-lg font-semibold">
+          <div className="border-t border-gray-200 pt-4">
+            <div className="flex justify-between text-xl font-bold text-gray-900">
               <span>Итого:</span>
               <span>{formatPrice(total)}</span>
             </div>
@@ -157,7 +159,7 @@ export function OrderSummary({
 
         <button
           onClick={isLoggedIn ? onPlaceOrder : () => setIsLoginModalOpen(true)}
-          className="rounded-card mt-6 w-full bg-purple-600 px-4 py-3 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
+          className="mt-6 w-full rounded-lg bg-purple-600 px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
           disabled={!!isPlacingOrder}
         >
           {isLoggedIn ? (

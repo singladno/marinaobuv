@@ -17,6 +17,7 @@ interface CartItemWithProduct {
     images: Array<{ url: string; alt?: string }>;
     category: { name: string };
     article?: string;
+    sizes: Array<{ size: string; count: number }>;
   };
 }
 
@@ -47,6 +48,10 @@ interface BasketContentProps {
   isPlacingOrder?: boolean;
   onRemove: (slug: string) => void;
   onUpdateQuantity: (slug: string, quantity: number) => void;
+  onToggleFavorite?: (slug: string) => void;
+  favorites?: Set<string>;
+  updatingItems?: Set<string>;
+  removingItems?: Set<string>;
 }
 
 export function BasketContent({
@@ -73,6 +78,10 @@ export function BasketContent({
   isPlacingOrder,
   onRemove,
   onUpdateQuantity,
+  onToggleFavorite,
+  favorites = new Set(),
+  updatingItems = new Set(),
+  removingItems = new Set(),
 }: BasketContentProps) {
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -81,6 +90,10 @@ export function BasketContent({
           items={products}
           onRemove={onRemove}
           onUpdateQuantity={onUpdateQuantity}
+          onToggleFavorite={onToggleFavorite}
+          favorites={favorites}
+          updatingItems={updatingItems}
+          removingItems={removingItems}
         />
 
         {/* Transport Company Selection Section */}

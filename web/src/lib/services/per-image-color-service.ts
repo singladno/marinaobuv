@@ -2,6 +2,7 @@
  * Service for analyzing individual images to detect colors
  */
 import { env } from '../env';
+import { normalizeColorToRussian } from '@/lib/utils/color-normalization';
 import OpenAI from 'openai';
 import { ModelConfigService } from './model-config-service';
 import { withRetry, sleep } from '../../utils/retry';
@@ -13,44 +14,6 @@ export interface ImageColorResult {
 
 export class PerImageColorService {
   private openai: any;
-
-  /**
-   * Normalize color names to Russian lowercase
-   */
-  private normalizeColorToRussian(color: string | null): string | null {
-    if (!color) return null;
-
-    const colorLower = color.toLowerCase().trim();
-
-    // English to Russian mapping
-    const englishToRussian: Record<string, string> = {
-      black: 'черный',
-      white: 'белый',
-      red: 'красный',
-      blue: 'синий',
-      green: 'зелёный',
-      yellow: 'желтый',
-      orange: 'оранжевый',
-      brown: 'коричневый',
-      gray: 'серый',
-      grey: 'серый',
-      pink: 'розовый',
-      purple: 'фиолетовый',
-      violet: 'фиолетовый',
-      beige: 'бежевый',
-      burgundy: 'бордовый',
-      navy: 'синий',
-      tan: 'бежевый',
-    };
-
-    // Check if it's an English color
-    if (englishToRussian[colorLower]) {
-      return englishToRussian[colorLower];
-    }
-
-    // If it's already Russian, just ensure lowercase
-    return colorLower;
-  }
 
   constructor() {
     if (!env.OPENAI_API_KEY) {
@@ -206,7 +169,7 @@ EXAMPLES:
 - Brown boot with silver buckles → "коричневый" (main leather)
 - Blue shoe with yellow stitching → "синий" (main material)
 
-Use ONLY Russian color names in lowercase: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый", "желтый", "оранжевый".
+Use ONLY Russian color names in lowercase: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый", "желтый", "оранжевый", "магнета", "фуксия".
 
 CRITICAL: NEVER use English color names like "black", "white", "red", "blue" - ONLY Russian names in lowercase.
 
@@ -332,7 +295,7 @@ Return STRICT JSON with this shape:
                   : null;
 
               // Normalize color to Russian lowercase
-              const normalizedColor = this.normalizeColorToRussian(rawColor);
+              const normalizedColor = normalizeColorToRussian(rawColor);
 
               colorResults[originalIdx] = {
                 url: imageUrls[originalIdx],

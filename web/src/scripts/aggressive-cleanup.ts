@@ -1,11 +1,8 @@
 #!/usr/bin/env tsx
 
 /**
- * Cleanup script for products stuck in processing state
- * This script finds and deletes products that are:
- * - Stuck in processing state with no images
- * - Have been processing for too long
- * - Are invalid and should be cleaned up
+ * Aggressive cleanup script for stuck products
+ * This script runs more frequently and catches products that get stuck
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -15,6 +12,7 @@ const prisma = new PrismaClient();
 interface StuckProduct {
   id: string;
   name: string;
+  article: string | null;
   createdAt: Date;
   batchProcessingStatus: string | null;
   imageCount: number;
@@ -22,52 +20,49 @@ interface StuckProduct {
 }
 
 async function findStuckProducts(): Promise<StuckProduct[]> {
-  console.log('🔍 Searching for stuck products...');
+  console.log('🔍 Searching for stuck products with aggressive criteria...');
 
-  // Find products that are stuck in processing
+  // More aggressive criteria for stuck products
   const stuckProducts = await prisma.product.findMany({
     where: {
       OR: [
-        // Products with "Processing..." name that are old
+        // Products with "Processing..." name (immediate cleanup)
+        {
+          name: 'Processing...',
+        },
+        // Products stuck in pending status (immediate cleanup)
+        {
+          batchProcessingStatus: 'pending',
+        },
+        // Products with no images (immediate cleanup)
+        {
+          images: {
+            none: {},
+          },
+        },
+        // Products with "Processing..." name that are old (30 minutes)
         {
           name: 'Processing...',
           createdAt: {
-            lt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+            lt: new Date(Date.now() - 30 * 60 * 1000),
           },
         },
-        // Products with processing status that are old
+        // Products with processing status that are old (30 minutes)
         {
           batchProcessingStatus: {
             in: ['pending', 'processing'],
           },
           createdAt: {
-            lt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+            lt: new Date(Date.now() - 30 * 60 * 1000),
           },
         },
-        // Products with no images that are old
+        // Products with no images that are old (15 minutes)
         {
           images: {
             none: {},
           },
           createdAt: {
-            lt: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-          },
-        },
-        // Products stuck in pending with no images (more aggressive cleanup)
-        {
-          batchProcessingStatus: 'pending',
-          images: {
-            none: {},
-          },
-          createdAt: {
-            lt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-          },
-        },
-        // Products with "Processing..." name and no images (immediate cleanup)
-        {
-          name: 'Processing...',
-          images: {
-            none: {},
+            lt: new Date(Date.now() - 15 * 60 * 1000),
           },
         },
       ],
@@ -87,6 +82,7 @@ async function findStuckProducts(): Promise<StuckProduct[]> {
   return stuckProducts.map(product => ({
     id: product.id,
     name: product.name,
+    article: product.article,
     createdAt: product.createdAt,
     batchProcessingStatus: product.batchProcessingStatus,
     imageCount: product.images.length,
@@ -96,7 +92,7 @@ async function findStuckProducts(): Promise<StuckProduct[]> {
 
 async function cleanupStuckProducts(): Promise<void> {
   try {
-    console.log('🧹 Starting cleanup of stuck products...');
+    console.log('🧹 Starting aggressive cleanup of stuck products...');
 
     const stuckProducts = await findStuckProducts();
 
@@ -108,7 +104,7 @@ async function cleanupStuckProducts(): Promise<void> {
     console.log(`🔍 Found ${stuckProducts.length} stuck products:`);
     stuckProducts.forEach((product, index) => {
       console.log(
-        `  ${index + 1}. ${product.id} - "${product.name}" (${product.imageCount} images, status: ${product.batchProcessingStatus}, active: ${product.isActive})`
+        `  ${index + 1}. ${product.article || 'No article'} - "${product.name}" (${product.imageCount} images, status: ${product.batchProcessingStatus}, active: ${product.isActive})`
       );
     });
 
@@ -118,7 +114,7 @@ async function cleanupStuckProducts(): Promise<void> {
     for (const product of stuckProducts) {
       try {
         console.log(
-          `🗑️ Deleting stuck product: ${product.id} (${product.name})`
+          `🗑️ Deleting stuck product: ${product.id} (${product.article || 'No article'})`
         );
 
         // Delete associated images first
@@ -140,11 +136,11 @@ async function cleanupStuckProducts(): Promise<void> {
       }
     }
 
-    console.log(`🎉 Cleanup completed:`);
+    console.log(`🎉 Aggressive cleanup completed:`);
     console.log(`  ✅ Successfully deleted: ${deletedCount} products`);
     console.log(`  ❌ Errors: ${errorCount} products`);
   } catch (error) {
-    console.error('❌ Error during cleanup:', error);
+    console.error('❌ Error during aggressive cleanup:', error);
     throw error;
   }
 }
@@ -153,16 +149,11 @@ async function main() {
   try {
     await cleanupStuckProducts();
   } catch (error) {
-    console.error('❌ Script failed:', error);
+    console.error('❌ Fatal error:', error);
     process.exit(1);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-// Run the script
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
-}
-
-export { cleanupStuckProducts, findStuckProducts };
+main();

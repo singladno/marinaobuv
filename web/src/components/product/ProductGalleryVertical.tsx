@@ -81,7 +81,10 @@ export default function ProductGalleryVertical({
 
       {/* Main image block */}
       <Card className="group relative flex-1 overflow-hidden rounded-xl shadow-sm">
-        <div className="relative w-full" style={{ height: `${height}px` }}>
+        <div
+          className="product-gallery-main relative w-full"
+          style={{ '--gallery-height': `${height}px` } as React.CSSProperties}
+        >
           <Image
             src={safeImages[clampedIndex]?.url || '/images/demo/1.jpg'}
             alt={safeImages[clampedIndex]?.alt || productName}

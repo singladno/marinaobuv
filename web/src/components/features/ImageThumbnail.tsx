@@ -34,6 +34,7 @@ export function ImageThumbnail({
   // isUpdating,
   index,
 }: ImageThumbnailProps) {
+  const [imageError, setImageError] = React.useState(false);
   const thumbnailUrl = getThumbnailUrl(image.url);
   // const isS3 = isS3Image(image.url);
   // const sanitizedUrl = sanitizeImageUrl(image.url);
@@ -62,6 +63,11 @@ export function ImageThumbnail({
     </span>
   ) : null;
 
+  const handleImageError = () => {
+    setImageError(true);
+    console.error('Failed to load S3 image:', thumbnailUrl);
+  };
+
   return (
     <div key={image.id} className="group relative h-12 w-12 flex-shrink-0">
       <button
@@ -69,19 +75,33 @@ export function ImageThumbnail({
         className={`relative h-full w-full overflow-hidden rounded-md border transition-colors hover:border-blue-300 dark:hover:border-blue-600 ${borderClasses}`}
         title="Нажмите для просмотра в полном размере"
       >
-        <Image
-          src={thumbnailUrl}
-          alt={image.alt || `Изображение ${(image.sort || 0) + 1}`}
-          width={150}
-          height={150}
-          className={`h-full w-full object-cover transition-opacity ${imageOpacity}`}
-          loading="lazy"
-          onError={e => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            console.error('Failed to load S3 image:', thumbnailUrl);
-          }}
-        />
+        {imageError ? (
+          <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+        ) : (
+          <Image
+            src={thumbnailUrl}
+            alt={image.alt || `Изображение ${(image.sort || 0) + 1}`}
+            width={150}
+            height={150}
+            className={`h-full w-full object-cover transition-opacity ${imageOpacity}`}
+            loading="lazy"
+            onError={handleImageError}
+          />
+        )}
         {badge}
       </button>
     </div>
