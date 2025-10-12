@@ -13,6 +13,10 @@ interface Product {
   sizes?: Array<{
     stock: number;
   }>;
+  colorOptions?: Array<{
+    color: string;
+    imageUrl: string;
+  }>;
 }
 
 // Helper functions for filtering
@@ -58,5 +62,17 @@ export const matchesStockFilter = (product: Product, inStock: boolean) => {
   if (!inStock) return true;
   return (
     product.sizes?.some((size: { stock: number }) => size.stock > 0) || false
+  );
+};
+
+export const matchesColorFilter = (product: Product, colors: string[]) => {
+  if (colors.length === 0) return true;
+  if (!product.colorOptions || product.colorOptions.length === 0) return false;
+
+  const productColors = product.colorOptions.map(option =>
+    option.color.toLowerCase()
+  );
+  return colors.some(selectedColor =>
+    productColors.includes(selectedColor.toLowerCase())
   );
 };

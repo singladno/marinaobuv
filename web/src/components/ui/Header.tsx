@@ -12,9 +12,10 @@ import TopRightActions from '@/components/product/TopRightActions';
 import AccountMenu from '@/components/ui/AccountMenu';
 import { Button } from '@/components/ui/Button';
 import MobileMenu from '@/components/ui/MobileMenu';
-import { SearchBar } from '@/components/ui/SearchBar';
+import { SearchWithHistory } from '@/components/catalog/SearchWithHistory';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/components/ui/ThemeProvider';
+import { useSearch } from '@/contexts/SearchContext';
 import { site } from '@/lib/site';
 
 interface HeaderProps {
@@ -23,19 +24,13 @@ interface HeaderProps {
 
 export default function Header({ onSearch }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
-
-  const handleSearch = (query: string) => {
-    if (onSearch) {
-      onSearch(query);
-    } else {
-      // Default search behavior - redirect to catalog with search params
-      const searchParams = new URLSearchParams();
-      if (query) {
-        searchParams.set('search', query);
-      }
-      window.location.href = `/?${searchParams.toString()}`;
-    }
-  };
+  const {
+    searchQuery,
+    searchHistory,
+    handleSearch,
+    clearSearchHistory,
+    deleteSearchHistoryItem,
+  } = useSearch();
 
   const handleMenuClick = (item: string) => {
     console.log(`Navigation clicked: ${item}`);
@@ -78,17 +73,21 @@ export default function Header({ onSearch }: HeaderProps) {
           </Button>
         </nav>
 
-        {/* Search Bar - Centered and Wider */}
-        <div className="flex flex-1 justify-center">
-          <div className="w-full max-w-md">
-            <SearchBar onSearch={handleSearch} />
-          </div>
+        {/* Search Bar - Takes all available space */}
+        <div className="flex flex-1 items-center">
+          <SearchWithHistory
+            value={searchQuery}
+            onChange={handleSearch}
+            searchHistory={searchHistory}
+            onClearHistory={clearSearchHistory}
+            onDeleteHistoryItem={deleteSearchHistoryItem}
+          />
         </div>
 
         {/* Right Actions */}
         <div
           id="header-icons"
-          className="relative ml-auto flex items-center gap-6 px-8 py-3"
+          className="relative flex items-center gap-6 px-8 py-3"
         >
           {/* Theme Toggle */}
           <Button

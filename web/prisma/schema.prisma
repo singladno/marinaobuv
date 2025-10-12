@@ -209,6 +209,7 @@ model User {
   gruzchikOrders Order[]   @relation("OrderGruzchik")
   orders         Order[]
   reviews        Review[]
+  searchHistory  SearchHistory[]
   provider       Provider? @relation(fields: [providerId], references: [id])
 
   @@index([role])
@@ -329,6 +330,19 @@ model GptBatchJob {
 
   @@index([status])
   @@index([type])
+}
+
+model SearchHistory {
+  id        String    @id @default(cuid())
+  query     String
+  userId    String?   // Optional - null for anonymous users
+  user      User?     @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([query])
+  @@index([createdAt])
 }
 
 enum Role {

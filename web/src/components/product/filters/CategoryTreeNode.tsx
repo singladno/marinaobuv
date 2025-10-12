@@ -26,6 +26,12 @@ export function CategoryTreeNode({
   const hasChildren = !!node.children && node.children.length > 0;
   const normalizedQuery = searchTerm.trim().toLowerCase();
 
+  // Check if current node matches the search
+  const currentNodeMatches = React.useMemo(() => {
+    if (!normalizedQuery) return false;
+    return node.name.toLowerCase().includes(normalizedQuery);
+  }, [node.name, normalizedQuery]);
+
   const subtreeMatches = React.useMemo(() => {
     if (!normalizedQuery) return true;
 
@@ -83,6 +89,8 @@ export function CategoryTreeNode({
   React.useEffect(() => {
     // Expand/collapse in response to search and selection changes
     if (normalizedQuery) {
+      // When searching, expand if this node or any of its children match the search
+      // This ensures parent categories are expanded to show matching subcategories
       setExpanded(subtreeMatches || isInPathToSelected);
     } else {
       // Only expand if this node is in the path to a selected category
@@ -120,7 +128,7 @@ export function CategoryTreeNode({
     return (
       <>
         {before}
-        <mark className="rounded bg-yellow-100 px-0.5 py-0 text-yellow-900">
+        <mark className="rounded bg-yellow-100 px-0 py-0 text-yellow-900">
           {match}
         </mark>
         {after}
@@ -186,7 +194,7 @@ export function CategoryTreeNode({
                 selectedIds={selectedIds}
                 onToggle={onToggle}
                 level={level + 1}
-                searchTerm={searchTerm}
+                searchTerm={currentNodeMatches ? '' : searchTerm}
               />
             ))}
           </div>

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 
 import ProductDetails from '@/components/product/ProductDetails';
 import ProductGalleryWithColors from '@/components/product/ProductGalleryWithColors';
+import ProductReviews from '@/components/product/ProductReviews';
 import { Button } from '@/components/ui/Button';
 import { prisma } from '@/lib/server/db';
 
@@ -127,6 +128,11 @@ export default async function ProductPage({
             />
           </div>
         </div>
+      </div>
+
+      {/* Reviews Section - Full Width */}
+      <div className="container mx-auto px-4 py-8">
+        <ProductReviews productId={product.id} />
       </div>
     </div>
   );

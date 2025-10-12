@@ -6,7 +6,6 @@ import { ProductActions } from '@/components/product/ProductActions';
 import { ProductFeatures } from '@/components/product/ProductFeatures';
 import { ProductHeader } from '@/components/product/ProductHeader';
 import { ProductPricing } from '@/components/product/ProductPricing';
-import ProductReviews from '@/components/product/ProductReviews';
 import { Separator } from '@/components/ui/Separator';
 import { useCart } from '@/contexts/CartContext';
 
@@ -103,8 +102,6 @@ export default function ProductDetails(props: Props) {
         season={season}
         packPairs={packPairs}
       />
-      <Separator />
-      <ProductReviews productId={productId} />
     </div>
   );
 }

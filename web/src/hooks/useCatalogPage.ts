@@ -4,6 +4,7 @@ import { FilterOptions } from '@/types/filters';
 import { useCatalogProducts } from '@/hooks/useCatalogProducts';
 import {
   matchesCategoryFilter,
+  matchesColorFilter,
   matchesPriceRange,
   matchesRatingFilter,
   matchesSearchQuery,
@@ -20,6 +21,7 @@ export function useCatalogPage() {
     minRating: 0,
     inStock: false,
     sortBy: 'featured',
+    colors: [],
   });
   const [gridCols, setGridCols] = useState<4 | 5>(4);
 
@@ -52,7 +54,8 @@ export function useCatalogPage() {
         matchesCategoryFilter(product, filters.categories) &&
         matchesPriceRange(product, filters.priceRange) &&
         matchesRatingFilter(product, filters.minRating) &&
-        matchesStockFilter(product, filters.inStock)
+        matchesStockFilter(product, filters.inStock) &&
+        matchesColorFilter(product, filters.colors)
       );
     });
 
@@ -79,6 +82,7 @@ export function useCatalogPage() {
       minRating: 0,
       inStock: false,
       sortBy: 'featured',
+      colors: [],
     });
     setSearchQuery('');
   };

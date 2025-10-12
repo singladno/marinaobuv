@@ -514,3 +514,9 @@ a:hover {
   min-width: var(--cell-width);
   max-width: var(--cell-width);
 }
+
+/* Search input placeholder styling */
+.search-input::placeholder {
+  color: #374151 !important;
+  opacity: 0.4 !important;
+}

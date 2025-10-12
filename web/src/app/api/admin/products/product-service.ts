@@ -16,10 +16,11 @@ export async function getProducts(filters: ProductFilters) {
   const where: any = {};
 
   if (filters.search) {
+    const searchLower = filters.search.toLowerCase();
     where.OR = [
-      { name: { contains: filters.search, mode: 'insensitive' } },
-      { article: { contains: filters.search, mode: 'insensitive' } },
-      { slug: { contains: filters.search, mode: 'insensitive' } },
+      { name: { contains: searchLower, mode: 'insensitive' } },
+      { article: { contains: searchLower, mode: 'insensitive' } },
+      { slug: { contains: searchLower, mode: 'insensitive' } },
     ];
   }
 

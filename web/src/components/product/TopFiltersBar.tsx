@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 
 import CategoryControl from '@/components/product/filters/CategoryControl';
+import ColorFilter from '@/components/product/filters/ColorFilter';
 import PriceControl from '@/components/product/filters/PriceControl';
 import SortControl from '@/components/product/filters/SortControl';
 import { useCategories } from '@/contexts/CategoriesContext';
@@ -31,7 +32,8 @@ export default function TopFiltersBar({
     return (
       filters.categories.length > 0 ||
       filters.priceRange[0] > 0 ||
-      filters.priceRange[1] < 100000
+      filters.priceRange[1] < 100000 ||
+      filters.colors.length > 0
     );
   }, [filters]);
 
@@ -52,6 +54,11 @@ export default function TopFiltersBar({
       <PriceControl
         value={filters.priceRange}
         onChange={range => onChange({ priceRange: range })}
+      />
+
+      <ColorFilter
+        value={filters.colors}
+        onChange={colors => onChange({ colors })}
       />
 
       {/* Clear */}

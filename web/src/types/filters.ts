@@ -4,6 +4,7 @@ export interface FilterOptions {
   minRating: number;
   inStock: boolean;
   sortBy: string;
+  colors: string[];
 }
 
 export interface CatalogFilters {
