@@ -1,11 +1,13 @@
 'use client';
 
 import { ProductGrid } from '@/components/catalog/ProductGrid';
+import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { useCatalogBackend } from '@/hooks/useCatalogBackend';
+import { useState } from 'react';
 
 export default function Home() {
   const {
@@ -19,6 +21,8 @@ export default function Home() {
     handleSortChange,
     clearFilters,
   } = useCatalogBackend();
+
+  const [gridCols, setGridCols] = useState<4 | 5>(4);
 
   if (error) {
     return (
@@ -72,10 +76,15 @@ export default function Home() {
                 </Badge>
               )}
             </div>
+            <GridColsSwitcher value={gridCols} onChange={setGridCols} />
           </div>
 
           {/* Products */}
-          <ProductGrid products={products} gridCols={4} loading={loading} />
+          <ProductGrid
+            products={products}
+            gridCols={gridCols}
+            loading={loading}
+          />
         </div>
       </div>
     </div>

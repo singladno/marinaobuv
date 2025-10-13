@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { isValidPhoneNumber } from '@/utils/phoneMask';
 import { useBasketAuth } from './useBasketAuth';
 import { useCart } from '@/contexts/CartContext';
 import { useNotifications } from '@/components/ui/NotificationProvider';
@@ -50,7 +51,14 @@ export function useBasketPageState() {
         userAddress?: string;
         selectedTransportId?: string | null;
       };
-      if (typeof saved.orderPhone === 'string') setOrderPhone(saved.orderPhone);
+      // Only restore a previously saved phone if it looks valid
+      if (
+        typeof saved.orderPhone === 'string' &&
+        saved.orderPhone.trim() !== '' &&
+        isValidPhoneNumber(saved.orderPhone)
+      ) {
+        setOrderPhone(saved.orderPhone);
+      }
       if (typeof saved.userEmail === 'string') setUserEmail(saved.userEmail);
       if (typeof saved.userFullName === 'string')
         setUserFullName(saved.userFullName);
@@ -67,7 +75,8 @@ export function useBasketPageState() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (hasAutofilledPhoneRef.current) return;
-    if (user?.phone && !orderPhone) {
+    // Prefill if user has phone and current phone is empty or invalid
+    if (user?.phone && (!orderPhone || !isValidPhoneNumber(orderPhone))) {
       setOrderPhone(user.phone);
       hasAutofilledPhoneRef.current = true;
     }
@@ -112,6 +121,17 @@ export function useBasketPageState() {
     }
   }, [selectedTransportId, validationErrors.transport]);
 
+  // Keep order.selectedShipping in sync with selectedTransportId
+  useEffect(() => {
+    if (!selectedTransportId) return;
+    const company = popularTransportCompanies.find(
+      c => c.id === selectedTransportId
+    );
+    if (company) {
+      order.setSelectedShipping(company);
+    }
+  }, [selectedTransportId, order]);
+
   // Shim auth states expected by page/handlers
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -136,6 +156,7 @@ export function useBasketPageState() {
     setIsEditingTransport,
     selectedTransportId,
     setSelectedTransportId,
+    setSelectedTransportCompany: order.setSelectedShipping,
     isEditingUserData,
     setIsEditingUserData,
     userEmail,

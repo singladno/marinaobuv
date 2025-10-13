@@ -117,17 +117,18 @@ export function useOptimizedBasketCart() {
     const slugs = items.map(item => item.slug);
     const slugsString = slugs.join(',');
 
+    // Always handle the empty-cart case to avoid stuck loading on first render
+    if (slugs.length === 0) {
+      setProducts([]);
+      setLoading(false);
+      prevSlugsRef.current = '';
+      return;
+    }
+
     // Only fetch if this is a new set of items (not just a removal)
     if (slugsString !== prevSlugsRef.current) {
-      if (slugs.length > 0) {
-        prevSlugsRef.current = slugsString;
-        fetchBasketProducts(slugs);
-      } else {
-        // If cart is empty, clear products immediately
-        setProducts([]);
-        setLoading(false);
-        prevSlugsRef.current = '';
-      }
+      prevSlugsRef.current = slugsString;
+      fetchBasketProducts(slugs);
     }
   }, [items, fetchBasketProducts]);
 

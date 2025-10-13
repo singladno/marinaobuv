@@ -28,6 +28,7 @@ interface BasketContentProps {
   setIsEditingTransport: (editing: boolean) => void;
   selectedTransportId: string | null;
   setSelectedTransportId: (id: string | null) => void;
+  setSelectedTransportCompany?: (company: TransportCompany) => void;
   isLoggedIn: boolean;
   setIsLoginModalOpen: (open: boolean) => void;
   isEditingUserData: boolean;
@@ -61,6 +62,7 @@ export function BasketContent({
   setIsEditingTransport,
   selectedTransportId,
   setSelectedTransportId,
+  setSelectedTransportCompany,
   isLoggedIn,
   setIsLoginModalOpen,
   isEditingUserData,
@@ -128,9 +130,18 @@ export function BasketContent({
           {isEditingTransport ? (
             <TransportCompanySelector
               value={selectedTransportId || undefined}
-              onChange={id => {
+              onChange={(id, company) => {
                 setSelectedTransportId(id);
-                setIsEditingTransport(false);
+                if (company && setSelectedTransportCompany) {
+                  setSelectedTransportCompany(company);
+                }
+                // Close for regular options; for "Другое" close only when a non-empty name is chosen
+                if (
+                  id !== 'other' ||
+                  (company?.name && company.name.trim() !== '')
+                ) {
+                  setIsEditingTransport(false);
+                }
               }}
             />
           ) : selectedTransport ? (

@@ -11,9 +11,11 @@ export const Input = React.forwardRef<HTMLInputElement, Props>(
       <input
         ref={ref}
         className={clsx(
-          'border-border bg-background shadow-xs rounded-md border px-3 py-2 text-sm outline-none',
+          // Base: single subtle border, no inner shadow
+          'bg-background rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-none outline-none',
           'placeholder:text-muted',
-          'focus-visible:ring-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]',
+          // Focus: match selectable option style (purple border + soft ring)
+          'focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:ring-offset-0',
           fullWidth && 'w-full',
           className
         )}
