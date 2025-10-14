@@ -23,24 +23,6 @@ export default function AccountMenu() {
     handleMenuMouseLeave,
   } = useAccountMenu();
 
-  if (loading) {
-    return (
-      <Button variant="secondary" disabled>
-        <UserIcon className="h-5 w-5" />
-        Загрузка...
-      </Button>
-    );
-  }
-
-  if (error) {
-    return (
-      <Button variant="secondary" disabled>
-        <UserIcon className="h-5 w-5" />
-        Ошибка
-      </Button>
-    );
-  }
-
   if (!user) {
     return (
       <>
