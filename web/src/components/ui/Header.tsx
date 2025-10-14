@@ -37,12 +37,12 @@ export default function Header({ onSearch }: HeaderProps) {
   };
 
   return (
-    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
+    <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-pink-500 to-purple-700">
       <div className="container mx-auto flex h-16 items-center gap-4 px-4">
         {/* Logo */}
         <div className="flex items-center gap-2">
           <Link href={site.links.home} className="hover:opacity-90">
-            <Text as="span" className="text-xl font-bold">
+            <Text as="span" className="text-xl font-bold" tone="inverted">
               {site.brand}
             </Text>
           </Link>
@@ -54,22 +54,31 @@ export default function Header({ onSearch }: HeaderProps) {
             variant="ghost"
             onClick={() => handleMenuClick('catalog')}
             asChild
+            className="!text-white hover:bg-white/10"
           >
-            <Link href={site.links.catalog}>Каталог</Link>
+            <Link href={site.links.catalog} className="!text-white">
+              Каталог
+            </Link>
           </Button>
           <Button
             variant="ghost"
             onClick={() => handleMenuClick('orders')}
             asChild
+            className="!text-white hover:bg-white/10"
           >
-            <Link href={site.links.orders}>Заказы</Link>
+            <Link href={site.links.orders} className="!text-white">
+              Заказы
+            </Link>
           </Button>
           <Button
             variant="ghost"
             onClick={() => handleMenuClick('about')}
             asChild
+            className="!text-white hover:bg-white/10"
           >
-            <Link href={site.links.about}>О нас</Link>
+            <Link href={site.links.about} className="!text-white">
+              О нас
+            </Link>
           </Button>
         </nav>
 
@@ -94,12 +103,12 @@ export default function Header({ onSearch }: HeaderProps) {
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="hover:bg-transparent"
+            className="!text-white hover:bg-white/10"
           >
             {theme === 'light' ? (
-              <MoonIcon className="h-4 w-4" />
+              <MoonIcon className="h-4 w-4 text-white" />
             ) : (
-              <SunIcon className="h-4 w-4" />
+              <SunIcon className="h-4 w-4 text-white" />
             )}
           </Button>
 
@@ -108,10 +117,10 @@ export default function Header({ onSearch }: HeaderProps) {
             variant="ghost"
             size="icon"
             asChild
-            className="hover:bg-transparent"
+            className="!text-white hover:bg-white/10"
           >
             <Link href="/favorites" aria-label="Избранное">
-              <HeartIcon className="h-4 w-4" />
+              <HeartIcon className="h-4 w-4 text-white" />
             </Link>
           </Button>
 

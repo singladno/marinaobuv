@@ -48,10 +48,10 @@ export default function AccountMenu() {
           variant="ghost"
           size="icon"
           onClick={() => setShowLoginModal(true)}
-          className="hover:bg-transparent"
+          className="text-white hover:bg-white/10"
           aria-label="Войти"
         >
-          <UserIcon className="h-4 w-4" />
+          <UserIcon className="h-4 w-4 text-white" />
         </Button>
         <LoginModal
           isOpen={showLoginModal}
@@ -68,7 +68,7 @@ export default function AccountMenu() {
         size="icon"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="hover:bg-transparent"
+        className="text-white hover:bg-white/10"
         aria-label={user.name || user.phone || 'Пользователь'}
       >
         <UserIcon className="h-4 w-4" />
