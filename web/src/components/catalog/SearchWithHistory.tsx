@@ -81,7 +81,7 @@ export function SearchWithHistory({
 
   const overlayContent = isOpen ? (
     <div
-      className="fixed inset-x-0 bottom-0 top-16 z-[100] bg-black/10"
+      className="fixed inset-x-0 bottom-0 top-[82px] z-[100] bg-black/10"
       onClick={() => setIsOpen(false)}
       aria-hidden="true"
     />

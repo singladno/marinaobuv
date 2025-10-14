@@ -47,74 +47,58 @@ export default function Header({ onSearch }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b bg-gradient-to-r from-pink-500 to-purple-700">
-        <div className="container mx-auto flex h-20 items-center gap-4 px-4">
-          {/* Hamburger Menu */}
-          <HamburgerMenu
-            isOpen={isMenuOpen}
-            onToggle={toggleMenu}
-            className="!text-white hover:bg-white/10"
-          />
+      <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-pink-500 to-purple-700">
+        {/* Top Utility Bar */}
+        <div>
+          <div className="container mx-auto flex items-center justify-center px-4 py-1 text-xs text-white">
+            {/* Center - Navigation Links */}
+            <nav className="hidden items-center gap-4 md:flex">
+              <Link href={site.links.catalog} className="hover:opacity-80">
+                Каталог
+              </Link>
+              <Link href={site.links.orders} className="hover:opacity-80">
+                Заказы
+              </Link>
+              <Link href={site.links.about} className="hover:opacity-80">
+                О нас
+              </Link>
+            </nav>
+          </div>
+        </div>
 
-          {/* Logo - Made bigger */}
-          <div className="flex items-center gap-2">
+        {/* Main Header Bar */}
+        <div className="container mx-auto flex items-center gap-4 py-2">
+          {/* Left side - Logo */}
+          <div className="flex items-center">
             <Link href={site.links.home} className="hover:opacity-90">
-              <Text as="span" className="text-2xl font-bold" tone="inverted">
+              <span className="text-3xl font-bold text-white">
                 {site.brand}
-              </Text>
+              </span>
             </Link>
           </div>
 
-          {/* Desktop Navigation - Above search bar */}
-          <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
-            <Button
-              variant="ghost"
-              onClick={() => handleMenuClick('catalog')}
-              asChild
-              className="!text-white hover:bg-white/10"
-            >
-              <Link href={site.links.catalog} className="!text-white">
-                Каталог
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleMenuClick('orders')}
-              asChild
-              className="!text-white hover:bg-white/10"
-            >
-              <Link href={site.links.orders} className="!text-white">
-                Заказы
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleMenuClick('about')}
-              asChild
-              className="!text-white hover:bg-white/10"
-            >
-              <Link href={site.links.about} className="!text-white">
-                О нас
-              </Link>
-            </Button>
-          </nav>
+          {/* Hamburger Menu - Between logo and search */}
+          <HamburgerMenu
+            isOpen={isMenuOpen}
+            onToggle={toggleMenu}
+            className="rounded-lg border border-white/50 bg-transparent py-2 !text-white transition-colors duration-300 ease-in-out hover:border-white hover:bg-transparent"
+          />
 
-          {/* Search Bar - Takes all available space */}
-          <div className="flex flex-1 items-center">
-            <SearchWithHistory
-              value={searchQuery}
-              onChange={handleSearch}
-              searchHistory={searchHistory}
-              onClearHistory={clearSearchHistory}
-              onDeleteHistoryItem={deleteSearchHistoryItem}
-            />
+          {/* Center - Search Bar */}
+          <div className="flex flex-1 items-center justify-center">
+            <div className="w-full max-w-2xl">
+              <SearchWithHistory
+                value={searchQuery}
+                onChange={handleSearch}
+                searchHistory={searchHistory}
+                onClearHistory={clearSearchHistory}
+                onDeleteHistoryItem={deleteSearchHistoryItem}
+              />
+            </div>
           </div>
 
-          {/* Right Actions */}
-          <div
-            id="header-icons"
-            className="relative flex items-center gap-6 px-8 py-3"
-          >
+          {/* Right side - Actions */}
+          <div className="flex items-center gap-4">
             {/* Theme Toggle */}
             <Button
               variant="ghost"
@@ -123,9 +107,9 @@ export default function Header({ onSearch }: HeaderProps) {
               className="!text-white hover:bg-white/10"
             >
               {theme === 'light' ? (
-                <MoonIcon className="h-4 w-4 text-white" />
+                <MoonIcon className="h-5 w-5 text-white" />
               ) : (
-                <SunIcon className="h-4 w-4 text-white" />
+                <SunIcon className="h-5 w-5 text-white" />
               )}
             </Button>
 
@@ -137,14 +121,14 @@ export default function Header({ onSearch }: HeaderProps) {
               className="!text-white hover:bg-white/10"
             >
               <Link href="/favorites" aria-label="Избранное">
-                <HeartIcon className="h-4 w-4 text-white" />
+                <HeartIcon className="h-5 w-5" />
               </Link>
             </Button>
 
             {/* Account */}
             <AccountMenu />
 
-            {/* Favorites + Cart */}
+            {/* Cart */}
             <TopRightActions />
           </div>
 

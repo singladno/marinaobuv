@@ -293,7 +293,7 @@ export function AdvancedSlidingMenu({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed bottom-0 left-0 right-0 top-20 z-40 bg-black/20 transition-opacity duration-300 ease-in-out ${
+        className={`fixed bottom-0 left-0 right-0 top-[82px] z-40 bg-black/20 transition-opacity duration-300 ease-in-out ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={onClose}
@@ -301,7 +301,7 @@ export function AdvancedSlidingMenu({
 
       {/* Menu Container */}
       <div
-        className="fixed left-0 top-20 z-50 flex h-[calc(100vh-5rem)]"
+        className="fixed left-0 top-[82px] z-50 flex h-[calc(100vh-82px)]"
         onMouseLeave={() => {
           // Only hide if we're not in navigation mode
           if (navigationStack.length === 0) {
