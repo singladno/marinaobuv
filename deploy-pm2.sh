@@ -116,7 +116,8 @@ chmod +x web/src/scripts/*.sh 2>/dev/null || true
 print_status "Installing dependencies..."
 npm install
 cd $WEB_DIR
-npm ci --production
+# Install all dependencies (including dev dependencies needed for Prisma generation)
+npm install
 cd ..
 
 # 9. Generate Prisma client
@@ -315,7 +316,7 @@ git pull origin main
 
 # Install dependencies
 cd /var/www/marinaobuv/web
-npm ci --production
+npm install
 
 # Generate Prisma client
 npm run prisma:generate
