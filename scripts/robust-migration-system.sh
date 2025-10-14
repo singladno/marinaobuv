@@ -88,8 +88,13 @@ run_migrations() {
     if validate_schema; then
         log_success "Schema validation passed"
     else
-        log_warning "Schema validation failed - manual intervention may be required"
-        return 1
+        log_warning "Schema validation failed - attempting to fix schema..."
+        if ../scripts/fix-database-schema.sh; then
+            log_success "Schema fix completed successfully"
+        else
+            log_error "Schema fix failed - manual intervention required"
+            return 1
+        fi
     fi
     
     return 0

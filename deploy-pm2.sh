@@ -134,11 +134,11 @@ if [ -f ".env.production" ]; then
     if ./prisma-server.sh npx prisma migrate deploy; then
         print_success "Database migrations completed successfully"
     else
-        print_warning "Database migrations failed, attempting schema synchronization..."
-        if ./prisma-server.sh npx prisma db push --accept-data-loss; then
-            print_success "Database schema synchronized successfully"
+        print_warning "Database migrations failed, attempting schema fix..."
+        if ../scripts/fix-database-schema.sh; then
+            print_success "Database schema fixed successfully"
         else
-            print_error "Database schema synchronization failed!"
+            print_error "Database schema fix failed!"
             exit 1
         fi
     fi

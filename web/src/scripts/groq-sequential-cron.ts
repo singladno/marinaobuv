@@ -1,12 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { GroqSequentialProcessor } from '../lib/services/groq-sequential-processor';
 import { fetchExtendedBatch } from '../lib/utils/batch-extender';
 import { env } from '../lib/env';
-
-// Create a separate Prisma client for parser without query logging
-const prisma = new PrismaClient({
-  log: ['error'],
-});
+import { prisma } from '../lib/server/db';
 
 /**
  * Groq Sequential Processing Cron Job
@@ -84,7 +79,22 @@ async function main() {
         }
       } catch (error) {
         console.error(`❌ Error processing batch:`, error);
+
+        // Check if it's a JSON validation error from Groq
+        if (
+          error instanceof Error &&
+          error.message.includes('json_validate_failed')
+        ) {
+          console.log(
+            `🔄 Groq JSON validation error - this batch will be skipped and retried later`
+          );
+          console.log(
+            `📝 Error details: ${error.message.substring(0, 200)}...`
+          );
+        }
+
         // Continue with next batch even if this one fails
+        // Don't increment cycleProcessed for failed batches
       }
 
       // Update offset for next batch to prevent overlap
@@ -106,20 +116,16 @@ async function main() {
       console.log(`📊 Next offset: ${currentOffset}`);
 
       // Small delay between cycles to avoid overwhelming the system
-      if (cycleProcessed > 0) {
-        console.log('⏳ Waiting 2 seconds before next cycle...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } else {
-        // If no messages were processed in this cycle, break to avoid infinite loop
-        console.log('⚠️ No messages were processed in this cycle, stopping...');
-        break;
-      }
+      console.log('⏳ Waiting 2 seconds before next cycle...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
+
+    console.log(`✅ Completed processing all available messages`);
 
     console.log(`🎉 Groq Sequential Processing completed!`);
     console.log(`📊 Total cycles: ${cycleCount}`);
     console.log(
-      `📊 Total messages processed: ${totalProcessed}/${totalUnprocessed} (100%)`
+      `📊 Total messages processed: ${totalProcessed}/${totalUnprocessed} (${Math.round((totalProcessed / totalUnprocessed) * 100)}%)`
     );
   } catch (error) {
     console.error('❌ Error in Groq Sequential Processing:', error);
