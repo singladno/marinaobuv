@@ -54,11 +54,11 @@ export function calculateItemBoxTotal(
 
 /**
  * Calculate total boxes across all cart items
+ * Each product represents one box, regardless of how many pairs are in it
  */
 export function calculateTotalBoxes(items: CartItem[]): number {
   return items.reduce((sum, item) => {
-    const amountOfSizes = calculateAmountOfSizes(item.product.sizes);
-    return sum + amountOfSizes * item.qty;
+    return sum + item.qty;
   }, 0);
 }
 

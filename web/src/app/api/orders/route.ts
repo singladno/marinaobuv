@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       phone,
       fullName,
       address,
+      comment,
       transportCompanyId,
       customerInfo,
     } = body;
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required phone (either flat or within customerInfo)
     const customerValidation = validateCustomerInfo(
-      customerInfo ?? { phone, name: fullName, address }
+      customerInfo ?? { phone, name: fullName, address, comment }
     );
     if (!customerValidation.isValid) {
       return NextResponse.json(
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
         name: fullName ?? customerInfo?.name,
         phone: phone ?? customerInfo?.phone,
         address: address ?? customerInfo?.address,
+        comment: comment ?? customerInfo?.comment,
       },
       String(transportCompanyId)
     );

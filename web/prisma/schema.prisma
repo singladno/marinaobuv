@@ -38,6 +38,7 @@ model Product {
   season                Season?
   description           String?
   availabilityCheckedAt DateTime?
+  activeUpdatedAt       DateTime       @default(now())
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   isActive              Boolean        @default(true)
@@ -59,6 +60,7 @@ model Product {
   @@index([season])
   @@index([pricePair])
   @@index([isActive])
+  @@index([activeUpdatedAt])
 }
 
 model ProductImage {
@@ -249,6 +251,7 @@ model Order {
   address       String?
   transportId   String?
   transportName String?
+  comment       String?
   subtotal      Decimal     @default(0)
   total         Decimal     @default(0)
   status        String      @default("new")

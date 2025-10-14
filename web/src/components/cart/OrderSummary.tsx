@@ -86,69 +86,22 @@ export function OrderSummary({
   // Keep the old subtotal for backward compatibility but it should match totalBoxPrice
   const subtotal = totalBoxPrice;
 
-  const shippingCost = selectedTransport?.priceLabel === 'Бесплатно' ? 0 : 250;
-  const total = subtotal + shippingCost;
+  const total = subtotal;
 
   return (
     <div className="space-y-6">
-      {/* Delivery Summary */}
-      <div className="rounded-card bg-card shadow-card border-card p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Доставка{' '}
-            {selectedTransport ? selectedTransport.name : '— не выбрана'}
-          </h2>
-          <button
-            className="text-purple-600 hover:text-purple-700"
-            aria-label="Редактировать доставку"
-            title="Редактировать доставку"
-            onClick={() => setIsEditingTransport(true)}
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-              />
-            </svg>
-          </button>
-        </div>
-        {selectedTransport ? (
-          <>
-            {selectedTransport.address && (
-              <p className="text-sm text-gray-600">
-                {selectedTransport.address}
-              </p>
-            )}
-            <p className="text-sm text-gray-500">{selectedTransport.eta}</p>
-          </>
-        ) : (
-          <p className="text-sm text-gray-500">
-            Выберите транспортную компанию
-          </p>
-        )}
-      </div>
-
       {/* Order Total */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="mb-6 text-xl font-semibold text-gray-900">Итого</h3>
+      <div className="sticky top-24 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-4">
+          <h3 className="mb-2 text-lg font-semibold text-gray-900">
+            Детали заказа
+          </h3>
+          <div className="text-sm text-gray-600">
+            <p>Кол-во коробок: {totalBoxes}</p>
+          </div>
+        </div>
 
         <div className="space-y-3">
-          {selectedTransport && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">
-                Доставка ({selectedTransport.name}):
-              </span>
-              <span className="font-medium">{formatPrice(shippingCost)}</span>
-            </div>
-          )}
-
           <div className="border-t border-gray-200 pt-4">
             <div className="flex justify-between text-xl font-bold text-gray-900">
               <span>Итого:</span>

@@ -11,6 +11,7 @@ interface Product {
     name: string;
   } | null;
   colorOptions?: Array<{ color: string; imageUrl: string }>;
+  activeUpdatedAt?: string;
 }
 
 interface ProductGridProps {
@@ -67,6 +68,7 @@ export function ProductGrid({ products, gridCols, loading }: ProductGridProps) {
           category={product.category?.name ?? undefined}
           colorOptions={product.colorOptions}
           productId={product.id}
+          activeUpdatedAt={product.activeUpdatedAt}
         />
       ))}
     </div>

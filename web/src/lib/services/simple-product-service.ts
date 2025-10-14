@@ -154,6 +154,7 @@ export class SimpleProductService {
           batchProcessingStatus: 'failed',
           name: 'Invalid Product - Missing Required Data',
           description: 'Product failed validation - missing required fields',
+          activeUpdatedAt: new Date(), // Update the activeUpdatedAt field
         },
       });
 
@@ -175,6 +176,7 @@ export class SimpleProductService {
         season: analysisResult.season || null,
         sizes: analysisResult.sizes || [],
         batchProcessingStatus: 'analysis_complete',
+        activeUpdatedAt: new Date(), // Update the activeUpdatedAt field
         // Store GPT debug data
         gptRequest: gptRequest || null,
         gptResponse: gptResponse || null,
@@ -273,6 +275,7 @@ export class SimpleProductService {
       where: { id: product.id },
       data: {
         batchProcessingStatus: 'colors_complete',
+        activeUpdatedAt: new Date(), // Update the activeUpdatedAt field
       },
     });
 
@@ -436,6 +439,7 @@ export class SimpleProductService {
       where: { id: product.id },
       data: {
         batchProcessingStatus: 'colors_complete',
+        activeUpdatedAt: new Date(), // Update the activeUpdatedAt field
       },
     });
 
@@ -482,6 +486,7 @@ export class SimpleProductService {
             name: 'Invalid Product - Missing Required Data',
             description:
               'Product failed final validation - missing required fields',
+            activeUpdatedAt: new Date(), // Update the activeUpdatedAt field
           },
         });
         return;
@@ -492,6 +497,7 @@ export class SimpleProductService {
         data: {
           isActive: true,
           batchProcessingStatus: 'completed',
+          activeUpdatedAt: new Date(), // Update the activeUpdatedAt field
         },
       });
 

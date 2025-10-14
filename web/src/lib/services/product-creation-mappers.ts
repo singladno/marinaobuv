@@ -85,9 +85,9 @@ export function inferGenderFromSizes(
  * Generate a unique article number for a product
  */
 export function generateArticleNumber(): string {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
-  return `ART-${timestamp}-${random}`.toUpperCase();
+  // Generate a 6-digit random number
+  const randomNumber = Math.floor(100000 + Math.random() * 900000);
+  return randomNumber.toString();
 }
 
 /**

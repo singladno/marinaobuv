@@ -28,6 +28,7 @@ export default function BasketPage() {
     userFullName: basketState.userFullName,
     userAddress: basketState.userAddress,
     userEmail: basketState.userEmail,
+    orderComment: basketState.orderComment,
     addNotification: basketState.addNotification,
     clear: basketState.clear,
     setIsCheckoutModalOpen: handlers.setIsCheckoutModalOpen,
@@ -52,6 +53,7 @@ export default function BasketPage() {
           setIsEditingTransport={basketState.setIsEditingTransport}
           selectedTransportId={basketState.selectedTransportId}
           setSelectedTransportId={basketState.setSelectedTransportId}
+          setSelectedTransportCompany={basketState.setSelectedTransportCompany}
           isLoggedIn={basketState.isLoggedIn}
           setIsLoginModalOpen={basketState.setIsLoginModalOpen}
           isEditingUserData={basketState.isEditingUserData}
@@ -64,6 +66,10 @@ export default function BasketPage() {
           setUserFullName={basketState.setUserFullName}
           userAddress={basketState.userAddress}
           setUserAddress={basketState.setUserAddress}
+          orderComment={basketState.orderComment}
+          setOrderComment={basketState.setOrderComment}
+          isEditingComment={basketState.isEditingComment}
+          setIsEditingComment={basketState.setIsEditingComment}
           validationErrors={basketState.validationErrors}
           onPlaceOrder={orderHandlers.handlePlaceOrder}
           isPlacingOrder={orderHandlers.isPlacingOrder}

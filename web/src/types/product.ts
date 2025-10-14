@@ -11,6 +11,7 @@ export interface Product {
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description: string | null;
   availabilityCheckedAt: Date | null;
+  activeUpdatedAt: Date;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

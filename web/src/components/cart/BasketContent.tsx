@@ -1,5 +1,6 @@
 import { CartItemsList } from '@/components/cart/CartItemsList';
 import { OrderSummary } from '@/components/cart/OrderSummary';
+import { OrderComment } from '@/components/cart/OrderComment';
 import TransportCompanySelector from '@/components/features/TransportCompanySelector';
 import { popularTransportCompanies, TransportCompany } from '@/lib/shipping';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +42,10 @@ interface BasketContentProps {
   setUserFullName: (name: string) => void;
   userAddress: string;
   setUserAddress: (address: string) => void;
+  orderComment: string;
+  setOrderComment: (comment: string) => void;
+  isEditingComment: boolean;
+  setIsEditingComment: (editing: boolean) => void;
   validationErrors?: {
     transport?: boolean;
     userData?: boolean;
@@ -75,6 +80,10 @@ export function BasketContent({
   setUserFullName,
   userAddress,
   setUserAddress,
+  orderComment,
+  setOrderComment,
+  isEditingComment,
+  setIsEditingComment,
   validationErrors,
   onPlaceOrder,
   isPlacingOrder,
@@ -130,6 +139,11 @@ export function BasketContent({
           {isEditingTransport ? (
             <TransportCompanySelector
               value={selectedTransportId || undefined}
+              initialCustomName={
+                selectedTransport?.id === 'other'
+                  ? selectedTransport?.name
+                  : undefined
+              }
               onChange={(id, company) => {
                 setSelectedTransportId(id);
                 if (company && setSelectedTransportCompany) {
@@ -151,18 +165,48 @@ export function BasketContent({
               className="rounded-card border-card hover:bg-card-hover w-full p-4 text-left transition-colors"
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">{selectedTransport.name}</h3>
-                  {selectedTransport.address && (
-                    <p className="text-sm text-gray-600">
-                      {selectedTransport.address}
-                    </p>
-                  )}
-                  {selectedTransport.workingHours && (
-                    <p className="text-sm text-gray-500">
-                      {selectedTransport.workingHours}
-                    </p>
-                  )}
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center">
+                    {selectedTransport.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={selectedTransport.logoUrl}
+                        alt={selectedTransport.name}
+                        className="h-10 w-10 object-contain"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : selectedTransport.id === 'other' ? (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100">
+                        <svg
+                          className="h-4 w-4 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                          />
+                        </svg>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{selectedTransport.name}</h3>
+                    {selectedTransport.address && (
+                      <p className="text-sm text-gray-600">
+                        {selectedTransport.address}
+                      </p>
+                    )}
+                    {selectedTransport.workingHours && (
+                      <p className="text-sm text-gray-500">
+                        {selectedTransport.workingHours}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-green-600">
@@ -338,6 +382,14 @@ export function BasketContent({
             </div>
           )}
         </div>
+
+        {/* Order Comment Section */}
+        <OrderComment
+          comment={orderComment}
+          setComment={setOrderComment}
+          isEditing={isEditingComment}
+          setIsEditing={setIsEditingComment}
+        />
       </div>
 
       <OrderSummary

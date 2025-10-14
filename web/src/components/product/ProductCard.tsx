@@ -12,6 +12,40 @@ import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { rub } from '@/lib/format';
 
+// Function to get relative time in Russian
+function getRelativeTime(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return 'Только что';
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} мин. назад`;
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} ч. назад`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return `${diffInDays} дн. назад`;
+  }
+
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return `${diffInMonths} мес. назад`;
+  }
+
+  const diffInYears = Math.floor(diffInMonths / 12);
+  return `${diffInYears} г. назад`;
+}
+
 type Props = {
   slug: string;
   name: string;
@@ -23,6 +57,7 @@ type Props = {
   showCategory?: boolean;
   colorOptions?: Array<{ color: string; imageUrl: string }>;
   productId?: string; // Add productId for source button
+  activeUpdatedAt?: string; // Add activeUpdatedAt for availability display
 };
 
 export default function ProductCard({
@@ -35,6 +70,7 @@ export default function ProductCard({
   showCategory = false,
   colorOptions = [],
   productId,
+  activeUpdatedAt,
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
@@ -58,7 +94,7 @@ export default function ProductCard({
   const computedPairPrice = useMemo(() => pricePair ?? null, [pricePair]);
   return (
     <>
-      <div className="bg-surface rounded-card-large shadow-card hover:shadow-card-hover group relative overflow-hidden transition-all duration-300 hover:-translate-y-1">
+      <div className="bg-surface rounded-card-large shadow-card hover:shadow-card-hover group relative flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1">
         {/* Heart overlay outside the Link to avoid navigation */}
         <button
           type="button"
@@ -75,7 +111,7 @@ export default function ProductCard({
           />
         </button>
 
-        <Link href={`/product/${slug}`} className="block">
+        <Link href={`/product/${slug}`} className="block flex-1">
           {/* Image Container */}
           <div className="bg-muted group/image relative aspect-square w-full overflow-hidden">
             {hasImage ? (
@@ -126,28 +162,33 @@ export default function ProductCard({
             <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
           </div>
 
-          <div className="p-5">
-            <div className="space-y-3">
-              <Text
-                variant="body"
-                className="text-foreground group-hover:text-primary line-clamp-2 min-h-[2.5rem] font-medium leading-tight transition-colors duration-200"
-              >
-                {name}
+          <div className="space-y-3 p-5">
+            <Text
+              variant="body"
+              className="text-foreground group-hover:text-primary line-clamp-2 min-h-[2.5rem] font-medium leading-tight transition-colors duration-200"
+            >
+              {name}
+            </Text>
+            <div className="flex items-center justify-between">
+              <Text className="text-foreground text-xl font-bold">
+                {rub(computedPairPrice ?? 0)}
               </Text>
-              <div className="flex items-center justify-between">
-                <Text className="text-foreground text-xl font-bold">
-                  {rub(computedPairPrice ?? 0)}
-                </Text>
-                <CartActionButton slug={slug} />
-              </div>
-              <ColorSwitcher
-                options={colorOptions}
-                selectedColor={selectedColor || colorOptions[0]?.color || null}
-                onSelect={setSelectedColor}
-              />
+              <CartActionButton slug={slug} />
             </div>
+            <ColorSwitcher
+              options={colorOptions}
+              selectedColor={selectedColor || colorOptions[0]?.color || null}
+              onSelect={setSelectedColor}
+            />
           </div>
         </Link>
+
+        {/* Availability info - positioned at the very bottom of the card */}
+        {activeUpdatedAt && (
+          <div className="px-5 pb-3 text-xs text-gray-500">
+            Наличие проверено: {getRelativeTime(activeUpdatedAt)}
+          </div>
+        )}
       </div>
 
       {/* Source Modal - rendered outside card to avoid clipping */}

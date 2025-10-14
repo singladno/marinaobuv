@@ -34,6 +34,7 @@ export function useCatalogPage() {
       id: product.id,
       slug: product.slug, // Include slug field
       name: product.name,
+      article: product.article, // Include article field
       pricePair: product.pricePair,
       primaryImageUrl: product.primaryImageUrl, // Include image URL
       colorOptions: product.colorOptions || [], // Include color options

@@ -93,10 +93,13 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Update the product
+    // Update the product with activeUpdatedAt
     const updatedProduct = await prisma.product.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...updateData,
+        activeUpdatedAt: new Date(), // Update the activeUpdatedAt field
+      },
       include: productInclude,
     });
 

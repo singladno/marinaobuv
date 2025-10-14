@@ -14,6 +14,7 @@ interface UseOrderHandlersProps {
   userFullName: string;
   userAddress: string;
   userEmail: string;
+  orderComment: string;
   addNotification: (notification: any) => void;
   clear: () => void;
   setIsCheckoutModalOpen: (open: boolean) => void;
@@ -36,6 +37,7 @@ export function useOrderHandlers({
   userFullName,
   userAddress,
   userEmail,
+  orderComment,
   addNotification,
   clear,
   setIsCheckoutModalOpen,
@@ -80,6 +82,7 @@ export function useOrderHandlers({
           phone: orderPhone,
           email: userEmail,
           address: userAddress,
+          comment: orderComment,
           transportCompanyId: selectedTransportId,
           total: calculateSubtotal(),
           subtotal: calculateSubtotal(),

@@ -108,6 +108,7 @@ export async function createOrder(
       fullName: customerInfo.name,
       phone: customerInfo.phone,
       address: customerInfo.address,
+      comment: customerInfo.comment,
       transportId: transportCompanyId,
       items: {
         create: orderItems,

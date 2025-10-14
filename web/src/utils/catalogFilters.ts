@@ -1,6 +1,7 @@
 interface Product {
   id: string;
   name: string;
+  article?: string | null;
   pricePair: number;
   createdAt: string;
   category?: {
@@ -25,6 +26,7 @@ export const matchesSearchQuery = (product: Product, query: string) => {
   const lowerQuery = query.toLowerCase();
   return (
     product.name.toLowerCase().includes(lowerQuery) ||
+    product.article?.toLowerCase()?.includes(lowerQuery) ||
     product.category?.name?.toLowerCase()?.includes(lowerQuery)
   );
 };

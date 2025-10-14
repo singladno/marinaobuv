@@ -87,6 +87,9 @@ export async function GET(request: NextRequest) {
       case 'newest':
         orderBy = { createdAt: 'desc' };
         break;
+      case 'updated':
+        orderBy = { activeUpdatedAt: 'desc' };
+        break;
       case 'oldest':
         orderBy = { createdAt: 'asc' };
         break;
@@ -155,12 +158,50 @@ export async function GET(request: NextRequest) {
     if (search && search.trim().length > 0) {
       try {
         const session = await getSession();
-        await prisma.searchHistory.create({
-          data: {
-            query: search.trim(),
-            userId: session?.userId || null,
-          },
-        });
+        const normalized = search.trim();
+        const userId = session?.userId || null;
+
+        if (userId) {
+          // For logged-in users: upsert by case-insensitive query to avoid duplicates
+          const existing = await prisma.searchHistory.findFirst({
+            where: {
+              userId,
+              query: { equals: normalized, mode: 'insensitive' },
+            },
+            select: { id: true },
+          });
+
+          if (existing) {
+            await prisma.searchHistory.update({
+              where: { id: existing.id },
+              data: { query: normalized, createdAt: new Date() },
+            });
+          } else {
+            await prisma.searchHistory.create({
+              data: { query: normalized, userId },
+            });
+          }
+        } else {
+          // Anonymous searches: still persist but dedupe by latest same query
+          const existing = await prisma.searchHistory.findFirst({
+            where: {
+              userId: null,
+              query: { equals: normalized, mode: 'insensitive' },
+            },
+            select: { id: true },
+          });
+
+          if (existing) {
+            await prisma.searchHistory.update({
+              where: { id: existing.id },
+              data: { query: normalized, createdAt: new Date() },
+            });
+          } else {
+            await prisma.searchHistory.create({
+              data: { query: normalized, userId: null },
+            });
+          }
+        }
       } catch (error) {
         // Don't fail the request if search history saving fails
         console.error('Failed to save search history:', error);

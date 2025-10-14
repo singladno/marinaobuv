@@ -4,6 +4,7 @@ interface Product {
   id: string;
   name: string;
   slug: string;
+  article: string | null;
   pricePair: number;
   currency: string;
   primaryImageUrl: string | null;
@@ -48,6 +49,7 @@ export function useCatalogProducts(): UseCatalogProductsReturn {
           id: string;
           name: string;
           slug: string;
+          article?: string | null;
           pricePair?: number;
           currency?: string;
           primaryImageUrl: string | null;
@@ -60,6 +62,7 @@ export function useCatalogProducts(): UseCatalogProductsReturn {
           id: product.id,
           name: product.name,
           slug: product.slug,
+          article: product.article || null,
           pricePair: product.pricePair || 0,
           currency: product.currency || 'RUB',
           primaryImageUrl: product.primaryImageUrl,

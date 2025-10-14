@@ -20,14 +20,19 @@ export function useBasketPageState() {
   const [selectedTransportId, setSelectedTransportId] = useState<string | null>(
     null
   );
+  const [customTransportCompany, setCustomTransportCompany] =
+    useState<TransportCompany | null>(null);
   const selectedTransport: TransportCompany | null =
     order.selectedShipping || null;
+
   const [isEditingTransport, setIsEditingTransport] = useState(false);
   const [isEditingUserData, setIsEditingUserData] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [orderPhone, setOrderPhone] = useState('');
   const [userFullName, setUserFullName] = useState('');
   const [userAddress, setUserAddress] = useState('');
+  const [orderComment, setOrderComment] = useState('');
+  const [isEditingComment, setIsEditingComment] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{
     transport?: boolean;
     userData?: boolean;
@@ -49,7 +54,9 @@ export function useBasketPageState() {
         userEmail?: string;
         userFullName?: string;
         userAddress?: string;
+        orderComment?: string;
         selectedTransportId?: string | null;
+        customTransportCompany?: TransportCompany;
       };
       // Only restore a previously saved phone if it looks valid
       if (
@@ -64,8 +71,14 @@ export function useBasketPageState() {
         setUserFullName(saved.userFullName);
       if (typeof saved.userAddress === 'string')
         setUserAddress(saved.userAddress);
+      if (typeof saved.orderComment === 'string')
+        setOrderComment(saved.orderComment);
       if (saved.selectedTransportId)
         setSelectedTransportId(saved.selectedTransportId);
+      if (saved.customTransportCompany) {
+        setCustomTransportCompany(saved.customTransportCompany);
+        order.setSelectedShipping(saved.customTransportCompany);
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -92,7 +105,9 @@ export function useBasketPageState() {
         userEmail,
         userFullName,
         userAddress,
+        orderComment,
         selectedTransportId,
+        customTransportCompany,
         timestamp: Date.now(),
       };
       if (typeof window !== 'undefined') {
@@ -104,7 +119,9 @@ export function useBasketPageState() {
     userEmail,
     userFullName,
     userAddress,
+    orderComment,
     selectedTransportId,
+    customTransportCompany,
     userId,
   ]);
 
@@ -124,6 +141,15 @@ export function useBasketPageState() {
   // Keep order.selectedShipping in sync with selectedTransportId
   useEffect(() => {
     if (!selectedTransportId) return;
+
+    // Handle custom companies (id === 'other')
+    if (selectedTransportId === 'other') {
+      // For custom companies, we don't need to do anything here
+      // as the company is already set via setSelectedTransportCompany
+      return;
+    }
+
+    // Handle regular companies
     const company = popularTransportCompanies.find(
       c => c.id === selectedTransportId
     );
@@ -131,6 +157,16 @@ export function useBasketPageState() {
       order.setSelectedShipping(company);
     }
   }, [selectedTransportId, order]);
+
+  // Custom setSelectedTransportCompany function that also updates customTransportCompany state
+  const handleSetSelectedTransportCompany = (company: TransportCompany) => {
+    order.setSelectedShipping(company);
+    if (company.id === 'other') {
+      setCustomTransportCompany(company);
+    } else {
+      setCustomTransportCompany(null);
+    }
+  };
 
   // Shim auth states expected by page/handlers
   const [loginLoading, setLoginLoading] = useState(false);
@@ -156,7 +192,7 @@ export function useBasketPageState() {
     setIsEditingTransport,
     selectedTransportId,
     setSelectedTransportId,
-    setSelectedTransportCompany: order.setSelectedShipping,
+    setSelectedTransportCompany: handleSetSelectedTransportCompany,
     isEditingUserData,
     setIsEditingUserData,
     userEmail,
@@ -167,6 +203,10 @@ export function useBasketPageState() {
     setUserFullName,
     userAddress,
     setUserAddress,
+    orderComment,
+    setOrderComment,
+    isEditingComment,
+    setIsEditingComment,
     validationErrors,
     setValidationErrors,
     // compatibility fields expected by basket page and handlers

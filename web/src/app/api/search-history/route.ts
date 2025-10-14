@@ -12,20 +12,32 @@ export async function GET(request: NextRequest) {
       [];
 
     if (session?.userId) {
-      searchHistory = await prisma.searchHistory.findMany({
+      const rows = await prisma.searchHistory.findMany({
         where: {
           userId: session.userId,
         },
         orderBy: {
           createdAt: 'desc',
         },
-        take: 10, // Limit to last 10 searches
         select: {
           id: true,
           query: true,
           createdAt: true,
         },
       });
+
+      // Deduplicate by query (case-insensitive), keeping the most recent
+      const seen = new Set<string>();
+      const deduped: typeof rows = [];
+      for (const row of rows) {
+        const key = row.query.trim().toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          deduped.push(row);
+        }
+        if (deduped.length >= 10) break; // limit to 10 unique queries
+      }
+      searchHistory = deduped;
     }
 
     return NextResponse.json({ searchHistory });

@@ -10,6 +10,7 @@ interface SortControlProps {
 
 const sortOptions = [
   { value: 'newest', label: 'Сначала новые' },
+  { value: 'updated', label: 'По дате обновления' },
   { value: 'price_asc', label: 'По возрастанию цены' },
   { value: 'price_desc', label: 'По убыванию цены' },
 ];

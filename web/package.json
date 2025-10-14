@@ -60,7 +60,6 @@
     "@aws-sdk/lib-storage": "^3.888.0",
     "@aws-sdk/s3-request-presigner": "^3.908.0",
     "@heroicons/react": "^2.2.0",
-    "@prisma/client": "^5.22.0",
     "@radix-ui/react-popover": "^1.1.15",
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-table": "8.21.3",
@@ -91,6 +90,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@prisma/client": "^5.22.0",
     "@types/global-agent": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -106,7 +106,7 @@
     "nodemon": "^3.1.7",
     "prettier": "^3.0.0",
     "prettier-plugin-tailwindcss": "^0.5.0",
-    "prisma": "^5.19.1",
+    "prisma": "^5.22.0",
     "typescript": "^5"
   },
   "lint-staged": {
