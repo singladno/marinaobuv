@@ -317,34 +317,8 @@ jobs:
             # Skip backup (requires tsx); do backups manually or on cron
             echo "ℹ️ Skipping DB backup during deploy"
 
-            # Fix database permissions first
-            echo "🔐 Fixing database permissions..."
-            DB_URL=$(grep "DATABASE_URL" .env | cut -d'=' -f2 | tr -d '"')
-            DB_USER=$(echo "$DB_URL" | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
-            DB_NAME=$(echo "$DB_URL" | sed -n 's/.*\/\([^?]*\).*/\1/p')
-            
-            # Create temporary SQL to fix permissions
-            TEMP_SQL="/tmp/fix_permissions_$$.sql"
-            cat > "$TEMP_SQL" << EOF
--- Grant necessary permissions to the database user
-GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB_USER;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;
-GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO $DB_USER;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $DB_USER;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO $DB_USER;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO $DB_USER;
-GRANT USAGE ON SCHEMA public TO $DB_USER;
-GRANT CREATE ON SCHEMA public TO $DB_USER;
-EOF
-
-            # Try to fix permissions
-            if psql "$DB_URL" -f "$TEMP_SQL" 2>/dev/null; then
-              echo "✅ Database permissions fixed"
-            else
-              echo "⚠️ Could not fix database permissions automatically, continuing..."
-            fi
-            rm -f "$TEMP_SQL"
+            # Skip database permission changes during deploy to avoid YAML/heredoc issues
+            echo "ℹ️ Skipping database permission adjustments during deployment"
 
             # Run database migrations with proper error handling
             echo "🚀 Running database migrations..."

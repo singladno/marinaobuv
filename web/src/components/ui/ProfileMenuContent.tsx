@@ -20,7 +20,7 @@ export default function ProfileMenuContent({
   // If user is not logged in, only show the login button
   if (!user) {
     return (
-      <div className="w-full rounded-2xl bg-white p-0 text-gray-900 shadow-xl">
+      <div className="w-full rounded-lg bg-white p-0 text-gray-900">
         <div className="p-2">
           <Link href="/login">
             <Button variant="ghost" className="w-full justify-start">
@@ -34,7 +34,7 @@ export default function ProfileMenuContent({
 
   // If user is logged in, show full profile menu
   return (
-    <div className="w-full rounded-2xl bg-white p-0 text-gray-900 shadow-xl">
+    <div className="w-full rounded-lg bg-white p-0 text-gray-900">
       <div className="flex items-center gap-3 border-b border-gray-100 p-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
           <svg
@@ -51,11 +51,13 @@ export default function ProfileMenuContent({
             />
           </svg>
         </div>
-        <div className="flex-1">
-          <div className="text-lg font-semibold">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-lg font-semibold">
             {user?.name || 'Имя не указано'}
           </div>
-          <div className="text-sm text-gray-500">{user?.phone || ''}</div>
+          <div className="truncate text-sm text-gray-500">
+            {user?.phone || ''}
+          </div>
         </div>
       </div>
 

@@ -59,11 +59,12 @@ export default function AccountMenu() {
       {open && anchorRect && (
         <div
           ref={menuRef}
-          className="fixed z-50 rounded-lg border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          className="fixed z-50 rounded-lg border bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800"
           style={{
             left: `${anchorRect.left}px`,
             top: `${anchorRect.top}px`,
             width: `${anchorRect.width}px`,
+            minWidth: '280px',
           }}
           onMouseEnter={handleMenuMouseEnter}
           onMouseLeave={handleMenuMouseLeave}

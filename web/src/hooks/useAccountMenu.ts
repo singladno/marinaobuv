@@ -57,25 +57,29 @@ export function useAccountMenu() {
     }
 
     const rect = event.currentTarget.getBoundingClientRect();
-    const iconsContainer = document.getElementById('header-icons');
+    const dropdownWidth = 280; // Fixed width for the dropdown
+    const viewportWidth = window.innerWidth;
 
-    if (iconsContainer) {
-      const containerRect = iconsContainer.getBoundingClientRect();
-      setAnchorRect({
-        left: containerRect.left,
-        top: containerRect.bottom,
-        width: containerRect.width,
-        height: containerRect.height,
-      });
-    } else {
-      // Fallback to button positioning if container not found
-      setAnchorRect({
-        left: rect.left,
-        top: rect.bottom,
-        width: rect.width,
-        height: rect.height,
-      });
+    // Calculate horizontal position with responsive adjustment
+    let left = rect.left;
+
+    // If dropdown would go off-screen to the right, align it to the right edge of the button
+    if (left + dropdownWidth > viewportWidth - 16) {
+      // 16px margin from edge
+      left = rect.right - dropdownWidth;
     }
+
+    // Ensure dropdown doesn't go off-screen to the left
+    if (left < 16) {
+      left = 16;
+    }
+
+    setAnchorRect({
+      left,
+      top: rect.bottom + 8, // 8px gap below the button
+      width: dropdownWidth,
+      height: rect.height,
+    });
     setOpen(true);
   };
 

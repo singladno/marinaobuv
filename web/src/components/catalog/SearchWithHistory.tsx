@@ -81,7 +81,8 @@ export function SearchWithHistory({
 
   const overlayContent = isOpen ? (
     <div
-      className="fixed inset-x-0 bottom-0 top-[82px] z-[100] bg-black/10"
+      className="fixed inset-x-0 bottom-0 z-[100] bg-black/10"
+      style={{ top: 'var(--header-height, 81px)' }}
       onClick={() => setIsOpen(false)}
       aria-hidden="true"
     />
@@ -230,17 +231,18 @@ export function SearchWithHistory({
             onFocus={handleInputFocus}
             onKeyDown={handleKeyDown}
             fullWidth
-            className="search-input !border-0 !bg-white pr-20 !shadow-sm placeholder:!text-gray-400 focus:!border-purple-500 focus:!ring-2 focus:!ring-purple-200 focus-visible:!border-purple-500 focus-visible:!ring-2 focus-visible:!ring-purple-200"
+            className="search-input !rounded-2xl !border-0 !bg-white !py-3 pr-20 !text-base !shadow-sm placeholder:!text-gray-400 focus:!border-purple-500 focus:!ring-2 focus:!ring-purple-200 focus-visible:!border-purple-500 focus-visible:!ring-2 focus-visible:!ring-purple-200"
           />
           {/* Clear button - show when there's text */}
           {inputValue && (
             <button
               type="button"
-              className="absolute right-10 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md hover:bg-gray-100"
+              className="absolute right-12 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md hover:bg-gray-100"
               onClick={() => {
                 setInputValue('');
                 onChange('');
               }}
+              aria-label="Очистить поиск"
             >
               <svg
                 className="h-4 w-4 text-gray-500"
@@ -261,8 +263,9 @@ export function SearchWithHistory({
           {/* Search button */}
           <button
             type="button"
-            className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md hover:bg-white/10"
+            className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md hover:bg-white/10"
             onClick={() => handleSearch(inputValue)}
+            aria-label="Найти товары"
           >
             <svg
               className="h-4 w-4 text-gray-400"

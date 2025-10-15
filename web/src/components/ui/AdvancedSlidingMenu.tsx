@@ -252,8 +252,8 @@ export function AdvancedSlidingMenu({
       setShowSubMenu(true);
       setHoveredItem(
         catalogData.find(item =>
-          item.children?.some(child => child.children?.length > 0)
-        )
+          item.children?.some(child => (child.children?.length ?? 0) > 0)
+        ) || null
       );
     }
   };
@@ -291,148 +291,66 @@ export function AdvancedSlidingMenu({
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 top-[82px] z-40 bg-black/20 transition-opacity duration-300 ease-in-out ${
-          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
-        }`}
-        onClick={onClose}
-      />
-
-      {/* Menu Container */}
-      <div
-        className="fixed left-0 top-[82px] z-50 flex h-[calc(100vh-82px)]"
-        onMouseLeave={() => {
-          // Only hide if we're not in navigation mode
-          if (navigationStack.length === 0) {
-            handleItemLeave();
-          }
-        }}
-      >
-        {/* Main Menu */}
+      {/* Backdrop - only render when menu is open */}
+      {isOpen && (
         <div
-          className={`w-64 transform bg-white shadow-xl transition-transform duration-300 ease-in-out ${
-            isOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          {/* Menu items */}
-          <div className="flex-1 overflow-y-auto">
-            <nav className="p-4">
-              <ul className="space-y-0">
-                {catalogData.map(item => (
-                  <li key={item.id}>
-                    <div
-                      className={`flex cursor-pointer items-center justify-between rounded-lg px-4 py-1.5 transition-colors ${
-                        hoveredItem?.id === item.id
-                          ? 'bg-gray-100'
-                          : 'hover:bg-gray-100'
-                      }`}
-                      onMouseEnter={() => handleItemHover(item)}
-                    >
-                      <div className="flex items-center gap-3">
-                        {item.icon && (
-                          <span className="text-base">{item.icon}</span>
-                        )}
-                        <Text as="span" className="text-sm">
-                          {item.name}
-                        </Text>
-                      </div>
-                      {item.children && item.children.length > 0 && (
-                        <ChevronRightIcon
-                          className={`h-4 w-4 text-gray-500 transition-opacity ${
-                            hoveredItem?.id === item.id
-                              ? 'opacity-100'
-                              : 'opacity-0'
-                          }`}
-                        />
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
-        </div>
+          className="fixed bottom-0 left-0 right-0 z-40 bg-black/20 opacity-100 transition-opacity duration-300 ease-in-out"
+          style={{ top: 'var(--header-height, 82px)' }}
+          onClick={onClose}
+        />
+      )}
 
-        {/* Sub Menu (appears on hover or when navigating) */}
-        {(() => {
-          const shouldShow = showSubMenu || navigationStack.length > 0;
-          console.log('Sub-menu visibility check:', {
-            showSubMenu,
-            navigationStackLength: navigationStack.length,
-            shouldShow,
-          });
-          return shouldShow;
-        })() ? (
+      {/* Menu Container - only render when menu is open */}
+      {isOpen && (
+        <div
+          className="fixed left-0 z-50 flex"
+          style={{
+            top: 'var(--header-height, 82px)',
+            height: 'calc(100vh - var(--header-height, 82px))',
+          }}
+          onMouseLeave={() => {
+            // Only hide if we're not in navigation mode
+            if (navigationStack.length === 0) {
+              handleItemLeave();
+            }
+          }}
+        >
+          {/* Main Menu */}
           <div
-            className="animate-in slide-in-from-left w-64 transform border-l bg-white shadow-xl transition-transform duration-200 ease-in-out"
-            onMouseEnter={() => {
-              // Clear timeout and keep sub-menu visible when hovering over it
-              if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-                setHoverTimeout(null);
-              }
-              if (navigationStack.length === 0) {
-                setShowSubMenu(true);
-              }
-            }}
+            className={`w-64 transform bg-white shadow-xl transition-transform duration-300 ease-in-out ${
+              isOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
           >
-            {/* Sub Menu Items */}
+            {/* Menu items */}
             <div className="flex-1 overflow-y-auto">
               <nav className="p-4">
-                {/* Back button for third level */}
-                {navigationStack.length > 0 && (
-                  <div className="mb-4">
-                    <button
-                      onClick={handleBackClick}
-                      className="flex items-center gap-2 text-base font-semibold text-gray-500 transition-colors duration-300 hover:text-black"
-                    >
-                      <ArrowLeftIcon className="h-4 w-4" />
-                      {navigationStack.length > 1
-                        ? navigationStack[navigationStack.length - 2]?.name
-                        : catalogData.find(item =>
-                            item.children?.some(
-                              child => child.id === navigationStack[0]?.id
-                            )
-                          )?.name || 'Назад'}
-                    </button>
-
-                    {/* Category header under back button for third level */}
-                    <div className="mt-2 px-4">
-                      <Text as="h3" className="text-base font-bold text-black">
-                        {navigationStack[navigationStack.length - 1]?.name}
-                      </Text>
-                    </div>
-                  </div>
-                )}
-                {/* Sub-menu header - just the category name */}
-                {!navigationStack.length && hoveredItem && (
-                  <div className="px-4 py-1.5 transition-colors duration-300 hover:text-gray-600">
-                    <Text
-                      as="h3"
-                      className="text-base font-semibold text-black"
-                    >
-                      {hoveredItem.name}
-                    </Text>
-                  </div>
-                )}
                 <ul className="space-y-0">
-                  {(navigationStack.length > 0
-                    ? currentLevel
-                    : hoveredItem?.children || []
-                  ).map(subItem => (
-                    <li key={subItem.id}>
+                  {catalogData.map(item => (
+                    <li key={item.id}>
                       <div
-                        className="group flex cursor-pointer items-center justify-between rounded-lg px-4 py-1.5 transition-colors hover:bg-gray-100"
-                        onClick={() => handleItemClick(subItem)}
+                        className={`flex cursor-pointer items-center justify-between rounded-lg px-4 py-1.5 transition-colors ${
+                          hoveredItem?.id === item.id
+                            ? 'bg-gray-100'
+                            : 'hover:bg-gray-100'
+                        }`}
+                        onMouseEnter={() => handleItemHover(item)}
                       >
                         <div className="flex items-center gap-3">
+                          {item.icon && (
+                            <span className="text-base">{item.icon}</span>
+                          )}
                           <Text as="span" className="text-sm">
-                            {subItem.name}
+                            {item.name}
                           </Text>
                         </div>
-                        {subItem.children && subItem.children.length > 0 && (
-                          <ChevronRightIcon className="h-4 w-4 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100" />
+                        {item.children && item.children.length > 0 && (
+                          <ChevronRightIcon
+                            className={`h-4 w-4 text-gray-500 transition-opacity ${
+                              hoveredItem?.id === item.id
+                                ? 'opacity-100'
+                                : 'opacity-0'
+                            }`}
+                          />
                         )}
                       </div>
                     </li>
@@ -441,8 +359,100 @@ export function AdvancedSlidingMenu({
               </nav>
             </div>
           </div>
-        ) : null}
-      </div>
+
+          {/* Sub Menu (appears on hover or when navigating) */}
+          {(() => {
+            const shouldShow = showSubMenu || navigationStack.length > 0;
+            console.log('Sub-menu visibility check:', {
+              showSubMenu,
+              navigationStackLength: navigationStack.length,
+              shouldShow,
+            });
+            return shouldShow;
+          })() ? (
+            <div
+              className="animate-in slide-in-from-left w-64 transform border-l bg-white shadow-xl transition-transform duration-200 ease-in-out"
+              onMouseEnter={() => {
+                // Clear timeout and keep sub-menu visible when hovering over it
+                if (hoverTimeout) {
+                  clearTimeout(hoverTimeout);
+                  setHoverTimeout(null);
+                }
+                if (navigationStack.length === 0) {
+                  setShowSubMenu(true);
+                }
+              }}
+            >
+              {/* Sub Menu Items */}
+              <div className="flex-1 overflow-y-auto">
+                <nav className="p-4">
+                  {/* Back button for third level */}
+                  {navigationStack.length > 0 && (
+                    <div className="mb-4">
+                      <button
+                        onClick={handleBackClick}
+                        className="flex items-center gap-2 text-base font-semibold text-gray-500 transition-colors duration-300 hover:text-black"
+                      >
+                        <ArrowLeftIcon className="h-4 w-4" />
+                        {navigationStack.length > 1
+                          ? navigationStack[navigationStack.length - 2]?.name
+                          : catalogData.find(item =>
+                              item.children?.some(
+                                child => child.id === navigationStack[0]?.id
+                              )
+                            )?.name || 'Назад'}
+                      </button>
+
+                      {/* Category header under back button for third level */}
+                      <div className="mt-2 px-4">
+                        <Text
+                          as="h3"
+                          className="text-base font-bold text-black"
+                        >
+                          {navigationStack[navigationStack.length - 1]?.name}
+                        </Text>
+                      </div>
+                    </div>
+                  )}
+                  {/* Sub-menu header - just the category name */}
+                  {!navigationStack.length && hoveredItem && (
+                    <div className="px-4 py-1.5 transition-colors duration-300 hover:text-gray-600">
+                      <Text
+                        as="h3"
+                        className="text-base font-semibold text-black"
+                      >
+                        {hoveredItem.name}
+                      </Text>
+                    </div>
+                  )}
+                  <ul className="space-y-0">
+                    {(navigationStack.length > 0
+                      ? currentLevel
+                      : hoveredItem?.children || []
+                    ).map(subItem => (
+                      <li key={subItem.id}>
+                        <div
+                          className="group flex cursor-pointer items-center justify-between rounded-lg px-4 py-1.5 transition-colors hover:bg-gray-100"
+                          onClick={() => handleItemClick(subItem)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Text as="span" className="text-sm">
+                              {subItem.name}
+                            </Text>
+                          </div>
+                          {subItem.children && subItem.children.length > 0 && (
+                            <ChevronRightIcon className="h-4 w-4 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100" />
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
     </>
   );
 }
