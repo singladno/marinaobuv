@@ -296,6 +296,11 @@ jobs:
             # Install dependencies including dev (required for tsx/typescript used by scripts)
             cd web && npm ci
             cd ..
+            
+            # Install proxy dependencies
+            echo "🔧 Installing proxy dependencies..."
+            cd proxy && npm install
+            cd ..
 
             # Generate Prisma client with proper environment
             cd web
@@ -593,6 +598,10 @@ jobs:
               exit 1
             fi
 
+            # Ensure Groq proxy port is open in firewall
+            echo "🔧 Ensuring Groq proxy port 8787 is open in firewall..."
+            sudo ufw allow 8787/tcp || true
+            
             # Verify webhook deployment
             echo "🔍 Verifying webhook deployment..."
 
