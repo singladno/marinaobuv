@@ -48,8 +48,12 @@ jobs:
           cd web
           npm run build
         env:
+          NODE_ENV: production
           NEXT_PUBLIC_SITE_URL: https://marina-obuv.ru
           NEXT_PUBLIC_BRAND_NAME: MarinaObuv
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_URL: https://marina-obuv.ru
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
 
       - name: Delete all existing artifacts (pre-clean)
         env:
