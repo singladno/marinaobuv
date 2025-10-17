@@ -606,24 +606,22 @@ jobs:
             
             # Configure Nginx to proxy Groq proxy through domain
             echo "🔧 Configuring Nginx to proxy Groq proxy through domain..."
-            sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
-            
-            # Groq Proxy endpoint
-            location /groq-proxy/ {
-                proxy_pass http://localhost:3001/;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection 'upgrade';
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                proxy_cache_bypass $http_upgrade;
-                proxy_read_timeout 86400;
-                proxy_connect_timeout 60s;
-                proxy_send_timeout 60s;
-            }
-EOF
+            echo "" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "            # Groq Proxy endpoint" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "            location /groq-proxy/ {" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_pass http://localhost:3001/;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_http_version 1.1;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_set_header Upgrade \$http_upgrade;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_set_header Connection 'upgrade';" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_set_header Host \$host;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_set_header X-Real-IP \$remote_addr;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_set_header X-Forwarded-Proto \$scheme;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_cache_bypass \$http_upgrade;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_read_timeout 86400;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_connect_timeout 60s;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "                proxy_send_timeout 60s;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
+            echo "            }" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf
             sudo nginx -t && sudo systemctl reload nginx
             echo "✅ Nginx configured to proxy Groq proxy through /groq-proxy/ endpoint"
 
