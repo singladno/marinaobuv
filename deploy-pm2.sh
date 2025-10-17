@@ -196,7 +196,7 @@ fi
 
 # Verify proxy is responding to health checks
 print_status "Verifying Groq proxy health..."
-if ! curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
+if ! curl -f -s http://localhost:8888/healthz > /dev/null 2>&1; then
     print_error "Groq proxy is not responding to health checks - deployment cannot succeed"
     exit 1
 fi
@@ -335,7 +335,7 @@ print_status "Configuring firewall..."
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 8787/tcp  # Allow Groq proxy port
+sudo ufw allow 8888/tcp  # Allow Groq proxy port
 sudo ufw --force enable
 
 # 23. Create deployment script

@@ -296,7 +296,7 @@ jobs:
             # Install dependencies including dev (required for tsx/typescript used by scripts)
             cd web && npm ci
             cd ..
-            
+
             # Install proxy dependencies
             echo "🔧 Installing proxy dependencies..."
             cd proxy && npm install
@@ -599,9 +599,9 @@ jobs:
             fi
 
             # Ensure Groq proxy port is open in firewall
-            echo "🔧 Ensuring Groq proxy port 8787 is open in firewall..."
-            sudo ufw allow 8787/tcp || true
-            
+            echo "🔧 Ensuring Groq proxy port 8888 is open in firewall..."
+            sudo ufw allow 8888/tcp || true
+
             # Verify webhook deployment
             echo "🔍 Verifying webhook deployment..."
 
