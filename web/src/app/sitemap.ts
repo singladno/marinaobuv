@@ -20,6 +20,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
+  // Check if we're in a CI environment
+  const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
+  if (isCI) {
+    // In CI environment, return static entries only (no database access)
+    console.log('Running in CI environment, returning static sitemap entries only');
+    return staticEntries;
+  }
+
+  // For server builds, database MUST be available
   // Check if DATABASE_URL is available
   if (!process.env.DATABASE_URL) {
     throw new Error(
@@ -27,6 +37,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
   }
 
+  // Attempt to fetch categories from database
+  // If this fails, the build should fail (database is required on server)
   const categories = await prisma.category.findMany({
     where: { isActive: true },
     select: { path: true, updatedAt: true, seoNoindex: true },
