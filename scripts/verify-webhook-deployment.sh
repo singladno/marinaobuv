@@ -113,15 +113,22 @@ check_application_status() {
 start_groq_proxy() {
     log_info "Starting Groq proxy server..."
     
+    # First, clean up any existing groq-proxy processes
+    log_info "Cleaning up existing groq-proxy processes..."
+    pm2 delete groq-proxy 2>/dev/null || true
+    pm2 save --force 2>/dev/null || true
+    
     # Install proxy dependencies first
     log_info "Installing proxy dependencies..."
     if ! cd proxy && npm install; then
         log_error "Failed to install proxy dependencies"
+        cd ..
         return 1
     fi
     cd ..
     
-    # Start Groq proxy
+    # Start Groq proxy with fresh process
+    log_info "Starting fresh groq-proxy process..."
     if pm2 start ecosystem.config.js --only groq-proxy --env production; then
         log_success "Groq proxy started successfully"
         
@@ -135,10 +142,14 @@ start_groq_proxy() {
             return 0
         else
             log_error "Groq proxy started but not responding"
+            log_info "Checking groq-proxy logs..."
+            pm2 logs groq-proxy --lines 10
             return 1
         fi
     else
         log_error "Failed to start Groq proxy"
+        log_info "Checking PM2 status..."
+        pm2 status
         return 1
     fi
 }
