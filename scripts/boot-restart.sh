@@ -60,11 +60,23 @@ pm2 startOrReload ecosystem.config.js --env production --update-env || pm2 start
 pm2 scale marinaobuv 1 || true
 pm2 delete prisma-studio || true
 
-# Ensure groq-proxy is running
+# Ensure groq-proxy is running (CRITICAL)
 if ! pm2 list | grep -q "groq-proxy.*online"; then
   log "Starting groq-proxy server..."
-  pm2 start ecosystem.config.js --only groq-proxy --env production || true
+  if ! pm2 start ecosystem.config.js --only groq-proxy --env production; then
+    log "ERROR: Failed to start groq-proxy server - boot recovery cannot succeed"
+    exit 1
+  fi
+  log "Groq proxy server started successfully"
 fi
+
+# Verify groq-proxy is responding (CRITICAL)
+log "Verifying groq-proxy health..."
+if ! curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
+  log "ERROR: Groq proxy is not responding to health checks - boot recovery cannot succeed"
+  exit 1
+fi
+log "Groq proxy health check passed"
 
 pm2 save || true
 

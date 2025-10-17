@@ -180,8 +180,20 @@ if pm2 list | grep -q "groq-proxy.*online"; then
 else
     print_error "Groq proxy server is not running"
     print_status "Attempting to start groq-proxy manually..."
-    pm2 start $APP_DIR/ecosystem.config.js --only groq-proxy --env production
+    if ! pm2 start $APP_DIR/ecosystem.config.js --only groq-proxy --env production; then
+        print_error "Failed to start Groq proxy server - deployment cannot succeed"
+        exit 1
+    fi
+    print_success "Groq proxy server started successfully"
 fi
+
+# Verify proxy is responding to health checks
+print_status "Verifying Groq proxy health..."
+if ! curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
+    print_error "Groq proxy is not responding to health checks - deployment cannot succeed"
+    exit 1
+fi
+print_success "Groq proxy health check passed"
 
 # 15. Save PM2 configuration and ensure startup
 pm2 save
@@ -509,21 +521,24 @@ else
     pm2 logs marinaobuv --lines 10
 fi
 
-# Check PM2 status for proxy server
+# Check PM2 status for proxy server (CRITICAL)
 if pm2 list | grep -q "groq-proxy.*online"; then
     print_success "PM2 groq-proxy server is running"
 else
     print_error "PM2 groq-proxy server is not running"
     pm2 logs groq-proxy --lines 10
+    print_error "Deployment cannot succeed without Groq proxy server"
+    exit 1
 fi
 
-# Test proxy server connectivity
+# Test proxy server connectivity (CRITICAL)
 print_status "Testing proxy server connectivity..."
 if curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
     print_success "Groq proxy server is responding"
 else
-    print_warning "Groq proxy server health check failed"
-    print_status "Proxy may still be starting up..."
+    print_error "Groq proxy server health check failed"
+    print_error "Deployment cannot succeed without working Groq proxy server"
+    exit 1
 fi
 
 # Check Nginx status

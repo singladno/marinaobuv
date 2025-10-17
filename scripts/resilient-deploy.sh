@@ -223,11 +223,23 @@ if ! pm2 list | grep -q "marinaobuv.*online"; then
     exit 1
 fi
 
-# Ensure proxy is running (non-critical for deployment success)
+# Ensure proxy is running (CRITICAL for deployment success)
 if ! pm2 list | grep -q "groq-proxy.*online"; then
-    print_warning "Groq proxy is not running, attempting to start..."
-    pm2 start ecosystem.config.js --only groq-proxy --env production || print_warning "Failed to start proxy"
+    print_error "Groq proxy is not running, attempting to start..."
+    if ! pm2 start ecosystem.config.js --only groq-proxy --env production; then
+        print_error "Failed to start Groq proxy - deployment cannot succeed without proxy"
+        exit 1
+    fi
+    print_success "Groq proxy started successfully"
 fi
+
+# Verify proxy is actually responding (CRITICAL)
+print_status "Verifying Groq proxy is responding..."
+if ! curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
+    print_error "Groq proxy is not responding to health checks - deployment cannot succeed"
+    exit 1
+fi
+print_success "Groq proxy is responding to health checks"
 
 # Save PM2 configuration
 pm2 save || print_warning "Failed to save PM2 configuration"
@@ -262,11 +274,12 @@ else
     print_warning "Main application health check failed"
 fi
 
-# Check proxy (non-critical)
+# Check proxy (CRITICAL)
 if curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
     print_success "Groq proxy health check passed"
 else
-    print_warning "Groq proxy health check failed (non-critical)"
+    print_error "Groq proxy health check failed - deployment cannot succeed"
+    exit 1
 fi
 
 # Check Nginx
