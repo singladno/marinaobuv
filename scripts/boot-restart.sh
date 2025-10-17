@@ -186,6 +186,10 @@ pm2 save || true
 
 sudo journalctl --vacuum-size=200M || true
 
+# Ensure Groq proxy port is open in firewall
+log "Ensuring Groq proxy port 8787 is open in firewall..."
+sudo ufw allow 8787/tcp || true
+
 # 7) Health checks
 log "Checking app on localhost:3000"
 curl -s -I http://127.0.0.1:3000 | head -n1 || true
