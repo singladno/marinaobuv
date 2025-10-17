@@ -30,7 +30,8 @@ export function flattenOrdersToItems(
         itemQty: item.qty,
         itemPrice: item.priceBox,
         itemCode: item.itemCode,
-        itemImage: item.product.image,
+        itemImage: item.product.images?.[0]?.url || null,
+        itemImages: item.product.images?.map(img => img.url) || [],
 
         // WhatsApp message info
         messageId: item.messageId,

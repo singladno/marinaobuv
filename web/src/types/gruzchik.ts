@@ -12,7 +12,13 @@ export type GruzchikOrderItem = {
     name: string;
     slug: string;
     article: string | null;
-    image: string | null;
+    images: {
+      id: string;
+      url: string;
+      alt: string | null;
+      isPrimary: boolean;
+      sort: number;
+    }[];
   };
   // WhatsApp message info
   messageId?: string;
@@ -69,6 +75,7 @@ export type GruzchikOrderItemRow = {
   itemPrice: number;
   itemCode: string | null;
   itemImage: string | null;
+  itemImages?: string[];
 
   // WhatsApp message info
   messageId?: string;
@@ -77,4 +84,7 @@ export type GruzchikOrderItemRow = {
 
   // Provider info
   provider?: string;
+
+  // Availability info
+  isAvailable?: boolean;
 };

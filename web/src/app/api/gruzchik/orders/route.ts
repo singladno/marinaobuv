@@ -41,6 +41,21 @@ export async function GET(req: NextRequest) {
                   name: true,
                   slug: true,
                   article: true,
+                  images: {
+                    where: {
+                      isActive: true,
+                    },
+                    orderBy: {
+                      sort: 'asc',
+                    },
+                    select: {
+                      id: true,
+                      url: true,
+                      alt: true,
+                      isPrimary: true,
+                      sort: true,
+                    },
+                  },
                 },
               },
             },

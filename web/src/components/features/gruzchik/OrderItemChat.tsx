@@ -154,7 +154,9 @@ export function OrderItemChat({ item, onClose }: OrderItemChatProps) {
       case 'gruzchik':
         return 'Грузчик';
       case 'client':
-        return item.customerName || 'Клиент';
+        return item.orderLabel
+          ? `${item.orderLabel} ${item.customerPhone}`
+          : item.customerPhone;
       case 'admin':
         return 'Админ';
       default:

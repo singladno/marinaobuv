@@ -59,6 +59,13 @@ pm2 startOrReload ecosystem.config.js --env production --update-env || pm2 start
 # Scale to exactly 1 instance to avoid overload and delete studio if exists
 pm2 scale marinaobuv 1 || true
 pm2 delete prisma-studio || true
+
+# Ensure groq-proxy is running
+if ! pm2 list | grep -q "groq-proxy.*online"; then
+  log "Starting groq-proxy server..."
+  pm2 start ecosystem.config.js --only groq-proxy --env production || true
+fi
+
 pm2 save || true
 
 # 4) Nginx: ensure proxy to localhost:3000
@@ -117,6 +124,8 @@ log "Checking app on localhost:3000"
 curl -s -I http://127.0.0.1:3000 | head -n1 || true
 log "Checking nginx /health"
 curl -s -I http://127.0.0.1/health | head -n1 || curl -s -I http://127.0.0.1 | head -n1 || true
+log "Checking groq-proxy on localhost:8787"
+curl -s -I http://127.0.0.1:8787/healthz | head -n1 || true
 
 # 8) Configure webhook after deployment
 log "Configuring Green API webhook..."

@@ -162,9 +162,26 @@ print_status "Using existing PM2 configuration..."
 sudo mkdir -p /var/log/pm2
 sudo chown -R $USER:$USER /var/log/pm2
 
-# 14. Start or reload PM2 with ecosystem (includes prisma-studio)
+# 14. Start or reload PM2 with ecosystem (includes groq-proxy)
 print_status "Starting or reloading PM2 with ecosystem..."
 pm2 startOrReload $APP_DIR/ecosystem.config.js --env production --update-env
+
+# 14.1. Verify all services are running
+print_status "Verifying all services are running..."
+sleep 5
+if pm2 list | grep -q "marinaobuv.*online"; then
+    print_success "Main application (marinaobuv) is running"
+else
+    print_error "Main application (marinaobuv) is not running"
+fi
+
+if pm2 list | grep -q "groq-proxy.*online"; then
+    print_success "Groq proxy server is running"
+else
+    print_error "Groq proxy server is not running"
+    print_status "Attempting to start groq-proxy manually..."
+    pm2 start $APP_DIR/ecosystem.config.js --only groq-proxy --env production
+fi
 
 # 15. Save PM2 configuration and ensure startup
 pm2 save
@@ -358,8 +375,12 @@ echo "PM2 Status:"
 pm2 status
 
 echo ""
-echo "Application Logs (last 20 lines):"
+echo "Main Application Logs (last 20 lines):"
 pm2 logs marinaobuv --lines 20
+
+echo ""
+echo "Groq Proxy Server Logs (last 20 lines):"
+pm2 logs groq-proxy --lines 20
 
 echo ""
 echo "System Resources:"
@@ -377,7 +398,15 @@ sudo systemctl is-active nginx && echo "✅ Nginx is running" || echo "❌ Nginx
 
 echo ""
 echo "Application Health:"
-curl -s http://localhost:3000/api/health && echo "✅ Application is healthy" || echo "❌ Application is not responding"
+curl -s http://localhost:3000/api/health && echo "✅ Main application is healthy" || echo "❌ Main application is not responding"
+
+echo ""
+echo "Groq Proxy Server Health:"
+curl -s http://localhost:8787/healthz && echo "✅ Groq proxy server is healthy" || echo "❌ Groq proxy server is not responding"
+
+echo ""
+echo "WhatsApp Webhook Status:"
+curl -s https://marina-obuv.ru/api/webhooks/green-api && echo "✅ Webhook endpoint is accessible" || echo "❌ Webhook endpoint is not accessible"
 EOF
 
 chmod +x $APP_DIR/monitor.sh
@@ -421,12 +450,29 @@ fi
 # 27. Final status check
 print_status "Performing final status check..."
 
-# Check PM2 status
+# Check PM2 status for main application
 if pm2 list | grep -q "marinaobuv.*online"; then
-    print_success "PM2 application is running"
+    print_success "PM2 main application is running"
 else
-    print_error "PM2 application is not running"
+    print_error "PM2 main application is not running"
     pm2 logs marinaobuv --lines 10
+fi
+
+# Check PM2 status for proxy server
+if pm2 list | grep -q "groq-proxy.*online"; then
+    print_success "PM2 groq-proxy server is running"
+else
+    print_error "PM2 groq-proxy server is not running"
+    pm2 logs groq-proxy --lines 10
+fi
+
+# Test proxy server connectivity
+print_status "Testing proxy server connectivity..."
+if curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
+    print_success "Groq proxy server is responding"
+else
+    print_warning "Groq proxy server health check failed"
+    print_status "Proxy may still be starting up..."
 fi
 
 # Check Nginx status
@@ -478,7 +524,10 @@ print_status "  Deploy updates: $APP_DIR/deploy.sh"
 print_status "  PM2 logs: pm2 logs marinaobuv"
 print_status "  PM2 status: pm2 status"
 print_status "  Restart app: pm2 restart marinaobuv"
+print_status "  Restart proxy: pm2 restart groq-proxy"
 print_status "  Test webhook: ./scripts/verify-webhook-deployment.sh"
+print_status "  Check proxy: ./scripts/check-proxy-health.sh"
+print_status "  Verify deployment: ./scripts/verify-deployment.sh"
 print_status ""
 print_status "Next steps:"
 print_status "1. Configure your domain DNS to point to this server"

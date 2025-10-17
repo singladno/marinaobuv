@@ -93,21 +93,51 @@ export function MobileGruzchikLayout({ children }: MobileGruzchikLayoutProps) {
         <main className="pb-20">{children}</main>
 
         {/* Bottom Navigation - visible on all breakpoints */}
-        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white">
+        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white shadow-lg">
           <div className="flex">
             {navigation.map(item => {
               const Icon = item.icon;
+              const active = isActive(item.href);
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'flex flex-1 flex-col items-center px-1 py-2',
-                    isActive(item.href) ? 'text-blue-600' : 'text-gray-500'
+                    'relative flex flex-1 flex-col items-center px-1 py-3 transition-all duration-200 ease-in-out',
+                    active
+                      ? 'text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 active:scale-95'
                   )}
                 >
-                  <Icon className="mb-1 h-5 w-5" />
-                  <span className="text-xs font-medium">{item.name}</span>
+                  {/* Active indicator background */}
+                  {active && (
+                    <div className="absolute inset-x-2 bottom-1 top-1 rounded-lg bg-blue-50" />
+                  )}
+
+                  {/* Icon with weight change for active state */}
+                  <div className="relative z-10 mb-1">
+                    <Icon
+                      className={cn(
+                        'h-5 w-5 transition-all duration-200',
+                        active ? 'stroke-2' : 'stroke-1.5'
+                      )}
+                    />
+                  </div>
+
+                  {/* Text with improved typography */}
+                  <span
+                    className={cn(
+                      'relative z-10 text-xs font-medium transition-all duration-200',
+                      active ? 'font-semibold' : 'font-medium'
+                    )}
+                  >
+                    {item.name}
+                  </span>
+
+                  {/* Active indicator dot */}
+                  {active && (
+                    <div className="absolute -top-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-blue-600" />
+                  )}
                 </Link>
               );
             })}

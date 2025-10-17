@@ -1,7 +1,7 @@
 import { GroqSequentialProcessor } from '../lib/services/groq-sequential-processor';
 import { fetchExtendedBatch } from '../lib/utils/batch-extender';
 import { env } from '../lib/env';
-import { prisma } from '../lib/server/db';
+import { scriptPrisma as prisma } from '../lib/script-db';
 
 /**
  * Groq Sequential Processing Cron Job

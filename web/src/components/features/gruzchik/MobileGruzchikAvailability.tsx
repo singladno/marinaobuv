@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { OrderItemCard, OrderItemData } from './OrderItemCard';
 import { useGruzchikOrders } from '@/hooks/useGruzchikOrders';
 import { useGruzchikView } from '@/contexts/GruzchikViewContext';
+import { useItemAvailability } from '@/hooks/useItemAvailability';
 import { cn } from '@/lib/utils';
 
 export function MobileGruzchikAvailability() {
@@ -46,19 +47,26 @@ export function MobileGruzchikAvailability() {
       return Array.from(grouped.entries()).map(([provider, items]) => ({
         key: provider,
         title: provider,
-        items: items.filter(
-          item =>
-            !searchQuery ||
+        items: items.filter(item => {
+          if (!searchQuery) return true;
+          const customerInfo = item.orderLabel
+            ? `${item.orderLabel} ${item.customerPhone}`
+            : item.customerPhone;
+          return (
             item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.itemCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
+            customerInfo.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        }),
       }));
     } else {
       const grouped = new Map<string, OrderItemData[]>();
 
       availabilityItems.forEach(item => {
-        const orderKey = `${item.orderNumber} - ${item.customerName || 'Неизвестно'}`;
+        const customerInfo = item.orderLabel
+          ? `${item.orderLabel} - ${item.customerPhone}`
+          : item.customerPhone;
+        const orderKey = `${item.orderNumber} - ${customerInfo}`;
         if (!grouped.has(orderKey)) {
           grouped.set(orderKey, []);
         }
@@ -68,13 +76,17 @@ export function MobileGruzchikAvailability() {
       return Array.from(grouped.entries()).map(([orderKey, items]) => ({
         key: orderKey,
         title: orderKey,
-        items: items.filter(
-          item =>
-            !searchQuery ||
+        items: items.filter(item => {
+          if (!searchQuery) return true;
+          const customerInfo = item.orderLabel
+            ? `${item.orderLabel} ${item.customerPhone}`
+            : item.customerPhone;
+          return (
             item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.itemCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
+            customerInfo.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        }),
       }));
     }
   }, [availabilityItems, viewMode, searchQuery]);
@@ -86,6 +98,17 @@ export function MobileGruzchikAvailability() {
   const handleSourceOpen = (itemId: string) => {
     console.log('Opening source for item:', itemId);
   };
+
+  const { updateAvailability, isUpdating } = useItemAvailability({
+    onSuccess: (itemId, isAvailable) => {
+      console.log('Availability updated successfully:', itemId, isAvailable);
+      // Optionally reload data or update local state
+    },
+    onError: error => {
+      console.error('Failed to update availability:', error);
+      // Optionally show error message to user
+    },
+  });
 
   if (loading) {
     return (
@@ -147,6 +170,8 @@ export function MobileGruzchikAvailability() {
                     item={item}
                     onChatOpen={handleChatOpen}
                     onSourceOpen={handleSourceOpen}
+                    onAvailabilityChange={updateAvailability}
+                    isUpdatingAvailability={isUpdating(item.itemId)}
                   />
                 ))}
               </div>

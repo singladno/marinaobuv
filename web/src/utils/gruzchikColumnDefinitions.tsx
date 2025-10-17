@@ -28,7 +28,7 @@ export function createGruzchikAvailabilityColumns({
       cell: ({ row }) => (
         <GruzchikImageColumn
           orderId={row.original.id}
-          imageUrl={row.original.items[0]?.product?.image || ''}
+          imageUrl={row.original.items[0]?.product?.images?.[0]?.url || ''}
           name={row.original.items[0]?.name || ''}
           updatingOrders={updatingOrders}
         />
