@@ -411,6 +411,50 @@ jobs:
               sudo sed -i '/http {/a\    # Rate limiting zones\n    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n    limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;' /etc/nginx/nginx.conf
             fi
 
+            # Fix nginx configuration first
+            echo "🔧 Fixing nginx configuration..."
+            if [ -f "scripts/fix-nginx-config.sh" ]; then
+              chmod +x scripts/fix-nginx-config.sh
+              if ./scripts/fix-nginx-config.sh; then
+                echo "✅ Nginx configuration fixed successfully"
+              else
+                echo "❌ Failed to fix nginx configuration"
+                exit 1
+              fi
+            else
+              echo "⚠️ Nginx fix script not found, using manual fix..."
+              # Manual nginx configuration fix
+              sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name marina-obuv.ru www.marina-obuv.ru;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location /health {
+        proxy_pass http://localhost:3000/api/health;
+        access_log off;
+    }
+}
+EOF
+            fi
+
             # Copy HTTPS nginx configuration
             sudo cp nginx/conf.d/marinaobuv-https.conf /etc/nginx/sites-available/marinaobuv-https
 
