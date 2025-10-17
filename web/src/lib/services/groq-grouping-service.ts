@@ -56,7 +56,7 @@ export class GroqGroupingService {
 
       // Prepare the full request for debugging
       const fullRequest = {
-        model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+        model: 'llama-3.1-8b-instant',
         messages: [
           {
             role: 'system',
@@ -124,7 +124,7 @@ export class GroqGroupingService {
 
       // Prepare the full request for debugging
       const fullRequest = {
-        model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+        model: 'llama-3.1-8b-instant',
         messages: [
           {
             role: 'system',
