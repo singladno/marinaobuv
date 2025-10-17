@@ -206,9 +206,19 @@ print_success "Groq proxy health check passed"
 pm2 save
 pm2 startup
 
-# 16. Configure Nginx
-print_status "Configuring Nginx..."
-sudo tee /etc/nginx/sites-available/marinaobuv << EOF
+# 16. Fix and Configure Nginx
+print_status "Fixing and configuring Nginx..."
+if [ -f "scripts/fix-nginx-config.sh" ]; then
+    chmod +x scripts/fix-nginx-config.sh
+    if ./scripts/fix-nginx-config.sh; then
+        print_success "Nginx configuration fixed successfully"
+    else
+        print_error "Failed to fix nginx configuration - deployment cannot continue"
+        exit 1
+    fi
+else
+    print_warning "Nginx fix script not found, using manual configuration..."
+    sudo tee /etc/nginx/sites-available/marinaobuv << EOF
 server {
     listen 80;
     server_name marina-obuv.ru www.marina-obuv.ru;
@@ -285,6 +295,7 @@ server {
         image/svg+xml;
 }
 EOF
+fi
 
 # 17. Enable the site
 sudo ln -sf /etc/nginx/sites-available/marinaobuv /etc/nginx/sites-enabled/

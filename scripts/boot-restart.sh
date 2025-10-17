@@ -87,27 +87,32 @@ log "Groq proxy health check passed"
 
 pm2 save || true
 
-# 4) Nginx: ensure proxy to localhost:3000
-NGINX_CONF="/etc/nginx/conf.d/marinaobuv.conf"
-if [ -f "$NGINX_CONF" ]; then
-  if grep -q "proxy_pass http://web:3000;" "$NGINX_CONF"; then
-    log "Rewriting nginx upstream to 127.0.0.1:3000"
-    sudo sed -i 's|proxy_pass http://web:3000;|proxy_pass http://127.0.0.1:3000;|g' "$NGINX_CONF" || true
+# 4) Nginx: ensure proxy to localhost:3000 and fix configuration
+log "Fixing nginx configuration..."
+if [ -f "scripts/fix-nginx-config.sh" ]; then
+  chmod +x scripts/fix-nginx-config.sh
+  if ./scripts/fix-nginx-config.sh; then
+    log "Nginx configuration fixed successfully"
+  else
+    log "ERROR: Failed to fix nginx configuration"
+    exit 1
   fi
 else
-  log "Writing nginx site config at $NGINX_CONF"
+  log "Nginx fix script not found, using manual fix..."
+  NGINX_CONF="/etc/nginx/conf.d/marinaobuv.conf"
   sudo tee "$NGINX_CONF" >/dev/null <<'EOF'
 server {
     listen 80;
     server_name marina-obuv.ru www.marina-obuv.ru;
-
-    location /health {
-        proxy_pass http://127.0.0.1:3000/api/health;
-        access_log off;
-    }
-
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -115,11 +120,31 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+    
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location /health {
+        proxy_pass http://localhost:3000/api/health;
+        access_log off;
     }
 }
 EOF
+  if ! sudo nginx -t; then
+    log "ERROR: Nginx configuration test failed"
+    exit 1
+  fi
+  sudo systemctl restart nginx || true
 fi
-sudo nginx -t && sudo systemctl restart nginx || true
 
 # 5) Install/refresh cron jobs (includes proxy monitoring)
 if [ -f scripts/install-crons.sh ]; then

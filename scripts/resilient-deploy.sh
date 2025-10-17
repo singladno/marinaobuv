@@ -118,6 +118,56 @@ print_status "🔧 Setting script permissions..."
 chmod +x scripts/*.sh 2>/dev/null || print_warning "Some scripts not found"
 chmod +x web/src/scripts/*.sh 2>/dev/null || print_warning "Some web scripts not found"
 
+# 2.1. Fix nginx configuration (critical for deployment success)
+print_status "🔧 Fixing nginx configuration..."
+if [ -f "scripts/fix-nginx-config.sh" ]; then
+    chmod +x scripts/fix-nginx-config.sh
+    if ./scripts/fix-nginx-config.sh; then
+        print_success "Nginx configuration fixed successfully"
+    else
+        print_error "Failed to fix nginx configuration - deployment cannot continue"
+        exit 1
+    fi
+else
+    print_warning "Nginx fix script not found, attempting manual fix..."
+    # Manual nginx configuration fix
+    sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name marina-obuv.ru www.marina-obuv.ru;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location /health {
+        proxy_pass http://localhost:3000/api/health;
+        access_log off;
+    }
+}
+EOF
+    if sudo nginx -t && sudo systemctl reload nginx; then
+        print_success "Manual nginx configuration fix successful"
+    else
+        print_error "Manual nginx configuration fix failed - deployment cannot continue"
+        exit 1
+    fi
+fi
+
 # 3. Install dependencies (critical for web app)
 print_status "📦 Installing dependencies..."
 cd web
