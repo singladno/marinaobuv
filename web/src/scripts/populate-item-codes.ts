@@ -30,7 +30,8 @@ async function populateItemCodes() {
     // Generate unique codes for all items
     const itemCodes = new Set<string>();
     while (itemCodes.size < itemsWithoutCodes.length) {
-      itemCodes.add(generateItemCode());
+      const code = await generateItemCode();
+      itemCodes.add(code);
     }
     const codesArray = Array.from(itemCodes);
 

@@ -7,7 +7,7 @@ async function testOrderItemIdMigration() {
   try {
     // Test 1: Check if the sequence exists
     console.log('📋 Test 1: Checking if sequence exists...');
-    const sequenceResult = await prisma.$queryRaw<[{ sequence_name: string }]>`
+    const sequenceResult = await prisma.$queryRaw<{ sequence_name: string }[]>`
       SELECT sequence_name 
       FROM information_schema.sequences 
       WHERE sequence_name = 'order_item_id_seq'
@@ -20,7 +20,7 @@ async function testOrderItemIdMigration() {
 
     // Test 2: Check if the function exists
     console.log('📋 Test 2: Checking if function exists...');
-    const functionResult = await prisma.$queryRaw<[{ routine_name: string }]>`
+    const functionResult = await prisma.$queryRaw<{ routine_name: string }[]>`
       SELECT routine_name 
       FROM information_schema.routines 
       WHERE routine_name = 'get_next_order_item_id'
@@ -98,20 +98,17 @@ async function testOrderItemIdMigration() {
 
     // Test 6: Check if any order items have non-numeric item codes
     console.log('📋 Test 6: Checking for non-numeric item codes...');
-    const nonNumericItems = await prisma.orderItem.findMany({
-      where: {
-        itemCode: {
-          not: {
-            regex: '^[0-9]+$',
-          },
-        },
-      },
+    const allItems = await prisma.orderItem.findMany({
       select: {
         id: true,
         itemCode: true,
       },
-      take: 5,
+      take: 10,
     });
+
+    const nonNumericItems = allItems.filter(
+      item => item.itemCode && !/^[0-9]+$/.test(item.itemCode)
+    );
 
     if (nonNumericItems.length > 0) {
       console.log(

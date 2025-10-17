@@ -81,7 +81,7 @@ async function importWhatsAppMessages() {
       try {
         const dataToInsert = batch.map(record => ({
           id: record.id,
-          waMessageId: record.waMessageId || null,
+          waMessageId: record.waMessageId || `imported-${record.id}`, // Ensure non-null
           from: record.from || null,
           type: record.type || null,
           source: record.source || null,
@@ -103,7 +103,7 @@ async function importWhatsAppMessages() {
           mediaUrl: record.mediaUrl || null,
           providerId: record.providerId || null,
           processed: record.processed === 'true',
-          rawPayload: record.rawPayload || null,
+          rawPayload: record.rawPayload ? JSON.parse(record.rawPayload) : {},
           createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
           updatedAt: record.updatedAt ? new Date(record.updatedAt) : new Date(),
           draftProductId: record.draftProductId || null,
