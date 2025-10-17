@@ -9,9 +9,11 @@ module.exports = {
       exec_mode: "fork",
       env: {
         NODE_ENV: "production",
+        GROQ_API_KEY: process.env.GROQ_API_KEY,
       },
       env_production: {
         NODE_ENV: "production",
+        GROQ_API_KEY: process.env.GROQ_API_KEY,
       },
       // Logging configuration
       log_file: "./logs/groq-sequential.log",
