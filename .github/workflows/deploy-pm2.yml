@@ -517,60 +517,30 @@ jobs:
             fi
 
             # Fix groq-proxy issues (CRITICAL for deployment success)
-            echo "🔧 Running groq-proxy fix script..."
-            if [ -f "scripts/fix-groq-proxy.sh" ]; then
-              chmod +x scripts/fix-groq-proxy.sh
-              if ./scripts/fix-groq-proxy.sh; then
-                echo "✅ Groq proxy fix script completed successfully"
-              else
-                echo "❌ Groq proxy fix script failed - deployment cannot succeed"
-                exit 1
-              fi
+            echo "🔧 Fixing groq-proxy issues..."
+            echo "📊 Current PM2 status:"
+            pm2 status
+            echo "🛑 Stopping all PM2 processes..."
+            pm2 delete all 2>/dev/null || true
+            pm2 kill 2>/dev/null || true
+            sleep 3
+            echo "📦 Installing proxy dependencies..."
+            cd proxy && npm install && cd ..
+            echo "🚀 Starting PM2 with ecosystem configuration..."
+            pm2 start ecosystem.config.js --env production
+            echo "⏳ Waiting for processes to start..."
+            sleep 10
+            echo "📊 PM2 status after startup:"
+            pm2 status
+            echo "🔍 Testing groq-proxy health endpoint..."
+            if curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
+              echo "✅ Groq-proxy health check passed!"
             else
-              echo "⚠️ Groq proxy fix script not found, using manual fix..."
-              
-              # Manual groq-proxy fix
-              echo "🔍 Checking groq-proxy status..."
-              if ! pm2 list | grep -q "groq-proxy.*online"; then
-                echo "❌ Groq proxy is not running, attempting to start..."
-                
-                # Clean up any existing groq-proxy processes first
-                echo "🧹 Cleaning up existing groq-proxy processes..."
-                pm2 delete groq-proxy 2>/dev/null || true
-                pm2 save --force 2>/dev/null || true
-                
-                # Install proxy dependencies first
-                echo "📦 Installing proxy dependencies..."
-                cd proxy
-                npm install
-                cd ..
-                
-                # Start groq-proxy specifically
-                echo "🚀 Starting groq-proxy server..."
-                if pm2 start ecosystem.config.js --only groq-proxy --env production; then
-                  echo "✅ Groq proxy started successfully"
-                else
-                  echo "❌ Failed to start Groq proxy - deployment cannot succeed"
-                  echo "🔍 Checking PM2 status..."
-                  pm2 status
-                  exit 1
-                fi
-              else
-                echo "✅ Groq proxy is already running"
-              fi
-
-              # Verify groq-proxy is responding (CRITICAL)
-              echo "🔍 Verifying groq-proxy health..."
-              sleep 5  # Give it time to start
-              if curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
-                echo "✅ Groq proxy health check passed"
-              else
-                echo "❌ Groq proxy is not responding to health checks"
-                echo "🔍 Checking groq-proxy logs..."
-                pm2 logs groq-proxy --lines 20
-                echo "❌ Deployment cannot succeed without working Groq proxy"
-                exit 1
-              fi
+              echo "❌ Groq-proxy health check failed"
+              echo "🔍 Checking groq-proxy logs..."
+              pm2 logs groq-proxy --lines 20
+              echo "❌ Deployment cannot succeed without working Groq proxy"
+              exit 1
             fi
 
             # Save PM2 configuration
