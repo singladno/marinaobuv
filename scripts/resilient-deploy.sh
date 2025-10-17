@@ -194,6 +194,15 @@ fi
 # Attempt proxy recovery if needed
 if [ "$proxy_healthy" = false ]; then
     print_warning "Groq proxy is not healthy, attempting recovery..."
+    
+    # Install proxy dependencies first
+    print_status "Installing proxy dependencies..."
+    if ! cd proxy && npm install; then
+        print_error "Failed to install proxy dependencies"
+        exit 1
+    fi
+    cd ..
+    
     if [ -f "scripts/auto-restart-proxy.sh" ]; then
         attempt_service_recovery "Groq proxy" "./scripts/auto-restart-proxy.sh restart"
     else

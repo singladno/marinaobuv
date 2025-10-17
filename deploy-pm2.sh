@@ -179,6 +179,13 @@ if pm2 list | grep -q "groq-proxy.*online"; then
     print_success "Groq proxy server is running"
 else
     print_error "Groq proxy server is not running"
+    print_status "Installing proxy dependencies..."
+    if ! cd $APP_DIR/proxy && npm install; then
+        print_error "Failed to install proxy dependencies - deployment cannot succeed"
+        exit 1
+    fi
+    cd $APP_DIR
+    
     print_status "Attempting to start groq-proxy manually..."
     if ! pm2 start $APP_DIR/ecosystem.config.js --only groq-proxy --env production; then
         print_error "Failed to start Groq proxy server - deployment cannot succeed"

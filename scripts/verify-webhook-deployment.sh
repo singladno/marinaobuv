@@ -113,6 +113,14 @@ check_application_status() {
 start_groq_proxy() {
     log_info "Starting Groq proxy server..."
     
+    # Install proxy dependencies first
+    log_info "Installing proxy dependencies..."
+    if ! cd proxy && npm install; then
+        log_error "Failed to install proxy dependencies"
+        return 1
+    fi
+    cd ..
+    
     # Start Groq proxy
     if pm2 start ecosystem.config.js --only groq-proxy --env production; then
         log_success "Groq proxy started successfully"

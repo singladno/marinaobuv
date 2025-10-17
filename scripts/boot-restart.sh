@@ -62,6 +62,13 @@ pm2 delete prisma-studio || true
 
 # Ensure groq-proxy is running (CRITICAL)
 if ! pm2 list | grep -q "groq-proxy.*online"; then
+  log "Installing proxy dependencies..."
+  if ! cd proxy && npm install; then
+    log "ERROR: Failed to install proxy dependencies - boot recovery cannot succeed"
+    exit 1
+  fi
+  cd ..
+  
   log "Starting groq-proxy server..."
   if ! pm2 start ecosystem.config.js --only groq-proxy --env production; then
     log "ERROR: Failed to start groq-proxy server - boot recovery cannot succeed"
