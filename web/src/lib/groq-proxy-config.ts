@@ -20,10 +20,10 @@ export const isProxyAvailable = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-    const proxyUrl = PROXY_CONFIG.port === 443 
+    const proxyUrl = PROXY_CONFIG.port === 443
       ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}/healthz`
       : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}/healthz`;
-    
+
     const response = await fetch(proxyUrl, {
       method: 'GET',
       signal: controller.signal,
@@ -39,7 +39,7 @@ export const isProxyAvailable = async (): Promise<boolean> => {
 
 // Create proxy agent for Groq requests
 export const createGroqProxyAgent = () => {
-  const proxyUrl = PROXY_CONFIG.port === 443 
+  const proxyUrl = PROXY_CONFIG.port === 443
     ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
     : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
   return new HttpsProxyAgent(proxyUrl);
@@ -51,7 +51,7 @@ export const getGroqConfig = async () => {
 
   if (useProxy) {
     console.log('🔄 Using Groq proxy server');
-    const baseURL = PROXY_CONFIG.port === 443 
+    const baseURL = PROXY_CONFIG.port === 443
       ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
       : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
     return {
@@ -81,7 +81,7 @@ export const testGroqConnection = async () => {
 
     if (proxyAvailable) {
       console.log('🔄 Testing through proxy server...');
-      const proxyUrl = PROXY_CONFIG.port === 443 
+      const proxyUrl = PROXY_CONFIG.port === 443
         ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
         : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
 
