@@ -20,6 +20,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
+  // Check if DATABASE_URL is available
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      'DATABASE_URL is required for sitemap generation but not found in environment variables'
+    );
+  }
+
   const categories = await prisma.category.findMany({
     where: { isActive: true },
     select: { path: true, updatedAt: true, seoNoindex: true },
