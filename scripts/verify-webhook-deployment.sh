@@ -80,7 +80,7 @@ check_application_status() {
     fi
     
     # Check if Groq proxy is responding (CRITICAL)
-    if curl -f -s http://localhost:8888/healthz > /dev/null 2>&1; then
+    if curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
         log_success "Groq proxy is responding to health checks"
     else
         log_error "Groq proxy is not responding to health checks"
@@ -130,7 +130,7 @@ start_groq_proxy() {
         sleep 10
         
         # Check if it's responding
-        if curl -f -s http://localhost:8888/healthz > /dev/null 2>&1; then
+        if curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
             log_success "Groq proxy is responding"
             return 0
         else

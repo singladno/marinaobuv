@@ -186,7 +186,7 @@ check_service "Main application" "pm2 list | grep -q 'marinaobuv.*online'"
 # Check Groq proxy
 proxy_healthy=false
 if check_service "Groq proxy (PM2)" "pm2 list | grep -q 'groq-proxy.*online'"; then
-    if check_service "Groq proxy (health)" "curl -f -s http://localhost:8888/healthz"; then
+    if check_service "Groq proxy (health)" "curl -f -s http://localhost:3001/healthz"; then
         proxy_healthy=true
     fi
 fi
@@ -284,7 +284,7 @@ else
 fi
 
 # Check proxy (CRITICAL)
-if curl -f -s http://localhost:8888/healthz > /dev/null 2>&1; then
+if curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
     print_success "Groq proxy health check passed"
 else
     print_error "Groq proxy health check failed - deployment cannot succeed"

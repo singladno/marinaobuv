@@ -55,7 +55,7 @@ module.exports = {
       exec_mode: "fork",
       env: {
         NODE_ENV: "production",
-        PORT: 8888,
+        PORT: 3001,
         PROXY_TARGET: "https://api.groq.com",
         UPSTREAM_PROXY: process.env.UPSTREAM_PROXY, // Optional upstream proxy
       },

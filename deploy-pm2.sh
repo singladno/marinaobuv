@@ -196,7 +196,7 @@ fi
 
 # Verify proxy is responding to health checks
 print_status "Verifying Groq proxy health..."
-if ! curl -f -s http://localhost:8888/healthz > /dev/null 2>&1; then
+if ! curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
     print_error "Groq proxy is not responding to health checks - deployment cannot succeed"
     exit 1
 fi
@@ -330,12 +330,18 @@ sudo systemctl daemon-reload
 sudo systemctl enable pm2-$APP_NAME
 sudo systemctl start pm2-$APP_NAME
 
-# 22. Setup firewall
+# 22. Remove unused Docker containers and setup firewall
+print_status "Removing unused Docker containers..."
+# Remove tinyproxy container (not used by application)
+docker stop tinyproxy 2>/dev/null || true
+docker rm tinyproxy 2>/dev/null || true
+print_success "Tinyproxy container removed (was not used by application)"
+
 print_status "Configuring firewall..."
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 8888/tcp  # Allow Groq proxy port
+sudo ufw allow 3001/tcp  # Allow Groq proxy port
 sudo ufw --force enable
 
 # 23. Create deployment script

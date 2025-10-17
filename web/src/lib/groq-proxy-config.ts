@@ -9,7 +9,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 const PROXY_CONFIG = {
   // Your proxy server details
   host: '31.44.2.216',
-  port: 8888, // Use port 8888 which is already open in AWS Security Groups
+  port: 3001, // Use port 3001 which is available
   protocol: 'http',
 };
 

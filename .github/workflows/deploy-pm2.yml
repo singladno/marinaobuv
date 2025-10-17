@@ -598,9 +598,15 @@ jobs:
               exit 1
             fi
 
+            # Remove unused tinyproxy Docker container to free up port 8888 and resources
+            echo "🧹 Removing unused tinyproxy Docker container..."
+            docker stop tinyproxy 2>/dev/null || true
+            docker rm tinyproxy 2>/dev/null || true
+            echo "✅ Tinyproxy container removed (was not used by application)"
+            
             # Ensure Groq proxy port is open in firewall
-            echo "🔧 Ensuring Groq proxy port 8888 is open in firewall..."
-            sudo ufw allow 8888/tcp || true
+            echo "🔧 Ensuring Groq proxy port 3001 is open in firewall..."
+            sudo ufw allow 3001/tcp || true
 
             # Verify webhook deployment
             echo "🔍 Verifying webhook deployment..."
