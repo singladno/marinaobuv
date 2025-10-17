@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useUser } from '@/contexts/UserContext';
 
-export function useLoginPage() {
+export function useLoginPage(options: { disableRedirect?: boolean } = {}) {
   const router = useRouter();
   const { setUserId } = useCart();
   const { refreshUser } = useUser();
@@ -17,11 +17,23 @@ export function useLoginPage() {
 
   useEffect(() => {
     (async () => {
-      const res = await fetch('/api/auth/me');
-      const json = await res.json();
-      if (json.user) router.replace('/');
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (!res.ok) return; // API might be unavailable; skip redirect
+        let json: any = null;
+        try {
+          json = await res.json();
+        } catch {
+          json = null; // Non-JSON or empty response
+        }
+        if (json?.user && !options.disableRedirect) {
+          router.replace('/');
+        }
+      } catch {
+        // Network/permission error; ignore to allow login page to render
+      }
     })();
-  }, [router]);
+  }, [router, options.disableRedirect]);
 
   const handleOtpRequest = async () => {
     const resReq = await fetch('/api/auth/request-otp', {

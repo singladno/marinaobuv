@@ -4,43 +4,30 @@ import { prisma } from '@/lib/server/db';
 
 export async function GET() {
   try {
-    const roots = await prisma.category.findMany({
-      where: { parentId: null, isActive: true },
-      orderBy: { sort: 'asc' },
+    // Fetch ALL active categories once (unlimited depth) and build the tree manually
+    const categories = await prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: [{ parentId: 'asc' }, { sort: 'asc' }],
       select: {
         id: true,
         name: true,
         slug: true,
         path: true,
-        children: {
-          where: { isActive: true },
-          orderBy: { sort: 'asc' },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            path: true,
-            children: {
-              where: { isActive: true },
-              orderBy: { sort: 'asc' },
-              select: { id: true, name: true, slug: true, path: true },
-            },
-          },
-        },
+        parentId: true,
       },
     });
 
-    // Get counts of active products per category
+    // Compute leaf product counts by category
     const grouped = await prisma.product.groupBy({
       by: ['categoryId'],
-      where: {
-        isActive: true,
-        batchProcessingStatus: 'completed', // Only count fully processed products
-      },
+      where: { isActive: true },
       _count: { _all: true },
     });
-    const countByCategory = new Map<string, number>(
-      grouped.map((g: any) => [g.categoryId, g._count._all as number])
+    const leafCountByCategory = new Map<string, number>(
+      grouped.map(g => [
+        g.categoryId as string,
+        (g as any)._count._all as number,
+      ])
     );
 
     type Node = {
@@ -51,18 +38,33 @@ export async function GET() {
       children: Node[];
     };
 
-    const transform = (n: any): Node => ({
-      id: n.id,
-      name: n.name,
-      slug: n.slug,
-      path: n.path,
-      children: (n.children || []).map(transform),
+    // Build lookup by parentId
+    const childrenByParent = new Map<
+      string | null,
+      Array<(typeof categories)[number]>
+    >();
+    for (const c of categories) {
+      const key = (c.parentId as string | null) ?? null;
+      const arr = childrenByParent.get(key) ?? [];
+      arr.push(c);
+      childrenByParent.set(key, arr);
+    }
+
+    const toNode = (c: (typeof categories)[number]): Node => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      path: c.path,
+      children: (childrenByParent.get(c.id) ?? []).map(toNode),
     });
 
+    const roots = (childrenByParent.get(null) ?? []).map(toNode);
+
+    // Roll up counts and filter empty branches
     const computeTotalAndFilter = (
       node: Node
     ): { node: Node | null; total: number } => {
-      const own = countByCategory.get(node.id) || 0;
+      const own = leafCountByCategory.get(node.id) || 0;
       const processedChildren = node.children.map(computeTotalAndFilter);
       const childrenKept = processedChildren
         .filter(c => (c?.node ?? null) !== null)
@@ -73,11 +75,13 @@ export async function GET() {
       return { node: { ...node, children: childrenKept }, total };
     };
 
-    const items = roots
-      .map(transform)
+    let items = roots
       .map(computeTotalAndFilter)
-      .filter((r: any) => r.node !== null)
-      .map((r: any) => r.node as Node);
+      .filter(r => r.node !== null)
+      .map(r => r.node as Node);
+
+    // Fallback: if all filtered out by counts, return full tree
+    if (items.length === 0) items = roots;
 
     return NextResponse.json({ ok: true, items });
   } catch (error) {

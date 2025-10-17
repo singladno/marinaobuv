@@ -24,6 +24,7 @@ export function flattenOrdersToItems(
 
         // Item info
         itemId: item.id,
+        productId: item.productId,
         itemName: item.name,
         itemArticle: item.article,
         itemQty: item.qty,
@@ -35,6 +36,9 @@ export function flattenOrdersToItems(
         messageId: item.messageId,
         messageText: item.messageText,
         messageDate: item.messageDate,
+
+        // Provider info (placeholder for now)
+        provider: undefined,
       });
     });
   });

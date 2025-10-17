@@ -31,7 +31,19 @@ export function useCartLogic() {
               slug: i.slug.trim(),
               qty: typeof i.qty === 'number' && i.qty > 0 ? i.qty : 1,
             }));
-          setItems(sanitized);
+
+          // Only set items if they're different to avoid infinite loops
+          setItems(prevItems => {
+            const prevSlugs = prevItems
+              .map(i => i.slug)
+              .sort()
+              .join(',');
+            const newSlugs = sanitized
+              .map(i => i.slug)
+              .sort()
+              .join(',');
+            return prevSlugs === newSlugs ? prevItems : sanitized;
+          });
         }
       }
     } catch {

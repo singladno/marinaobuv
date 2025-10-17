@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
+import { formatOrderNumberForDisplay } from '@/utils/orderNumberUtils';
 
 interface OrderHeaderProps {
   order: {
@@ -26,7 +27,7 @@ export function OrderHeader({ order }: OrderHeaderProps) {
       case 'new':
         return 'bg-gray-100 text-gray-800';
       case 'Наличие':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-violet-100 text-violet-800';
       case 'Купить':
         return 'bg-amber-100 text-amber-800';
       case 'Согласование':
@@ -43,7 +44,7 @@ export function OrderHeader({ order }: OrderHeaderProps) {
           href={`/orders/${order.id}`}
           className="text-lg font-semibold text-gray-900 hover:text-blue-600"
         >
-          Заказ #{order.orderNumber}
+          Заказ {formatOrderNumberForDisplay(order.orderNumber)}
         </Link>
         <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
       </div>

@@ -5,13 +5,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { Text } from '@/components/ui/Text';
 
-export type CategoryTreeNode = {
-  id: string;
-  name: string;
-  slug: string;
-  path: string; // obuv/...
-  children: CategoryTreeNode[];
-};
+import type { CatalogTreeNode as CategoryTreeNode } from '@/types/catalog-tree';
 
 function stripPrefix(p: string) {
   return p.replace(/^obuv\//, '');
@@ -23,10 +17,9 @@ function isActive(path: string, activePath?: string) {
   return activePath === p || activePath.startsWith(p + '/');
 }
 
-function buildCatalogUrl(categoryId: string, currentParams: URLSearchParams) {
-  const newParams = new URLSearchParams(currentParams);
-  newParams.set('categoryId', categoryId);
-  return `/?${newParams.toString()}`;
+function buildCatalogUrlFromPath(path: string) {
+  const p = stripPrefix(path);
+  return `/catalog/${p}`;
 }
 
 export function CategoryTreeClient({
@@ -64,10 +57,9 @@ function TreeNode({
   activePath?: string;
   searchParams: URLSearchParams;
 }) {
-  // const p = stripPrefix(node.path);
   const expanded = isActive(node.path, activePath);
   const isLeaf = node.children.length === 0;
-  const catalogUrl = buildCatalogUrl(node.id, searchParams);
+  const catalogUrl = buildCatalogUrlFromPath(node.path);
 
   return (
     <div className="rounded-md">
@@ -106,16 +98,25 @@ function TreeNode({
             <ul className="border-border bg-surface/60 ml-2 mt-1 space-y-1 rounded-md border p-2 backdrop-blur-sm">
               {node.children.map(c => (
                 <li key={c.id}>
-                  <Link
-                    href={buildCatalogUrl(c.id, searchParams)}
-                    className={`block rounded px-2 py-1 transition ${
-                      isActive(c.path, activePath)
-                        ? 'text-primary'
-                        : 'hover:bg-[color-mix(in_oklab,var(--color-background),#000_4%)]'
-                    }`}
-                  >
-                    <Text as="span">{c.name}</Text>
-                  </Link>
+                  {/* If child has further children, render nested TreeNode; otherwise simple link */}
+                  {c.children && c.children.length > 0 ? (
+                    <TreeNode
+                      node={c}
+                      activePath={activePath}
+                      searchParams={searchParams}
+                    />
+                  ) : (
+                    <Link
+                      href={buildCatalogUrlFromPath(c.path)}
+                      className={`block rounded px-2 py-1 transition ${
+                        isActive(c.path, activePath)
+                          ? 'text-primary'
+                          : 'hover:bg-[color-mix(in_oklab,var(--color-background),#000_4%)]'
+                      }`}
+                    >
+                      <Text as="span">{c.name}</Text>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

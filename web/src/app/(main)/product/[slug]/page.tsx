@@ -7,6 +7,7 @@ import ProductGalleryWithColors from '@/components/product/ProductGalleryWithCol
 import ProductReviews from '@/components/product/ProductReviews';
 import { Button } from '@/components/ui/Button';
 import { prisma } from '@/lib/server/db';
+import { buildCategoryPath } from '@/lib/catalog-utils';
 
 export default async function ProductPage({
   params,
@@ -67,9 +68,7 @@ export default async function ProductPage({
               <span className="text-muted-foreground/50 mx-1">/</span>
               {product.category?.name ? (
                 <Link
-                  href={`/?category=${encodeURIComponent(
-                    product.category.name
-                  )}`}
+                  href={`/catalog/${buildCategoryPath(product.category)}`}
                   className="text-muted-foreground/80 hover:text-foreground transition-colors"
                 >
                   {product.category.name}
@@ -125,6 +124,7 @@ export default async function ProductPage({
                   ? (product.sourceMessageIds as string[])
                   : null
               }
+              imageUrl={images[0]?.url}
             />
           </div>
         </div>

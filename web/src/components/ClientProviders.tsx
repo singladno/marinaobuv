@@ -5,6 +5,7 @@ import { CartProvider } from '@/contexts/CartContext';
 import { CategoriesProvider } from '@/contexts/CategoriesContext';
 import { CategoryLookupProvider } from '@/contexts/CategoryLookupContext';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
+import { FlyingAnimationProvider } from '@/contexts/FlyingAnimationContext';
 import { HighlightedProductsProvider } from '@/contexts/HighlightedProductsContext';
 import { UserProvider } from '@/contexts/UserContext';
 
@@ -20,7 +21,9 @@ export function ClientProviders({ children }: ClientProvidersProps) {
           <CategoryLookupProvider>
             <HighlightedProductsProvider>
               <FavoritesProvider>
-                <CartProvider>{children}</CartProvider>
+                <FlyingAnimationProvider>
+                  <CartProvider>{children}</CartProvider>
+                </FlyingAnimationProvider>
               </FavoritesProvider>
             </HighlightedProductsProvider>
           </CategoryLookupProvider>

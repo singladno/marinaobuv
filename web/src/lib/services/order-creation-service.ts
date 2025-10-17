@@ -82,7 +82,7 @@ export async function createOrder(
     total += itemTotal;
 
     // Generate a single item code for this order line
-    const itemCode = generateItemCode();
+    const itemCode = await generateItemCode();
 
     orderItems.push({
       slug: product.slug,

@@ -62,6 +62,7 @@ export type GruzchikOrderItemRow = {
 
   // Item info
   itemId: string;
+  productId: string;
   itemName: string;
   itemArticle: string | null;
   itemQty: number;
@@ -73,4 +74,7 @@ export type GruzchikOrderItemRow = {
   messageId?: string;
   messageText?: string;
   messageDate?: string;
+
+  // Provider info
+  provider?: string;
 };

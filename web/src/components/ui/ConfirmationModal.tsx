@@ -154,48 +154,81 @@ export function ConfirmationModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 overflow-y-auto transition-opacity duration-300 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
       onClick={handleBackdropClick}
     >
-      <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          aria-hidden="true"
-        />
-        <span
-          className="hidden sm:inline-block sm:h-screen sm:align-middle"
-          aria-hidden="true"
-        >
-          &#8203;
-        </span>
-        <div
-          className={`inline-block transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle ${
-            isVisible
-              ? 'translate-y-0 scale-100 opacity-100'
-              : 'translate-y-4 scale-95 opacity-0'
-          }`}
-        >
-          <div className="sm:flex sm:items-start">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+      {/* Modal */}
+      <div
+        className={`relative w-full max-w-md rounded-lg bg-white shadow-xl transition-all ${
+          isVisible
+            ? 'translate-y-0 scale-100 opacity-100'
+            : 'translate-y-4 scale-95 opacity-0'
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Закрыть"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-6">
+          {/* Icon */}
+          <div className="mb-4 flex justify-center">
             <div
-              className={`mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full sm:mx-0 sm:h-10 sm:w-10 ${styles.iconBg}`}
+              className={`flex h-12 w-12 items-center justify-center rounded-full border ${styles.iconBg} ${
+                variant === 'danger'
+                  ? 'border-red-200'
+                  : variant === 'warning'
+                    ? 'border-yellow-200'
+                    : 'border-blue-200'
+              }`}
             >
               <div className={styles.icon}>{getIcon()}</div>
             </div>
-            <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">
-                {title}
-              </h3>
-              <div className="mt-2">
-                <p className="text-sm text-gray-500">{message}</p>
-              </div>
-            </div>
           </div>
-          <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+
+          {/* Message */}
+          <div className="mb-6 text-center">
+            <p className="text-sm leading-relaxed text-gray-600">{message}</p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3">
             <button
               type="button"
-              className={`inline-flex w-full justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm ${styles.confirmButton} ${
+              onClick={onClose}
+              disabled={isLoading}
+              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {cancelText}
+            </button>
+            <button
+              type="button"
+              className={`rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${styles.confirmButton} ${
                 isLoading ? 'cursor-not-allowed opacity-50' : ''
               }`}
               onClick={handleConfirm}
@@ -227,14 +260,6 @@ export function ConfirmationModal({
               ) : (
                 confirmText
               )}
-            </button>
-            <button
-              type="button"
-              className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              {cancelText}
             </button>
           </div>
         </div>

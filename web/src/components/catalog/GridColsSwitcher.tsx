@@ -8,7 +8,7 @@ type GridCols = 4 | 5;
 
 type GridColsSwitcherProps = {
   value: GridCols;
-  onChange: (cols: GridCols) => void;
+  onChange?: (cols: GridCols) => void;
   className?: string;
 };
 
@@ -24,7 +24,7 @@ export function GridColsSwitcher({
         size="sm"
         onClick={() => {
           console.log('Switching to 4 columns');
-          onChange(4);
+          if (onChange) onChange(4);
         }}
         aria-label="4 в ряд"
       >
@@ -47,7 +47,7 @@ export function GridColsSwitcher({
         size="sm"
         onClick={() => {
           console.log('Switching to 5 columns');
-          onChange(5);
+          if (onChange) onChange(5);
         }}
         aria-label="5 в ряд"
       >

@@ -8,12 +8,13 @@ import {
 import { useOrdersData } from './useOrdersData';
 
 export function useOrdersPage() {
-  const { orders, loading, error } = useOrdersData();
+  const { orders, loading, error, isAuthenticated } = useOrdersData();
 
   return {
     orders,
     loading,
     error,
+    isAuthenticated,
     getStatusBadgeVariant,
     getStatusText,
     formatDate,

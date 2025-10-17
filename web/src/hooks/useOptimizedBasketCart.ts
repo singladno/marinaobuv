@@ -22,7 +22,8 @@ interface CartItemWithProduct {
 }
 
 export function useOptimizedBasketCart() {
-  const { items, remove, updateQuantity, clear } = useCart();
+  const { items, remove, updateQuantity, clear, removeInvalidItems } =
+    useCart();
   const { addNotification } = useNotifications();
   const { favorites, toggleFavorite } = useFavorites();
 
@@ -68,6 +69,28 @@ export function useOptimizedBasketCart() {
 
         const data = await response.json();
 
+        // Find slugs that exist in the database
+        const validSlugs = data.products.map((p: any) => p.slug);
+
+        // Clean up invalid items from cart context
+        const invalidItems = items.filter(
+          item => !validSlugs.includes(item.slug)
+        );
+        if (invalidItems.length > 0) {
+          console.log(
+            'Removing invalid cart items:',
+            invalidItems.map(item => item.slug)
+          );
+          removeInvalidItems(validSlugs);
+
+          // Show notification about removed items
+          addNotification({
+            type: 'info',
+            title: 'Корзина обновлена',
+            message: `Удалено ${invalidItems.length} недоступных товаров из корзины`,
+          });
+        }
+
         // Convert CartItem[] to CartItemWithProduct[] with real product data
         const productsWithData: CartItemWithProduct[] = cartSlugs
           .map(slug => {
@@ -104,7 +127,7 @@ export function useOptimizedBasketCart() {
         setLoading(false);
       }
     },
-    [items]
+    [items, removeInvalidItems, addNotification]
   );
 
   // Fetch products only on initial load or when new items are added

@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { ClientProviders } from '@/components/ClientProviders';
-import { GruzchikPortalSwitcher } from '@/components/ui/GruzchikPortalSwitcher';
-import GruzchikSidebarLayout from '@/components/ui/GruzchikSidebarLayout';
+import { MobileGruzchikLayout } from '@/components/features/gruzchik/MobileGruzchikLayout';
 import { getSession } from '@/lib/server/session';
 
 export default async function GruzchikLayout({
@@ -15,10 +14,7 @@ export default async function GruzchikLayout({
 
   return (
     <ClientProviders>
-      <div className="bg-background text-foreground flex h-screen">
-        <GruzchikSidebarLayout>{children}</GruzchikSidebarLayout>
-        <GruzchikPortalSwitcher />
-      </div>
+      <MobileGruzchikLayout>{children}</MobileGruzchikLayout>
     </ClientProviders>
   );
 }

@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
 } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface SearchHistoryItem {
   id: string;
@@ -29,6 +30,7 @@ const SearchContext = createContext<SearchContextType | undefined>(undefined);
 export function SearchProvider({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const router = useRouter();
 
   // Fetch search history from backend
   const fetchSearchHistory = useCallback(async () => {
@@ -102,13 +104,13 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Use Next.js router for client-side navigation
-      if (typeof window !== 'undefined') {
-        const url = searchParams.toString()
-          ? `/?${searchParams.toString()}`
-          : '/';
-        window.history.pushState({}, '', url);
+      const url = searchParams.toString()
+        ? `/catalog?${searchParams.toString()}`
+        : '/catalog';
+      router.push(url);
 
-        // Dispatch a custom event to notify components of the search
+      // Dispatch a custom event to notify components of the search
+      if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('searchPerformed', {
             detail: { query: query.trim() },
@@ -116,7 +118,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
         );
       }
     },
-    [saveToLocalSearchHistory]
+    [saveToLocalSearchHistory, router]
   );
 
   // Clear search history

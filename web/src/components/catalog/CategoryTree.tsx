@@ -1,8 +1,5 @@
-import CategoryTreeClient, {
-  type CategoryTreeNode,
-} from './CategoryTreeClient';
-
-export type { CategoryTreeNode };
+import CategoryTreeClient from './CategoryTreeClient';
+import type { CatalogTreeNode as CategoryTreeNode } from '@/types/catalog-tree';
 
 export function CategoryTree({
   tree,

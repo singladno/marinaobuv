@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import type { CatalogFilters } from '@/types/filters';
 
 import { dbPathFromInput } from './catalog-utils';
-import { prisma } from './db-node';
+import { prisma } from './server/db';
 
 export async function listProductsByCategoryPath(
   categoryPath?: string,
@@ -71,15 +71,37 @@ export async function listProductsByCategoryId(
       include: {
         category: true,
         images: {
-          orderBy: { sort: 'asc' },
+          orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
         },
       },
     }),
     prisma.product.count({ where }),
   ]);
 
+  // Transform the data to include primaryImageUrl and colorOptions
+  const transformedProducts = products.map(product => {
+    const primaryImageUrl = product.images[0]?.url || null;
+    const seen = new Set<string>();
+    const colorOptions = product.images
+      .filter(img => !!img.color)
+      .filter(img => {
+        const key = (img.color || '').toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map(img => ({ color: img.color as string, imageUrl: img.url }));
+
+    return {
+      ...product,
+      pricePair: product.pricePair.toString(),
+      primaryImageUrl,
+      colorOptions,
+    };
+  });
+
   return {
-    products,
+    products: transformedProducts,
     total,
     page,
     limit,

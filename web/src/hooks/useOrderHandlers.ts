@@ -30,6 +30,8 @@ interface UseOrderHandlersProps {
 
 import { useState } from 'react';
 
+import { formatOrderNumber } from '@/utils/orderNumberUtils';
+
 export function useOrderHandlers({
   products,
   selectedTransportId,
@@ -98,7 +100,7 @@ export function useOrderHandlers({
       addNotification({
         type: 'success',
         title: 'Заказ оформлен!',
-        message: `Ваш заказ #${result.order.orderNumber} успешно оформлен.`,
+        message: `Ваш заказ #${formatOrderNumber(result.order.orderNumber)} успешно оформлен.`,
       });
       clear();
       setIsCheckoutModalOpen(false);

@@ -23,8 +23,8 @@ interface CatalogFilters {
 
 type TopFiltersBarBackendProps = {
   filters: CatalogFilters;
-  onChange: (filters: Partial<CatalogFilters>) => void;
-  onClear: () => void;
+  onChange?: (filters: Partial<CatalogFilters>) => void;
+  onClear?: () => void;
 };
 
 export default function TopFiltersBarBackend({
@@ -65,6 +65,8 @@ export default function TopFiltersBarBackend({
   );
 
   const handleFiltersChange = (newFilters: any) => {
+    if (!onChange) return; // Don't do anything if no onChange handler
+
     const updatedFilters: Partial<CatalogFilters> = {};
 
     if (newFilters.categories !== undefined) {
@@ -100,7 +102,7 @@ export default function TopFiltersBarBackend({
       {/* Sort control */}
       <SortControl
         value={filters.sortBy}
-        onChange={sortBy => onChange({ sortBy })}
+        onChange={sortBy => onChange && onChange({ sortBy })}
       />
 
       {/* Category filter */}
@@ -124,9 +126,9 @@ export default function TopFiltersBarBackend({
       />
 
       {/* Clear button */}
-      {hasActive && (
+      {hasActive && onClear && (
         <button
-          onClick={onClear}
+          onClick={() => onClear()}
           className="h-9 rounded-xl px-3 text-sm text-gray-600 hover:bg-gray-100"
         >
           Сбросить

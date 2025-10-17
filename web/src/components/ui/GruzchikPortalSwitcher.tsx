@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
+import { GruzchikPortalMenuItems } from './GruzchikPortalMenuItems';
 
 type CurrentUser = {
   userId?: string;
@@ -18,6 +19,8 @@ export function GruzchikPortalSwitcher() {
   const [isVisible, setIsVisible] = useState(false);
   const pathname = usePathname();
   const { user } = useUser();
+  const isOnGruzchik =
+    typeof pathname === 'string' && pathname.startsWith('/gruzchik');
 
   useEffect(() => {
     // Show switcher after a short delay for better UX
@@ -49,7 +52,7 @@ export function GruzchikPortalSwitcher() {
         />
       )}
 
-      {/* Menu Items */}
+      {/* Menu Items - show only ONE destination (the other portal) */}
       <div
         className={`absolute bottom-16 right-0 mb-2 space-y-2 transition-all duration-300 ${
           isOpen
@@ -57,85 +60,17 @@ export function GruzchikPortalSwitcher() {
             : 'pointer-events-none translate-y-2 scale-95 opacity-0'
         }`}
       >
-        {/* Customer Portal */}
-        <Link
-          href="/"
-          onClick={closeMenu}
-          className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 shadow-lg transition-all duration-200 hover:scale-105 sm:px-4 sm:py-3 ${
-            user?.role !== 'GRUZCHIK'
-              ? 'bg-blue-600 text-white shadow-blue-500/25'
-              : 'bg-white text-gray-700 hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 group-hover:bg-blue-200 sm:h-10 sm:w-10 dark:bg-blue-900/30 dark:group-hover:bg-blue-900/50">
-            <svg
-              className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5 dark:text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-          </div>
-          <div className="text-left">
-            <div className="text-sm font-semibold sm:text-base">
-              Клиентский портал
-            </div>
-            <div className="text-xs opacity-80 sm:text-sm">
-              Просмотр товаров
-            </div>
-          </div>
-        </Link>
-
-        {/* Gruzchik Portal */}
-        <Link
-          href="/gruzchik"
-          onClick={closeMenu}
-          className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 shadow-lg transition-all duration-200 hover:scale-105 sm:px-4 sm:py-3 ${
-            user?.role === 'GRUZCHIK'
-              ? 'bg-orange-600 text-white shadow-orange-500/25'
-              : 'bg-white text-gray-700 hover:bg-orange-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 group-hover:bg-orange-200 sm:h-10 sm:w-10 dark:bg-orange-900/30 dark:group-hover:bg-orange-900/50">
-            <svg
-              className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5 dark:text-orange-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-              />
-            </svg>
-          </div>
-          <div className="text-left">
-            <div className="text-sm font-semibold sm:text-base">
-              Грузчик панель
-            </div>
-            <div className="text-xs opacity-80 sm:text-sm">
-              Управление заказами
-            </div>
-          </div>
-        </Link>
+        <GruzchikPortalMenuItems
+          isOnGruzchik={isOnGruzchik}
+          onClose={closeMenu}
+          className="sm:px-4 sm:py-3 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+        />
       </div>
 
       {/* Main Toggle Button */}
       <button
         onClick={toggleMenu}
-        className={`group relative flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-offset-2 sm:h-14 sm:w-14 ${
-          user?.role === 'GRUZCHIK'
-            ? 'bg-orange-600 text-white shadow-orange-500/25 focus:ring-orange-500'
-            : 'bg-blue-600 text-white shadow-blue-500/25 focus:ring-blue-500'
-        }`}
+        className="group relative flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg shadow-purple-500/25 transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-offset-2 sm:h-14 sm:w-14"
         aria-label="Переключить портал"
       >
         {/* Background Animation */}
@@ -182,18 +117,9 @@ export function GruzchikPortalSwitcher() {
         <div
           className={`absolute inset-0 animate-ping rounded-full ${
             isOpen ? 'opacity-0' : 'opacity-20'
-          } ${user?.role === 'GRUZCHIK' ? 'bg-orange-400' : 'bg-blue-400'}`}
+          } bg-purple-400`}
         />
       </button>
-
-      {/* Current Portal Indicator */}
-      <div
-        className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white shadow-lg sm:-right-2 sm:-top-2 sm:h-6 sm:w-6 ${
-          user?.role === 'GRUZCHIK' ? 'bg-orange-500' : 'bg-blue-500'
-        }`}
-      >
-        {user?.role === 'GRUZCHIK' ? 'Г' : 'К'}
-      </div>
     </div>
   );
 }

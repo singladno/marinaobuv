@@ -19,4 +19,23 @@ export function Card({ className, hover = false, ...rest }: Props) {
   );
 }
 
+export function CardHeader({
+  className,
+  ...rest
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={clsx('flex flex-col space-y-1.5 p-6', className)}
+      {...rest}
+    />
+  );
+}
+
+export function CardContent({
+  className,
+  ...rest
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={clsx('p-6 pt-0', className)} {...rest} />;
+}
+
 export default Card;

@@ -22,7 +22,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     handleSubmit,
     handleOtpResend,
     handleBackToPhone,
-  } = useLoginPage();
+  } = useLoginPage({ disableRedirect: true });
 
   if (!isOpen) return null;
 

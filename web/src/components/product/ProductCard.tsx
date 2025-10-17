@@ -1,3 +1,4 @@
+'use client';
 import { Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -173,7 +174,11 @@ export default function ProductCard({
               <Text className="text-foreground text-xl font-bold">
                 {rub(computedPairPrice ?? 0)}
               </Text>
-              <CartActionButton slug={slug} />
+              <CartActionButton
+                slug={slug}
+                productName={name}
+                productImageUrl={displayImageUrl || undefined}
+              />
             </div>
             <ColorSwitcher
               options={colorOptions}

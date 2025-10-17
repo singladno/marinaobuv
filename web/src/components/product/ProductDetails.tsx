@@ -24,6 +24,7 @@ type Props = {
   availabilityCheckedAt?: Date | string | null;
   sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
   sourceMessageIds?: string[] | null;
+  imageUrl?: string; // Primary image URL for cart animations
 };
 
 export default function ProductDetails(props: Props) {
@@ -41,10 +42,8 @@ export default function ProductDetails(props: Props) {
     sourceMessageIds,
   } = props;
 
-  const { add, items } = useCart();
+  const { add } = useCart();
   const [quantity, setQuantity] = useState(1);
-
-  const inCart = useMemo(() => items.some(i => i.slug === slug), [items, slug]);
   const packPairs = useMemo(() => {
     if (!Array.isArray(sizes)) return null;
     return sizes.length > 0
@@ -61,8 +60,16 @@ export default function ProductDetails(props: Props) {
     return null;
   }, [pairPrice, packPairs]);
 
-  const handleAddToCart = () => add(slug, quantity);
-  const handleBuyNow = () => add(slug, quantity);
+  const handleAddToCart = () =>
+    add(slug, quantity, {
+      imageUrl: props.imageUrl || '',
+      name: name,
+    });
+  const handleBuyNow = () =>
+    add(slug, quantity, {
+      imageUrl: props.imageUrl || '',
+      name: name,
+    });
 
   return (
     <div className="space-y-6">
@@ -91,9 +98,11 @@ export default function ProductDetails(props: Props) {
       )}
       <Separator />
       <ProductActions
-        inCart={inCart}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
+        productSlug={slug}
+        productName={name}
+        productImageUrl={props.imageUrl || undefined}
       />
       <Separator />
       <ProductFeatures

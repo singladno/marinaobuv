@@ -15,6 +15,14 @@ model Category {
   path          String           @unique
   sort          Int              @default(500)
   isActive      Boolean          @default(true)
+  // SEO fields for category landing pages
+  seoTitle      String?
+  seoDescription String?
+  seoH1         String?
+  seoIntroHtml  String?
+  seoCanonical  String?
+  seoNoindex    Boolean          @default(false)
+  seoUpdatedAt  DateTime?        @default(now())
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   parent        Category?        @relation("CatToParent", fields: [parentId], references: [id])
@@ -254,7 +262,7 @@ model Order {
   comment       String?
   subtotal      Decimal     @default(0)
   total         Decimal     @default(0)
-  status        String      @default("new")
+  status        String      @default("Новый")
   label         String?
   payment       Decimal     @default(0)
   createdAt     DateTime    @default(now())

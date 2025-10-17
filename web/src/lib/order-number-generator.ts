@@ -1,72 +1,93 @@
 import { prisma } from './db-node';
 
 /**
- * Generate a human-readable order number
- * Format: ORD-YYYYMMDD-XXXX
- * Example: ORD-20250120-0001
+ * Generate a sequential order number
+ * Format: XXXXX (numbers only)
+ * Example: 10000, 10001, 10002
  *
  * Best practices:
- * - Short and memorable
- * - Includes date for easy reference
- * - Sequential numbering per day
- * - Prefix for easy identification
+ * - Simple sequential numbering starting from 10000
+ * - Easy to remember and reference
+ * - Database sequence ensures uniqueness
+ * - No date dependency for better performance
  */
 export async function generateOrderNumber(): Promise<string> {
-  const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+  try {
+    // Use the database function to get the next order number
+    const result = await prisma.$queryRaw<[{ get_next_order_number: string }]>`
+      SELECT get_next_order_number() as get_next_order_number
+    `;
 
-  // Find the highest order number for today
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(todayStart);
-  todayEnd.setDate(todayEnd.getDate() + 1);
+    const orderNumber = result[0]?.get_next_order_number;
 
-  const lastOrder = await prisma.order.findFirst({
-    where: {
-      createdAt: {
-        gte: todayStart,
-        lt: todayEnd,
+    if (!orderNumber) {
+      throw new Error('Failed to generate order number');
+    }
+
+    // Double-check uniqueness (should be extremely rare with sequence)
+    const exists = await prisma.order.findFirst({
+      where: { orderNumber },
+      select: { id: true },
+    });
+
+    if (exists) {
+      // If somehow exists, try again (this should be extremely rare)
+      return await generateOrderNumber();
+    }
+
+    return orderNumber;
+  } catch (error) {
+    console.error('Error generating order number:', error);
+
+    // Fallback: find the highest existing order number and increment
+    const lastOrder = await prisma.order.findFirst({
+      where: {
+        orderNumber: {
+          // Match numeric order numbers using Prisma's string filters
+          not: {
+            contains: '-',
+          },
+        },
       },
-      orderNumber: {
-        startsWith: `ORD-${dateStr}-`,
+      orderBy: {
+        orderNumber: 'desc',
       },
-    },
-    orderBy: {
-      orderNumber: 'desc',
-    },
-    select: {
-      orderNumber: true,
-    },
-  });
+      select: {
+        orderNumber: true,
+      },
+    });
 
-  let sequence = 1;
-  if (lastOrder?.orderNumber) {
-    // Extract sequence number from last order
-    const parts = lastOrder.orderNumber.split('-');
-    const lastSequence = parseInt(parts[2] || '0', 10);
-    sequence = lastSequence + 1;
+    let nextNumber = 10000;
+    if (lastOrder?.orderNumber) {
+      // Parse the numeric order number
+      const parsedNumber = parseInt(lastOrder.orderNumber, 10);
+      if (!isNaN(parsedNumber)) {
+        nextNumber = parsedNumber + 1;
+      }
+    }
+
+    const orderNumber = nextNumber.toString();
+
+    // Final uniqueness check
+    const exists = await prisma.order.findFirst({
+      where: { orderNumber },
+      select: { id: true },
+    });
+
+    if (exists) {
+      // If still exists, add timestamp suffix as last resort
+      const timestamp = Date.now().toString().slice(-4);
+      return `${nextNumber}-${timestamp}`;
+    }
+
+    return orderNumber;
   }
-
-  const orderNumber = `ORD-${dateStr}-${sequence.toString().padStart(4, '0')}`;
-
-  // Double-check uniqueness (should be extremely rare)
-  const exists = await prisma.order.findFirst({
-    where: { orderNumber },
-    select: { id: true },
-  });
-
-  if (exists) {
-    // If somehow exists, add timestamp suffix
-    const timestamp = now.getTime().toString().slice(-4);
-    return `ORD-${dateStr}-${sequence.toString().padStart(4, '0')}-${timestamp}`;
-  }
-
-  return orderNumber;
 }
 
 /**
  * Alternative format: Short alphanumeric
- * Format: ORD-XXXXXX
- * Example: ORD-A1B2C3
+ * Format: XXXXXX (alphanumeric only)
+ * Example: A1B2C3
  *
  * Uses base36 encoding for shorter, more memorable codes
  */
@@ -83,7 +104,7 @@ export async function generateShortOrderNumber(): Promise<string> {
     shortCode = shortCode.padStart(6, '0');
   }
 
-  const orderNumber = `ORD-${shortCode}`;
+  const orderNumber = shortCode;
 
   // Check uniqueness
   const exists = await prisma.order.findFirst({
@@ -97,7 +118,7 @@ export async function generateShortOrderNumber(): Promise<string> {
       .toString(36)
       .substring(2, 4)
       .toUpperCase();
-    return `ORD-${shortCode}${randomSuffix}`;
+    return `${shortCode}${randomSuffix}`;
   }
 
   return orderNumber;

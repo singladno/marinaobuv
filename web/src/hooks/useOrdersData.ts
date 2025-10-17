@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useNotifications } from '@/components/ui/NotificationProvider';
+import { useUser } from '@/contexts/UserContext';
 
 interface OrderItem {
   id: string;
@@ -42,9 +43,16 @@ export function useOrdersData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { addNotification } = useNotifications();
+  const { user, loading: userLoading } = useUser();
 
   useEffect(() => {
     const fetchOrders = async () => {
+      // Don't make API call if user is not authenticated
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch('/api/orders');
         if (!response.ok) {
@@ -66,12 +74,16 @@ export function useOrdersData() {
       }
     };
 
-    fetchOrders();
-  }, [addNotification]);
+    // Only fetch orders when user loading is complete
+    if (!userLoading) {
+      fetchOrders();
+    }
+  }, [addNotification, user, userLoading]);
 
   return {
     orders,
-    loading,
+    loading: loading || userLoading,
     error,
+    isAuthenticated: !!user,
   };
 }

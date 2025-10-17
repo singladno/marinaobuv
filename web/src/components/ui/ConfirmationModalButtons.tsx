@@ -26,9 +26,9 @@ export function ConfirmationModalButtons({
       case 'warning':
         return 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500';
       case 'info':
-        return 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';
+        return 'bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 focus:ring-violet-500 shadow-lg hover:shadow-xl transition-all duration-200';
       default:
-        return 'bg-gray-600 hover:bg-gray-700 focus:ring-gray-500';
+        return 'bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 focus:ring-violet-500 shadow-lg hover:shadow-xl transition-all duration-200';
     }
   };
 

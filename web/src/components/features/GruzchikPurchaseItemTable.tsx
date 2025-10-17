@@ -36,7 +36,7 @@ export function GruzchikPurchaseItemTable() {
     [updateOrderOptimistically, updatingOrders]
   );
 
-  // Group items by order
+  // Group items by order and show only first item per order
   const ordersWithItems = useMemo(() => {
     const grouped = new Map<string, typeof itemRows>();
 
@@ -49,15 +49,17 @@ export function GruzchikPurchaseItemTable() {
 
     return Array.from(grouped.entries()).map(([orderId, items]) => {
       const order = orders.find(o => o.id === orderId);
+      // Show only the first item per order (like admin panel)
+      const firstItem = items[0];
       return {
         order,
-        items,
-        orderNumber: items[0]?.orderNumber || 'Unknown',
-        orderDate: items[0]?.orderDate || '',
-        customerName: items[0]?.customerName || 'Не указано',
-        customerPhone: items[0]?.customerPhone || '',
-        orderTotal: items[0]?.orderTotal || 0,
-        orderStatus: items[0]?.orderStatus || '',
+        items: [firstItem], // Only show first item
+        orderNumber: firstItem?.orderNumber || 'Unknown',
+        orderDate: firstItem?.orderDate || '',
+        customerName: firstItem?.customerName || 'Не указано',
+        customerPhone: firstItem?.customerPhone || '',
+        orderTotal: firstItem?.orderTotal || 0,
+        orderStatus: firstItem?.orderStatus || '',
       };
     });
   }, [itemRows, orders]);

@@ -60,7 +60,7 @@ export function OrdersTableContent({
 
   return (
     <div className="h-full overflow-auto transition-opacity duration-200 ease-in-out">
-      <table className="w-full table-auto">
+      <table className="w-full border-collapse">
         {/* Header */}
         <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
           <tr>
@@ -101,9 +101,6 @@ export function OrdersTableContent({
             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
               Прибыль
             </th>
-            <th className="sticky right-0 z-30 border-b border-l border-gray-200 bg-gray-50 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-              Действия
-            </th>
           </tr>
         </thead>
 
@@ -114,6 +111,7 @@ export function OrdersTableContent({
               key={order.id}
               order={order}
               gruzchikById={gruzchikById}
+              gruzchiks={gruzchiks}
               isSelected={selected[order.id] || false}
               onToggle={onToggle}
               onPatch={onPatch}

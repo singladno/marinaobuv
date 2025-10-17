@@ -5,7 +5,17 @@ import { useMemo } from 'react';
 
 import { useCart } from '@/contexts/CartContext';
 
-export default function CartActionButton({ slug }: { slug: string }) {
+interface CartActionButtonProps {
+  slug: string;
+  productName?: string;
+  productImageUrl?: string;
+}
+
+export default function CartActionButton({
+  slug,
+  productName,
+  productImageUrl,
+}: CartActionButtonProps) {
   const router = useRouter();
   const { add, items } = useCart();
   const inCart = useMemo(() => items.some(i => i.slug === slug), [items, slug]);
@@ -28,11 +38,15 @@ export default function CartActionButton({ slug }: { slug: string }) {
 
   return (
     <button
-      title="Добавить в корзину"
-      aria-label="Добавить в корзину"
+      title="Добавить"
+      aria-label="Добавить"
+      data-product-slug={slug}
       onClick={e => {
         e.preventDefault();
-        add(slug, 1);
+        add(slug, 1, {
+          imageUrl: productImageUrl || '',
+          name: productName || '',
+        });
       }}
       className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white"
     >

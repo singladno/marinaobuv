@@ -1,14 +1,26 @@
+import { getStatusLabel } from '@/lib/order-statuses';
+
 export const getStatusBadgeVariant = (status: string) => {
+  // Map statuses to shadcn/ui badge variants
   switch (status) {
-    case 'new':
+    case 'Новый':
       return 'default';
-    case 'processing':
+    case 'Наличие':
+    case 'Проверено':
       return 'secondary';
-    case 'shipped':
+    case 'Согласование':
+    case 'Согласован':
       return 'outline';
-    case 'delivered':
+    case 'Купить':
+    case 'Куплен':
       return 'default';
-    case 'cancelled':
+    case 'Отправить':
+    case 'Готов к отправке':
+    case 'Отправлен':
+      return 'outline';
+    case 'Выполнен':
+      return 'default';
+    case 'Отменен':
       return 'destructive';
     default:
       return 'default';
@@ -16,20 +28,7 @@ export const getStatusBadgeVariant = (status: string) => {
 };
 
 export const getStatusText = (status: string) => {
-  switch (status) {
-    case 'new':
-      return 'Новый';
-    case 'processing':
-      return 'В обработке';
-    case 'shipped':
-      return 'Отправлен';
-    case 'delivered':
-      return 'Доставлен';
-    case 'cancelled':
-      return 'Отменен';
-    default:
-      return status;
-  }
+  return getStatusLabel(status);
 };
 
 export const formatDate = (dateString: string) => {

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 
 import { OrderCard } from '@/components/orders/OrderCard';
+import { OrdersLoginPrompt } from '@/components/orders/OrdersLoginPrompt';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Loader } from '@/components/ui/Loader';
@@ -14,11 +15,17 @@ export default function OrdersPage() {
     orders,
     loading,
     error,
+    isAuthenticated,
     getStatusBadgeVariant,
     getStatusText,
     formatDate,
     formatPrice,
   } = useOrdersPage();
+
+  // Show login prompt if user is not authenticated
+  if (!isAuthenticated && !loading) {
+    return <OrdersLoginPrompt />;
+  }
 
   if (loading) {
     return (

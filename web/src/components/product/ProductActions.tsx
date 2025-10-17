@@ -1,17 +1,25 @@
 'use client';
 
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/Button';
 
 type Props = {
-  inCart: boolean;
   onAddToCart: () => void;
   onBuyNow: () => void;
+  productSlug?: string;
+  productName?: string;
+  productImageUrl?: string;
 };
 
-export function ProductActions({ inCart, onAddToCart, onBuyNow }: Props) {
+export function ProductActions({
+  onAddToCart,
+  onBuyNow,
+  productSlug,
+  productName,
+  productImageUrl,
+}: Props) {
   const router = useRouter();
 
   const handleBuyNow = () => {
@@ -21,34 +29,24 @@ export function ProductActions({ inCart, onAddToCart, onBuyNow }: Props) {
 
   return (
     <div className="flex gap-3">
-      {inCart ? (
-        <Button
-          variant="primary"
-          size="lg"
-          onClick={() => router.push('/basket')}
-          className="flex-1 gap-2"
-          data-add-to-cart
-        >
-          <ShoppingCart className="h-5 w-5" />В корзине
-        </Button>
-      ) : (
-        <Button
-          variant="primary"
-          size="lg"
-          onClick={onAddToCart}
-          className="flex-1 gap-2"
-          data-add-to-cart
-        >
-          <ShoppingCart className="h-5 w-5" />В корзину
-        </Button>
-      )}
+      <Button
+        variant="primary"
+        size="lg"
+        onClick={onAddToCart}
+        className="flex-1 gap-2"
+        data-add-to-cart
+        data-product-slug={productSlug}
+      >
+        <ShoppingCart className="h-5 w-5" />
+        Купить
+      </Button>
       <Button
         variant="outline"
         size="lg"
         onClick={handleBuyNow}
-        className="px-8"
+        className="gap-2 border-2 border-violet-200 px-8 font-semibold text-violet-700 transition-all duration-200 hover:border-violet-300 hover:bg-violet-50"
       >
-        Купить сейчас
+        <Zap className="h-5 w-5" />В корзину
       </Button>
     </div>
   );
