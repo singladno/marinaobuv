@@ -46,6 +46,17 @@ export function UserProvider({ children }: UserProviderProps) {
         const res = await fetch('/api/auth/me', {
           cache: 'no-store',
         });
+
+        if (res.status === 401) {
+          // User is not authenticated
+          setUser(null);
+          return null;
+        }
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
         const json = await res.json();
         setUser(json.user ?? null);
         return json.user;

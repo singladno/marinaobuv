@@ -5,7 +5,9 @@ import { getSession } from '@/lib/server/session';
 
 export async function GET() {
   const session = await getSession();
-  if (!session) return NextResponse.json({ user: null });
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   // Get full user data from database
   const user = await prisma.user.findUnique({
@@ -19,7 +21,9 @@ export async function GET() {
     },
   });
 
-  if (!user) return NextResponse.json({ user: null });
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 401 });
+  }
 
   return NextResponse.json({
     user: {

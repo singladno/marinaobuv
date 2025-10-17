@@ -19,15 +19,18 @@ export function useLoginPage(options: { disableRedirect?: boolean } = {}) {
     (async () => {
       try {
         const res = await fetch('/api/auth/me', { cache: 'no-store' });
-        if (!res.ok) return; // API might be unavailable; skip redirect
-        let json: any = null;
-        try {
-          json = await res.json();
-        } catch {
-          json = null; // Non-JSON or empty response
+        if (res.status === 401) {
+          // User is not authenticated, stay on login page
+          return;
         }
+        if (!res.ok) return; // API might be unavailable; skip redirect
+
+        const json = await res.json();
         if (json?.user && !options.disableRedirect) {
-          router.replace('/');
+          // User is authenticated, redirect to home or intended page
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectParam = urlParams.get('redirect');
+          router.replace(redirectParam || '/');
         }
       } catch {
         // Network/permission error; ignore to allow login page to render
