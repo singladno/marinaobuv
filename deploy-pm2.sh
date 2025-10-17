@@ -421,15 +421,66 @@ else
     print_warning "Parsing cron script not found, skipping cron setup"
 fi
 
-# 26. Install/update all cron jobs (including batch polling)
+# 26. Install/update all cron jobs (including batch polling and proxy monitoring)
 print_status "Installing/updating all cron jobs..."
 cd $APP_DIR
 if [ -f "scripts/install-crons.sh" ]; then
     bash scripts/install-crons.sh
-    print_success "All cron jobs installed (parsing, queue polling, batch polling, backup)"
+    print_success "All cron jobs installed (parsing, queue polling, batch polling, backup, proxy monitoring)"
 else
     print_warning "Cron installation script not found"
 fi
+
+# 26.1. Install proxy monitoring systemd service
+print_status "Installing proxy monitoring systemd service..."
+if [ -f "scripts/auto-restart-proxy.sh" ]; then
+    chmod +x scripts/auto-restart-proxy.sh
+    
+    # Create systemd service for proxy monitoring
+    sudo tee /etc/systemd/system/groq-proxy-monitor.service > /dev/null << 'EOF'
+[Unit]
+Description=Groq Proxy Server Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=$APP_DIR
+ExecStart=/bin/bash $APP_DIR/scripts/auto-restart-proxy.sh
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # Create systemd timer for periodic checks
+    sudo tee /etc/systemd/system/groq-proxy-monitor.timer > /dev/null << 'EOF'
+[Unit]
+Description=Run Groq Proxy Monitor every 2 minutes
+Requires=groq-proxy-monitor.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+    # Enable and start the timer service
+    sudo systemctl daemon-reload
+    sudo systemctl enable groq-proxy-monitor.timer
+    sudo systemctl start groq-proxy-monitor.timer
+    print_success "Proxy monitoring systemd service installed and started"
+else
+    print_warning "Proxy auto-restart script not found"
+fi
+
 cd $APP_DIR
 
 # 26. Verify webhook script exists and is executable

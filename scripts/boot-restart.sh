@@ -102,10 +102,58 @@ EOF
 fi
 sudo nginx -t && sudo systemctl restart nginx || true
 
-# 5) Install/refresh cron jobs
+# 5) Install/refresh cron jobs (includes proxy monitoring)
 if [ -f scripts/install-crons.sh ]; then
-  log "Installing/updating cron jobs"
+  log "Installing/updating cron jobs (including proxy monitoring)"
   bash scripts/install-crons.sh || true
+fi
+
+# 5.1) Install proxy monitoring systemd service
+if [ -f scripts/auto-restart-proxy.sh ]; then
+  log "Setting up proxy monitoring systemd service"
+  chmod +x scripts/auto-restart-proxy.sh || true
+  
+  # Create systemd service for proxy monitoring
+  sudo tee /etc/systemd/system/groq-proxy-monitor.service > /dev/null << 'EOF' || true
+[Unit]
+Description=Groq Proxy Server Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/var/www/marinaobuv
+ExecStart=/bin/bash /var/www/marinaobuv/scripts/auto-restart-proxy.sh
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  # Create systemd timer for periodic checks
+  sudo tee /etc/systemd/system/groq-proxy-monitor.timer > /dev/null << 'EOF' || true
+[Unit]
+Description=Run Groq Proxy Monitor every 2 minutes
+Requires=groq-proxy-monitor.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  # Enable and start the timer service
+  sudo systemctl daemon-reload || true
+  sudo systemctl enable groq-proxy-monitor.timer || true
+  sudo systemctl start groq-proxy-monitor.timer || true
+  log "Proxy monitoring systemd service installed and started"
 fi
 
 # 6) PM2 logrotate and journald vacuum
