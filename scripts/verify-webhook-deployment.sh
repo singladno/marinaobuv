@@ -71,6 +71,22 @@ check_application_status() {
         return 1
     fi
     
+    # Check if Groq proxy is running (CRITICAL)
+    if pm2 list | grep -q "groq-proxy.*online"; then
+        log_success "Groq proxy PM2 process is running"
+    else
+        log_error "Groq proxy PM2 process is not running"
+        return 1
+    fi
+    
+    # Check if Groq proxy is responding (CRITICAL)
+    if curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
+        log_success "Groq proxy is responding to health checks"
+    else
+        log_error "Groq proxy is not responding to health checks"
+        return 1
+    fi
+    
     # Check if port 3000 is listening (prefer ss, fallback to netstat)
     if command -v ss >/dev/null 2>&1; then
         if ss -tlnp | grep -q ":3000"; then
@@ -91,6 +107,32 @@ check_application_status() {
     fi
     
     return 0
+}
+
+# Function to start Groq proxy if needed
+start_groq_proxy() {
+    log_info "Starting Groq proxy server..."
+    
+    # Start Groq proxy
+    if pm2 start ecosystem.config.js --only groq-proxy --env production; then
+        log_success "Groq proxy started successfully"
+        
+        # Wait for proxy to start
+        log_info "Waiting for Groq proxy to start..."
+        sleep 10
+        
+        # Check if it's responding
+        if curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
+            log_success "Groq proxy is responding"
+            return 0
+        else
+            log_error "Groq proxy started but not responding"
+            return 1
+        fi
+    else
+        log_error "Failed to start Groq proxy"
+        return 1
+    fi
 }
 
 # Function to restart application if needed
@@ -164,7 +206,25 @@ main() {
     # Step 1: Check application status
     if ! check_application_status; then
         log_error "Application is not running properly"
-        exit 1
+        
+        # Try to start Groq proxy if it's not running
+        if ! pm2 list | grep -q "groq-proxy.*online"; then
+            log_info "Attempting to start Groq proxy..."
+            if start_groq_proxy; then
+                log_success "Groq proxy started, rechecking application status..."
+                if check_application_status; then
+                    log_success "Application status is now OK"
+                else
+                    log_error "Application still not running properly after proxy start"
+                    exit 1
+                fi
+            else
+                log_error "Failed to start Groq proxy - deployment cannot succeed"
+                exit 1
+            fi
+        else
+            exit 1
+        fi
     fi
     
     # Step 2: Verify webhook route exists
