@@ -18,7 +18,7 @@ import {
 } from '../prompts/image-analysis-prompts';
 
 export class GroqSequentialProcessor {
-  private groq: Groq;
+  private groq: Groq | null = null;
   private prisma: PrismaClient;
   private groupingService: GroqGroupingService;
   private batchProductService: SimpleProductService;
@@ -26,12 +26,19 @@ export class GroqSequentialProcessor {
   private colorMappingService: FixedColorMappingService;
 
   constructor(prismaClient: PrismaClient) {
-    this.groq = new Groq(getGroqConfig());
     this.prisma = prismaClient;
     this.groupingService = new GroqGroupingService();
     this.batchProductService = new SimpleProductService();
     this.validationService = new AnalysisValidationService();
     this.colorMappingService = new FixedColorMappingService();
+  }
+
+  private async initializeGroq(): Promise<Groq> {
+    if (!this.groq) {
+      const config = await getGroqConfig();
+      this.groq = new Groq(config);
+    }
+    return this.groq;
   }
 
   /**
@@ -431,21 +438,23 @@ export class GroqSequentialProcessor {
 
     try {
       // Add timeout to Groq API call
-      const groqPromise = this.groq.chat.completions.create({
-        model: 'llama-3.1-8b-instant',
-        messages: [
-          {
-            role: 'system',
-            content: TEXT_ANALYSIS_SYSTEM_PROMPT,
-          },
-          {
-            role: 'user',
-            content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls),
-          },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.5,
-      });
+      const groqPromise = (await this.initializeGroq()).chat.completions.create(
+        {
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content: TEXT_ANALYSIS_SYSTEM_PROMPT,
+            },
+            {
+              role: 'user',
+              content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls),
+            },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.5,
+        }
+      );
 
       // Add timeout to Groq API call
       const timeoutPromise = new Promise<never>(
@@ -759,7 +768,9 @@ export class GroqSequentialProcessor {
           console.log(promptText.substring(0, 1000) + '...');
 
           // Add timeout to Groq API call
-          const groqPromise = this.groq.chat.completions.create({
+          const groqPromise = (
+            await this.initializeGroq()
+          ).chat.completions.create({
             model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
             messages: [
               {

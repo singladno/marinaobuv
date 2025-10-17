@@ -24,13 +24,20 @@ export interface GroupingDebugInfo {
  * Service for grouping WhatsApp messages using Groq
  */
 export class GroqGroupingService {
-  private groq: Groq;
+  private groq: Groq | null = null;
 
   constructor() {
     if (!process.env.GROQ_API_KEY) {
       throw new Error('GROQ_API_KEY is required');
     }
-    this.groq = new Groq(getGroqConfig());
+  }
+
+  private async initializeGroq(): Promise<Groq> {
+    if (!this.groq) {
+      const config = await getGroqConfig();
+      this.groq = new Groq(config);
+    }
+    return this.groq;
   }
 
   /**
@@ -64,9 +71,9 @@ export class GroqGroupingService {
         temperature: 0.1,
       };
 
-      const response = await this.groq.chat.completions.create(
-        fullRequest as any
-      );
+      const response = await (
+        await this.initializeGroq()
+      ).chat.completions.create(fullRequest as any);
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
 
@@ -132,9 +139,9 @@ export class GroqGroupingService {
         temperature: 0.1,
       };
 
-      const response = await this.groq.chat.completions.create(
-        fullRequest as any
-      );
+      const response = await (
+        await this.initializeGroq()
+      ).chat.completions.create(fullRequest as any);
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
 
