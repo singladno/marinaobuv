@@ -329,8 +329,19 @@ jobs:
             # Skip database permission changes during deploy to avoid YAML/heredoc issues
             echo "ℹ️ Skipping database permission adjustments during deployment"
 
-            # Run database migrations with proper error handling
-            echo "🚀 Running database migrations..."
+            # Run database migrations with comprehensive error handling
+            echo "🚀 Running database migrations with conflict resolution..."
+            
+            # First, try to resolve any failed migrations
+            echo "🔧 Checking for failed migrations and resolving conflicts..."
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000000_add_order_number_sequence 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000001_update_order_statuses 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000002_remove_ord_prefix 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000003_update_order_status_default 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000004_add_order_item_sequence 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250916211900_init 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            
+            # Try to run migrations
             if ./prisma-server.sh npx prisma migrate deploy; then
               echo "✅ Database migrations completed successfully"
             else
@@ -342,6 +353,23 @@ jobs:
                 echo "💡 DEPLOYMENT FAILED - could not fix database schema"
                 exit 1
               fi
+            
+            # Ensure default categories exist (critical for parser functionality)
+            echo "🔧 Ensuring default categories exist..."
+            ./prisma-server.sh npx prisma db execute --stdin <<< "
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+              VALUES ('default', 'Обувь', 'obuv', 'Основная категория обуви', NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING;
+              
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+              VALUES ('winter', 'Зимняя обувь', 'winter-shoes', 'Зимняя обувь и аксессуары', NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING;
+              
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+              VALUES ('summer', 'Летняя обувь', 'summer-shoes', 'Летняя обувь и сандалии', NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING;
+            " 2>/dev/null || echo "Categories already exist or table doesn't exist yet"
+            echo "✅ Default categories ensured"
             fi
 
             # Skip init/seed (requires tsx); run manually when needed

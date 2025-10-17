@@ -7,11 +7,11 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 
 // Proxy server configuration
 const PROXY_CONFIG = {
-  // Use domain instead of direct IP (server is behind load balancer)
-  host: 'marina-obuv.ru',
-  port: 443, // Use HTTPS port
-  protocol: 'https',
-  path: '/groq-proxy', // Nginx proxy path
+  // Use localhost for local development, domain for production
+  host: process.env.NODE_ENV === 'production' ? 'marina-obuv.ru' : 'localhost',
+  port: process.env.NODE_ENV === 'production' ? 443 : 3001,
+  protocol: process.env.NODE_ENV === 'production' ? 'https' : 'http',
+  path: process.env.NODE_ENV === 'production' ? '/groq-proxy' : '', // Nginx proxy path for production
 };
 
 // Check if proxy server is available
@@ -20,13 +20,14 @@ export const isProxyAvailable = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-    const response = await fetch(
-      `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}/healthz`,
-      {
-        method: 'GET',
-        signal: controller.signal,
-      }
-    );
+    const proxyUrl = PROXY_CONFIG.port === 443 
+      ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}/healthz`
+      : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}/healthz`;
+    
+    const response = await fetch(proxyUrl, {
+      method: 'GET',
+      signal: controller.signal,
+    });
 
     clearTimeout(timeoutId);
     return response.ok;
@@ -38,7 +39,9 @@ export const isProxyAvailable = async (): Promise<boolean> => {
 
 // Create proxy agent for Groq requests
 export const createGroqProxyAgent = () => {
-  const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`;
+  const proxyUrl = PROXY_CONFIG.port === 443 
+    ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
+    : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
   return new HttpsProxyAgent(proxyUrl);
 };
 
@@ -48,9 +51,12 @@ export const getGroqConfig = async () => {
 
   if (useProxy) {
     console.log('🔄 Using Groq proxy server');
+    const baseURL = PROXY_CONFIG.port === 443 
+      ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
+      : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
     return {
       apiKey: process.env.GROQ_API_KEY!,
-      baseURL: `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`, // Use proxy server through domain
+      baseURL: baseURL,
       timeout: 30000,
       maxRetries: 3,
     };
@@ -75,7 +81,9 @@ export const testGroqConnection = async () => {
 
     if (proxyAvailable) {
       console.log('🔄 Testing through proxy server...');
-      const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`;
+      const proxyUrl = PROXY_CONFIG.port === 443 
+        ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
+        : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
 
       const response = await fetch(`${proxyUrl}/openai/v1/models`, {
         method: 'GET',
