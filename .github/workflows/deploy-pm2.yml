@@ -606,34 +606,53 @@ jobs:
 
             # Configure Nginx to proxy Groq proxy through domain
             echo "🔧 Configuring Nginx to proxy Groq proxy through domain..."
-            # Create a backup of the current config
-            sudo cp /etc/nginx/conf.d/marinaobuv.conf /etc/nginx/conf.d/marinaobuv.conf.backup
-            # Remove any existing groq-proxy configuration
-            sudo sed -i '/# Groq Proxy endpoint/,/^[[:space:]]*}/d' /etc/nginx/conf.d/marinaobuv.conf
-            # Remove any orphaned location blocks outside server
-            sudo sed -i '/^[[:space:]]*location \/groq-proxy\//,/^[[:space:]]*}/d' /etc/nginx/conf.d/marinaobuv.conf
-            # Add groq-proxy location block before the closing server brace using a more reliable method
-            sudo awk '/^[[:space:]]*}[[:space:]]*$/ { 
-                print "    # Groq Proxy endpoint"
-                print "    location /groq-proxy/ {"
-                print "        proxy_pass http://localhost:3001/;"
-                print "        proxy_http_version 1.1;"
-                print "        proxy_set_header Upgrade $http_upgrade;"
-                print "        proxy_set_header Connection \"upgrade\";"
-                print "        proxy_set_header Host $host;"
-                print "        proxy_set_header X-Real-IP $remote_addr;"
-                print "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;"
-                print "        proxy_set_header X-Forwarded-Proto $scheme;"
-                print "        proxy_cache_bypass $http_upgrade;"
-                print "        proxy_read_timeout 86400;"
-                print "        proxy_connect_timeout 60s;"
-                print "        proxy_send_timeout 60s;"
-                print "    }"
-                print ""
-                print $0
-                next
-            } { print }' /etc/nginx/conf.d/marinaobuv.conf > /tmp/marinaobuv.conf.new
-            sudo mv /tmp/marinaobuv.conf.new /etc/nginx/conf.d/marinaobuv.conf
+            # Create a clean, working Nginx configuration
+            sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
+server {
+    if ($host = www.marina-obuv.ru) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    if ($host = marina-obuv.ru) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    listen 80;
+    server_name marina-obuv.ru www.marina-obuv.ru;
+
+    location /health {
+        proxy_pass http://127.0.0.1:3000/api/health;
+        access_log off;
+    }
+
+    # Groq Proxy endpoint
+    location /groq-proxy/ {
+        proxy_pass http://localhost:3001/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
             sudo nginx -t && sudo systemctl reload nginx
             echo "✅ Nginx configured to proxy Groq proxy through /groq-proxy/ endpoint"
 
