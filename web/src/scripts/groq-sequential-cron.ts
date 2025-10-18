@@ -6,24 +6,32 @@ import { scriptPrisma as prisma } from '../lib/script-db';
 /**
  * Groq Sequential Processing Cron Job
  * Processes messages in sequence: Group → Analysis → Colors
- * Continues processing ALL unprocessed messages in cycles until none remain
+ * Only processes unprocessed messages from the last N hours (configurable via MESSAGE_PROCESSING_HOURS)
+ * Continues processing in cycles until no more recent unprocessed messages remain
  */
 async function main() {
   console.log('🚀 Starting Groq Sequential Processing Cron Job...');
 
   try {
     const batchSize = env.PROCESSING_BATCH_SIZE;
+    const hoursBack = env.MESSAGE_PROCESSING_HOURS;
     const processor = new GroqSequentialProcessor(prisma);
     let totalProcessed = 0;
     let cycleCount = 0;
     let totalUnprocessed = 0;
 
-    // Get initial count of unprocessed messages
+    // Calculate the cutoff time for messages (N hours back from now)
+    const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+
+    // Get initial count of unprocessed messages from the last N hours
     const initialCount = await prisma.whatsAppMessage.count({
       where: {
         processed: false,
         type: { in: ['imageMessage', 'extendedTextMessage', 'textMessage'] },
         chatId: env.TARGET_GROUP_ID,
+        createdAt: {
+          gte: cutoffTime, // Only messages from the last N hours
+        },
       },
     });
 
@@ -33,7 +41,7 @@ async function main() {
     }
 
     totalUnprocessed = initialCount;
-    console.log(`📊 Found ${totalUnprocessed} unprocessed messages to process`);
+    console.log(`📊 Found ${totalUnprocessed} unprocessed messages from the last ${hoursBack} hours to process`);
 
     // Continue processing until no more unprocessed messages
     let currentOffset = 0;
@@ -46,7 +54,8 @@ async function main() {
       const extendedBatch = await fetchExtendedBatch(
         batchSize,
         env.TARGET_GROUP_ID,
-        currentOffset
+        currentOffset,
+        hoursBack
       );
 
       if (extendedBatch.totalCount === 0) {

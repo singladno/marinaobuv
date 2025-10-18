@@ -122,18 +122,26 @@ export async function extendBatchWithConsecutiveMessages(
 /**
  * Fetches unprocessed messages and extends the batch if there are consecutive messages from the same user
  * Uses offset-based fetching to prevent overlapping batches
+ * Only processes messages from the last N hours (configurable via MESSAGE_PROCESSING_HOURS)
  */
 export async function fetchExtendedBatch(
   batchSize: number,
   targetGroupId?: string,
-  offset: number = 0
+  offset: number = 0,
+  hoursBack: number = 24
 ): Promise<ExtendedBatchResult> {
+  // Calculate the cutoff time for messages (N hours back from now)
+  const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+
   // Get total count of unprocessed messages for offset calculation
   const totalUnprocessed = await prisma.whatsAppMessage.count({
     where: {
       processed: false,
       type: { in: ['textMessage', 'imageMessage', 'extendedTextMessage'] },
       ...(targetGroupId && { chatId: targetGroupId }),
+      createdAt: {
+        gte: cutoffTime, // Only messages from the last N hours
+      },
     },
   });
 
@@ -153,6 +161,9 @@ export async function fetchExtendedBatch(
       processed: false,
       type: { in: ['textMessage', 'imageMessage', 'extendedTextMessage'] },
       ...(targetGroupId && { chatId: targetGroupId }),
+      createdAt: {
+        gte: cutoffTime, // Only messages from the last N hours
+      },
     },
     orderBy: { createdAt: 'desc' },
     skip: offset,

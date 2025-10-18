@@ -117,6 +117,19 @@ const schema = z
         return parsed;
       }),
 
+    // Message Processing Time Range (in hours)
+    MESSAGE_PROCESSING_HOURS: z
+      .string()
+      .optional()
+      .transform(val => {
+        if (!val) return 24; // Default to 24 hours
+        const parsed = parseInt(val, 10);
+        if (isNaN(parsed) || parsed <= 0) {
+          throw new Error('MESSAGE_PROCESSING_HOURS must be a positive integer');
+        }
+        return parsed;
+      }),
+
     // SMS Configuration (SMS.ru)
     SMS_API_KEY: z.string().optional(),
     SMS_USE_CONSOLE: z.string().optional(),
@@ -178,6 +191,7 @@ const raw = {
 
   // Processing Configuration
   PROCESSING_BATCH_SIZE: process.env.PROCESSING_BATCH_SIZE,
+  MESSAGE_PROCESSING_HOURS: process.env.MESSAGE_PROCESSING_HOURS,
 
   // SMS Configuration
   SMS_API_KEY: process.env.SMS_API_KEY,
