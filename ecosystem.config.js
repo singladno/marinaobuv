@@ -47,55 +47,6 @@ module.exports = {
       health_check_grace_period: 3000,
       health_check_fatal_exceptions: true,
     },
-    {
-      name: "groq-proxy",
-      script: "server.js",
-      cwd: "./proxy",
-      instances: 1,
-      exec_mode: "fork",
-      env: {
-        NODE_ENV: "production",
-        PORT: 3001,
-        PROXY_TARGET: "https://api.groq.com",
-        UPSTREAM_PROXY: process.env.UPSTREAM_PROXY, // Optional upstream proxy
-        ALLOWED_PREFIXES:
-          "/openai,/v1,/chat,/responses,/images,/embeddings,/audio,/fine_tuning,/models",
-      },
-      env_production: {
-        NODE_ENV: "production",
-        PORT: 3001,
-        PROXY_TARGET: "https://api.groq.com",
-        UPSTREAM_PROXY: process.env.UPSTREAM_PROXY, // Optional upstream proxy
-        ALLOWED_PREFIXES:
-          "/openai,/v1,/chat,/responses,/images,/embeddings,/audio,/fine_tuning,/models",
-      },
-      // Logging configuration
-      log_file: "./logs/groq-proxy.log",
-      out_file: "./logs/groq-proxy-out.log",
-      error_file: "./logs/groq-proxy-error.log",
-      log_date_format: "YYYY-MM-DD HH:mm:ss Z",
-      merge_logs: true,
-
-      // Performance and memory management
-      max_memory_restart: "512M",
-      node_args: "--max-old-space-size=1024",
-
-      // Process management
-      watch: false, // Disable file watching for proxy
-      restart_delay: 3000,
-      kill_timeout: 5000,
-      listen_timeout: 5000,
-      shutdown_with_message: true,
-
-      // Advanced PM2 features
-      autorestart: true,
-      max_restarts: 10, // More restarts for proxy service
-      min_uptime: "10s",
-
-      // Health monitoring
-      health_check_grace_period: 2000,
-      health_check_fatal_exceptions: true,
-    },
     // prisma-studio is disabled in production to conserve resources
   ],
 };
