@@ -297,8 +297,8 @@ jobs:
             cd web && npm ci
             cd ..
 
-# Note: Proxy runs on separate serverspace server
-echo "📋 Note: Proxy server runs on separate serverspace server (31.44.2.216)"
+            # Note: Proxy runs on separate serverspace server
+            echo "📋 Note: Proxy server runs on separate serverspace server (31.44.2.216)"
 
             # Generate Prisma client with proper environment
             cd web
