@@ -71,21 +71,9 @@ check_application_status() {
         return 1
     fi
     
-    # Check if Groq proxy is running (CRITICAL)
-    if pm2 list | grep -q "groq-proxy.*online"; then
-        log_success "Groq proxy PM2 process is running"
-    else
-        log_error "Groq proxy PM2 process is not running"
-        return 1
-    fi
-    
-    # Check if Groq proxy is responding (CRITICAL)
-    if curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
-        log_success "Groq proxy is responding to health checks"
-    else
-        log_error "Groq proxy is not responding to health checks"
-        return 1
-    fi
+    # Note: Groq proxy runs on separate serverspace server (31.44.2.216)
+    log_info "Note: Groq proxy runs on separate serverspace server"
+    log_info "Proxy connectivity will be tested via nginx configuration"
     
     # Check if port 3000 is listening (prefer ss, fallback to netstat)
     if command -v ss >/dev/null 2>&1; then
@@ -109,50 +97,8 @@ check_application_status() {
     return 0
 }
 
-# Function to start Groq proxy if needed
-start_groq_proxy() {
-    log_info "Starting Groq proxy server..."
-    
-    # First, clean up any existing groq-proxy processes
-    log_info "Cleaning up existing groq-proxy processes..."
-    pm2 delete groq-proxy 2>/dev/null || true
-    pm2 save --force 2>/dev/null || true
-    
-    # Install proxy dependencies first
-    log_info "Installing proxy dependencies..."
-    if ! cd proxy && npm install; then
-        log_error "Failed to install proxy dependencies"
-        cd ..
-        return 1
-    fi
-    cd ..
-    
-    # Start Groq proxy with fresh process
-    log_info "Starting fresh groq-proxy process..."
-    if pm2 start ecosystem.config.js --only groq-proxy --env production; then
-        log_success "Groq proxy started successfully"
-        
-        # Wait for proxy to start
-        log_info "Waiting for Groq proxy to start..."
-        sleep 10
-        
-        # Check if it's responding
-        if curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
-            log_success "Groq proxy is responding"
-            return 0
-        else
-            log_error "Groq proxy started but not responding"
-            log_info "Checking groq-proxy logs..."
-            pm2 logs groq-proxy --lines 10
-            return 1
-        fi
-    else
-        log_error "Failed to start Groq proxy"
-        log_info "Checking PM2 status..."
-        pm2 status
-        return 1
-    fi
-}
+# Note: Groq proxy runs on separate serverspace server (31.44.2.216)
+# No local proxy startup needed
 
 # Function to restart application if needed
 restart_application() {
@@ -226,24 +172,10 @@ main() {
     if ! check_application_status; then
         log_error "Application is not running properly"
         
-        # Try to start Groq proxy if it's not running
-        if ! pm2 list | grep -q "groq-proxy.*online"; then
-            log_info "Attempting to start Groq proxy..."
-            if start_groq_proxy; then
-                log_success "Groq proxy started, rechecking application status..."
-                if check_application_status; then
-                    log_success "Application status is now OK"
-                else
-                    log_error "Application still not running properly after proxy start"
-                    exit 1
-                fi
-            else
-                log_error "Failed to start Groq proxy - deployment cannot succeed"
-                exit 1
-            fi
-        else
-            exit 1
-        fi
+        # Note: Groq proxy runs on separate serverspace server (31.44.2.216)
+        log_info "Note: Groq proxy runs on separate serverspace server"
+        log_info "Application should work without local proxy"
+        exit 1
     fi
     
     # Step 2: Verify webhook route exists
