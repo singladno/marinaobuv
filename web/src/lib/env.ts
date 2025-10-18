@@ -125,7 +125,9 @@ const schema = z
         if (!val) return 24; // Default to 24 hours
         const parsed = parseInt(val, 10);
         if (isNaN(parsed) || parsed <= 0) {
-          throw new Error('MESSAGE_PROCESSING_HOURS must be a positive integer');
+          throw new Error(
+            'MESSAGE_PROCESSING_HOURS must be a positive integer'
+          );
         }
         return parsed;
       }),

@@ -41,7 +41,9 @@ async function main() {
     }
 
     totalUnprocessed = initialCount;
-    console.log(`📊 Found ${totalUnprocessed} unprocessed messages from the last ${hoursBack} hours to process`);
+    console.log(
+      `📊 Found ${totalUnprocessed} unprocessed messages from the last ${hoursBack} hours to process`
+    );
 
     // Continue processing until no more unprocessed messages
     let currentOffset = 0;
