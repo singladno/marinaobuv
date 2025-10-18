@@ -863,7 +863,7 @@ jobs:
 
             # Start the proxy server with PM2
             echo "🚀 Starting groq-proxy with PM2..."
-            pm2 start server.js --name groq-proxy --env production
+            PORT=8787 pm2 start server.js --name groq-proxy --env production
 
             # Save PM2 configuration
             pm2 save
