@@ -58,12 +58,16 @@ module.exports = {
         PORT: 3001,
         PROXY_TARGET: "https://api.groq.com",
         UPSTREAM_PROXY: process.env.UPSTREAM_PROXY, // Optional upstream proxy
+        ALLOWED_PREFIXES:
+          "/openai,/v1,/chat,/responses,/images,/embeddings,/audio,/fine_tuning,/models",
       },
       env_production: {
         NODE_ENV: "production",
         PORT: 3001,
         PROXY_TARGET: "https://api.groq.com",
         UPSTREAM_PROXY: process.env.UPSTREAM_PROXY, // Optional upstream proxy
+        ALLOWED_PREFIXES:
+          "/openai,/v1,/chat,/responses,/images,/embeddings,/audio,/fine_tuning,/models",
       },
       // Logging configuration
       log_file: "./logs/groq-proxy.log",
