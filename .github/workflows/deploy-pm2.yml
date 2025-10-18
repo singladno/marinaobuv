@@ -331,7 +331,7 @@ jobs:
 
             # Run database migrations with comprehensive error handling
             echo "🚀 Running database migrations with conflict resolution..."
-            
+
             # First, try to resolve any failed migrations
             echo "🔧 Checking for failed migrations and resolving conflicts..."
             ./prisma-server.sh npx prisma migrate resolve --applied 20250120000000_add_order_number_sequence 2>/dev/null || echo "Migration already resolved or doesn't exist"
@@ -340,7 +340,7 @@ jobs:
             ./prisma-server.sh npx prisma migrate resolve --applied 20250120000003_update_order_status_default 2>/dev/null || echo "Migration already resolved or doesn't exist"
             ./prisma-server.sh npx prisma migrate resolve --applied 20250120000004_add_order_item_sequence 2>/dev/null || echo "Migration already resolved or doesn't exist"
             ./prisma-server.sh npx prisma migrate resolve --applied 20250916211900_init 2>/dev/null || echo "Migration already resolved or doesn't exist"
-            
+
             # Try to run migrations
             if ./prisma-server.sh npx prisma migrate deploy; then
               echo "✅ Database migrations completed successfully"
@@ -353,7 +353,7 @@ jobs:
                 echo "💡 DEPLOYMENT FAILED - could not fix database schema"
                 exit 1
               fi
-            
+
             # Ensure default categories exist (critical for parser functionality)
             echo "🔧 Ensuring default categories exist..."
             ./prisma-server.sh npx prisma db execute --stdin <<< "
@@ -535,12 +535,12 @@ jobs:
             # Load runtime environment for PM2
             echo "🔧 Exporting environment for PM2 runtime..."
             export $(cat web/.env | grep -v '^#' | xargs)
-            
+
             # Clean up PM2 state before starting
             echo "🧹 Cleaning up PM2 state..."
             pm2 kill 2>/dev/null || true
             sleep 2
-            
+
             # Start PM2 application with updated env
             echo "🚀 Starting PM2 applications..."
             pm2 start ecosystem.config.js --env production
@@ -823,15 +823,15 @@ jobs:
           debug: true
           script: |
             echo "🚀 Starting proxy server deployment on serverspace..."
-            
+
             # Create proxy directory if it doesn't exist
             mkdir -p /root/proxy
-            
+
             # Stop and remove any existing groq-proxy processes
             echo "🛑 Stopping existing groq-proxy processes..."
             pm2 stop groq-proxy 2>/dev/null || true
             pm2 delete groq-proxy 2>/dev/null || true
-            
+
             # Kill any processes using port 8787
             echo "🔍 Checking for port conflicts on port 8787..."
             if lsof -i :8787 >/dev/null 2>&1; then
@@ -839,7 +839,7 @@ jobs:
                 lsof -ti :8787 | xargs kill -9 2>/dev/null || true
                 sleep 2
             fi
-            
+
             # Copy proxy server files from git
             echo "📁 Setting up proxy server files..."
             cd /root
@@ -849,31 +849,31 @@ jobs:
             if [ -d "proxy" ]; then
                 mv proxy proxy-backup
             fi
-            
+
             # Clone the repository to get the latest proxy files
             git clone https://github.com/singladno/marinaobuv.git temp-repo
             cp -r temp-repo/proxy /root/
             rm -rf temp-repo
-            
+
             # Set proper permissions
             chmod +x /root/proxy/server.js
-            
+
             # Install dependencies
             echo "📦 Installing proxy server dependencies..."
             cd /root/proxy
             npm install --production
-            
+
             # Start the proxy server with PM2
             echo "🚀 Starting groq-proxy with PM2..."
             pm2 start server.js --name groq-proxy --env production
-            
+
             # Save PM2 configuration
             pm2 save
-            
+
             # Wait for server to start
             echo "⏳ Waiting for proxy server to start..."
             sleep 5
-            
+
             # Test the proxy server
             echo "🧪 Testing proxy server..."
             if curl -f http://localhost:8787/healthz >/dev/null 2>&1; then
@@ -886,7 +886,7 @@ jobs:
                 pm2 logs groq-proxy --lines 10
                 exit 1
             fi
-            
+
             echo "🎉 Proxy server deployment completed successfully!"
             echo "✅ Proxy server is running on port 8787"
             echo "✅ PM2 is managing the proxy server"

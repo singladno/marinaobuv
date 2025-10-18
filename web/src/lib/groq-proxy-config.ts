@@ -8,11 +8,11 @@ import 'dotenv/config';
 
 // Proxy server configuration
 const PROXY_CONFIG = {
-  // Always use remote server for proxy connection
-  host: 'marina-obuv.ru',
-  port: 443,
-  protocol: 'https',
-  path: '/groq-proxy', // Nginx proxy path
+  // Always use serverspace server for proxy connection
+  host: '31.44.2.216',
+  port: 8787,
+  protocol: 'http',
+  path: '', // Direct connection to proxy server
 };
 
 // Check if proxy server is available
@@ -21,7 +21,7 @@ export const isProxyAvailable = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-    const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}/healthz`;
+    const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}${PROXY_CONFIG.path}/healthz`;
 
     const response = await fetch(proxyUrl, {
       method: 'GET',
@@ -38,7 +38,7 @@ export const isProxyAvailable = async (): Promise<boolean> => {
 
 // Create proxy agent for Groq requests
 export const createGroqProxyAgent = () => {
-  const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`;
+  const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}${PROXY_CONFIG.path}`;
   return new HttpsProxyAgent(proxyUrl);
 };
 
@@ -53,7 +53,7 @@ export const getGroqConfig = async () => {
   }
 
   console.log('🔄 Using Groq proxy server');
-  const baseURL = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`;
+  const baseURL = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}${PROXY_CONFIG.path}`;
 
   return {
     apiKey: process.env.GROQ_API_KEY!,
@@ -77,7 +77,7 @@ export const testGroqConnection = async () => {
     }
 
     console.log('🔄 Testing through proxy server...');
-    const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`;
+    const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}${PROXY_CONFIG.path}`;
 
     const response = await fetch(`${proxyUrl}/openai/v1/models`, {
       method: 'GET',
