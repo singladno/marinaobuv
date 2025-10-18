@@ -712,9 +712,9 @@ jobs:
             echo "        access_log off;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
             echo "    }" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
             echo "" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
-            echo "    # Groq Proxy endpoint" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    # Groq Proxy endpoint (external serverspace server)" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
             echo "    location /groq-proxy/ {" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
-            echo "        proxy_pass http://localhost:3001/;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_pass http://31.44.2.216:8787/;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
             echo "        proxy_http_version 1.1;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
             echo "        proxy_set_header Upgrade \$http_upgrade;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
             echo "        proxy_set_header Connection 'upgrade';" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null

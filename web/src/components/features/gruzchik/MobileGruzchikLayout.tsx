@@ -133,11 +133,6 @@ export function MobileGruzchikLayout({ children }: MobileGruzchikLayoutProps) {
                   >
                     {item.name}
                   </span>
-
-                  {/* Active indicator dot */}
-                  {active && (
-                    <div className="absolute -top-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-blue-600" />
-                  )}
                 </Link>
               );
             })}

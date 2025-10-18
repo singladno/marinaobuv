@@ -60,30 +60,9 @@ pm2 startOrReload ecosystem.config.js --env production --update-env || pm2 start
 pm2 scale marinaobuv 1 || true
 pm2 delete prisma-studio || true
 
-# Ensure groq-proxy is running (CRITICAL)
-if ! pm2 list | grep -q "groq-proxy.*online"; then
-  log "Installing proxy dependencies..."
-  if ! cd proxy && npm install; then
-    log "ERROR: Failed to install proxy dependencies - boot recovery cannot succeed"
-    exit 1
-  fi
-  cd ..
-  
-  log "Starting groq-proxy server..."
-  if ! pm2 start ecosystem.config.js --only groq-proxy --env production; then
-    log "ERROR: Failed to start groq-proxy server - boot recovery cannot succeed"
-    exit 1
-  fi
-  log "Groq proxy server started successfully"
-fi
-
-# Verify groq-proxy is responding (CRITICAL)
-log "Verifying groq-proxy health..."
-if ! curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
-  log "ERROR: Groq proxy is not responding to health checks - boot recovery cannot succeed"
-  exit 1
-fi
-log "Groq proxy health check passed"
+# Note: Groq proxy runs on separate serverspace server (31.44.2.216)
+log "Note: Groq proxy server runs on separate serverspace server"
+log "Proxy connectivity will be tested via nginx configuration"
 
 pm2 save || true
 
@@ -152,53 +131,8 @@ if [ -f scripts/install-crons.sh ]; then
   bash scripts/install-crons.sh || true
 fi
 
-# 5.1) Install proxy monitoring systemd service
-if [ -f scripts/auto-restart-proxy.sh ]; then
-  log "Setting up proxy monitoring systemd service"
-  chmod +x scripts/auto-restart-proxy.sh || true
-  
-  # Create systemd service for proxy monitoring
-  sudo tee /etc/systemd/system/groq-proxy-monitor.service > /dev/null << 'EOF' || true
-[Unit]
-Description=Groq Proxy Server Monitor
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/var/www/marinaobuv
-ExecStart=/bin/bash /var/www/marinaobuv/scripts/auto-restart-proxy.sh
-Restart=always
-RestartSec=30
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-  # Create systemd timer for periodic checks
-  sudo tee /etc/systemd/system/groq-proxy-monitor.timer > /dev/null << 'EOF' || true
-[Unit]
-Description=Run Groq Proxy Monitor every 2 minutes
-Requires=groq-proxy-monitor.service
-
-[Timer]
-OnBootSec=2min
-OnUnitActiveSec=2min
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-
-  # Enable and start the timer service
-  sudo systemctl daemon-reload || true
-  sudo systemctl enable groq-proxy-monitor.timer || true
-  sudo systemctl start groq-proxy-monitor.timer || true
-  log "Proxy monitoring systemd service installed and started"
-fi
+# 5.1) Note: Proxy monitoring runs on separate serverspace server
+log "Note: Groq proxy monitoring runs on separate serverspace server (31.44.2.216)"
 
 # 6) PM2 logrotate and journald vacuum
 if ! pm2 module:info pm2-logrotate >/dev/null 2>&1; then
@@ -220,8 +154,7 @@ log "Checking app on localhost:3000"
 curl -s -I http://127.0.0.1:3000 | head -n1 || true
 log "Checking nginx /health"
 curl -s -I http://127.0.0.1/health | head -n1 || curl -s -I http://127.0.0.1 | head -n1 || true
-log "Checking groq-proxy on localhost:8787"
-curl -s -I http://127.0.0.1:8787/healthz | head -n1 || true
+log "Note: Groq proxy runs on separate serverspace server (31.44.2.216)"
 
 # 8) Configure webhook after deployment
 log "Configuring Green API webhook..."

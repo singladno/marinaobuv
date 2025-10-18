@@ -233,32 +233,9 @@ print_status "🔍 Checking service status..."
 # Check main application
 check_service "Main application" "pm2 list | grep -q 'marinaobuv.*online'"
 
-# Check Groq proxy
-proxy_healthy=false
-if check_service "Groq proxy (PM2)" "pm2 list | grep -q 'groq-proxy.*online'"; then
-    if check_service "Groq proxy (health)" "curl -f -s http://localhost:3001/healthz"; then
-        proxy_healthy=true
-    fi
-fi
-
-# Attempt proxy recovery if needed
-if [ "$proxy_healthy" = false ]; then
-    print_warning "Groq proxy is not healthy, attempting recovery..."
-    
-    # Install proxy dependencies first
-    print_status "Installing proxy dependencies..."
-    if ! cd proxy && npm install; then
-        print_error "Failed to install proxy dependencies"
-        exit 1
-    fi
-    cd ..
-    
-    if [ -f "scripts/auto-restart-proxy.sh" ]; then
-        attempt_service_recovery "Groq proxy" "./scripts/auto-restart-proxy.sh restart"
-    else
-        attempt_service_recovery "Groq proxy" "pm2 start ecosystem.config.js --only groq-proxy --env production"
-    fi
-fi
+# Note: Groq proxy runs on separate serverspace server (31.44.2.216)
+print_status "Note: Groq proxy server runs on separate serverspace server"
+print_status "Proxy health will be checked via nginx configuration"
 
 # Check Nginx
 check_service "Nginx" "sudo systemctl is-active nginx"
@@ -282,23 +259,9 @@ if ! pm2 list | grep -q "marinaobuv.*online"; then
     exit 1
 fi
 
-# Ensure proxy is running (CRITICAL for deployment success)
-if ! pm2 list | grep -q "groq-proxy.*online"; then
-    print_error "Groq proxy is not running, attempting to start..."
-    if ! pm2 start ecosystem.config.js --only groq-proxy --env production; then
-        print_error "Failed to start Groq proxy - deployment cannot succeed without proxy"
-        exit 1
-    fi
-    print_success "Groq proxy started successfully"
-fi
-
-# Verify proxy is actually responding (CRITICAL)
-print_status "Verifying Groq proxy is responding..."
-if ! curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
-    print_error "Groq proxy is not responding to health checks - deployment cannot succeed"
-    exit 1
-fi
-print_success "Groq proxy is responding to health checks"
+# Note: Groq proxy runs on separate serverspace server (31.44.2.216)
+print_status "Note: Groq proxy server runs on separate serverspace server"
+print_status "Proxy connectivity will be tested via nginx configuration"
 
 # Save PM2 configuration
 pm2 save || print_warning "Failed to save PM2 configuration"
@@ -333,13 +296,8 @@ else
     print_warning "Main application health check failed"
 fi
 
-# Check proxy (CRITICAL)
-if curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
-    print_success "Groq proxy health check passed"
-else
-    print_error "Groq proxy health check failed - deployment cannot succeed"
-    exit 1
-fi
+# Note: Groq proxy runs on separate serverspace server (31.44.2.216)
+print_status "Note: Groq proxy health check skipped (runs on separate server)"
 
 # Check Nginx
 if curl -f -s http://localhost/health > /dev/null 2>&1; then
@@ -366,12 +324,11 @@ print_status "✅ Main application is running"
 # Show final status
 print_status ""
 print_status "Current Service Status:"
-pm2 list | grep -E "(marinaobuv|groq-proxy)" || print_warning "PM2 status check failed"
+pm2 list | grep -E "marinaobuv" || print_warning "PM2 status check failed"
 
 print_status ""
 print_status "Useful commands:"
 print_status "  Check status: pm2 status"
 print_status "  View logs: pm2 logs marinaobuv"
 print_status "  Restart app: pm2 restart marinaobuv"
-print_status "  Check proxy: ./scripts/auto-restart-proxy.sh status"
-print_status "  Restart proxy: ./scripts/auto-restart-proxy.sh restart"
+print_status "  Note: Proxy runs on separate serverspace server (31.44.2.216)"

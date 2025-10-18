@@ -162,45 +162,19 @@ print_status "Using existing PM2 configuration..."
 sudo mkdir -p /var/log/pm2
 sudo chown -R $USER:$USER /var/log/pm2
 
-# 14. Start or reload PM2 with ecosystem (includes groq-proxy)
+# 14. Start or reload PM2 with ecosystem (main application only)
 print_status "Starting or reloading PM2 with ecosystem..."
 pm2 startOrReload $APP_DIR/ecosystem.config.js --env production --update-env
 
-# 14.1. Verify all services are running
-print_status "Verifying all services are running..."
+# 14.1. Verify main application is running
+print_status "Verifying main application is running..."
 sleep 5
 if pm2 list | grep -q "marinaobuv.*online"; then
     print_success "Main application (marinaobuv) is running"
 else
     print_error "Main application (marinaobuv) is not running"
-fi
-
-if pm2 list | grep -q "groq-proxy.*online"; then
-    print_success "Groq proxy server is running"
-else
-    print_error "Groq proxy server is not running"
-    print_status "Installing proxy dependencies..."
-    if ! cd $APP_DIR/proxy && npm install; then
-        print_error "Failed to install proxy dependencies - deployment cannot succeed"
-        exit 1
-    fi
-    cd $APP_DIR
-    
-    print_status "Attempting to start groq-proxy manually..."
-    if ! pm2 start $APP_DIR/ecosystem.config.js --only groq-proxy --env production; then
-        print_error "Failed to start Groq proxy server - deployment cannot succeed"
-        exit 1
-    fi
-    print_success "Groq proxy server started successfully"
-fi
-
-# Verify proxy is responding to health checks
-print_status "Verifying Groq proxy health..."
-if ! curl -f -s http://localhost:3001/healthz > /dev/null 2>&1; then
-    print_error "Groq proxy is not responding to health checks - deployment cannot succeed"
     exit 1
 fi
-print_success "Groq proxy health check passed"
 
 # 15. Save PM2 configuration and ensure startup
 pm2 save
@@ -352,7 +326,7 @@ print_status "Configuring firewall..."
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 3001/tcp  # Allow Groq proxy port
+# Note: Groq proxy runs on separate serverspace server
 sudo ufw --force enable
 
 # 23. Create deployment script
@@ -416,8 +390,7 @@ echo "Main Application Logs (last 20 lines):"
 pm2 logs marinaobuv --lines 20
 
 echo ""
-echo "Groq Proxy Server Logs (last 20 lines):"
-pm2 logs groq-proxy --lines 20
+echo "Note: Groq Proxy Server runs on separate serverspace server (31.44.2.216)"
 
 echo ""
 echo "System Resources:"
@@ -438,8 +411,7 @@ echo "Application Health:"
 curl -s http://localhost:3000/api/health && echo "✅ Main application is healthy" || echo "❌ Main application is not responding"
 
 echo ""
-echo "Groq Proxy Server Health:"
-curl -s http://localhost:8787/healthz && echo "✅ Groq proxy server is healthy" || echo "❌ Groq proxy server is not responding"
+echo "Note: Groq Proxy Server Health check skipped (runs on separate server)"
 
 echo ""
 echo "WhatsApp Webhook Status:"
@@ -468,55 +440,9 @@ else
     print_warning "Cron installation script not found"
 fi
 
-# 26.1. Install proxy monitoring systemd service
-print_status "Installing proxy monitoring systemd service..."
-if [ -f "scripts/auto-restart-proxy.sh" ]; then
-    chmod +x scripts/auto-restart-proxy.sh
-    
-    # Create systemd service for proxy monitoring
-    sudo tee /etc/systemd/system/groq-proxy-monitor.service > /dev/null << 'EOF'
-[Unit]
-Description=Groq Proxy Server Monitor
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$APP_DIR
-ExecStart=/bin/bash $APP_DIR/scripts/auto-restart-proxy.sh
-Restart=always
-RestartSec=30
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    # Create systemd timer for periodic checks
-    sudo tee /etc/systemd/system/groq-proxy-monitor.timer > /dev/null << 'EOF'
-[Unit]
-Description=Run Groq Proxy Monitor every 2 minutes
-Requires=groq-proxy-monitor.service
-
-[Timer]
-OnBootSec=2min
-OnUnitActiveSec=2min
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-
-    # Enable and start the timer service
-    sudo systemctl daemon-reload
-    sudo systemctl enable groq-proxy-monitor.timer
-    sudo systemctl start groq-proxy-monitor.timer
-    print_success "Proxy monitoring systemd service installed and started"
-else
-    print_warning "Proxy auto-restart script not found"
-fi
+# 26.1. Proxy server runs on separate serverspace server (31.44.2.216)
+print_status "Note: Groq proxy server runs on separate serverspace server"
+print_status "Proxy deployment is handled by GitHub Actions workflow"
 
 cd $APP_DIR
 
@@ -546,25 +472,9 @@ else
     pm2 logs marinaobuv --lines 10
 fi
 
-# Check PM2 status for proxy server (CRITICAL)
-if pm2 list | grep -q "groq-proxy.*online"; then
-    print_success "PM2 groq-proxy server is running"
-else
-    print_error "PM2 groq-proxy server is not running"
-    pm2 logs groq-proxy --lines 10
-    print_error "Deployment cannot succeed without Groq proxy server"
-    exit 1
-fi
-
-# Test proxy server connectivity (CRITICAL)
-print_status "Testing proxy server connectivity..."
-if curl -f -s http://localhost:8787/healthz > /dev/null 2>&1; then
-    print_success "Groq proxy server is responding"
-else
-    print_error "Groq proxy server health check failed"
-    print_error "Deployment cannot succeed without working Groq proxy server"
-    exit 1
-fi
+# Note: Proxy server runs on separate serverspace server
+print_status "Note: Groq proxy server runs on separate serverspace server (31.44.2.216)"
+print_status "Proxy connectivity will be tested via nginx configuration"
 
 # Check Nginx status
 if sudo systemctl is-active --quiet nginx; then
@@ -615,7 +525,7 @@ print_status "  Deploy updates: $APP_DIR/deploy.sh"
 print_status "  PM2 logs: pm2 logs marinaobuv"
 print_status "  PM2 status: pm2 status"
 print_status "  Restart app: pm2 restart marinaobuv"
-print_status "  Restart proxy: pm2 restart groq-proxy"
+print_status "  Note: Proxy runs on separate serverspace server"
 print_status "  Test webhook: ./scripts/verify-webhook-deployment.sh"
 print_status "  Check proxy: ./scripts/check-proxy-health.sh"
 print_status "  Verify deployment: ./scripts/verify-deployment.sh"
