@@ -16,6 +16,9 @@ export function useEditableCell({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(value || ''));
   const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>(
+    'idle'
+  );
 
   const handleEdit = useCallback(() => {
     if (disabled) return;
@@ -36,12 +39,19 @@ export function useEditableCell({
     // Only save if value actually changed
     if (newValue !== value) {
       setIsSaving(true);
+      setStatus('saving');
       try {
         await onSave(newValue);
+        setStatus('success');
+        // Clear success status after 2 seconds
+        setTimeout(() => setStatus('idle'), 2000);
       } catch (error) {
         console.error('Failed to save:', error);
+        setStatus('error');
         // Revert to original value on error
         setEditValue(String(value || ''));
+        // Clear error status after 3 seconds
+        setTimeout(() => setStatus('idle'), 3000);
       } finally {
         setIsSaving(false);
       }
@@ -78,6 +88,7 @@ export function useEditableCell({
     isEditing,
     editValue,
     isSaving,
+    status,
     handleEdit,
     handleSave,
     handleCancel,

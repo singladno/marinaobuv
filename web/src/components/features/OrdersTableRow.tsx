@@ -8,8 +8,8 @@ import { calculateOrderProfit, formatProfit } from '@/utils/profitCalculation';
 import { OrderCustomerInfo } from './OrderCustomerInfo';
 import { OrderGruzchikInfo } from './OrderGruzchikInfo';
 import { EditableStatusBadge } from './EditableStatusBadge';
-import { OrderEditableLabel } from './OrderEditableLabel';
-import { OptimisticEditableSelect } from './OptimisticEditableSelect';
+import { EditableLabelSelector } from './EditableLabelSelector';
+import { EditableGruzchikSelector } from './EditableGruzchikSelector';
 import { formatOrderNumber } from '@/utils/orderNumberUtils';
 
 interface OrdersTableRowProps {
@@ -67,7 +67,12 @@ export function OrdersTableRow({
       </td>
       {/* Метка */}
       <td className="whitespace-nowrap px-4 py-4">
-        <OrderEditableLabel order={order} onUpdate={onPatch} />
+        <EditableLabelSelector
+          value={order.label}
+          onLabelChange={async newLabel =>
+            onPatch(order.id, { label: newLabel })
+          }
+        />
       </td>
       {/* Сумма */}
       <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-900">
@@ -88,20 +93,12 @@ export function OrdersTableRow({
       </td>
       {/* Грузчик */}
       <td className="whitespace-nowrap px-4 py-4">
-        <OptimisticEditableSelect
+        <EditableGruzchikSelector
           value={order.gruzchikId}
-          onSave={async v =>
-            onPatch(order.id, { gruzchikId: v as string | null })
+          gruzchiks={gruzchiks || []}
+          onGruzchikChange={async newGruzchikId =>
+            onPatch(order.id, { gruzchikId: newGruzchikId })
           }
-          options={[
-            { value: '', label: 'Не назначен' },
-            ...(gruzchiks || []).map(g => ({
-              value: g.id,
-              label: g.name || g.phone || g.id,
-            })),
-          ]}
-          placeholder="Не назначен"
-          aria-label="Назначить грузчика"
         />
       </td>
       {/* Прибыль */}

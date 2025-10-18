@@ -2,19 +2,22 @@ import { useState, useCallback } from 'react';
 
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import { useCart } from '@/contexts/CartContext';
-import { popularTransportCompanies } from '@/lib/shipping';
+import {
+  popularTransportCompanies,
+  type TransportCompany,
+} from '@/lib/shipping';
 
 export function useBasketOrder() {
   const { clear } = useCart();
   const { addNotification } = useNotifications();
 
-  const [selectedShipping, setSelectedShipping] = useState(
-    popularTransportCompanies[0]
-  );
+  const [selectedShipping, setSelectedShipping] =
+    useState<TransportCompany | null>(null);
+
   const [shippingAddress, setShippingAddress] = useState('');
   const [notes, setNotes] = useState('');
 
-  const shippingCost = selectedShipping.priceLabel === 'Бесплатно' ? 0 : 250; // Default cost for paid shipping
+  const shippingCost = selectedShipping?.priceLabel === 'Бесплатно' ? 0 : 250; // Default cost for paid shipping
 
   const handlePlaceOrder = useCallback(async () => {
     if (!shippingAddress.trim()) {

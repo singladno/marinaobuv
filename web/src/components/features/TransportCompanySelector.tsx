@@ -21,9 +21,7 @@ export default function TransportCompanySelector({
   onChange,
   initialCustomName,
 }: Props) {
-  const [selectedId, setSelectedId] = useState<string>(
-    value || popularTransportCompanies[0].id
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(value || null);
   const [otherName, setOtherName] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [customCompanyName, setCustomCompanyName] = useState('');
@@ -82,7 +80,7 @@ export default function TransportCompanySelector({
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
       {popularTransportCompanies.map(company => {
-        const isActive = company.id === selectedId;
+        const isActive = selectedId && company.id === selectedId;
         return (
           <button
             key={company.id}

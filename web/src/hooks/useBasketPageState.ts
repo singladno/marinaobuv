@@ -46,6 +46,19 @@ export function useBasketPageState() {
   useEffect(() => {
     try {
       const key = getUserDataStorageKey(userId);
+
+      // One-time clearing of old transport data - remove this after deployment
+      if (typeof window !== 'undefined') {
+        const clearOldTransportData = window.localStorage.getItem(
+          'clearOldTransportData'
+        );
+        if (!clearOldTransportData) {
+          window.localStorage.removeItem(key);
+          window.localStorage.setItem('clearOldTransportData', 'true');
+          return; // Don't restore any data on this load
+        }
+      }
+
       const raw =
         typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
       if (!raw) return;
@@ -57,7 +70,20 @@ export function useBasketPageState() {
         orderComment?: string;
         selectedTransportId?: string | null;
         customTransportCompany?: TransportCompany;
+        version?: number;
       };
+
+      // Clear transport data from old versions to prevent stale data issues
+      const currentVersion = 1;
+      if (!saved.version || saved.version < currentVersion) {
+        saved.selectedTransportId = null;
+        saved.customTransportCompany = undefined;
+        // Also clear the localStorage entry to prevent future issues
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(key);
+        }
+        return; // Don't restore any data from old versions
+      }
       // Only restore a previously saved phone if it looks valid
       if (
         typeof saved.orderPhone === 'string' &&
@@ -73,11 +99,21 @@ export function useBasketPageState() {
         setUserAddress(saved.userAddress);
       if (typeof saved.orderComment === 'string')
         setOrderComment(saved.orderComment);
-      if (saved.selectedTransportId)
+      if (saved.selectedTransportId) {
         setSelectedTransportId(saved.selectedTransportId);
+        // Find the company and set it in order state
+        const company = popularTransportCompanies.find(
+          c => c.id === saved.selectedTransportId
+        );
+        if (company) {
+          order.setSelectedShipping(company);
+        }
+      }
       if (saved.customTransportCompany) {
         setCustomTransportCompany(saved.customTransportCompany);
         order.setSelectedShipping(saved.customTransportCompany);
+        // Ensure selectedTransportId is set for custom companies
+        setSelectedTransportId('other');
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,6 +145,7 @@ export function useBasketPageState() {
         selectedTransportId,
         customTransportCompany,
         timestamp: Date.now(),
+        version: 1,
       };
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(key, JSON.stringify(toSave));

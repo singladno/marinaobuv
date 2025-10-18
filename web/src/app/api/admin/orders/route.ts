@@ -57,14 +57,15 @@ export async function POST(req: NextRequest) {
       status?: string;
       label?: string;
       payment?: number;
-      gruzchikId?: string;
+      gruzchikId?: string | null;
     } = {};
     if (typeof status === 'string') data.status = status;
     if (label !== undefined && label !== null) data.label = label;
     if (payment !== undefined && payment !== null)
       data.payment = Number(payment) || 0;
-    if (gruzchikId !== undefined && gruzchikId !== null)
-      data.gruzchikId = gruzchikId;
+    if (gruzchikId !== undefined) {
+      data.gruzchikId = gruzchikId === '' ? null : gruzchikId;
+    }
 
     const updated = await prisma.order.update({ where: { id }, data });
     return NextResponse.json({ ok: true, order: updated });
