@@ -65,6 +65,9 @@ const schema = z
     OPENAI_BASE_URL: z.string().url().optional(),
     OPENAI_PROXY: z.string().optional(),
 
+    // Groq API
+    GROQ_API_KEY: z.string().optional(),
+
     // Concurrency tuning (optional)
     MEDIA_REFRESH_CONCURRENCY: z
       .string()
@@ -159,6 +162,9 @@ const raw = {
   OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL,
   OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
   OPENAI_PROXY: process.env.OPENAI_PROXY,
+
+  // Groq API
+  GROQ_API_KEY: process.env.GROQ_API_KEY,
 
   // Concurrency tuning (optional)
   MEDIA_REFRESH_CONCURRENCY: process.env.MEDIA_REFRESH_CONCURRENCY,

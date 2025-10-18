@@ -1,17 +1,18 @@
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import 'dotenv/config';
 
 /**
- * Groq Proxy Configuration with Fallback
- * Routes Groq API requests through the proxy server with fallback to direct connection
+ * Groq Proxy Configuration
+ * Routes Groq API requests through the proxy server only - no fallback
  */
 
 // Proxy server configuration
 const PROXY_CONFIG = {
-  // Use localhost for local development, domain for production
-  host: process.env.NODE_ENV === 'production' ? 'marina-obuv.ru' : 'localhost',
-  port: process.env.NODE_ENV === 'production' ? 443 : 3001,
-  protocol: process.env.NODE_ENV === 'production' ? 'https' : 'http',
-  path: process.env.NODE_ENV === 'production' ? '/groq-proxy' : '', // Nginx proxy path for production
+  // Always use remote server for proxy connection
+  host: 'marina-obuv.ru',
+  port: 443,
+  protocol: 'https',
+  path: '/groq-proxy', // Nginx proxy path
 };
 
 // Check if proxy server is available
@@ -20,9 +21,7 @@ export const isProxyAvailable = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-    const proxyUrl = PROXY_CONFIG.port === 443
-      ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}/healthz`
-      : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}/healthz`;
+    const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}/healthz`;
 
     const response = await fetch(proxyUrl, {
       method: 'GET',
@@ -39,97 +38,71 @@ export const isProxyAvailable = async (): Promise<boolean> => {
 
 // Create proxy agent for Groq requests
 export const createGroqProxyAgent = () => {
-  const proxyUrl = PROXY_CONFIG.port === 443
-    ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
-    : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
+  const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`;
   return new HttpsProxyAgent(proxyUrl);
 };
 
-// Groq configuration with proxy or fallback
+// Groq configuration - proxy only, no fallback
 export const getGroqConfig = async () => {
   const useProxy = await isProxyAvailable();
 
-  if (useProxy) {
-    console.log('🔄 Using Groq proxy server');
-    const baseURL = PROXY_CONFIG.port === 443
-      ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
-      : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
-    return {
-      apiKey: process.env.GROQ_API_KEY!,
-      baseURL: baseURL,
-      timeout: 30000,
-      maxRetries: 3,
-    };
-  } else {
-    console.log('⚠️ Proxy server unavailable, using direct Groq connection');
-    return {
-      apiKey: process.env.GROQ_API_KEY!,
-      baseURL: 'https://api.groq.com', // Direct connection to Groq
-      timeout: 30000,
-      maxRetries: 3,
-    };
+  if (!useProxy) {
+    throw new Error(
+      '❌ Groq proxy server is unavailable. Cannot proceed without proxy connection.'
+    );
   }
+
+  console.log('🔄 Using Groq proxy server');
+  const baseURL = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`;
+
+  return {
+    apiKey: process.env.GROQ_API_KEY!,
+    baseURL: baseURL,
+    timeout: 30000,
+    maxRetries: 3,
+  };
 };
 
-// Test Groq connection with fallback
+// Test Groq connection through proxy only
 export const testGroqConnection = async () => {
   try {
-    console.log('🧪 Testing Groq connection...');
+    console.log('🧪 Testing Groq connection through proxy...');
 
-    // First try proxy
     const proxyAvailable = await isProxyAvailable();
 
-    if (proxyAvailable) {
-      console.log('🔄 Testing through proxy server...');
-      const proxyUrl = PROXY_CONFIG.port === 443
-        ? `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`
-        : `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
-
-      const response = await fetch(`${proxyUrl}/openai/v1/models`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-          Host: 'api.groq.com', // Override host header for Groq
-        },
-      });
-
-      if (response.ok) {
-        console.log('✅ Groq API accessible through proxy!');
-        const models = await response.json();
-        console.log(`📊 Available models: ${models.data?.length || 0}`);
-        return true;
-      } else {
-        console.log(
-          '❌ Groq API not accessible through proxy:',
-          response.status
-        );
-      }
+    if (!proxyAvailable) {
+      throw new Error(
+        '❌ Groq proxy server is unavailable. Cannot test connection.'
+      );
     }
 
-    // Fallback to direct connection
-    console.log('🔄 Testing direct connection to Groq...');
-    const response = await fetch('https://api.groq.com/openai/v1/models', {
+    console.log('🔄 Testing through proxy server...');
+    const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}${PROXY_CONFIG.path}`;
+
+    const response = await fetch(`${proxyUrl}/openai/v1/models`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Type': 'application/json',
+        Host: 'api.groq.com', // Override host header for Groq
       },
     });
 
     if (response.ok) {
-      console.log('✅ Groq API accessible directly!');
+      console.log('✅ Groq API accessible through proxy!');
       const models = await response.json();
       console.log(`📊 Available models: ${models.data?.length || 0}`);
       return true;
     } else {
-      console.log('❌ Groq API not accessible directly:', response.status);
+      console.log('❌ Groq API not accessible through proxy:', response.status);
       const errorText = await response.text();
       console.log('Error details:', errorText);
-      return false;
+      throw new Error(
+        `Groq API not accessible through proxy: ${response.status}`
+      );
     }
   } catch (error) {
     console.log('❌ Connection failed:', error);
-    return false;
+    throw error;
   }
 };
