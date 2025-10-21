@@ -13,7 +13,12 @@ import FilterPill from './FilterPill';
 type Props = {
   value: string[];
   onChange: (value: string[]) => void;
-  options: { id: string; label: string; level?: number }[]; // kept for flat list fallback
+  options: {
+    id: string;
+    label: string;
+    level?: number;
+    productCount?: number;
+  }[]; // kept for flat list fallback
   tree?: CategoryNode[]; // preferred: pass full tree
   label?: string;
   disabled?: boolean;
@@ -120,6 +125,11 @@ export default function CategoryControl({
                   >
                     {option.label}
                   </span>
+                  {option.productCount !== undefined && (
+                    <span className="ml-auto text-xs text-gray-500">
+                      {option.productCount}
+                    </span>
+                  )}
                 </label>
               );
             })}

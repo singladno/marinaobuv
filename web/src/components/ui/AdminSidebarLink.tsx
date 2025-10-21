@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { ParsingIndicator } from './ParsingIndicator';
+
 type AdminSidebarLinkProps = {
   href: string;
   label: string;
   icon: React.ReactNode;
   collapsed: boolean;
+  isParsingActive?: boolean;
 };
 
 export function AdminSidebarLink({
@@ -15,6 +18,7 @@ export function AdminSidebarLink({
   label,
   icon,
   collapsed,
+  isParsingActive = false,
 }: AdminSidebarLinkProps) {
   const pathname = usePathname();
   const isActive = pathname === href;
@@ -42,6 +46,9 @@ export function AdminSidebarLink({
         </span>
       )}
       {collapsed && <span className="sr-only">{label}</span>}
+
+      {/* Parsing indicator */}
+      <ParsingIndicator isActive={isParsingActive} collapsed={collapsed} />
 
       {/* Tooltip for collapsed state */}
       {collapsed && (

@@ -24,7 +24,7 @@ interface CatalogResponse {
   filters: CatalogFilters;
 }
 
-export function useInfiniteCatalog() {
+export function useInfiniteCatalog(initialCategoryId?: string) {
   const { searchQuery } = useSearch();
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,7 @@ export function useInfiniteCatalog() {
 
   const [filters, setFilters] = useState<CatalogFilters>({
     search: searchQuery,
-    categoryId: '',
+    categoryId: initialCategoryId || '',
     sortBy: 'newest',
     minPrice: undefined,
     maxPrice: undefined,
@@ -99,7 +99,9 @@ export function useInfiniteCatalog() {
         searchParams.set('page', currentFilters.page.toString());
         searchParams.set('pageSize', currentFilters.pageSize.toString());
 
-        const response = await fetch(`/api/catalog?${searchParams.toString()}`);
+        const url = `/api/catalog?${searchParams.toString()}`;
+        console.log('🔍 Fetching products from URL:', url);
+        const response = await fetch(url);
 
         if (!response.ok) {
           throw new Error('Failed to fetch products');
@@ -149,7 +151,7 @@ export function useInfiniteCatalog() {
       console.log('🚀 Loading next page:', nextPage);
       fetchProducts({ page: nextPage }, true);
     }
-  }, [hasNextPage, loadingMore, loading, pagination.page, fetchProducts]);
+  }, [hasNextPage, loadingMore, loading, pagination.page]);
 
   // Retry loading more products
   const retryLoadMore = useCallback(() => {
@@ -165,7 +167,31 @@ export function useInfiniteCatalog() {
       setFilters(newFilters);
       fetchProducts(newFilters, false);
     }
-  }, [searchQuery, filters, fetchProducts]);
+  }, [searchQuery]);
+
+  // Update categoryId when initialCategoryId changes
+  useEffect(() => {
+    console.log(
+      '🔍 useInfiniteCatalog: initialCategoryId changed:',
+      initialCategoryId,
+      'current categoryId:',
+      filters.categoryId
+    );
+    if (initialCategoryId !== filters.categoryId) {
+      const newFilters = {
+        ...filters,
+        categoryId: initialCategoryId || '',
+        page: 1,
+      };
+      console.log(
+        '🔍 useInfiniteCatalog: updating filters with categoryId:',
+        newFilters.categoryId
+      );
+      setFilters(newFilters);
+      // Call fetchProducts directly without including it in dependencies
+      fetchProducts(newFilters, false);
+    }
+  }, [initialCategoryId]);
 
   // Handle filter changes
   const handleFiltersChange = useCallback(
@@ -174,7 +200,7 @@ export function useInfiniteCatalog() {
       setFilters(updatedFilters);
       fetchProducts(updatedFilters, false);
     },
-    [filters, fetchProducts]
+    [filters]
   );
 
   // Handle sorting
@@ -200,7 +226,7 @@ export function useInfiniteCatalog() {
     };
     setFilters(clearedFilters);
     fetchProducts(clearedFilters, false);
-  }, [fetchProducts]);
+  }, []);
 
   // Load initial data
   useEffect(() => {

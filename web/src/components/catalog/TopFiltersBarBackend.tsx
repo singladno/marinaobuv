@@ -2,12 +2,11 @@
 
 import { useMemo } from 'react';
 
-import CategoryControl from '@/components/product/filters/CategoryControl';
 import ColorFilter from '@/components/product/filters/ColorFilter';
 import PriceControl from '@/components/product/filters/PriceControl';
 import { SortControl } from '@/components/catalog/SortControl';
-import { useCategories } from '@/contexts/CategoriesContext';
-import { flattenCategoryTree } from '@/utils/categoryUtils';
+import CategoryNavigationControl from '@/components/catalog/CategoryNavigationControl';
+import CategoryFilterControl from '@/components/catalog/CategoryFilterControl';
 
 interface CatalogFilters {
   search: string;
@@ -25,20 +24,41 @@ type TopFiltersBarBackendProps = {
   filters: CatalogFilters;
   onChange?: (filters: Partial<CatalogFilters>) => void;
   onClear?: () => void;
+  subcategories?: Array<{
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+    hasChildren?: boolean;
+  }>;
+  siblingCategories?: Array<{
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+    hasChildren?: boolean;
+  }>;
+  parentChildren?: Array<{
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+    hasChildren?: boolean;
+  }>;
+  currentPath?: string;
+  currentCategoryName?: string;
 };
 
 export default function TopFiltersBarBackend({
   filters,
   onChange,
   onClear,
+  subcategories,
+  siblingCategories,
+  parentChildren,
+  currentPath,
+  currentCategoryName,
 }: TopFiltersBarBackendProps) {
-  const { categories } = useCategories();
-
-  const categoryOptions = useMemo(() => {
-    const flat = flattenCategoryTree(categories);
-    return flat.map(c => ({ id: c.id, label: c.label, level: c.level }));
-  }, [categories]);
-
   const hasActive = useMemo(() => {
     return (
       filters.categoryId.length > 0 ||
@@ -52,7 +72,6 @@ export default function TopFiltersBarBackend({
   // Convert backend filters to frontend format
   const frontendFilters = useMemo(
     () => ({
-      categories: filters.categoryId ? [filters.categoryId] : [],
       priceRange: [filters.minPrice ?? 0, filters.maxPrice ?? 100000] as [
         number,
         number,
@@ -68,10 +87,6 @@ export default function TopFiltersBarBackend({
     if (!onChange) return; // Don't do anything if no onChange handler
 
     const updatedFilters: Partial<CatalogFilters> = {};
-
-    if (newFilters.categories !== undefined) {
-      updatedFilters.categoryId = newFilters.categories[0] || '';
-    }
 
     if (newFilters.priceRange !== undefined) {
       updatedFilters.minPrice =
@@ -105,13 +120,40 @@ export default function TopFiltersBarBackend({
         onChange={sortBy => onChange && onChange({ sortBy })}
       />
 
-      {/* Category filter */}
-      <CategoryControl
-        value={frontendFilters.categories}
-        onChange={categories => handleFiltersChange({ categories })}
-        options={categoryOptions}
-        tree={categories}
-      />
+      {/* Category Navigation Control - Subcategories of current category */}
+      {subcategories && subcategories.length > 0 && currentCategoryName && (
+        <CategoryNavigationControl
+          currentCategory={currentCategoryName}
+          categories={subcategories}
+          parentCategory={
+            siblingCategories && siblingCategories.length > 0
+              ? { name: 'Обувь', href: '/catalog' }
+              : undefined
+          }
+          siblingCategories={siblingCategories}
+          parentChildren={parentChildren}
+        />
+      )}
+
+      {/* Category Filter Control - Subcategories */}
+      {subcategories && subcategories.length > 0 && (
+        <CategoryFilterControl
+          selectedCategories={filters.categoryId ? [filters.categoryId] : []}
+          categories={subcategories}
+          onSelectionChange={categoryIds => {
+            if (onChange) {
+              onChange({
+                categoryId: categoryIds.length > 0 ? categoryIds[0] : '',
+              });
+            }
+          }}
+          onClear={() => {
+            if (onChange) {
+              onChange({ categoryId: '' });
+            }
+          }}
+        />
+      )}
 
       {/* Price filter */}
       <PriceControl

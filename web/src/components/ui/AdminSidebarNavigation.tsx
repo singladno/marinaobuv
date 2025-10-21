@@ -1,5 +1,7 @@
 'use client';
 
+import { useParsingStatus } from '@/hooks/useParsingStatus';
+
 import {
   ProductsIcon,
   OrdersIcon,
@@ -16,6 +18,8 @@ type AdminSidebarNavigationProps = {
 export function AdminSidebarNavigation({
   isCollapsed,
 }: AdminSidebarNavigationProps) {
+  const { isParsingActive } = useParsingStatus();
+
   return (
     <nav>
       <AdminSidebarLink
@@ -44,6 +48,7 @@ export function AdminSidebarNavigation({
         label="Парсинг"
         icon={<ParsingIcon />}
         collapsed={isCollapsed}
+        isParsingActive={isParsingActive}
       />
     </nav>
   );
