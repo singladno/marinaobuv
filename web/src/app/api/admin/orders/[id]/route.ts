@@ -38,6 +38,51 @@ export async function GET(
                 },
               },
             },
+            feedbacks: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+            replacements: {
+              include: {
+                adminUser: {
+                  select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                  },
+                },
+                clientUser: {
+                  select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
+            messages: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                    role: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 5, // Get latest 5 messages for preview
+            },
           },
         },
         user: {

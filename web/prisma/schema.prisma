@@ -224,6 +224,9 @@ model User {
   messageReads   OrderItemMessageRead[]
   reviews        Review[]
   searchHistory  SearchHistory[]
+  feedbacks      OrderItemFeedback[]
+  adminReplacements OrderItemReplacement[] @relation("AdminReplacement")
+  clientReplacements OrderItemReplacement[] @relation("ClientReplacement")
   provider       Provider?          @relation(fields: [providerId], references: [id])
 
   @@index([role])
@@ -297,6 +300,8 @@ model OrderItem {
   order       Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product     Product            @relation(fields: [productId], references: [id])
   messages    OrderItemMessage[]
+  feedbacks   OrderItemFeedback[]
+  replacements OrderItemReplacement[]
 
   @@index([orderId])
   @@index([productId])
@@ -411,4 +416,51 @@ enum Season {
   SUMMER
   AUTUMN
   WINTER
+}
+
+enum FeedbackType {
+  WRONG_SIZE
+  WRONG_ITEM
+  AGREE_REPLACEMENT
+}
+
+enum ReplacementStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model OrderItemFeedback {
+  id          String       @id @default(cuid())
+  orderItemId String
+  userId      String
+  feedbackType FeedbackType
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orderItemId])
+  @@index([userId])
+}
+
+model OrderItemReplacement {
+  id                  String             @id @default(cuid())
+  orderItemId         String
+  adminUserId         String
+  clientUserId        String
+  replacementImageUrl String?
+  replacementImageKey String?
+  status              ReplacementStatus  @default(PENDING)
+  adminComment        String?
+  clientComment       String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  orderItem           OrderItem          @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  adminUser           User               @relation("AdminReplacement", fields: [adminUserId], references: [id], onDelete: Cascade)
+  clientUser          User               @relation("ClientReplacement", fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@index([orderItemId])
+  @@index([adminUserId])
+  @@index([clientUserId])
 }

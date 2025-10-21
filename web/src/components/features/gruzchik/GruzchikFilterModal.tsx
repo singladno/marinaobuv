@@ -16,6 +16,7 @@ import { useGruzchikFilter } from '@/contexts/GruzchikFilterContext';
 import { useGruzchikView } from '@/contexts/GruzchikViewContext';
 import { useGruzchikOrders } from '@/hooks/useGruzchikOrders';
 import { ViewToggle } from './ViewToggle';
+import { DraggableProviderList } from './DraggableProviderList';
 import { cn } from '@/lib/utils';
 
 interface GruzchikFilterModalProps {
@@ -29,8 +30,9 @@ export function GruzchikFilterModal({
 }: GruzchikFilterModalProps) {
   const { filters, updateFilter, clearFilters, hasActiveFilters } =
     useGruzchikFilter();
+
   const { viewMode, setViewMode } = useGruzchikView();
-  const { orders } = useGruzchikOrders('Наличие');
+  const { orders, reload } = useGruzchikOrders('Наличие');
 
   // Extract unique providers and clients from orders
   const [providers, setProviders] = useState<
@@ -105,7 +107,10 @@ export function GruzchikFilterModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div
+      key={JSON.stringify(filters)}
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+    >
       <div className="flex h-full w-full max-w-md transform flex-col rounded-t-2xl bg-white shadow-xl transition-all sm:h-auto sm:rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
@@ -143,12 +148,11 @@ export function GruzchikFilterModal({
             <h3 className="mb-3 text-sm font-medium text-gray-900">Фильтры</h3>
             <div className="space-y-2">
               <button
-                onClick={() =>
-                  updateFilter(
-                    'availabilityStatus',
-                    filters.availabilityStatus === 'unset' ? 'all' : 'unset'
-                  )
-                }
+                onClick={() => {
+                  const newValue =
+                    filters.availabilityStatus === 'unset' ? 'all' : 'unset';
+                  updateFilter('availabilityStatus', newValue);
+                }}
                 className={cn(
                   'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors',
                   filters.availabilityStatus === 'unset'
@@ -169,45 +173,13 @@ export function GruzchikFilterModal({
             <h3 className="mb-3 text-sm font-medium text-gray-900">
               Поставщик
             </h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => updateFilter('providerId', null)}
-                className={cn(
-                  'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors',
-                  filters.providerId === null
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                )}
-              >
-                <span className="text-sm">Все поставщики</span>
-                {filters.providerId === null && (
-                  <Check className="h-4 w-4 text-blue-600" />
-                )}
-              </button>
-              {providers.length > 0 ? (
-                providers.map(provider => (
-                  <button
-                    key={provider.id}
-                    onClick={() => updateFilter('providerId', provider.id)}
-                    className={cn(
-                      'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors',
-                      filters.providerId === provider.id
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                    )}
-                  >
-                    <span className="text-sm">{provider.name}</span>
-                    {filters.providerId === provider.id && (
-                      <Check className="h-4 w-4 text-blue-600" />
-                    )}
-                  </button>
-                ))
-              ) : (
-                <div className="px-3 py-2 text-sm text-gray-500">
-                  Нет поставщиков в заказах
-                </div>
-              )}
-            </div>
+            <DraggableProviderList
+              providers={providers}
+              selectedProviderId={filters.providerId}
+              onProviderSelect={providerId => {
+                updateFilter('providerId', providerId);
+              }}
+            />
           </div>
 
           {/* Client Filter */}
@@ -215,9 +187,9 @@ export function GruzchikFilterModal({
             <h3 className="mb-3 text-sm font-medium text-gray-900">Клиент</h3>
             <Select
               value={filters.clientId || 'all'}
-              onValueChange={value =>
-                updateFilter('clientId', value === 'all' ? null : value)
-              }
+              onValueChange={value => {
+                updateFilter('clientId', value === 'all' ? null : value);
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Выберите клиента">
@@ -301,7 +273,12 @@ export function GruzchikFilterModal({
             >
               Сбросить
             </Button>
-            <Button onClick={onClose} className="flex-1">
+            <Button
+              onClick={() => {
+                onClose();
+              }}
+              className="flex-1"
+            >
               Применить
             </Button>
           </div>

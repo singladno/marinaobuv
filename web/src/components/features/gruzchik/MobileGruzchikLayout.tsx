@@ -12,7 +12,10 @@ import {
   GruzchikViewProvider,
   useGruzchikView,
 } from '@/contexts/GruzchikViewContext';
-import { useGruzchikFilter } from '@/contexts/GruzchikFilterContext';
+import {
+  GruzchikFilterProvider,
+  useGruzchikFilter,
+} from '@/contexts/GruzchikFilterContext';
 import { ViewToggle } from './ViewToggle';
 import { GruzchikPortalSwitcherHeader } from '@/components/ui/GruzchikPortalSwitcherHeader';
 import { GruzchikFilterModal } from './GruzchikFilterModal';
@@ -103,61 +106,63 @@ export function MobileGruzchikLayout({ children }: MobileGruzchikLayoutProps) {
   const isActive = (href: string) => pathname === href;
 
   return (
-    <GruzchikViewProvider>
-      <div className="min-h-screen bg-gray-50">
-        {/* Mobile Header with Search */}
-        <GruzchikHeader />
+    <GruzchikFilterProvider>
+      <GruzchikViewProvider>
+        <div className="min-h-screen bg-gray-50">
+          {/* Mobile Header with Search */}
+          <GruzchikHeader />
 
-        {/* Main Content */}
-        <main className="pb-20">{children}</main>
+          {/* Main Content */}
+          <main className="pb-20">{children}</main>
 
-        {/* Bottom Navigation - visible on all breakpoints */}
-        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white shadow-lg">
-          <div className="flex">
-            {navigation.map(item => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'relative flex flex-1 flex-col items-center px-1 py-3 transition-all duration-200 ease-in-out',
-                    active
-                      ? 'text-blue-600'
-                      : 'text-gray-500 hover:text-gray-700 active:scale-95'
-                  )}
-                >
-                  {/* Active indicator background */}
-                  {active && (
-                    <div className="absolute inset-x-2 bottom-1 top-1 rounded-lg bg-blue-50" />
-                  )}
-
-                  {/* Icon with weight change for active state */}
-                  <div className="relative z-10 mb-1">
-                    <Icon
-                      className={cn(
-                        'h-5 w-5 transition-all duration-200',
-                        active ? 'stroke-2' : 'stroke-1.5'
-                      )}
-                    />
-                  </div>
-
-                  {/* Text with improved typography */}
-                  <span
+          {/* Bottom Navigation - visible on all breakpoints */}
+          <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white shadow-lg">
+            <div className="flex">
+              {navigation.map(item => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
                     className={cn(
-                      'relative z-10 text-xs font-medium transition-all duration-200',
-                      active ? 'font-semibold' : 'font-medium'
+                      'relative flex flex-1 flex-col items-center px-1 py-3 transition-all duration-200 ease-in-out',
+                      active
+                        ? 'text-blue-600'
+                        : 'text-gray-500 hover:text-gray-700 active:scale-95'
                     )}
                   >
-                    {item.name}
-                  </span>
-                </Link>
-              );
-            })}
+                    {/* Active indicator background */}
+                    {active && (
+                      <div className="absolute inset-x-2 bottom-1 top-1 rounded-lg bg-blue-50" />
+                    )}
+
+                    {/* Icon with weight change for active state */}
+                    <div className="relative z-10 mb-1">
+                      <Icon
+                        className={cn(
+                          'h-5 w-5 transition-all duration-200',
+                          active ? 'stroke-2' : 'stroke-1.5'
+                        )}
+                      />
+                    </div>
+
+                    {/* Text with improved typography */}
+                    <span
+                      className={cn(
+                        'relative z-10 text-xs font-medium transition-all duration-200',
+                        active ? 'font-semibold' : 'font-medium'
+                      )}
+                    >
+                      {item.name}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
-    </GruzchikViewProvider>
+      </GruzchikViewProvider>
+    </GruzchikFilterProvider>
   );
 }

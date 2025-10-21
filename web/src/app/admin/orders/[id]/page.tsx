@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, MessageSquare, Tag } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Tag, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -14,6 +14,9 @@ import { ChatButtonWithIndicator } from '@/components/features/admin/ChatButtonW
 import { OrderItemData } from '@/components/features/gruzchik/OrderItemCard';
 import { useAdminOrderUnreadCounts } from '@/hooks/useAdminOrderUnreadCounts';
 import { StatusBadge } from '@/components/features/OrderStatusBadge';
+import { FeedbackStatusIconsCompact } from '@/components/features/admin/FeedbackStatusIcons';
+import { MessagePreviewCompact } from '@/components/features/admin/MessagePreview';
+import { AdminReplacementModal } from '@/components/features/admin/AdminReplacementModal';
 import { cn } from '@/lib/utils';
 
 interface OrderItem {
@@ -40,6 +43,47 @@ interface OrderItem {
       alt: string | null;
     }>;
   };
+  feedbacks: Array<{
+    id: string;
+    feedbackType: 'WRONG_SIZE' | 'WRONG_ITEM' | 'AGREE_REPLACEMENT';
+    createdAt: string;
+    user: {
+      id: string;
+      name: string | null;
+      phone: string;
+    };
+  }>;
+  replacements: Array<{
+    id: string;
+    status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+    replacementImageUrl: string | null;
+    replacementImageKey: string | null;
+    adminComment: string | null;
+    clientComment: string | null;
+    createdAt: string;
+    adminUser: {
+      id: string;
+      name: string | null;
+      phone: string;
+    };
+    clientUser: {
+      id: string;
+      name: string | null;
+      phone: string;
+    };
+  }>;
+  messages: Array<{
+    id: string;
+    text: string | null;
+    isService: boolean;
+    createdAt: string;
+    user: {
+      id: string;
+      name: string | null;
+      phone: string;
+      role: string;
+    };
+  }>;
 }
 
 interface OrderDetails {
@@ -74,6 +118,9 @@ export default function OrderDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [replacementModalOpen, setReplacementModalOpen] = useState(false);
+  const [selectedItemForReplacement, setSelectedItemForReplacement] =
+    useState<OrderItem | null>(null);
 
   // Get unread counts for all items in this order
   const { getUnreadCount } = useAdminOrderUnreadCounts(orderId);
@@ -183,6 +230,47 @@ export default function OrderDetailsPage() {
     }
 
     return <span className="text-gray-400">—</span>;
+  };
+
+  const handleReplacementProposal = (item: OrderItem) => {
+    setSelectedItemForReplacement(item);
+    setReplacementModalOpen(true);
+  };
+
+  const handleReplacementSubmit = async (data: {
+    replacementImageUrl?: string;
+    replacementImageKey?: string;
+    adminComment?: string;
+  }) => {
+    if (!selectedItemForReplacement) return;
+
+    try {
+      const response = await fetch(
+        `/api/admin/order-items/${selectedItemForReplacement.id}/replacement`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        }
+      );
+
+      if (response.ok) {
+        // Refresh order data
+        const orderResponse = await fetch(`/api/admin/orders/${orderId}`);
+        if (orderResponse.ok) {
+          const orderData = await orderResponse.json();
+          setOrder(orderData.order);
+        }
+        setReplacementModalOpen(false);
+        setSelectedItemForReplacement(null);
+      } else {
+        console.error('Failed to create replacement proposal');
+      }
+    } catch (error) {
+      console.error('Failed to create replacement proposal:', error);
+    }
   };
 
   const convertToOrderItemData = (item: OrderItem): OrderItemData => {
@@ -364,7 +452,10 @@ export default function OrderDetailsPage() {
                     Наличие
                   </th>
                   <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Согласование
+                    Обратная связь
+                  </th>
+                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    Сообщения
                   </th>
                   <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
                     За пару
@@ -420,7 +511,32 @@ export default function OrderDetailsPage() {
                       {getAvailabilityBadge(item.isAvailable)}
                     </td>
                     <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                      {getApprovalBadge()}
+                      <FeedbackStatusIconsCompact
+                        feedbacks={item.feedbacks.map(feedback => ({
+                          type: feedback.feedbackType,
+                          createdAt: feedback.createdAt,
+                        }))}
+                        replacements={item.replacements}
+                        hasMessages={item.messages.length > 0}
+                      />
+                    </td>
+                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                      <MessagePreviewCompact
+                        messages={item.messages.map(message => ({
+                          id: message.id,
+                          text: message.text,
+                          sender:
+                            message.user.role === 'ADMIN'
+                              ? 'admin'
+                              : message.user.role === 'GRUZCHIK'
+                                ? 'gruzchik'
+                                : 'client',
+                          senderName: message.user.name || undefined,
+                          isService: message.isService,
+                          createdAt: message.createdAt,
+                        }))}
+                        maxLength={50}
+                      />
                     </td>
                     <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
                       {formatPrice(item.product.pricePair)}
@@ -432,11 +548,22 @@ export default function OrderDetailsPage() {
                       {formatPrice(item.priceBox * item.qty)}
                     </td>
                     <td className="sticky right-0 z-20 border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
-                      <ChatButtonWithIndicator
-                        itemId={item.id}
-                        onClick={() => setSelectedItemId(item.id)}
-                        unreadCount={getUnreadCount(item.id).unreadCount}
-                      />
+                      <div className="flex items-center space-x-2">
+                        <ChatButtonWithIndicator
+                          itemId={item.id}
+                          onClick={() => setSelectedItemId(item.id)}
+                          unreadCount={getUnreadCount(item.id).unreadCount}
+                        />
+                        <Button
+                          onClick={() => handleReplacementProposal(item)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center space-x-1"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          <span className="text-xs">Замена</span>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -445,6 +572,27 @@ export default function OrderDetailsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Replacement Modal */}
+      {replacementModalOpen && selectedItemForReplacement && (
+        <AdminReplacementModal
+          isOpen={replacementModalOpen}
+          onClose={() => {
+            setReplacementModalOpen(false);
+            setSelectedItemForReplacement(null);
+          }}
+          onSubmit={handleReplacementSubmit}
+          itemName={selectedItemForReplacement.name}
+          availableImages={selectedItemForReplacement.messages
+            .filter(msg => msg.text && msg.text.includes('image'))
+            .map(msg => ({
+              id: msg.id,
+              type: 'image',
+              name: 'Chat image',
+              url: msg.text || undefined,
+            }))}
+        />
+      )}
     </div>
   );
 }

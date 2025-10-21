@@ -148,7 +148,12 @@ export function OrderItemCard({
   }
 
   return (
-    <Card className={cn('w-full', className)}>
+    <Card
+      className={cn(
+        'w-full shadow-sm transition-shadow hover:shadow-md',
+        className
+      )}
+    >
       <CardHeader className="px-3 pb-3">
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">

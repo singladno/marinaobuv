@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { ClientProviders } from '@/components/ClientProviders';
 import { MobileGruzchikLayout } from '@/components/features/gruzchik/MobileGruzchikLayout';
+import { ProviderSortingProvider } from '@/contexts/ProviderSortingContext';
 import { getSession } from '@/lib/server/session';
 
 export default async function GruzchikLayout({
@@ -14,7 +15,9 @@ export default async function GruzchikLayout({
 
   return (
     <ClientProviders>
-      <MobileGruzchikLayout>{children}</MobileGruzchikLayout>
+      <ProviderSortingProvider>
+        <MobileGruzchikLayout>{children}</MobileGruzchikLayout>
+      </ProviderSortingProvider>
     </ClientProviders>
   );
 }

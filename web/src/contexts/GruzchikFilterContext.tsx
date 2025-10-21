@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react';
 
 export interface GruzchikFilters {
   availabilityStatus: 'all' | 'unset' | 'available' | 'unavailable';
@@ -38,32 +46,38 @@ export function GruzchikFilterProvider({
 }: GruzchikFilterProviderProps) {
   const [filters, setFilters] = useState<GruzchikFilters>(defaultFilters);
 
-  const updateFilter = <K extends keyof GruzchikFilters>(
-    key: K,
-    value: GruzchikFilters[K]
-  ) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const updateFilter = useCallback(
+    <K extends keyof GruzchikFilters>(key: K, value: GruzchikFilters[K]) => {
+      setFilters(prev => ({ ...prev, [key]: value }));
+    },
+    []
+  );
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setFilters(defaultFilters);
-  };
+  }, []);
 
-  const hasActiveFilters =
-    filters.availabilityStatus !== 'all' ||
-    filters.providerId !== null ||
-    filters.clientId !== null;
+  const hasActiveFilters = useMemo(
+    () =>
+      filters.availabilityStatus !== 'all' ||
+      filters.providerId !== null ||
+      filters.clientId !== null,
+    [filters.availabilityStatus, filters.providerId, filters.clientId]
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      filters,
+      setFilters,
+      updateFilter,
+      clearFilters,
+      hasActiveFilters,
+    }),
+    [filters, setFilters, updateFilter, clearFilters, hasActiveFilters]
+  );
 
   return (
-    <GruzchikFilterContext.Provider
-      value={{
-        filters,
-        setFilters,
-        updateFilter,
-        clearFilters,
-        hasActiveFilters,
-      }}
-    >
+    <GruzchikFilterContext.Provider value={contextValue}>
       {children}
     </GruzchikFilterContext.Provider>
   );

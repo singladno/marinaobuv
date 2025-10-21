@@ -2,8 +2,6 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-import { GruzchikFilterProvider } from './GruzchikFilterContext';
-
 export type ViewMode = 'provider' | 'order';
 
 interface GruzchikViewContextType {
@@ -30,13 +28,11 @@ export function GruzchikViewProvider({
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   return (
-    <GruzchikFilterProvider>
-      <GruzchikViewContext.Provider
-        value={{ viewMode, setViewMode, searchQuery, setSearchQuery }}
-      >
-        {children}
-      </GruzchikViewContext.Provider>
-    </GruzchikFilterProvider>
+    <GruzchikViewContext.Provider
+      value={{ viewMode, setViewMode, searchQuery, setSearchQuery }}
+    >
+      {children}
+    </GruzchikViewContext.Provider>
   );
 }
 

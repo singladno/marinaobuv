@@ -5,10 +5,14 @@ import {
   MessageSquare,
   Package,
   AlertTriangle,
+  MessageCircle,
 } from 'lucide-react';
 import { ChatButtonWithIndicator } from './ChatButtonWithIndicator';
 import { ItemApproveButton } from './ItemApproveButton';
+import { OrderItemFeedbackModal } from '@/components/features/orders/OrderItemFeedbackModal';
 import { useOrderData } from '@/hooks/useOrderData';
+import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
 
 interface OrderItem {
   id: string;
@@ -39,6 +43,7 @@ interface OrderItemsProps {
   onItemApproval?: (itemId: string) => void;
   showMessages?: boolean;
   orderId?: string;
+  showFeedback?: boolean;
 }
 
 export function OrderItems({
@@ -47,7 +52,12 @@ export function OrderItems({
   onItemApproval,
   showMessages = false,
   orderId,
+  showFeedback = false,
 }: OrderItemsProps) {
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [selectedItemForFeedback, setSelectedItemForFeedback] =
+    useState<OrderItem | null>(null);
+
   const {
     hasMessages,
     needsApproval,
@@ -81,6 +91,40 @@ export function OrderItems({
       return 'Нет в наличии';
     } else {
       return 'Проверяется';
+    }
+  };
+
+  const handleFeedbackClick = (item: OrderItem) => {
+    setSelectedItemForFeedback(item);
+    setFeedbackModalOpen(true);
+  };
+
+  const handleFeedbackSubmit = async (
+    feedbackType: 'WRONG_SIZE' | 'WRONG_ITEM' | 'AGREE_REPLACEMENT'
+  ) => {
+    if (!selectedItemForFeedback) return;
+
+    try {
+      const response = await fetch(
+        `/api/order-items/${selectedItemForFeedback.id}/feedback`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ feedbackType }),
+        }
+      );
+
+      if (response.ok) {
+        // Feedback submitted successfully
+        setFeedbackModalOpen(false);
+        setSelectedItemForFeedback(null);
+      } else {
+        console.error('Failed to submit feedback');
+      }
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
     }
   };
 
@@ -169,7 +213,7 @@ export function OrderItems({
               </div>
 
               {/* Actions - Mobile */}
-              {showMessages && (
+              {(showMessages || showFeedback) && (
                 <div className="flex items-center justify-between border-t border-gray-200 pt-2">
                   <div className="flex items-center space-x-2">
                     {onChatClick && (
@@ -178,6 +222,17 @@ export function OrderItems({
                         onClick={() => onChatClick(item)}
                         unreadCount={unreadData.unreadCount}
                       />
+                    )}
+                    {showFeedback && (
+                      <Button
+                        onClick={() => handleFeedbackClick(item)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center space-x-1"
+                      >
+                        <MessageCircle className="h-3 w-3" />
+                        <span className="text-xs">Обратная связь</span>
+                      </Button>
                     )}
                     {itemNeedsApproval && (
                       <ItemApproveButton
@@ -270,7 +325,7 @@ export function OrderItems({
                   </div>
 
                   {/* Actions */}
-                  {showMessages && (
+                  {(showMessages || showFeedback) && (
                     <div className="flex items-center space-x-2">
                       {onChatClick && (
                         <ChatButtonWithIndicator
@@ -278,6 +333,17 @@ export function OrderItems({
                           onClick={() => onChatClick(item)}
                           unreadCount={unreadData.unreadCount}
                         />
+                      )}
+                      {showFeedback && (
+                        <Button
+                          onClick={() => handleFeedbackClick(item)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center space-x-1"
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          <span className="text-xs">Обратная связь</span>
+                        </Button>
                       )}
                       {itemNeedsApproval && (
                         <ItemApproveButton
@@ -305,6 +371,20 @@ export function OrderItems({
           </div>
         );
       })}
+
+      {/* Feedback Modal */}
+      {feedbackModalOpen && selectedItemForFeedback && (
+        <OrderItemFeedbackModal
+          isOpen={feedbackModalOpen}
+          onClose={() => {
+            setFeedbackModalOpen(false);
+            setSelectedItemForFeedback(null);
+          }}
+          onFeedback={handleFeedbackSubmit}
+          itemName={selectedItemForFeedback.name}
+          hasReplacementProposal={false} // TODO: Check if there's a pending replacement
+        />
+      )}
     </div>
   );
 }

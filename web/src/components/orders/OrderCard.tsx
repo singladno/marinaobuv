@@ -87,6 +87,7 @@ export function OrderCard({ order }: OrderCardProps) {
                 onChatClick={showMessages ? handleChatClick : undefined}
                 onItemApproval={handleItemApproval}
                 showMessages={showMessages}
+                showFeedback={true}
                 orderId={order.id}
               />
             </div>

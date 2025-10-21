@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Package } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
@@ -9,11 +9,14 @@ import { OrderItemCard, OrderItemData } from './OrderItemCard';
 import { useGruzchikOrders } from '@/hooks/useGruzchikOrders';
 import { useGruzchikView } from '@/contexts/GruzchikViewContext';
 import { useGruzchikFilter } from '@/contexts/GruzchikFilterContext';
+import { useProviderSorting } from '@/contexts/ProviderSortingContext';
 import { cn } from '@/lib/utils';
 
 export function MobileGruzchikAvailability() {
   const { viewMode, searchQuery } = useGruzchikView();
   const { filters } = useGruzchikFilter();
+
+  const { getSortedProviders, sortedProviderIds } = useProviderSorting();
 
   const {
     orders,
@@ -69,7 +72,12 @@ export function MobileGruzchikAvailability() {
     }
 
     return filtered;
-  }, [itemRows, filters]);
+  }, [
+    itemRows,
+    filters.availabilityStatus,
+    filters.providerId,
+    filters.clientId,
+  ]);
 
   // Group items by provider or order
   const groupedItems = useMemo(() => {
@@ -78,27 +86,54 @@ export function MobileGruzchikAvailability() {
 
       availabilityItems.forEach(item => {
         const provider = item.provider || 'Неизвестный поставщик';
-        if (!grouped.has(provider)) {
-          grouped.set(provider, []);
+        const providerId = item.providerId || 'unknown';
+        const groupKey = `${providerId}:${provider}`;
+
+        if (!grouped.has(groupKey)) {
+          grouped.set(groupKey, []);
         }
-        grouped.get(provider)!.push(item);
+        grouped.get(groupKey)!.push(item);
       });
 
-      return Array.from(grouped.entries()).map(([provider, items]) => ({
-        key: provider,
-        title: provider,
-        items: items.filter(item => {
-          if (!searchQuery) return true;
-          const customerInfo = item.orderLabel
-            ? `${item.orderLabel} ${item.customerPhone}`
-            : item.customerPhone;
-          return (
-            item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.itemCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            customerInfo.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }),
-      }));
+      // Get all unique providers with their IDs and sort them
+      const providerMap = new Map<string, { id: string; name: string }>();
+
+      availabilityItems.forEach(item => {
+        if (item.providerId && item.provider) {
+          providerMap.set(item.providerId, {
+            id: item.providerId,
+            name: item.provider,
+          });
+        }
+      });
+
+      const allProviders = Array.from(providerMap.values());
+      const sortedProviders = getSortedProviders(allProviders);
+
+      // Return groups in sorted order
+      const result = sortedProviders.map(provider => {
+        const groupKey = `${provider.id}:${provider.name}`;
+        const items = grouped.get(groupKey) || [];
+        return {
+          key: groupKey,
+          title: provider.name,
+          items: items.filter(item => {
+            if (!searchQuery) return true;
+            const customerInfo = item.orderLabel
+              ? `${item.orderLabel} ${item.customerPhone}`
+              : item.customerPhone;
+            return (
+              item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              item.itemCode
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase()) ||
+              customerInfo.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+          }),
+        };
+      });
+
+      return result;
     } else {
       const grouped = new Map<string, OrderItemData[]>();
 
@@ -129,7 +164,13 @@ export function MobileGruzchikAvailability() {
         }),
       }));
     }
-  }, [availabilityItems, viewMode, searchQuery]);
+  }, [
+    availabilityItems,
+    viewMode,
+    searchQuery,
+    getSortedProviders,
+    sortedProviderIds,
+  ]);
 
   const handleChatOpen = (itemId: string) => {
     console.log('Opening chat for item:', itemId);
@@ -199,16 +240,36 @@ export function MobileGruzchikAvailability() {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {groupedItems.map(group => (
-            <div key={group.key} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900">{group.title}</h2>
-                <Badge variant="outline" className="text-xs">
-                  {group.items.length} товаров
-                </Badge>
+        <div className="space-y-8">
+          {groupedItems.map((group, index) => (
+            <div key={group.key} className="relative">
+              {/* Enhanced Group Header */}
+              <div className="sticky top-0 z-10 mb-4 rounded-lg border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {group.title}
+                      </h2>
+                      <p className="text-sm text-gray-600">
+                        {viewMode === 'provider' ? 'Поставщик' : 'Заказ'}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className="border-blue-200 bg-blue-100 text-blue-700"
+                  >
+                    {group.items.length}{' '}
+                    {group.items.length === 1 ? 'товар' : 'товаров'}
+                  </Badge>
+                </div>
               </div>
 
+              {/* Items Container */}
               <div className="space-y-3">
                 {group.items.map(item => (
                   <OrderItemCard
@@ -229,6 +290,19 @@ export function MobileGruzchikAvailability() {
                   />
                 ))}
               </div>
+
+              {/* Section Divider */}
+              {index < groupedItems.length - 1 && (
+                <div className="mt-6 flex items-center">
+                  <div className="flex-1 border-t border-gray-200"></div>
+                  <div className="mx-4 flex items-center gap-2 text-xs text-gray-500">
+                    <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+                    <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+                    <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+                  </div>
+                  <div className="flex-1 border-t border-gray-200"></div>
+                </div>
+              )}
             </div>
           ))}
         </div>
