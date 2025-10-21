@@ -1,0 +1,34 @@
+#cloud-config
+package_update: true
+packages:
+  - openssh-server
+  - ca-certificates
+  - wget
+  - net-tools
+  - gnupg
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo
+    shell: /bin/bash
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINH4flLUi8wz70+duyQUDC2tR1JSt9ypqJ61k3Gxbnga singladno@gmail.com
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/90-cloud-ssh.conf
+    permissions: '0644'
+    content: |
+      PasswordAuthentication no
+      PubkeyAuthentication yes
+
+runcmd:
+  - systemctl enable ssh
+  - systemctl restart ssh
+  - wget -qO - https://as-repository.openvpn.net/as-repo-public.gpg | gpg --dearmor -o /usr/share/keyrings/openvpn-as.gpg
+  - echo "deb [signed-by=/usr/share/keyrings/openvpn-as.gpg] https://as-repository.openvpn.net/as/debian jammy main" | tee /etc/apt/sources.list.d/openvpn-as.list
+  - apt update -y
+  - DEBIAN_FRONTEND=noninteractive apt install -y openvpn-as
+  - echo "openvpn:OpenVPN-Temp-Admin-123" | chpasswd || true
+  - systemctl enable openvpnas
+  - systemctl start openvpnas

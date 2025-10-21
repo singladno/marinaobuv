@@ -1,0 +1,413 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id             String           @id @default(cuid())
+  parentId       String?
+  name           String
+  slug           String           @unique
+  path           String           @unique
+  sort           Int              @default(500)
+  isActive       Boolean          @default(true)
+  seoTitle       String?
+  seoDescription String?
+  seoH1          String?
+  seoIntroHtml   String?
+  seoCanonical   String?
+  seoNoindex     Boolean          @default(false)
+  seoUpdatedAt   DateTime?        @default(now())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  parent         Category?        @relation("CatToParent", fields: [parentId], references: [id])
+  children       Category[]       @relation("CatToParent")
+  products       Product[]
+  draftProducts  WaDraftProduct[]
+
+  @@index([parentId])
+}
+
+model Product {
+  id                    String         @id @default(cuid())
+  slug                  String         @unique
+  name                  String
+  article               String?
+  categoryId            String
+  pricePair             Decimal
+  currency              String         @default("RUB")
+  material              String?
+  gender                Gender?
+  season                Season?
+  description           String?
+  availabilityCheckedAt DateTime?
+  activeUpdatedAt       DateTime       @default(now())
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  isActive              Boolean        @default(true)
+  sizes                 Json?
+  sourceMessageIds      Json?
+  analysisBatchId       String?        @unique
+  colorBatchId          String?        @unique
+  batchProcessingStatus String?        @default("pending")
+  gptRequest            String?
+  gptResponse           String?
+  providerId            String?
+  orderItems            OrderItem[]
+  category              Category       @relation(fields: [categoryId], references: [id])
+  images                ProductImage[]
+  reviews               Review[]
+  provider              Provider?      @relation(fields: [providerId], references: [id])
+
+  @@index([categoryId])
+  @@index([season])
+  @@index([pricePair])
+  @@index([isActive])
+  @@index([activeUpdatedAt])
+  @@index([providerId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  key       String? @unique
+  alt       String?
+  sort      Int     @default(0)
+  isPrimary Boolean @default(false)
+  isActive  Boolean @default(true)
+  color     String?
+  width     Int?
+  height    Int?
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sort])
+}
+
+model Provider {
+  id            String            @id @default(cuid())
+  name          String            @unique
+  phone         String?
+  place         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  users         User[]
+  draftProducts WaDraftProduct[]
+  messages      WhatsAppMessage[]
+  products      Product[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([place])
+}
+
+model WaDraftProduct {
+  id               String                @id @default(cuid())
+  messageId        String                @unique
+  providerId       String
+  name             String?
+  pricePair        Decimal?
+  currency         String                @default("RUB")
+  material         String?
+  gender           Gender?
+  season           Season?
+  description      String?
+  sizes            Json?
+  providerDiscount Decimal?
+  rawGptResponse   Json?
+  gptRequest       String?
+  rawGptResponse2  Json?
+  gptRequest2      String?
+  gptResponse1     Json?
+  gptResponse2     Json?
+  source           Json?
+  color            String?
+  categoryId       String?
+  status           String                @default("draft")
+  isDeleted        Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  aiProcessedAt    DateTime?
+  aiStatus         String?
+  article          String?
+  aiConfidence     Float?
+  aiContext        String?
+  category         Category?             @relation(fields: [categoryId], references: [id])
+  message          WhatsAppMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  provider         Provider              @relation(fields: [providerId], references: [id])
+  images           WaDraftProductImage[]
+
+  @@index([providerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([categoryId])
+  @@index([isDeleted])
+}
+
+model WaDraftProductImage {
+  id             String         @id @default(cuid())
+  draftProductId String
+  url            String
+  key            String?        @unique
+  mimeType       String?
+  sha256         String?
+  alt            String?
+  sort           Int            @default(0)
+  isPrimary      Boolean        @default(false)
+  isFalseImage   Boolean        @default(false)
+  color          String?
+  width          Int?
+  height         Int?
+  createdAt      DateTime       @default(now())
+  isActive       Boolean        @default(true)
+  draftProduct   WaDraftProduct @relation(fields: [draftProductId], references: [id], onDelete: Cascade)
+
+  @@index([draftProductId, sort])
+}
+
+model WhatsAppMessage {
+  id             String          @id @default(cuid())
+  waMessageId    String          @unique
+  from           String?
+  type           String?
+  source         String?
+  chatId         String?
+  fromMe         Boolean         @default(false)
+  fromName       String?
+  timestamp      BigInt?
+  mediaId        String?
+  mediaWidth     Int?
+  mediaHeight    Int?
+  mediaSha256    String?
+  mediaPreview   String?
+  mediaFileSize  Int?
+  mediaMimeType  String?
+  text           String?
+  mediaS3Key     String?
+  mediaUrl       String?
+  providerId     String?
+  processed      Boolean         @default(false)
+  rawPayload     Json
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  draftProductId String?
+  aiGroupId      String?
+  draftProduct   WaDraftProduct?
+  provider       Provider?       @relation(fields: [providerId], references: [id])
+
+  @@index([createdAt])
+  @@index([from])
+  @@index([type])
+  @@index([fromMe])
+  @@index([chatId])
+  @@index([timestamp])
+  @@index([providerId])
+}
+
+model User {
+  id             String             @id @default(cuid())
+  phone          String             @unique
+  name           String?
+  role           Role
+  providerId     String?
+  passwordHash   String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  gruzchikOrders Order[]            @relation("OrderGruzchik")
+  orders         Order[]
+  messages       OrderItemMessage[]
+  messageReads   OrderItemMessageRead[]
+  reviews        Review[]
+  searchHistory  SearchHistory[]
+  provider       Provider?          @relation(fields: [providerId], references: [id])
+
+  @@index([role])
+  @@index([providerId])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  productId   String
+  userId      String?
+  rating      Int
+  title       String?
+  comment     String?
+  name        String?
+  email       String?
+  isVerified  Boolean  @default(false)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([productId])
+  @@index([rating])
+  @@index([isPublished])
+  @@index([createdAt])
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  userId        String?
+  gruzchikId    String?
+  fullName      String?
+  phone         String
+  email         String?
+  address       String?
+  transportId   String?
+  transportName String?
+  comment       String?
+  subtotal      Decimal     @default(0)
+  total         Decimal     @default(0)
+  status        String      @default("Новый")
+  label         String?
+  payment       Decimal     @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  gruzchik      User?       @relation("OrderGruzchik", fields: [gruzchikId], references: [id])
+  user          User?       @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([orderNumber])
+  @@index([gruzchikId])
+}
+
+model OrderItem {
+  id          String             @id @default(cuid())
+  orderId     String
+  productId   String
+  slug        String
+  name        String
+  article     String?
+  priceBox    Decimal
+  qty         Int
+  itemCode    String?            @unique
+  isAvailable Boolean?
+  createdAt   DateTime           @default(now())
+  order       Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product            @relation(fields: [productId], references: [id])
+  messages    OrderItemMessage[]
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([itemCode])
+}
+
+model OrderItemMessage {
+  id          String    @id @default(cuid())
+  orderItemId String
+  userId      String
+  text        String?
+  isService   Boolean   @default(false)
+  attachments Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readBy      OrderItemMessageRead[]
+
+  @@index([orderItemId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model OrderItemMessageRead {
+  id        String           @id @default(cuid())
+  messageId String
+  userId    String
+  readAt    DateTime         @default(now())
+  message   OrderItemMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+  @@index([readAt])
+}
+
+model ParsingHistory {
+  id              String    @id @default(cuid())
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  status          String    @default("running")
+  messagesRead    Int       @default(0)
+  productsCreated Int       @default(0)
+  errorMessage    String?
+  duration        Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  reason          String?
+  triggeredBy     String?
+
+  @@index([startedAt])
+  @@index([status])
+  @@index([createdAt])
+  @@index([triggeredBy])
+}
+
+model MigrationHistory {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  executedAt DateTime @default(now())
+
+  @@map("MigrationHistory")
+}
+
+model GptBatchJob {
+  id            String   @id @default(cuid())
+  type          String
+  status        String   @default("pending")
+  batchId       String?  @unique
+  inputFileId   String?
+  outputFileId  String?
+  totalRequests Int?     @default(0)
+  completed     Int?     @default(0)
+  failed        Int?     @default(0)
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  query     String
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([query])
+  @@index([createdAt])
+}
+
+enum Role {
+  ADMIN
+  PROVIDER
+  GRUZCHIK
+  CLIENT
+}
+
+enum Gender {
+  FEMALE
+  MALE
+}
+
+enum Season {
+  SPRING
+  SUMMER
+  AUTUMN
+  WINTER
+}

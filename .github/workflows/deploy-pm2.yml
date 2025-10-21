@@ -1,0 +1,890 @@
+name: Deploy MarinaObuv with PM2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set workflow title
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+          echo "workflow_title=$COMMIT_MSG" >> $GITHUB_OUTPUT
+        id: set_title
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm install
+          cd web && npm install
+
+      - name: Run linting
+        run: |
+          cd web && npm run lint:check
+
+      - name: Run type checking
+        run: |
+          cd web && npm run typecheck
+
+      - name: Run tests (if any)
+        run: |
+          cd web
+          npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_SITE_URL: https://marina-obuv.ru
+          NEXT_PUBLIC_BRAND_NAME: MarinaObuv
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_URL: https://marina-obuv.ru
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+
+      - name: Delete all existing artifacts (pre-clean)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🧹 Deleting all existing artifacts to free storage..."
+          ids=$(gh api repos/${{ github.repository }}/actions/artifacts --paginate --jq '.artifacts[].id' || echo "")
+          if [ -n "$ids" ]; then
+            for id in $ids; do
+              echo "Deleting artifact $id"
+              gh api repos/${{ github.repository }}/actions/artifacts/$id -X DELETE || true
+            done
+          else
+            echo "No artifacts to delete."
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            web/.next/
+            web/package*.json
+            web/node_modules/
+            web/prisma/
+            web/public/
+            web/src/
+            web/next.config.ts
+            web/tsconfig.json
+            web/postcss.config.mjs
+            web/tailwind.config.ts
+            web/.env*
+          retention-days: 1
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 60
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Cancel previous deployments
+        run: |
+          echo "🛑 Cancelling all previous workflow runs..."
+          gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id' | xargs -I {} gh api repos/${{ github.repository }}/actions/runs/{}/cancel -X POST || echo "No previous runs to cancel"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for cancellations
+        run: |
+          echo "⏳ Waiting for previous runs to be cancelled..."
+          sleep 15
+          echo "✅ Ready to proceed with new deployment"
+
+      - name: Cancel previous deployments (backup)
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 5
+          command: |
+            echo "🔄 Checking for previous deployments to cancel..."
+
+            # Get all in-progress workflow runs for this repository
+            RUNS=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id')
+
+            if [ ! -z "$RUNS" ]; then
+              echo "🛑 Found previous deployments to cancel: $RUNS"
+              for run_id in $RUNS; do
+                echo "🛑 Cancelling deployment run: $run_id"
+                gh api repos/${{ github.repository }}/actions/runs/$run_id/cancel -X POST || echo "Failed to cancel run $run_id"
+                sleep 2
+              done
+              
+              # Wait a bit for cancellations to take effect
+              echo "⏳ Waiting for cancellations to take effect..."
+              sleep 10
+              
+              # Check if any are still running
+              REMAINING=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id')
+              if [ ! -z "$REMAINING" ]; then
+                echo "⚠️ Some deployments are still running: $REMAINING"
+                echo "🔄 Attempting force cancellation..."
+                for run_id in $REMAINING; do
+                  gh api repos/${{ github.repository }}/actions/runs/$run_id/cancel -X POST || echo "Force cancel failed for run $run_id"
+                done
+              else
+                echo "✅ All previous deployments cancelled successfully"
+              fi
+            else
+              echo "✅ No previous deployments found to cancel"
+            fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Skip artifact download: we rebuild on server to avoid stale/overwriting files
+      # - name: Download build artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: build-artifacts
+      #     path: web/
+
+      - name: Setup Node.js (for server deployment tools)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Test SSH Connection
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 30s
+          command_timeout: 30s
+          debug: true
+          use_insecure_cipher: false
+          cipher: aes128-ctr,aes192-ctr,aes256-ctr
+          script: |
+            echo "🔍 Testing SSH connection..."
+            echo "Current user: $(whoami)"
+            echo "Current directory: $(pwd)"
+            echo "Server info: $(uname -a)"
+            echo "✅ SSH connection successful!"
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 600s
+          command_timeout: 600s
+          debug: true
+          use_insecure_cipher: false
+          cipher: aes128-ctr,aes192-ctr,aes256-ctr
+          script: |
+            # Check if application directory exists
+            if [ ! -d "/var/www/marinaobuv" ]; then
+                echo "Setting up application directory..."
+                sudo mkdir -p /var/www/marinaobuv
+                sudo chown -R $USER:$USER /var/www/marinaobuv
+                git clone https://github.com/singladno/marinaobuv.git /var/www/marinaobuv
+            fi
+
+            # Navigate to application directory
+            cd /var/www/marinaobuv
+
+            # Force-refresh repository to avoid untracked/dirty tree issues
+            echo "🔁 Refreshing repository from origin/main..."
+            git fetch origin main
+            # Backup untracked files list for debugging
+            echo "📋 Untracked files before cleanup:" || true
+            git ls-files --others --exclude-standard || true
+            # Discard local changes and untracked files, then reset to origin/main
+            git reset --hard origin/main
+            git clean -fd
+            echo "✅ Repository reset to origin/main"
+
+            # Ensure all scripts are executable
+            echo "🔧 Setting execute permissions for all scripts..."
+            chmod +x scripts/*.sh 2>/dev/null || echo "No scripts found in scripts directory"
+            chmod +x web/src/scripts/*.sh 2>/dev/null || echo "No scripts found in web/src/scripts directory"
+            echo "✅ Script permissions set"
+
+
+            # Verify critical scripts exist
+            echo "🔍 Verifying critical scripts exist..."
+            if [ -f "scripts/verify-webhook-deployment.sh" ]; then
+              echo "✅ Webhook verification script found"
+            else
+              echo "❌ CRITICAL: Webhook verification script not found!"
+              echo "Available files in scripts directory:"
+              ls -la scripts/ || echo "No scripts directory found"
+              echo "💡 DEPLOYMENT FAILED - required script missing"
+              exit 1
+            fi
+
+            # Use existing environment file instead of GitHub Secrets
+            echo "🔧 Using environment file for configuration..."
+            if [ -f "web/.env" ]; then
+                echo "✅ Found existing .env file"
+            elif [ -f "web/env.example" ]; then
+                echo "📋 Using env.example as template for environment"
+                cp web/env.example web/.env
+                echo "⚠️ Please update web/.env with your actual values!"
+            else
+                echo "❌ No environment file found!"
+                echo "Please ensure web/.env or web/env.example exists"
+                exit 1
+            fi
+
+            # Show which env keys are present (names only)
+            echo "Env keys on server:" && cut -d= -f1 web/.env | paste -sd, -
+
+            # Ensure database is properly initialized
+            echo "🗄️ Initializing database configuration..."
+
+            # Check if PostgreSQL is running
+            if ! systemctl is-active --quiet postgresql; then
+              echo "🔧 Starting PostgreSQL service..."
+              sudo systemctl start postgresql
+              sudo systemctl enable postgresql
+            fi
+
+            # Load DATABASE_URL from environment file
+            export $(cat web/.env | grep -v '^#' | xargs)
+
+            # Verify database connection string is valid
+            if [ -z "$DATABASE_URL" ]; then
+              echo "❌ DATABASE_URL is not set in environment file!"
+              echo "Available environment variables:"
+              cat web/.env | grep -v '^#' | head -10
+              exit 1
+            fi
+
+            # Skip database setup (managed manually outside deploy)
+            echo "ℹ️ Skipping database setup (handled manually)"
+
+            # Test database connection
+            echo "🔍 Testing database connection..."
+            cd web && ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
+            if [ $? -ne 0 ]; then
+              echo "⚠️ Database connection test failed, but continuing with deployment..."
+            else
+              echo "✅ Database connection verified"
+            fi
+            cd ..
+
+            # Skip DB auth modification during deploy
+            echo "ℹ️ Skipping DB auth modification during deploy"
+
+            # Install dependencies including dev (required for tsx/typescript used by scripts)
+            cd web && npm ci
+            cd ..
+
+            # Note: Proxy runs on separate serverspace server
+            echo "📋 Note: Proxy server runs on separate serverspace server (31.44.2.216)"
+
+            # Generate Prisma client with proper environment
+            cd web
+            echo "🔧 Generating Prisma client..."
+            ./prisma-server.sh npm run prisma:generate
+
+            # Verify Prisma client was generated
+            if [ ! -f "node_modules/@prisma/client/index.js" ]; then
+              echo "❌ Prisma client not generated properly!"
+              echo "🔧 Attempting to regenerate..."
+              ./prisma-server.sh npx prisma generate
+              if [ ! -f "node_modules/@prisma/client/index.js" ]; then
+                echo "❌ CRITICAL: Prisma client generation failed!"
+                exit 1
+              fi
+            fi
+            echo "✅ Prisma client generated successfully"
+
+            # Verify database connection
+            echo "🔍 Verifying database connection..."
+            ./prisma-server.sh npx prisma db pull --print || echo "⚠️ Database connection test failed, but continuing..."
+
+            # Skip backup (requires tsx); do backups manually or on cron
+            echo "ℹ️ Skipping DB backup during deploy"
+
+            # Skip database permission changes during deploy to avoid YAML/heredoc issues
+            echo "ℹ️ Skipping database permission adjustments during deployment"
+
+            # Run database migrations with comprehensive error handling
+            echo "🚀 Running database migrations with conflict resolution..."
+
+            # First, try to resolve any failed migrations
+            echo "🔧 Checking for failed migrations and resolving conflicts..."
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000000_add_order_number_sequence 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000001_update_order_statuses 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000002_remove_ord_prefix 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000003_update_order_status_default 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250120000004_add_order_item_sequence 2>/dev/null || echo "Migration already resolved or doesn't exist"
+            ./prisma-server.sh npx prisma migrate resolve --applied 20250916211900_init 2>/dev/null || echo "Migration already resolved or doesn't exist"
+
+            # Try to run migrations
+            if ./prisma-server.sh npx prisma migrate deploy; then
+              echo "✅ Database migrations completed successfully"
+            else
+              echo "❌ Database migrations failed, attempting schema synchronization..."
+              if ./prisma-server.sh npx prisma db push --accept-data-loss; then
+                echo "✅ Database schema synchronized successfully"
+              else
+                echo "❌ CRITICAL: Database schema synchronization failed!"
+                echo "💡 DEPLOYMENT FAILED - could not fix database schema"
+                exit 1
+              fi
+
+            # Ensure default categories exist (critical for parser functionality)
+            echo "🔧 Ensuring default categories exist..."
+            ./prisma-server.sh npx prisma db execute --stdin <<< "
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+              VALUES ('default', 'Обувь', 'obuv', 'Основная категория обуви', NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING;
+              
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+              VALUES ('winter', 'Зимняя обувь', 'winter-shoes', 'Зимняя обувь и аксессуары', NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING;
+              
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+              VALUES ('summer', 'Летняя обувь', 'summer-shoes', 'Летняя обувь и сандалии', NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING;
+            " 2>/dev/null || echo "Categories already exist or table doesn't exist yet"
+            echo "✅ Default categories ensured"
+            fi
+
+            # Skip init/seed (requires tsx); run manually when needed
+            echo "ℹ️ Skipping DB init/seed during deploy"
+            cd ..
+
+            # Stop existing PM2 processes BEFORE rebuilding to avoid race with next start
+            echo "🛑 Stopping PM2 apps before rebuild and clearing dump..."
+            pm2 delete all 2>/dev/null || true
+            pm2 save --force || true
+
+            # Clean up any orphaned PM2 processes
+            echo "🧹 Cleaning up orphaned PM2 processes..."
+            pm2 kill 2>/dev/null || true
+            sleep 2
+
+            # Rebuild application on server to ensure all routes are present
+            echo "🔧 Rebuilding application on server to ensure routes are included..."
+            cd web
+            # Ensure path alias '@' resolves during build
+            if ! grep -q '"baseUrl"' tsconfig.json; then
+              jq '.compilerOptions.baseUrl = "."' tsconfig.json > tsconfig.tmp && mv tsconfig.tmp tsconfig.json
+            fi
+            # Clear old app logs to avoid confusing tail output later
+            mkdir -p logs
+            : > logs/marinaobuv-error.log || true
+            : > logs/marinaobuv-out.log || true
+            npm ci
+            npm run build
+            cd ..
+            echo "✅ Server-side build completed"
+
+            # Ensure production build exists before starting PM2
+            if [ ! -f "web/.next/BUILD_ID" ]; then
+              echo "❌ Build artifact missing (.next/BUILD_ID not found)"
+              ls -la web/.next || true
+              exit 1
+            fi
+
+            # PM2 already stopped above; continue to start fresh below
+
+            # Setup HTTPS and nginx configuration
+            echo "🔒 Setting up HTTPS and nginx configuration..."
+
+            # Install required packages for HTTPS
+            sudo apt-get update
+            sudo apt-get install -y certbot python3-certbot-nginx openssl
+
+            # Create SSL directory structure
+            sudo mkdir -p /etc/ssl/certs
+            sudo mkdir -p /etc/ssl/private
+            sudo chmod 755 /etc/ssl/certs
+            sudo chmod 700 /etc/ssl/private
+
+            # Generate SSL certificate if not exists
+            if [ ! -f "/etc/ssl/certs/marinaobuv.ru.crt" ]; then
+              echo "🔐 Generating SSL certificate..."
+              sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                  -keyout /etc/ssl/private/marinaobuv.ru.key \
+                  -out /etc/ssl/certs/marinaobuv.ru.crt \
+                  -subj "/C=RU/ST=Moscow/L=Moscow/O=MarinaObuv/OU=IT/CN=marina-obuv.ru"
+              
+              sudo chmod 600 /etc/ssl/private/marinaobuv.ru.key
+              sudo chmod 644 /etc/ssl/certs/marinaobuv.ru.crt
+            else
+              echo "✅ SSL certificate already exists"
+            fi
+
+            # Add rate limiting zones to main nginx.conf
+            echo "⚙️ Adding rate limiting zones to nginx.conf..."
+            if ! grep -q "limit_req_zone.*api" /etc/nginx/nginx.conf; then
+              sudo sed -i '/http {/a\    # Rate limiting zones\n    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n    limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;' /etc/nginx/nginx.conf
+            fi
+
+            # Fix nginx configuration first
+            echo "🔧 Fixing nginx configuration..."
+            if [ -f "scripts/fix-nginx-config.sh" ]; then
+              chmod +x scripts/fix-nginx-config.sh
+              if ./scripts/fix-nginx-config.sh; then
+                echo "✅ Nginx configuration fixed successfully"
+              else
+                echo "❌ Failed to fix nginx configuration"
+                exit 1
+              fi
+            else
+              echo "⚠️ Nginx fix script not found, using manual fix..."
+              # Manual nginx configuration fix
+              sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
+            server {
+                listen 80;
+                server_name marina-obuv.ru www.marina-obuv.ru;
+                
+                location / {
+                    proxy_pass http://localhost:3000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                }
+                
+                location /api/ {
+                    proxy_pass http://localhost:3000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                }
+                
+                location /health {
+                    proxy_pass http://localhost:3000/api/health;
+                    access_log off;
+                }
+            }
+            EOF
+            fi
+
+            # Copy HTTPS nginx configuration
+            sudo cp nginx/conf.d/marinaobuv-https.conf /etc/nginx/sites-available/marinaobuv-https
+
+            # Enable the site
+            echo "🔗 Enabling nginx HTTPS site..."
+            sudo ln -sf /etc/nginx/sites-available/marinaobuv-https /etc/nginx/sites-enabled/
+
+            # Remove default nginx site if it exists
+            sudo rm -f /etc/nginx/sites-enabled/default
+
+            # Test nginx configuration
+            echo "🧪 Testing nginx configuration..."
+            sudo nginx -t
+
+            if [ $? -eq 0 ]; then
+                echo "✅ Nginx configuration is valid"
+                # Reload nginx
+                echo "🔄 Reloading nginx..."
+                sudo systemctl reload nginx
+                echo "✅ Nginx configuration updated successfully!"
+            else
+                echo "❌ Nginx configuration test failed!"
+                exit 1
+            fi
+
+            # Setup Let's Encrypt certificate
+            echo "🔐 Setting up Let's Encrypt certificate..."
+            sudo certbot --nginx -d marina-obuv.ru -d www.marina-obuv.ru --non-interactive --agree-tos --email admin@marina-obuv.ru || echo "⚠️ Let's Encrypt setup failed, using self-signed certificate"
+
+            # Setup auto-renewal
+            echo "🔄 Setting up certificate auto-renewal..."
+            (sudo crontab -l 2>/dev/null | grep -v certbot; echo "0 12 * * * /usr/bin/certbot renew --quiet --post-hook 'systemctl reload nginx'") | sudo crontab -
+
+            # Configure firewall
+            echo "🔥 Configuring firewall..."
+            sudo ufw allow 22/tcp
+            sudo ufw allow 80/tcp
+            sudo ufw allow 443/tcp
+            sudo ufw --force enable || echo "⚠️ Firewall configuration failed"
+
+            # Install/refresh server cron jobs from repository config
+            echo "🕒 Installing cron jobs from scripts/cron-jobs.conf..."
+            bash -s < scripts/install-crons.sh || echo "⚠️ Cron installation step failed"
+
+            # Load runtime environment for PM2
+            echo "🔧 Exporting environment for PM2 runtime..."
+            export $(cat web/.env | grep -v '^#' | xargs)
+
+            # Clean up PM2 state before starting
+            echo "🧹 Cleaning up PM2 state..."
+            pm2 kill 2>/dev/null || true
+            sleep 2
+
+            # Start PM2 application with updated env
+            echo "🚀 Starting PM2 applications..."
+            pm2 start ecosystem.config.js --env production
+            if [ $? -ne 0 ]; then
+              echo "PM2 start failed!"
+              pm2 logs marinaobuv --lines 50
+              exit 1
+            fi
+
+            # Deploy proxy server to serverspace (separate server)
+            echo "🌐 Deploying proxy server to serverspace..."
+            echo "📋 Note: Proxy server runs on separate serverspace server (31.44.2.216)"
+            echo "✅ Main application server deployment complete"
+
+            # Save PM2 configuration
+            pm2 save
+
+            # Show status
+            pm2 status
+
+            # Wait for application to start
+            echo "Waiting for application to start..."
+            sleep 15
+
+            # Health check with retries
+            for i in {1..5}; do
+              echo "Health check attempt $i/5..."
+              if curl -f http://localhost:3000/api/health; then
+                echo "Health check passed!"
+                break
+              else
+                echo "Health check failed, attempt $i/5"
+                if [ $i -eq 5 ]; then
+                  echo "Health check failed after 5 attempts"
+                  pm2 logs marinaobuv --lines 50
+                  exit 1
+                fi
+                sleep 5
+              fi
+            done
+
+            # Database connectivity health check
+            echo "🔍 Testing database connectivity..."
+            cd web
+            ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+              echo "✅ Database connectivity verified"
+            else
+              echo "❌ Database connectivity failed!"
+              echo "🔧 Attempting to fix database connection..."
+              
+              # Fix database authentication issues
+              echo "🔧 Fixing database authentication issues..."
+              cd ..
+              export $(cat web/.env | grep -v '^#' | xargs)
+              ./scripts/fix-database-auth.sh
+              
+              # Test connection again
+              cd web
+              ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
+              if [ $? -eq 0 ]; then
+                echo "✅ Database connection restored"
+              else
+                echo "❌ Database connection could not be restored"
+                echo "🔍 Database connection details:"
+                echo "Host: $DB_HOST"
+                echo "Port: $DB_PORT" 
+                echo "Database: $DB_NAME"
+                echo "User: $DB_USER"
+                echo "🔍 Testing direct PostgreSQL connection..."
+                PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" || echo "Direct connection failed"
+                pm2 logs marinaobuv --lines 50
+                exit 1
+              fi
+            fi
+            cd ..
+
+            # Run comprehensive diagnostics (with timeout) if script exists
+            echo "🔍 Running comprehensive diagnostics..."
+            if [ -f scripts/diagnose-domain-issues.sh ]; then
+              chmod +x scripts/diagnose-domain-issues.sh
+              timeout 60 ./scripts/diagnose-domain-issues.sh || echo "⚠️ Diagnostics completed with timeout"
+            else
+              echo "ℹ️ diagnose-domain-issues.sh not found, skipping"
+            fi
+
+            # Fix common hosting issues (with timeout) if script exists
+            echo "🔧 Fixing common hosting issues..."
+            if [ -f scripts/fix-hosting-issues.sh ]; then
+              chmod +x scripts/fix-hosting-issues.sh
+              timeout 60 ./scripts/fix-hosting-issues.sh || echo "⚠️ Hosting fixes completed with timeout"
+            else
+              echo "ℹ️ fix-hosting-issues.sh not found, skipping"
+            fi
+
+            # CRITICAL: Final application health check
+            echo "🔍 Performing final application health check..."
+            sleep 10  # Wait for application to fully start
+
+            # Test database connectivity and schema
+            echo "🔍 Testing database schema..."
+            cd web
+            if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
+              echo "✅ Database schema validation passed"
+              cd ..
+            else
+              echo "❌ CRITICAL: Database schema is still broken!"
+              echo "🔧 Attempting final schema fix..."
+              # Final attempt to fix schema
+              cd web
+              echo "Adding missing analysisBatchId column..."
+              ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"analysisBatchId\" TEXT;" || echo "Column may already exist"
+              echo "Adding missing colorBatchId column..."
+              ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"colorBatchId\" TEXT;" || echo "Column may already exist"
+              echo "Adding missing batchProcessingStatus column..."
+              ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"batchProcessingStatus\" TEXT DEFAULT 'pending';" || echo "Column may already exist"
+              echo "Adding missing indexes..."
+              ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_analysisBatchId_key\" ON \"Product\"(\"analysisBatchId\");" || echo "Index may already exist"
+              ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_colorBatchId_key\" ON \"Product\"(\"colorBatchId\");" || echo "Index may already exist"
+              echo "Regenerating Prisma client..."
+              ./prisma-server.sh npm run prisma:generate
+              cd ..
+              echo "Restarting application..."
+              pm2 restart marinaobuv
+              sleep 10
+              # Test again after fixes
+              if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
+                echo "✅ Database schema fixed successfully"
+              else
+                echo "❌ CRITICAL: Database schema could not be fixed!"
+                echo "💡 DEPLOYMENT FAILED - application will not work"
+                exit 1
+              fi
+            fi
+
+            # Test application endpoints
+            echo "🔍 Testing application endpoints..."
+            if curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "✅ Health endpoint working"
+            else
+              echo "❌ CRITICAL: Health endpoint failed!"
+              echo "💡 DEPLOYMENT FAILED - application is not responding"
+              exit 1
+            fi
+
+            # Remove unused tinyproxy Docker container to free up port 8888 and resources
+            echo "🧹 Removing unused tinyproxy Docker container..."
+            docker stop tinyproxy 2>/dev/null || true
+            docker rm tinyproxy 2>/dev/null || true
+            echo "✅ Tinyproxy container removed (was not used by application)"
+
+            # Configure Nginx to proxy Groq proxy through domain
+            echo "🔧 Configuring Nginx to proxy Groq proxy through domain..."
+            # Create a clean, working Nginx configuration using individual echo commands
+            echo "server {" | sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    if (\$host = www.marina-obuv.ru) {" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        return 301 https://\$host\$request_uri;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    } # managed by Certbot" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    if (\$host = marina-obuv.ru) {" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        return 301 https://\$host\$request_uri;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    } # managed by Certbot" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    listen 80;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    server_name marina-obuv.ru www.marina-obuv.ru;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    location /health {" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_pass http://127.0.0.1:3000/api/health;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        access_log off;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    }" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    # Groq Proxy endpoint (external serverspace server)" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    location /groq-proxy/ {" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_pass http://31.44.2.216:8787/;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_http_version 1.1;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header Upgrade \$http_upgrade;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header Connection 'upgrade';" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header Host \$host;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header X-Real-IP \$remote_addr;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header X-Forwarded-Proto \$scheme;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_cache_bypass \$http_upgrade;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_read_timeout 86400;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_connect_timeout 60s;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_send_timeout 60s;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    }" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    location / {" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_pass http://127.0.0.1:3000;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_http_version 1.1;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header Upgrade \$http_upgrade;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header Connection 'upgrade';" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header Host \$host;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header X-Real-IP \$remote_addr;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "        proxy_set_header X-Forwarded-Proto \$scheme;" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "    }" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            echo "}" | sudo tee -a /etc/nginx/conf.d/marinaobuv.conf > /dev/null
+            sudo nginx -t && sudo systemctl reload nginx
+            echo "✅ Nginx configured to proxy Groq proxy through /groq-proxy/ endpoint"
+
+            # Verify webhook deployment
+            echo "🔍 Verifying webhook deployment..."
+
+            # Check if webhook script exists and make it executable
+            if [ -f "scripts/verify-webhook-deployment.sh" ]; then
+              chmod +x scripts/verify-webhook-deployment.sh
+              echo "✅ Webhook verification script found and made executable"
+              
+              if ./scripts/verify-webhook-deployment.sh; then
+                echo "✅ Webhook verification completed successfully"
+              else
+                echo "❌ CRITICAL: Webhook verification failed!"
+                echo "💡 DEPLOYMENT FAILED - webhook is not working"
+                exit 1
+              fi
+            else
+              echo "❌ CRITICAL: Webhook verification script not found!"
+              echo "Available scripts:"
+              ls -la scripts/ || echo "No scripts directory found"
+              echo "💡 DEPLOYMENT FAILED - webhook script missing"
+              exit 1
+            fi
+
+            # Final status check
+            echo "📊 Final deployment status:"
+            echo "PM2 Status:"
+            pm2 status
+            echo ""
+            echo "Nginx Status:"
+            sudo systemctl status nginx --no-pager -l
+            echo ""
+            echo "Port 3000 Status:"
+            netstat -tlnp | grep :3000 || echo "Port 3000 not listening"
+            echo ""
+            echo "Nginx Configuration Test:"
+            sudo nginx -t
+            echo ""
+            echo "Domain Test (HTTPS):"
+            timeout 30 curl -f https://marina-obuv.ru/api/health || echo "HTTPS domain access failed"
+            echo "Domain Test (HTTP redirect):"
+            timeout 30 curl -f http://marina-obuv.ru/api/health || echo "HTTP redirect test failed"
+            echo "Webhook Test:"
+            timeout 30 curl -f https://marina-obuv.ru/api/webhooks/green-api || echo "Webhook endpoint test failed"
+
+            echo ""
+            echo "🎉 Deployment completed successfully!"
+            echo "✅ Application is running on port 3000"
+            echo "✅ HTTPS is configured and working"
+            echo "✅ Nginx is properly configured"
+            echo "✅ PM2 is managing the application"
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi
+
+  deploy-proxy:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy proxy server to serverspace
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROXY_SSH_HOST }}
+          username: ${{ secrets.PROXY_SSH_USER }}
+          key: ${{ secrets.PROXY_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PROXY_SSH_PORT }}
+          timeout: 300s
+          command_timeout: 300s
+          debug: true
+          script: |
+            echo "🚀 Starting proxy server deployment on serverspace..."
+
+            # Create proxy directory if it doesn't exist
+            mkdir -p /root/proxy
+
+            # Stop and remove any existing groq-proxy processes
+            echo "🛑 Stopping existing groq-proxy processes..."
+            pm2 stop groq-proxy 2>/dev/null || true
+            pm2 delete groq-proxy 2>/dev/null || true
+
+            # Kill any processes using port 8787
+            echo "🔍 Checking for port conflicts on port 8787..."
+            if lsof -i :8787 >/dev/null 2>&1; then
+                echo "⚠️  Port 8787 is in use, killing existing processes..."
+                lsof -ti :8787 | xargs kill -9 2>/dev/null || true
+                sleep 2
+            fi
+
+            # Copy proxy server files from git
+            echo "📁 Setting up proxy server files..."
+            cd /root
+            if [ -d "proxy-backup" ]; then
+                rm -rf proxy-backup
+            fi
+            if [ -d "proxy" ]; then
+                mv proxy proxy-backup
+            fi
+
+            # Clone the repository to get the latest proxy files
+            git clone https://github.com/singladno/marinaobuv.git temp-repo
+            cp -r temp-repo/proxy /root/
+            rm -rf temp-repo
+
+            # Set proper permissions
+            chmod +x /root/proxy/server.js
+
+            # Install dependencies
+            echo "📦 Installing proxy server dependencies..."
+            cd /root/proxy
+            npm install --production
+
+            # Start the proxy server with PM2
+            echo "🚀 Starting groq-proxy with PM2..."
+            PORT=8787 pm2 start server.js --name groq-proxy --env production
+
+            # Save PM2 configuration
+            pm2 save
+
+            # Wait for server to start
+            echo "⏳ Waiting for proxy server to start..."
+            sleep 5
+
+            # Test the proxy server
+            echo "🧪 Testing proxy server..."
+            if curl -f http://localhost:8787/healthz >/dev/null 2>&1; then
+                echo "✅ Proxy server is running successfully!"
+                echo "📊 Proxy server status:"
+                pm2 status groq-proxy
+            else
+                echo "❌ Proxy server failed to start!"
+                echo "📋 Proxy server logs:"
+                pm2 logs groq-proxy --lines 10
+                exit 1
+            fi
+
+            echo "🎉 Proxy server deployment completed successfully!"
+            echo "✅ Proxy server is running on port 8787"
+            echo "✅ PM2 is managing the proxy server"

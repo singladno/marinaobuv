@@ -1,0 +1,312 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { X, Filter, Check, Tag } from 'lucide-react';
+
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select';
+import { useGruzchikFilter } from '@/contexts/GruzchikFilterContext';
+import { useGruzchikView } from '@/contexts/GruzchikViewContext';
+import { useGruzchikOrders } from '@/hooks/useGruzchikOrders';
+import { ViewToggle } from './ViewToggle';
+import { cn } from '@/lib/utils';
+
+interface GruzchikFilterModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function GruzchikFilterModal({
+  isOpen,
+  onClose,
+}: GruzchikFilterModalProps) {
+  const { filters, updateFilter, clearFilters, hasActiveFilters } =
+    useGruzchikFilter();
+  const { viewMode, setViewMode } = useGruzchikView();
+  const { orders } = useGruzchikOrders('Наличие');
+
+  // Extract unique providers and clients from orders
+  const [providers, setProviders] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [clients, setClients] = useState<
+    Array<{ id: string; name: string; phone: string; label: string | null }>
+  >([]);
+
+  useEffect(() => {
+    if (orders.length > 0) {
+      // Extract unique clients from orders
+      const clientMap = new Map<
+        string,
+        { name: string; phone: string; label: string | null }
+      >();
+      const providerMap = new Map<string, string>();
+
+      orders.forEach(order => {
+        // Extract clients
+        if (order.user) {
+          clientMap.set(order.user.phone, {
+            name: order.user.name || 'Без имени',
+            phone: order.user.phone,
+            label: order.label,
+          });
+        }
+
+        // Extract providers from order items
+        order.items.forEach(item => {
+          // Try to extract provider from product data or item data
+          if (item.product && 'provider' in item.product) {
+            const provider = (item.product as any).provider;
+            if (provider && provider.id && provider.name) {
+              providerMap.set(provider.id, provider.name);
+            }
+          }
+          // Alternative: check if provider info is in item data
+          if ((item as any).provider) {
+            providerMap.set((item as any).provider, (item as any).provider);
+          }
+        });
+      });
+
+      setClients(
+        Array.from(clientMap.entries()).map(([phone, data]) => ({
+          id: phone,
+          ...data,
+        }))
+      );
+
+      setProviders(
+        Array.from(providerMap.entries()).map(([id, name]) => ({ id, name }))
+      );
+    }
+  }, [orders]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <div className="flex h-full w-full max-w-md transform flex-col rounded-t-2xl bg-white shadow-xl transition-all sm:h-auto sm:rounded-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Filter className="h-5 w-5 text-gray-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Фильтры</h2>
+            {hasActiveFilters && (
+              <Badge variant="secondary" className="text-xs">
+                Активны
+              </Badge>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-10 w-10 p-0"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
+          {/* View Mode Toggle */}
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-900">
+              Группировка
+            </h3>
+            <ViewToggle mode={viewMode} onModeChange={setViewMode} />
+          </div>
+
+          {/* Availability Status Filter */}
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-900">Фильтры</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() =>
+                  updateFilter(
+                    'availabilityStatus',
+                    filters.availabilityStatus === 'unset' ? 'all' : 'unset'
+                  )
+                }
+                className={cn(
+                  'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors',
+                  filters.availabilityStatus === 'unset'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                )}
+              >
+                <span className="text-sm">Только непроверенные</span>
+                {filters.availabilityStatus === 'unset' && (
+                  <Check className="h-4 w-4 text-blue-600" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Provider Filter */}
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-900">
+              Поставщик
+            </h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => updateFilter('providerId', null)}
+                className={cn(
+                  'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors',
+                  filters.providerId === null
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                )}
+              >
+                <span className="text-sm">Все поставщики</span>
+                {filters.providerId === null && (
+                  <Check className="h-4 w-4 text-blue-600" />
+                )}
+              </button>
+              {providers.length > 0 ? (
+                providers.map(provider => (
+                  <button
+                    key={provider.id}
+                    onClick={() => updateFilter('providerId', provider.id)}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors',
+                      filters.providerId === provider.id
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                    )}
+                  >
+                    <span className="text-sm">{provider.name}</span>
+                    {filters.providerId === provider.id && (
+                      <Check className="h-4 w-4 text-blue-600" />
+                    )}
+                  </button>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-sm text-gray-500">
+                  Нет поставщиков в заказах
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Client Filter */}
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-900">Клиент</h3>
+            <Select
+              value={filters.clientId || 'all'}
+              onValueChange={value =>
+                updateFilter('clientId', value === 'all' ? null : value)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Выберите клиента">
+                  {filters.clientId
+                    ? (() => {
+                        const selectedClient = clients.find(
+                          c => c.id === filters.clientId
+                        );
+                        if (selectedClient) {
+                          return (
+                            <div className="flex flex-col text-left">
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm font-medium">
+                                  {selectedClient.name}
+                                </span>
+                                {selectedClient.label && (
+                                  <>
+                                    <span className="text-gray-400">-</span>
+                                    <Tag className="h-3 w-3 text-blue-600" />
+                                    <span className="text-xs font-medium text-blue-600">
+                                      {selectedClient.label}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {selectedClient.phone}
+                              </span>
+                            </div>
+                          );
+                        }
+                        return 'Все клиенты';
+                      })()
+                    : 'Все клиенты'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все клиенты</SelectItem>
+                {clients.length === 0 ? (
+                  <SelectItem value="no-clients">
+                    Нет клиентов в заказах
+                  </SelectItem>
+                ) : (
+                  clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-medium">
+                            {client.name}
+                          </span>
+                          {client.label && (
+                            <>
+                              <span className="text-gray-400">-</span>
+                              <Tag className="h-3 w-3 text-blue-600" />
+                              <span className="text-xs font-medium text-blue-600">
+                                {client.label}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {client.phone}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-auto border-t border-gray-200 px-6 py-4">
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={clearFilters}
+              className="flex-1"
+              disabled={!hasActiveFilters}
+            >
+              Сбросить
+            </Button>
+            <Button onClick={onClose} className="flex-1">
+              Применить
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,6 @@
+# Migration: Add Order Item ID Sequence
+# This migration adds a sequence for generating sequential order item IDs
+# Format: 1, 2, 3, 4, 5, etc.
+
+[metadata]
+description = "Add sequence for order item IDs starting from 1"

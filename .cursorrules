@@ -1,0 +1,123 @@
+# MarinaObuv Project Rules for Cursor AI
+
+## CRITICAL RULE: Component Size Limit
+
+Components must not exceed 120 lines of code. This is enforced by ESLint and must be followed strictly.
+
+## When to Decompose Components
+
+- Component exceeds 120 lines
+- Component has multiple responsibilities
+- Component has complex state management
+- Component has multiple useEffect hooks
+- Component renders multiple distinct sections
+
+## Decomposition Strategies
+
+1. Extract custom hooks for state logic (move to `hooks/` directory)
+2. Create sub-components for distinct UI sections
+3. Extract utility functions to `utils/` directory
+4. Split complex components into multiple files.
+
+## File Structure
+
+```
+web/src/
+├── app/                 # Next.js app directory
+├── components/          # Reusable UI components
+│   ├── ui/             # Basic UI components
+│   └── features/       # Feature-specific components
+├── hooks/              # Custom React hooks
+├── utils/              # Utility functions
+├── types/              # TypeScript definitions
+└── lib/                # Third-party configurations
+```
+
+## Naming Conventions
+
+- Components: PascalCase (e.g., `UserProfile.tsx`)
+- Hooks: camelCase starting with "use" (e.g., `useUserData.ts`)
+- Utils: camelCase (e.g., `formatDate.ts`)
+- Types: PascalCase (e.g., `User.ts`)
+
+## Code Quality Rules
+
+- ESLint enforces max-lines: 120
+- Prettier formats code automatically
+- TypeScript provides type safety
+- React Hooks rules are enforced
+- Import organization is automatic
+
+## Examples
+
+### ❌ Bad - Component too large
+
+```tsx
+// UserDashboard.tsx - 200+ lines
+const UserDashboard = () => {
+  // 200+ lines of mixed concerns
+  return <div>...</div>;
+};
+```
+
+### ✅ Good - Decomposed component
+
+```tsx
+// UserDashboard.tsx - 50 lines
+const UserDashboard = () => {
+  const { user, loading, error } = useUser();
+  const { orders } = useOrders(user?.id);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div>
+      <UserProfile user={user} />
+      <OrdersList orders={orders} />
+    </div>
+  );
+};
+
+// hooks/useUser.ts
+export const useUser = () => {
+  // User-related logic
+};
+
+// hooks/useOrders.ts
+export const useOrders = (userId: string) => {
+  // Orders-related logic
+};
+```
+
+## Technology Stack
+
+- Next.js 15.5.3 with App Router
+- TypeScript
+- Tailwind CSS 4
+- React 19.1.0
+- ESLint + Prettier
+
+## AI Agent Instructions
+
+When working on this project:
+
+1. Always check component size - if approaching 120 lines, decompose
+2. Extract custom hooks for complex state logic
+3. Create sub-components for distinct UI sections
+4. Use utility functions for pure logic
+5. Follow TypeScript best practices
+6. Maintain consistent code style
+7. Test components thoroughly
+8. Handle errors gracefully
+9. Optimize performance with React patterns
+10. Keep components focused and maintainable
+
+## Enforcement
+
+- ESLint max-lines rule catches violations
+- Pre-commit hooks prevent large components
+- Code reviews check component size
+- Automated checks in CI/CD pipeline
+
+Remember: The 120-line component limit is the most important rule. When in doubt, decompose!

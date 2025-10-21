@@ -1,0 +1,53 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/server/db';
+import { getSession } from '@/lib/server/session';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ itemId: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { itemId } = await params;
+
+    // Get total messages for this order item (excluding messages sent by the admin)
+    const totalMessages = await prisma.orderItemMessage.count({
+      where: {
+        orderItemId: itemId,
+        userId: {
+          not: session.userId, // Exclude messages sent by the admin themselves
+        },
+      },
+    });
+
+    // Get messages read by admin (excluding messages sent by the admin)
+    const readMessages = await prisma.orderItemMessageRead.count({
+      where: {
+        message: {
+          orderItemId: itemId,
+          userId: {
+            not: session.userId, // Exclude messages sent by the admin themselves
+          },
+        },
+        userId: session.userId,
+      },
+    });
+
+    const unreadCount = totalMessages - readMessages;
+
+    return NextResponse.json({
+      unreadCount: Math.max(0, unreadCount),
+      totalMessages,
+    });
+  } catch (error) {
+    console.error('Failed to get unread message count:', error);
+    return NextResponse.json(
+      { error: 'Failed to get unread message count' },
+      { status: 500 }
+    );
+  }
+}

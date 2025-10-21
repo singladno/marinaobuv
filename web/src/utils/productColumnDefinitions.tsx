@@ -1,0 +1,244 @@
+import { createColumnHelper } from '@tanstack/react-table';
+
+import { ProductActionsCell } from '@/components/features/ProductActionsCell';
+import { ProductArticleCell } from '@/components/features/ProductArticleCell';
+import { ProductCategoryCell } from '@/components/features/ProductCategoryCell';
+import { ProductDateCell } from '@/components/features/ProductDateCell';
+import { ProductDescriptionCell } from '@/components/features/ProductDescriptionCell';
+import { ProductGenderCell } from '@/components/features/ProductGenderCell';
+import { ProductGptDebugCell } from '@/components/features/ProductGptDebugCell';
+import { ProductImagesCell } from '@/components/features/ProductImagesCell';
+import { ProductNameCell } from '@/components/features/ProductNameCell';
+import { ProductPriceCell } from '@/components/features/ProductPriceCell';
+import { ProductProviderCell } from '@/components/features/ProductProviderCell';
+import { ProductSeasonCell } from '@/components/features/ProductSeasonCell';
+import { ProductSelectionCheckbox } from '@/components/features/ProductSelectionCheckbox';
+import { ProductSizesCell } from '@/components/features/ProductSizesCell';
+import type { CategoryNode } from '@/components/ui/CategorySelector';
+import type { Product, ProductUpdateData } from '@/types/product';
+
+type ProductWithSelected = Product & { selected?: boolean };
+
+const columnHelper = createColumnHelper<ProductWithSelected>();
+
+export function createProductColumnDefinitions({
+  onUpdateProduct,
+  onDeleteProduct,
+  categories,
+  onToggle,
+  onSelectAll,
+  allSelected,
+  someSelected,
+}: {
+  onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
+  onDeleteProduct: (id: string) => Promise<void>;
+  categories: CategoryNode[];
+  onToggle?: (id: string) => void;
+  onSelectAll?: (selectAll: boolean) => void;
+  allSelected?: boolean;
+  someSelected?: boolean;
+}) {
+  return [
+    // Selection column
+    columnHelper.display({
+      id: 'select',
+      header: () =>
+        onSelectAll ? (
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={allSelected || false}
+              ref={input => {
+                if (input)
+                  input.indeterminate =
+                    (someSelected || false) && !(allSelected || false);
+              }}
+              onChange={e => onSelectAll(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              title={allSelected ? 'Снять выделение со всех' : 'Выделить все'}
+            />
+          </div>
+        ) : (
+          ''
+        ),
+      cell: info => (
+        <ProductSelectionCheckbox
+          id={info.row.original.id}
+          selected={Boolean(info.row.original.selected)}
+          onToggle={onToggle || (() => {})}
+        />
+      ),
+      meta: {
+        frozen: 'left',
+      },
+    }),
+
+    // Images column - show row of images with hover toggles and modal
+    columnHelper.accessor('images', {
+      id: 'images',
+      header: 'Изображения',
+      cell: ({ row }) => <ProductImagesCell product={row.original} />,
+    }),
+
+    // Name column
+    columnHelper.accessor('name', {
+      header: 'Название',
+      cell: ({ row }) => (
+        <ProductNameCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+          disabled={row.original.isActive}
+        />
+      ),
+    }),
+
+    // Article column
+    columnHelper.accessor('article', {
+      header: 'Артикул',
+      cell: ({ row }) => (
+        <ProductArticleCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+          disabled={row.original.isActive}
+        />
+      ),
+    }),
+
+    // Description column
+    columnHelper.accessor('description', {
+      header: 'Описание',
+      cell: ({ row }) => (
+        <ProductDescriptionCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+        />
+      ),
+      size: 300, // Wider column for description
+    }),
+
+    // Category column
+    columnHelper.accessor('category.name', {
+      id: 'category',
+      header: 'Категория',
+      cell: ({ row }) => (
+        <ProductCategoryCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+          categories={categories}
+        />
+      ),
+    }),
+
+    // Provider column
+    columnHelper.display({
+      id: 'provider',
+      header: 'Поставщик',
+      cell: ({ row }) => <ProductProviderCell product={row.original} />,
+    }),
+
+    // Price column
+    columnHelper.accessor('pricePair', {
+      header: 'Цена (руб.)',
+      cell: ({ row, getValue }) => (
+        <ProductPriceCell
+          product={row.original}
+          priceInKopecks={getValue()}
+          onUpdateProduct={onUpdateProduct}
+        />
+      ),
+      size: 200, // Twice as wide
+    }),
+
+    // Gender column
+    columnHelper.accessor('gender', {
+      header: 'Пол',
+      cell: ({ row, getValue }) => (
+        <ProductGenderCell
+          product={row.original}
+          gender={getValue()}
+          onUpdateProduct={onUpdateProduct}
+          disabled={row.original.isActive}
+        />
+      ),
+      size: 200, // Twice as wide
+    }),
+
+    // Season column
+    columnHelper.accessor('season', {
+      header: 'Сезон',
+      cell: ({ row, getValue }) => (
+        <ProductSeasonCell
+          product={row.original}
+          season={getValue()}
+          onUpdateProduct={onUpdateProduct}
+          disabled={row.original.isActive}
+        />
+      ),
+      size: 200, // Twice as wide
+    }),
+
+    // Sizes column
+    columnHelper.accessor('sizes', {
+      header: 'Размеры',
+      cell: ({ getValue, row }) => (
+        <ProductSizesCell
+          sizes={getValue()}
+          disabled={row.original.isActive}
+          onChange={async sizes => {
+            try {
+              const response = await fetch(
+                `/api/admin/products/${row.original.id}/sizes`,
+                {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ sizes }),
+                }
+              );
+
+              if (!response.ok) {
+                throw new Error('Failed to update sizes');
+              }
+
+              // Reload the page to reflect changes
+              window.location.reload();
+            } catch (error) {
+              console.error('Error updating sizes:', error);
+            }
+          }}
+        />
+      ),
+    }),
+
+    // Created date column
+    columnHelper.accessor('createdAt', {
+      header: 'Создан',
+      cell: ({ getValue }) => <ProductDateCell date={getValue()} />,
+    }),
+
+    // GPT Debug column
+    columnHelper.display({
+      id: 'gptDebug',
+      header: 'GPT Debug',
+      cell: ({ row }) => <ProductGptDebugCell product={row.original} />,
+      size: 150,
+    }),
+
+    // Actions column
+    columnHelper.display({
+      id: 'actions',
+      header: () => '',
+      cell: ({ row }) => (
+        <ProductActionsCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+          onDeleteProduct={onDeleteProduct}
+        />
+      ),
+      meta: {
+        frozen: 'right',
+      },
+    }),
+  ];
+}
