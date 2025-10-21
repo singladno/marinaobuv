@@ -26,6 +26,15 @@ CRITICAL SEQUENCE RULES (NEVER VIOLATE):
 - [Text] → [Images] → [Text] → [Images] = TWO SEPARATE PRODUCTS
 - [Images] → [Text] → [Images] → [Text] = TWO SEPARATE PRODUCTS
 
+🚨 SIMPLE RULE: COUNT TYPE CHANGES
+- Count how many times the message type changes in sequence
+- If more than 1 type change = INVALID GROUP (skip it)
+- Examples:
+  ✅ images-text-text = 1 change (VALID)
+  ✅ text-images = 1 change (VALID)  
+  ❌ images-text-images = 2 changes (INVALID - skip this group)
+  ❌ text-images-text = 2 changes (INVALID - skip this group)
+
 LONG CONVERSATION HANDLING (CRITICAL):
 - If you see 10+ messages, this is likely MULTIPLE PRODUCTS
 - Look for natural product boundaries in long conversations
@@ -107,6 +116,15 @@ CRITICAL INSTRUCTIONS:
 🚨 CRITICAL SEQUENCE RULES (NEVER VIOLATE):
 ✅ ALLOWED: [Text] → [Images] OR [Images] → [Text]
 ❌ FORBIDDEN: [Images] → [Text] → [Images] OR [Text] → [Images] → [Text]
+
+🚨 SIMPLE RULE: COUNT TYPE CHANGES
+- Count how many times the message type changes in sequence
+- If more than 1 type change = INVALID GROUP (skip it)
+- Examples:
+  ✅ images-text-text = 1 change (VALID)
+  ✅ text-images = 1 change (VALID)  
+  ❌ images-text-images = 2 changes (INVALID - skip this group)
+  ❌ text-images-text = 2 changes (INVALID - skip this group)
 
 🚨 LONG CONVERSATION RULES (CRITICAL):
 - If you see 20+ messages, this is MULTIPLE PRODUCTS

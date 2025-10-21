@@ -418,9 +418,63 @@ export class GroqSequentialProcessor {
 
     console.log(`  ✅ Has text: ${hasText}`);
     console.log(`  ✅ Has image: ${hasImage}`);
-    console.log(`  ✅ Valid group: ${hasText && hasImage}`);
 
-    return hasText && hasImage;
+    // Basic content validation
+    if (!hasText || !hasImage) {
+      console.log(`  ❌ Invalid group: missing text or images`);
+      return false;
+    }
+
+    // CRITICAL: Validate sequence - only one type change allowed
+    const isValidSequence = this.validateSequenceTypeChanges(messages);
+    console.log(`  ✅ Valid sequence: ${isValidSequence}`);
+    console.log(`  ✅ Valid group: ${isValidSequence}`);
+
+    return isValidSequence;
+  }
+
+  /**
+   * Validate sequence - only one type change allowed per group
+   */
+  private validateSequenceTypeChanges(messages: any[]): boolean {
+    if (messages.length < 2) return true;
+
+    // Sort messages by timestamp
+    const sortedMessages = [...messages].sort(
+      (a, b) =>
+        new Date(a.createdAt || a.timestamp).getTime() -
+        new Date(b.createdAt || b.timestamp).getTime()
+    );
+
+    // Create type sequence: 'T' for text, 'I' for image
+    const types = sortedMessages.map(msg => {
+      const hasText = msg.text && msg.text.trim().length > 0;
+      const hasImage =
+        msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage');
+
+      if (hasText && hasImage) return 'B'; // Both
+      if (hasText) return 'T';
+      if (hasImage) return 'I';
+      return 'N'; // Neither
+    });
+
+    // Count type changes
+    let typeChanges = 0;
+    for (let i = 1; i < types.length; i++) {
+      if (types[i] !== types[i - 1]) {
+        typeChanges++;
+      }
+    }
+
+    console.log(
+      `  🔍 Sequence types: ${types.join('')}, changes: ${typeChanges}`
+    );
+
+    // Only allow 0 or 1 type change
+    const isValid = typeChanges <= 1;
+    console.log(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
+
+    return isValid;
   }
 
   /**
