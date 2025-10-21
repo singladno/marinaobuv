@@ -48,7 +48,7 @@ export class GroqGroupingService {
 
     try {
       console.log(
-        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Maverick 17B)...`
+        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Scout 17B)...`
       );
 
       // Prepare messages for grouping
@@ -56,7 +56,7 @@ export class GroqGroupingService {
 
       // Prepare the full request for debugging
       const fullRequest = {
-        model: 'llama-3.1-8b-instant',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: [
           {
             role: 'system',
@@ -116,7 +116,7 @@ export class GroqGroupingService {
 
     try {
       console.log(
-        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Maverick 17B)...`
+        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Scout 17B)...`
       );
 
       // Prepare messages for grouping
@@ -124,7 +124,7 @@ export class GroqGroupingService {
 
       // Prepare the full request for debugging
       const fullRequest = {
-        model: 'llama-3.1-8b-instant',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: [
           {
             role: 'system',
