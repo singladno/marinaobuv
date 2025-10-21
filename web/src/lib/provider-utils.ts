@@ -1,4 +1,5 @@
 import { prisma } from './db-node';
+import { extractNormalizedPhone } from './utils/whatsapp-phone-extractor';
 
 /**
  * Extract provider name and place from WhatsApp sender name
@@ -53,9 +54,14 @@ export async function getOrCreateProvider(
 ): Promise<string | null> {
   if (!phone && !name) return null;
 
-  // Try by phone first if available
-  if (phone) {
-    const byPhone = await prisma.provider.findFirst({ where: { phone } });
+  // Extract normalized phone from WhatsApp ID or regular phone
+  const normalizedPhone = extractNormalizedPhone(phone);
+
+  // Try by normalized phone first if available
+  if (normalizedPhone) {
+    const byPhone = await prisma.provider.findFirst({
+      where: { phone: normalizedPhone },
+    });
     if (byPhone) {
       // Update place if provided and not already set
       if (place && !byPhone.place) {
@@ -73,10 +79,10 @@ export async function getOrCreateProvider(
     const byName = await prisma.provider.findFirst({ where: { name } });
     if (byName) {
       // Backfill phone if missing
-      if (phone && !byName.phone) {
+      if (normalizedPhone && !byName.phone) {
         await prisma.provider.update({
           where: { id: byName.id },
-          data: { phone },
+          data: { phone: normalizedPhone },
         });
       }
       // Update place if provided and not already set
@@ -93,8 +99,8 @@ export async function getOrCreateProvider(
   // Create new provider
   const created = await prisma.provider.create({
     data: {
-      name: name ?? (phone as string),
-      phone: phone ?? null,
+      name: name ?? (normalizedPhone as string),
+      phone: normalizedPhone ?? null,
       place: place,
     },
   });

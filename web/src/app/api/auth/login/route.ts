@@ -5,6 +5,7 @@ import { prisma } from '@/lib/server/db';
 import { verifyPassword } from '@/lib/server/password';
 import { createSession } from '@/lib/server/session';
 import { normalizePhoneToE164 } from '@/lib/server/sms';
+import { extractNormalizedPhone } from '@/lib/utils/whatsapp-phone-extractor';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,9 +23,25 @@ export async function POST(req: NextRequest) {
 
     // If user doesn't exist, check if there's a provider with this phone
     if (!user) {
-      const provider = await prisma.provider.findFirst({
+      // First try exact match with normalized phone
+      let provider = await prisma.provider.findFirst({
         where: { phone: normalizedPhone },
       });
+
+      // If no exact match, try to find provider by WhatsApp ID format
+      if (!provider) {
+        // Look for providers with WhatsApp ID format that matches this phone
+        const allProviders = await prisma.provider.findMany({
+          where: { phone: { not: null } },
+        });
+
+        provider =
+          allProviders.find(p => {
+            if (!p.phone) return false;
+            const extractedPhone = extractNormalizedPhone(p.phone);
+            return extractedPhone === normalizedPhone;
+          }) || null;
+      }
 
       if (provider) {
         // Create user and connect to provider
@@ -63,9 +80,25 @@ export async function POST(req: NextRequest) {
     }
     // If existing user doesn't have a provider but there's a provider with this phone, connect them
     else if (!user.providerId) {
-      const provider = await prisma.provider.findFirst({
+      // First try exact match with normalized phone
+      let provider = await prisma.provider.findFirst({
         where: { phone: normalizedPhone },
       });
+
+      // If no exact match, try to find provider by WhatsApp ID format
+      if (!provider) {
+        const allProviders = await prisma.provider.findMany({
+          where: { phone: { not: null } },
+        });
+
+        provider =
+          allProviders.find(p => {
+            if (!p.phone) return false;
+            const extractedPhone = extractNormalizedPhone(p.phone);
+            return extractedPhone === normalizedPhone;
+          }) || null;
+      }
+
       if (provider && user.role !== 'ADMIN') {
         updatedUser = await prisma.user.update({
           where: { id: user.id },

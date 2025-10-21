@@ -10,6 +10,7 @@ import { prisma } from '../lib/db-node';
 import { ParsingProgressService } from '../lib/services/parsing-progress-service';
 import { env } from '../lib/env';
 import { greenApiFetcher } from '../lib/green-api-fetcher';
+import { extractNormalizedPhone } from '../lib/utils/whatsapp-phone-extractor';
 
 async function processMessage(
   message: any,
@@ -38,12 +39,15 @@ async function processMessage(
     // Get media URL from downloadUrl field
     const mediaUrl = message.downloadUrl || null;
 
+    // Extract normalized phone from WhatsApp ID
+    const normalizedFrom = extractNormalizedPhone(message.senderId);
+
     // Save message with media URL
     await prisma.whatsAppMessage.create({
       data: {
         waMessageId: message.idMessage,
         chatId: message.chatId,
-        from: message.senderId || null,
+        from: normalizedFrom || message.senderId || null,
         fromName: message.senderName || null,
         text: message.textMessage || null,
         type: message.typeMessage,

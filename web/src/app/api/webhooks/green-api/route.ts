@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db-node';
 import { env } from '../../../../lib/env';
+import { extractNormalizedPhone } from '../../../../lib/utils/whatsapp-phone-extractor';
 
 /**
  * Green API Webhook Handler
@@ -87,8 +88,9 @@ async function handleIncomingMessage(payload: any) {
     messageData.extendedTextMessageData?.text ||
     null;
 
-  // Extract sender information
-  const from = senderData?.sender || null;
+  // Extract sender information and normalize phone number
+  const rawFrom = senderData?.sender || null;
+  const from = extractNormalizedPhone(rawFrom);
   const fromName = senderData?.senderName || null;
 
   try {
