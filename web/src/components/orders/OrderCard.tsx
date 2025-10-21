@@ -27,6 +27,13 @@ interface OrderItem {
       alt: string | null;
     }>;
   };
+  replacements?: Array<{
+    id: string;
+    status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+    replacementImageUrl: string | null;
+    adminComment: string | null;
+    createdAt: string;
+  }>;
 }
 
 interface Order {
@@ -63,6 +70,7 @@ export function OrderCard({ order }: OrderCardProps) {
 
   // Show messages only for orders in "Согласование" status
   const showMessages = order.status === 'Согласование';
+  const isApprovalStatus = order.status === 'Согласование';
 
   return (
     <>
@@ -84,11 +92,12 @@ export function OrderCard({ order }: OrderCardProps) {
               <h4 className="mb-2 text-sm font-medium text-gray-900">Товары</h4>
               <OrderItems
                 items={order.items}
-                onChatClick={showMessages ? handleChatClick : undefined}
+                onChatClick={handleChatClick}
                 onItemApproval={handleItemApproval}
                 showMessages={showMessages}
-                showFeedback={true}
+                showFeedback={isApprovalStatus}
                 orderId={order.id}
+                orderStatus={order.status}
               />
             </div>
 
@@ -97,7 +106,7 @@ export function OrderCard({ order }: OrderCardProps) {
         </Card>
       </div>
 
-      {selectedItem && showMessages && (
+      {selectedItem && (
         <ClientOrderItemChat item={selectedItem} onClose={handleCloseChat} />
       )}
     </>

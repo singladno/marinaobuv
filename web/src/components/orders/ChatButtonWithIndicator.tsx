@@ -41,9 +41,10 @@ export function ChatButtonWithIndicator({
         onClick={onClick}
         variant="outline"
         size="sm"
-        className="h-10 w-10 p-0"
+        className="flex items-center space-x-1"
       >
-        <MessageSquare className="h-5 w-5" />
+        <MessageSquare className="h-3 w-3" />
+        <span className="text-xs">Чат</span>
       </Button>
 
       {unreadCount > 0 && (

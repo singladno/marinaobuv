@@ -57,12 +57,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Color filter
+    // Color filter - find products where the primary image color matches the selected color
     if (colors.length > 0) {
       where.images = {
         some: {
+          isPrimary: true,
           color: {
             in: colors,
+            mode: 'insensitive',
           },
         },
       };

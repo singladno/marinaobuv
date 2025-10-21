@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
 import { OrderApprovalButton } from './OrderApprovalButton';
 import { useOrderData } from '@/hooks/useOrderData';
+import { getClientStatusDisplay } from '@/utils/clientStatusUtils';
 
 interface OrderItem {
   id: string;
@@ -126,15 +127,16 @@ export function OrderStatusMessage({
   }
 
   if (status === 'Наличие' || status === 'Проверено') {
+    const clientStatus = getClientStatusDisplay(status);
     return (
-      <Card className="border-cyan-200 bg-cyan-50 p-6">
+      <Card className="border-amber-200 bg-amber-50 p-6">
         <div className="flex items-start space-x-3">
-          <ShoppingBag className="mt-0.5 h-6 w-6 text-cyan-600" />
+          <ShoppingBag className="mt-0.5 h-6 w-6 text-amber-600" />
           <div>
-            <Text variant="h3" className="mb-2 text-cyan-900">
-              Заказ в обработке
+            <Text variant="h3" className="mb-2 text-amber-900">
+              Заказ {clientStatus.toLowerCase()}
             </Text>
-            <Text className="text-cyan-700">
+            <Text className="text-amber-700">
               Ваш заказ находится в процессе обработки. Мы проверяем наличие
               товаров и подготавливаем их к отправке.
             </Text>

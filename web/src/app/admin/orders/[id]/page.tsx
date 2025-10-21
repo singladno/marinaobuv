@@ -77,6 +77,13 @@ interface OrderItem {
     text: string | null;
     isService: boolean;
     createdAt: string;
+    attachments?: Array<{
+      type: string;
+      name: string;
+      size?: number;
+      data?: string;
+      url?: string;
+    }>;
     user: {
       id: string;
       name: string | null;
@@ -123,7 +130,8 @@ export default function OrderDetailsPage() {
     useState<OrderItem | null>(null);
 
   // Get unread counts for all items in this order
-  const { getUnreadCount } = useAdminOrderUnreadCounts(orderId);
+  const { getUnreadCount, refetch: refetchUnreadCounts } =
+    useAdminOrderUnreadCounts(orderId);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -245,6 +253,7 @@ export default function OrderDetailsPage() {
     if (!selectedItemForReplacement) return;
 
     try {
+      console.log('Submitting replacement proposal:', data);
       const response = await fetch(
         `/api/admin/order-items/${selectedItemForReplacement.id}/replacement`,
         {
@@ -253,6 +262,71 @@ export default function OrderDetailsPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(data),
+        }
+      );
+
+      const responseData = await response.json();
+      console.log('Replacement response:', responseData);
+
+      if (response.ok) {
+        // Refresh order data
+        const orderResponse = await fetch(`/api/admin/orders/${orderId}`);
+        if (orderResponse.ok) {
+          const orderData = await orderResponse.json();
+          setOrder(orderData.order);
+        }
+        setReplacementModalOpen(false);
+        setSelectedItemForReplacement(null);
+      } else if (response.status === 409) {
+        // Handle existing proposal
+        console.log(
+          'Existing replacement proposal found:',
+          responseData.existingReplacement
+        );
+        const shouldUpdate = confirm(
+          `Предложение о замене уже существует. Хотите обновить его?`
+        );
+
+        if (shouldUpdate) {
+          await handleReplacementUpdate(
+            responseData.existingReplacement.id,
+            data
+          );
+        }
+      } else {
+        console.error('Failed to create replacement proposal:', responseData);
+        alert(`Ошибка: ${responseData.error || 'Неизвестная ошибка'}`);
+      }
+    } catch (error) {
+      console.error('Failed to create replacement proposal:', error);
+      alert(
+        `Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+      );
+    }
+  };
+
+  const handleReplacementUpdate = async (
+    replacementId: string,
+    data: {
+      replacementImageUrl?: string;
+      replacementImageKey?: string;
+      adminComment?: string;
+    }
+  ) => {
+    if (!selectedItemForReplacement) return;
+
+    try {
+      const response = await fetch(
+        `/api/admin/order-items/${selectedItemForReplacement.id}/replacement`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            replacementId,
+            ...data,
+          }),
         }
       );
 
@@ -265,11 +339,53 @@ export default function OrderDetailsPage() {
         }
         setReplacementModalOpen(false);
         setSelectedItemForReplacement(null);
+        alert('Предложение о замене обновлено');
       } else {
-        console.error('Failed to create replacement proposal');
+        const responseData = await response.json();
+        alert(
+          `Ошибка обновления: ${responseData.error || 'Неизвестная ошибка'}`
+        );
       }
     } catch (error) {
-      console.error('Failed to create replacement proposal:', error);
+      console.error('Failed to update replacement:', error);
+      alert(
+        `Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+      );
+    }
+  };
+
+  const handleReplacementDelete = async (replacementId: string) => {
+    if (!selectedItemForReplacement) return;
+
+    try {
+      const response = await fetch(
+        `/api/admin/order-items/${selectedItemForReplacement.id}/replacement`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ replacementId }),
+        }
+      );
+
+      if (response.ok) {
+        // Refresh order data
+        const orderResponse = await fetch(`/api/admin/orders/${orderId}`);
+        if (orderResponse.ok) {
+          const orderData = await orderResponse.json();
+          setOrder(orderData.order);
+        }
+        alert('Предложение о замене удалено');
+      } else {
+        const responseData = await response.json();
+        alert(`Ошибка удаления: ${responseData.error || 'Неизвестная ошибка'}`);
+      }
+    } catch (error) {
+      console.error('Failed to delete replacement:', error);
+      alert(
+        `Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+      );
     }
   };
 
@@ -346,7 +462,15 @@ export default function OrderDetailsPage() {
       return (
         <AdminOrderItemChat
           item={convertToOrderItemData(selectedItem)}
-          onClose={() => setSelectedItemId(null)}
+          onClose={() => {
+            setSelectedItemId(null);
+            // Refresh unread counts when chat is closed
+            refetchUnreadCounts();
+          }}
+          onMessagesRead={() => {
+            // Refresh unread counts immediately when messages are marked as read
+            refetchUnreadCounts();
+          }}
         />
       );
     }
@@ -511,14 +635,66 @@ export default function OrderDetailsPage() {
                       {getAvailabilityBadge(item.isAvailable)}
                     </td>
                     <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                      <FeedbackStatusIconsCompact
-                        feedbacks={item.feedbacks.map(feedback => ({
-                          type: feedback.feedbackType,
-                          createdAt: feedback.createdAt,
-                        }))}
-                        replacements={item.replacements}
-                        hasMessages={item.messages.length > 0}
-                      />
+                      <div className="space-y-2">
+                        <FeedbackStatusIconsCompact
+                          feedbacks={item.feedbacks.map(feedback => ({
+                            type: feedback.feedbackType,
+                            createdAt: feedback.createdAt,
+                          }))}
+                          replacements={item.replacements}
+                          hasMessages={item.messages.length > 0}
+                        />
+                        {/* Show existing replacement proposals */}
+                        {item.replacements
+                          .filter(rep => rep.status === 'PENDING')
+                          .map(replacement => (
+                            <div
+                              key={replacement.id}
+                              className="rounded-lg border border-blue-200 bg-blue-50 p-2"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <RefreshCw className="h-3 w-3 text-blue-600" />
+                                  <span className="text-xs font-medium text-blue-800">
+                                    Предложена замена
+                                  </span>
+                                </div>
+                                <div className="flex space-x-1">
+                                  <Button
+                                    onClick={() => {
+                                      setSelectedItemForReplacement(item);
+                                      setReplacementModalOpen(true);
+                                    }}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2 text-xs"
+                                  >
+                                    Изменить
+                                  </Button>
+                                  <Button
+                                    onClick={() => {
+                                      if (
+                                        confirm('Удалить предложение о замене?')
+                                      ) {
+                                        handleReplacementDelete(replacement.id);
+                                      }
+                                    }}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 border-red-200 px-2 text-xs text-red-600 hover:bg-red-50"
+                                  >
+                                    Удалить
+                                  </Button>
+                                </div>
+                              </div>
+                              {replacement.adminComment && (
+                                <p className="mt-1 text-xs text-blue-700">
+                                  {replacement.adminComment}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                      </div>
                     </td>
                     <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
                       <MessagePreviewCompact
@@ -583,14 +759,28 @@ export default function OrderDetailsPage() {
           }}
           onSubmit={handleReplacementSubmit}
           itemName={selectedItemForReplacement.name}
-          availableImages={selectedItemForReplacement.messages
-            .filter(msg => msg.text && msg.text.includes('image'))
-            .map(msg => ({
-              id: msg.id,
-              type: 'image',
-              name: 'Chat image',
-              url: msg.text || undefined,
-            }))}
+          existingReplacement={
+            selectedItemForReplacement.replacements.find(
+              rep => rep.status === 'PENDING'
+            ) || null
+          }
+          availableImages={(() => {
+            const images = selectedItemForReplacement.messages
+              .filter(msg => msg.attachments && msg.attachments.length > 0)
+              .flatMap(msg =>
+                msg
+                  .attachments!.filter(att => att.type.startsWith('image/'))
+                  .map(att => ({
+                    id: `${msg.id}-${att.name}`,
+                    type: att.type,
+                    name: att.name,
+                    url: att.data || att.url,
+                    data: att.data,
+                  }))
+              );
+            console.log('Available images for replacement:', images);
+            return images;
+          })()}
         />
       )}
     </div>

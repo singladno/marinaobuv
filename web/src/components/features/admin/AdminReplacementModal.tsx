@@ -2,10 +2,18 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { X, Upload, Camera, Trash2, Check, X as XIcon } from 'lucide-react';
+import {
+  X,
+  Upload,
+  Camera,
+  Trash2,
+  Check,
+  X as XIcon,
+  Trash,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
@@ -30,6 +38,12 @@ interface AdminReplacementModalProps {
   itemName: string;
   availableImages?: MediaAttachment[];
   loading?: boolean;
+  existingReplacement?: {
+    id: string;
+    replacementImageUrl: string | null;
+    replacementImageKey: string | null;
+    adminComment: string | null;
+  } | null;
 }
 
 export function AdminReplacementModal({
@@ -39,12 +53,15 @@ export function AdminReplacementModal({
   itemName,
   availableImages = [],
   loading = false,
+  existingReplacement = null,
 }: AdminReplacementModalProps) {
   const [selectedImage, setSelectedImage] = useState<MediaAttachment | null>(
     null
   );
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [adminComment, setAdminComment] = useState('');
+  const [adminComment, setAdminComment] = useState(
+    existingReplacement?.adminComment || ''
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,14 +135,13 @@ export function AdminReplacementModal({
             height={200}
             className="rounded-lg object-cover"
           />
-          <Button
+          <button
             onClick={() => setSelectedImage(null)}
-            variant="danger"
-            size="sm"
-            className="absolute -right-2 -top-2 h-6 w-6 p-0"
+            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-red-300 bg-white shadow-md hover:bg-red-50"
+            title="Удалить изображение"
           >
-            <XIcon className="h-3 w-3" />
-          </Button>
+            <Trash className="h-3 w-3 text-red-600" />
+          </button>
         </div>
       );
     }
@@ -140,14 +156,13 @@ export function AdminReplacementModal({
             height={200}
             className="rounded-lg object-cover"
           />
-          <Button
+          <button
             onClick={() => setUploadedFile(null)}
-            variant="danger"
-            size="sm"
-            className="absolute -right-2 -top-2 h-6 w-6 p-0"
+            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-red-300 bg-white shadow-md hover:bg-red-50"
+            title="Удалить изображение"
           >
-            <XIcon className="h-3 w-3" />
-          </Button>
+            <Trash className="h-3 w-3 text-red-600" />
+          </button>
         </div>
       );
     }
@@ -156,151 +171,170 @@ export function AdminReplacementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <Card className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Предложить замену</h3>
-            <p className="truncate text-sm text-gray-600 dark:text-gray-400">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={
+        existingReplacement
+          ? 'Изменить предложение о замене'
+          : 'Предложить замену'
+      }
+      size="lg"
+    >
+      <div className="space-y-4 p-6">
+        {/* Item Info */}
+        <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+          <div className="flex items-center space-x-2">
+            <Camera className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {itemName}
-            </p>
+            </span>
           </div>
-          <Button
-            onClick={handleClose}
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            disabled={isSubmitting}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-
-        <CardContent className="max-h-[calc(90vh-120px)] space-y-6 overflow-y-auto">
-          {/* Available Images from Chat */}
-          {availableImages.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Выберите изображение из чата:
-              </h4>
-              <div className="grid grid-cols-3 gap-3">
-                {availableImages.map(image => (
-                  <button
-                    key={image.id}
-                    onClick={() => handleImageSelect(image)}
-                    className={cn(
-                      'relative overflow-hidden rounded-lg border-2 transition-all',
-                      selectedImage?.id === image.id
-                        ? 'border-blue-500 ring-2 ring-blue-200'
-                        : 'border-gray-200 hover:border-gray-300'
-                    )}
-                  >
-                    <Image
-                      src={image.url || image.data || ''}
-                      alt={image.name}
-                      width={100}
-                      height={100}
-                      className="h-24 w-full object-cover"
-                    />
-                    {selectedImage?.id === image.id && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-blue-500 bg-opacity-20">
-                        <Check className="h-6 w-6 text-blue-600" />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Upload New Image */}
+        </div>
+        {/* Available Images from Chat */}
+        {availableImages.length > 0 ? (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              Или загрузите новое изображение:
+              Выберите из чата ({availableImages.length} изображений):
             </h4>
-            <div className="flex items-center space-x-3">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                className="flex items-center space-x-2"
-                disabled={isSubmitting}
-              >
-                <Upload className="h-4 w-4" />
-                <span>Выбрать файл</span>
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-                aria-label="Выберите изображение для замены"
-              />
-              {uploadedFile && (
-                <Badge
-                  variant="secondary"
-                  className="flex items-center space-x-1"
+            <div className="grid grid-cols-4 gap-2">
+              {availableImages.map(image => (
+                <button
+                  key={image.id}
+                  onClick={() => handleImageSelect(image)}
+                  className={cn(
+                    'relative overflow-hidden rounded-lg border-2 transition-all',
+                    selectedImage?.id === image.id
+                      ? 'border-blue-500 ring-2 ring-blue-200'
+                      : 'border-gray-200 hover:border-gray-300'
+                  )}
                 >
-                  <Camera className="h-3 w-3" />
-                  <span>{uploadedFile.name}</span>
-                </Badge>
-              )}
+                  <Image
+                    src={image.url || image.data || ''}
+                    alt={image.name}
+                    width={80}
+                    height={80}
+                    className="h-16 w-full object-cover"
+                  />
+                  {selectedImage?.id === image.id && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 shadow-lg">
+                        <Check className="h-3 w-3 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
-
-          {/* Image Preview */}
-          {getImagePreview() && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Предварительный просмотр:
-              </h4>
-              {getImagePreview()}
+        ) : (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Изображения из чата:
+            </h4>
+            <div className="rounded-lg bg-gray-50 p-3 text-center text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+              Нет изображений в чате для этого товара
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Admin Comment */}
+        {/* Upload New Image */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            Или загрузите новое:
+          </h4>
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              variant="outline"
+              size="sm"
+              disabled={isSubmitting}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Выбрать файл
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+              aria-label="Выберите изображение для замены"
+            />
+            {uploadedFile && (
+              <div className="flex items-center space-x-2 rounded-lg bg-green-50 px-3 py-2 dark:bg-green-900/20">
+                <Camera className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-800 dark:text-green-200">
+                  {uploadedFile.name}
+                </span>
+                <Button
+                  onClick={() => setUploadedFile(null)}
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                >
+                  <XIcon className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Image Preview */}
+        {getImagePreview() && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              Комментарий для клиента (необязательно):
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Предварительный просмотр:
+            </h4>
+            <div className="flex justify-center">{getImagePreview()}</div>
+          </div>
+        )}
+
+        {/* Admin Comment */}
+        <div className="space-y-3">
+          <div className="flex flex-col space-y-2">
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+              Комментарий для клиента:
             </label>
             <Textarea
               value={adminComment}
               onChange={e => setAdminComment(e.target.value)}
               placeholder="Объясните, почему предлагаете эту замену..."
-              className="min-h-[80px]"
+              className="min-h-[60px] w-full"
               disabled={isSubmitting}
             />
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex justify-end space-x-3 border-t pt-4">
-            <Button
-              onClick={handleClose}
-              variant="outline"
-              disabled={isSubmitting}
-            >
-              Отмена
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={(!selectedImage && !uploadedFile) || isSubmitting}
-              className="flex items-center space-x-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  <span>Отправка...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4" />
-                  <span>Предложить замену</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        {/* Actions */}
+        <div className="flex justify-end space-x-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+          <Button
+            onClick={handleClose}
+            variant="outline"
+            disabled={isSubmitting}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={(!selectedImage && !uploadedFile) || isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Отправка...
+              </>
+            ) : (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                {existingReplacement
+                  ? 'Обновить предложение'
+                  : 'Предложить замену'}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

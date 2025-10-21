@@ -20,6 +20,13 @@ interface OrderItem {
       alt: string | null;
     }>;
   };
+  replacements?: Array<{
+    id: string;
+    status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+    replacementImageUrl: string | null;
+    adminComment: string | null;
+    createdAt: string;
+  }>;
 }
 
 interface Order {

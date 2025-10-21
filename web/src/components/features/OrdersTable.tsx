@@ -17,6 +17,27 @@ export function OrdersTable() {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const { addNotification } = useNotifications();
 
+  // Refresh orders when user returns to this page (e.g., from order details)
+  React.useEffect(() => {
+    const handleFocus = () => {
+      reload();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        reload();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [reload]);
+
   const handleToggle = React.useCallback((id: string) => {
     setSelected(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);

@@ -56,6 +56,7 @@ interface OrderItem {
 interface ClientOrderItemChatProps {
   item: OrderItem;
   onClose: () => void;
+  onMessagesRead?: () => void;
 }
 
 // Beautiful Chat Loader Component
@@ -92,6 +93,7 @@ function ChatLoader() {
 export function ClientOrderItemChat({
   item,
   onClose,
+  onMessagesRead,
 }: ClientOrderItemChatProps) {
   const { setClientChatOpen } = useClientChat();
   const { user } = useUser();
@@ -172,6 +174,9 @@ export function ClientOrderItemChat({
           method: 'POST',
         });
 
+        // Notify parent that messages have been read
+        onMessagesRead?.();
+
         // Fetch messages
         const response = await fetch(
           `${baseUrl}/order-items/${item.id}/messages`
@@ -179,8 +184,9 @@ export function ClientOrderItemChat({
         const data = await response.json();
 
         if (data.success) {
-          const transformedMessages: ChatMessage[] = data.messages.map(
-            (msg: any) => ({
+          const transformedMessages: ChatMessage[] = data.messages
+            .filter((msg: any) => !msg.isService) // Filter out service messages for client view
+            .map((msg: any) => ({
               id: msg.id,
               text: msg.text,
               sender: msg.sender,
@@ -188,8 +194,7 @@ export function ClientOrderItemChat({
               timestamp: new Date(msg.timestamp),
               isService: msg.isService,
               attachments: msg.attachments,
-            })
-          );
+            }));
           setMessages(transformedMessages);
         } else {
           console.error('Failed to fetch messages:', data.error);
@@ -257,7 +262,10 @@ export function ClientOrderItemChat({
           attachments: data.message.attachments,
         };
 
-        setMessages(prev => [...prev, newMessage]);
+        // Only add non-service messages to client view
+        if (!newMessage.isService) {
+          setMessages(prev => [...prev, newMessage]);
+        }
       } else {
         console.error('Failed to send message:', data.error);
       }

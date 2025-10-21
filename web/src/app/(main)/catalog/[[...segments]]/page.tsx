@@ -7,7 +7,8 @@ import { ProductGrid } from '@/components/catalog/ProductGrid';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
 import { Text } from '@/components/ui/Text';
-import { useCatalogBackend } from '@/hooks/useCatalogBackend';
+import { useInfiniteCatalog } from '@/hooks/useInfiniteCatalog';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useSearch } from '@/contexts/SearchContext';
 
 export default function CatalogPage() {
@@ -16,14 +17,24 @@ export default function CatalogPage() {
   const {
     products,
     loading,
+    loadingMore,
     error,
     pagination,
     filters,
+    hasNextPage,
     handleFiltersChange,
     handleSortChange,
-    handlePageChange,
     clearFilters,
-  } = useCatalogBackend();
+    loadMore,
+    retryLoadMore,
+  } = useInfiniteCatalog();
+
+  // Set up infinite scroll
+  const { setLoadMoreRef } = useInfiniteScroll({
+    hasNextPage,
+    isLoading: loadingMore,
+    onLoadMore: loadMore,
+  });
 
   // Grid columns state for switcher (4 or 5)
   const [gridCols, setGridCols] = useState<4 | 5>(4);
@@ -88,32 +99,14 @@ export default function CatalogPage() {
             products={products}
             gridCols={gridCols}
             loading={loading}
+            loadingMore={loadingMore}
+            hasNextPage={hasNextPage}
+            error={error}
+            onLoadMore={loadMore}
+            onRetry={retryLoadMore}
+            loadMoreRef={setLoadMoreRef}
           />
         </div>
-
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="mt-8 flex justify-center">
-            <div className="flex gap-2">
-              {Array.from(
-                { length: pagination.totalPages },
-                (_, i) => i + 1
-              ).map(page => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`rounded-md px-3 py-2 text-sm ${
-                    page === pagination.page
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

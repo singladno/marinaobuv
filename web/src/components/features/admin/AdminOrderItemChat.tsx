@@ -47,6 +47,7 @@ interface ChatMessage {
 interface AdminOrderItemChatProps {
   item: OrderItemData;
   onClose: () => void;
+  onMessagesRead?: () => void;
 }
 
 // Beautiful Chat Loader Component
@@ -70,7 +71,11 @@ function ChatLoader() {
   );
 }
 
-export function AdminOrderItemChat({ item, onClose }: AdminOrderItemChatProps) {
+export function AdminOrderItemChat({
+  item,
+  onClose,
+  onMessagesRead,
+}: AdminOrderItemChatProps) {
   const { user } = useUser();
   const { setAdminChatOpen } = useAdminChat();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -148,6 +153,9 @@ export function AdminOrderItemChat({ item, onClose }: AdminOrderItemChatProps) {
         await fetch(`/api/admin/order-items/${item.itemId}/mark-read`, {
           method: 'POST',
         });
+
+        // Notify parent that messages have been read
+        onMessagesRead?.();
 
         // Then fetch messages
         const response = await fetch(

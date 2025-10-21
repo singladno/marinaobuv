@@ -24,22 +24,6 @@ export async function GET() {
                   pricePair: true,
                 },
               },
-              messages: {
-                where: {
-                  isService: false,
-                  userId: {
-                    not: session.userId, // Exclude messages sent by the admin themselves
-                  },
-                  readBy: {
-                    none: {
-                      userId: session.userId,
-                    },
-                  },
-                },
-                select: {
-                  id: true,
-                },
-              },
             },
           },
           user: { select: { id: true, phone: true, name: true, label: true } },
@@ -56,13 +40,43 @@ export async function GET() {
     ]);
 
     // Calculate unread message count for each order
-    const ordersWithUnreadCount = orders.map(order => ({
-      ...order,
-      unreadMessageCount: order.items.reduce(
-        (total, item) => total + item.messages.length,
-        0
-      ),
-    }));
+    const ordersWithUnreadCount = await Promise.all(
+      orders.map(async order => {
+        let totalUnreadCount = 0;
+        for (const item of order.items) {
+          // Get total messages for this order item (excluding messages sent by the admin)
+          const totalMessages = await prisma.orderItemMessage.count({
+            where: {
+              orderItemId: item.id,
+              userId: {
+                not: session.userId, // Exclude messages sent by the admin themselves
+              },
+            },
+          });
+
+          // Get messages read by admin (excluding messages sent by the admin)
+          const readMessages = await prisma.orderItemMessageRead.count({
+            where: {
+              message: {
+                orderItemId: item.id,
+                userId: {
+                  not: session.userId, // Exclude messages sent by the admin themselves
+                },
+              },
+              userId: session.userId,
+            },
+          });
+
+          const unreadCount = Math.max(0, totalMessages - readMessages);
+          totalUnreadCount += unreadCount;
+        }
+
+        return {
+          ...order,
+          unreadMessageCount: totalUnreadCount,
+        };
+      })
+    );
 
     return NextResponse.json({ orders: ordersWithUnreadCount, gruzchiks });
   } catch (e: unknown) {

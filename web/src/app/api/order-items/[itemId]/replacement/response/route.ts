@@ -13,32 +13,23 @@ export async function POST(
     }
 
     const { itemId } = await params;
-    const { status, clientComment } = await request.json();
+    const { replacementId, status } = await request.json();
 
-    if (!status || !['ACCEPTED', 'REJECTED'].includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-    }
-
-    // Verify the order item belongs to this client
-    const orderItem = await prisma.orderItem.findFirst({
-      where: {
-        id: itemId,
-        order: {
-          userId: session.userId,
-        },
-      },
-    });
-
-    if (!orderItem) {
+    if (
+      !replacementId ||
+      !status ||
+      !['ACCEPTED', 'REJECTED'].includes(status)
+    ) {
       return NextResponse.json(
-        { error: 'Order item not found' },
-        { status: 404 }
+        { error: 'Invalid replacement response data' },
+        { status: 400 }
       );
     }
 
-    // Find pending replacement for this item
+    // Verify the replacement exists and belongs to this client
     const replacement = await prisma.orderItemReplacement.findFirst({
       where: {
+        id: replacementId,
         orderItemId: itemId,
         clientUserId: session.userId,
         status: 'PENDING',
@@ -47,19 +38,22 @@ export async function POST(
 
     if (!replacement) {
       return NextResponse.json(
-        { error: 'No pending replacement found' },
+        { error: 'Replacement not found or already responded' },
         { status: 404 }
       );
     }
 
-    // Update replacement status
+    // Update the replacement status
     const updatedReplacement = await prisma.orderItemReplacement.update({
       where: {
-        id: replacement.id,
+        id: replacementId,
       },
       data: {
-        status: status,
-        clientComment: clientComment || null,
+        status: status as 'ACCEPTED' | 'REJECTED',
+        clientComment:
+          status === 'ACCEPTED'
+            ? 'Клиент принял предложение о замене'
+            : 'Клиент отказался от замены',
       },
       include: {
         adminUser: {
@@ -79,6 +73,24 @@ export async function POST(
       },
     });
 
+    // Create a chat message about the response
+    try {
+      await prisma.orderItemMessage.create({
+        data: {
+          orderItemId: itemId,
+          userId: session.userId,
+          text:
+            status === 'ACCEPTED'
+              ? 'Клиент принял предложение о замене'
+              : 'Клиент отказался от замены',
+          isService: true,
+        },
+      });
+    } catch (messageError) {
+      console.error('Failed to create response chat message:', messageError);
+      // Don't fail the whole operation if message creation fails
+    }
+
     return NextResponse.json({
       success: true,
       replacement: {
@@ -94,9 +106,9 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Failed to update replacement:', error);
+    console.error('Failed to respond to replacement:', error);
     return NextResponse.json(
-      { error: 'Failed to update replacement' },
+      { error: 'Failed to respond to replacement' },
       { status: 500 }
     );
   }

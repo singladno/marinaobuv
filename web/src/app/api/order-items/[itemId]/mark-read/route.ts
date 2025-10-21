@@ -32,9 +32,13 @@ export async function POST(
     }
 
     // Get all messages for this order item that haven't been read by this client
+    // (excluding messages sent by the client themselves)
     const unreadMessages = await prisma.orderItemMessage.findMany({
       where: {
         orderItemId: itemId,
+        userId: {
+          not: session.userId, // Exclude messages sent by the client themselves
+        },
         readBy: {
           none: {
             userId: session.userId,

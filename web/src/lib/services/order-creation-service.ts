@@ -167,6 +167,21 @@ export async function getOrders(userId: string) {
               },
             },
           },
+          replacements: {
+            where: {
+              clientUserId: userId,
+            },
+            select: {
+              id: true,
+              status: true,
+              replacementImageUrl: true,
+              adminComment: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
         },
       },
     },

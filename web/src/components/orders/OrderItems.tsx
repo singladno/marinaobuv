@@ -6,6 +6,8 @@ import {
   Package,
   AlertTriangle,
   MessageCircle,
+  Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import { ChatButtonWithIndicator } from './ChatButtonWithIndicator';
 import { ItemApproveButton } from './ItemApproveButton';
@@ -35,6 +37,13 @@ interface OrderItem {
       alt: string | null;
     }>;
   };
+  replacements?: Array<{
+    id: string;
+    status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+    replacementImageUrl: string | null;
+    adminComment: string | null;
+    createdAt: string;
+  }>;
 }
 
 interface OrderItemsProps {
@@ -44,6 +53,7 @@ interface OrderItemsProps {
   showMessages?: boolean;
   orderId?: string;
   showFeedback?: boolean;
+  orderStatus?: string;
 }
 
 export function OrderItems({
@@ -53,6 +63,7 @@ export function OrderItems({
   showMessages = false,
   orderId,
   showFeedback = false,
+  orderStatus,
 }: OrderItemsProps) {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [selectedItemForFeedback, setSelectedItemForFeedback] =
@@ -66,6 +77,9 @@ export function OrderItems({
     getApprovalStatus,
     markItemAsApproved,
   } = useOrderData(orderId || null);
+
+  // Determine if this is an approval status
+  const isApprovalStatus = orderStatus === 'Согласование';
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -128,6 +142,10 @@ export function OrderItems({
     }
   };
 
+  const getPendingReplacement = (item: OrderItem) => {
+    return item.replacements?.find(rep => rep.status === 'PENDING');
+  };
+
   return (
     <div className="space-y-4">
       {items.map(item => {
@@ -136,12 +154,13 @@ export function OrderItems({
         const totalMessages = getTotalMessages(item.id);
         const itemNeedsApproval = needsApproval(item.id, item.isAvailable);
         const itemHasMessages = hasMessages(item.id);
+        const pendingReplacement = getPendingReplacement(item);
 
         return (
           <div
             key={item.id}
             className={`rounded-lg border p-4 transition-all ${
-              itemNeedsApproval
+              isApprovalStatus && itemNeedsApproval
                 ? 'attention-pulse border-orange-200 bg-orange-50'
                 : 'border-gray-200 bg-white'
             }`}
@@ -182,13 +201,25 @@ export function OrderItems({
                     </div>
                   )}
 
-                  {/* Availability Status */}
-                  <div className="flex items-center space-x-2">
-                    {getAvailabilityIcon(item.isAvailable)}
-                    <span className="text-xs text-gray-600">
-                      {getAvailabilityText(item.isAvailable)}
-                    </span>
-                  </div>
+                  {/* Availability Status - only for approval orders */}
+                  {isApprovalStatus && (
+                    <div className="flex items-center space-x-2">
+                      {getAvailabilityIcon(item.isAvailable)}
+                      <span className="text-xs text-gray-600">
+                        {getAvailabilityText(item.isAvailable)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Replacement Proposal Indicator - only for approval orders */}
+                  {isApprovalStatus && pendingReplacement && (
+                    <div className="mt-2 flex items-center space-x-2 text-blue-600">
+                      <RefreshCw className="h-3 w-3" />
+                      <span className="text-xs">
+                        предложена замена - перейдите в чат
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -213,47 +244,46 @@ export function OrderItems({
               </div>
 
               {/* Actions - Mobile */}
-              {(showMessages || showFeedback) && (
-                <div className="flex items-center justify-between border-t border-gray-200 pt-2">
-                  <div className="flex items-center space-x-2">
-                    {onChatClick && (
-                      <ChatButtonWithIndicator
-                        itemId={item.id}
-                        onClick={() => onChatClick(item)}
-                        unreadCount={unreadData.unreadCount}
-                      />
-                    )}
-                    {showFeedback && (
-                      <Button
-                        onClick={() => handleFeedbackClick(item)}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center space-x-1"
-                      >
-                        <MessageCircle className="h-3 w-3" />
-                        <span className="text-xs">Обратная связь</span>
-                      </Button>
-                    )}
-                    {itemNeedsApproval && (
-                      <ItemApproveButton
-                        itemId={item.id}
-                        size="sm"
-                        onApprovalComplete={() => {
-                          markItemAsApproved(item.id);
-                          onItemApproval?.(item.id);
-                        }}
-                        unreadCount={unreadData.unreadCount}
-                      />
-                    )}
-                  </div>
-                  {itemNeedsApproval &&
-                    !getApprovalStatus(item.id).isApproved && (
-                      <div className="text-xs font-medium text-orange-600">
-                        Требует одобрения
-                      </div>
-                    )}
+              <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                <div className="flex items-center space-x-2">
+                  {onChatClick && (
+                    <ChatButtonWithIndicator
+                      itemId={item.id}
+                      onClick={() => onChatClick(item)}
+                      unreadCount={unreadData.unreadCount}
+                    />
+                  )}
+                  {isApprovalStatus && showFeedback && (
+                    <Button
+                      onClick={() => handleFeedbackClick(item)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-1 border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      <span className="text-xs">Отказ</span>
+                    </Button>
+                  )}
+                  {isApprovalStatus && itemNeedsApproval && (
+                    <ItemApproveButton
+                      itemId={item.id}
+                      size="sm"
+                      onApprovalComplete={() => {
+                        markItemAsApproved(item.id);
+                        onItemApproval?.(item.id);
+                      }}
+                      unreadCount={unreadData.unreadCount}
+                    />
+                  )}
                 </div>
-              )}
+                {isApprovalStatus &&
+                  itemNeedsApproval &&
+                  !getApprovalStatus(item.id).isApproved && (
+                    <div className="text-xs font-medium text-orange-600">
+                      Требует одобрения
+                    </div>
+                  )}
+              </div>
             </div>
 
             {/* Desktop Layout */}
@@ -316,50 +346,61 @@ export function OrderItems({
               {/* Availability Status and Actions */}
               <div className="w-44 flex-shrink-0">
                 <div className="flex flex-col items-end space-y-2">
-                  {/* Availability Status */}
-                  <div className="flex items-center justify-end space-x-2">
-                    {getAvailabilityIcon(item.isAvailable)}
-                    <span className="text-xs text-gray-600">
-                      {getAvailabilityText(item.isAvailable)}
-                    </span>
-                  </div>
-
-                  {/* Actions */}
-                  {(showMessages || showFeedback) && (
-                    <div className="flex items-center space-x-2">
-                      {onChatClick && (
-                        <ChatButtonWithIndicator
-                          itemId={item.id}
-                          onClick={() => onChatClick(item)}
-                          unreadCount={unreadData.unreadCount}
-                        />
-                      )}
-                      {showFeedback && (
-                        <Button
-                          onClick={() => handleFeedbackClick(item)}
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center space-x-1"
-                        >
-                          <MessageCircle className="h-3 w-3" />
-                          <span className="text-xs">Обратная связь</span>
-                        </Button>
-                      )}
-                      {itemNeedsApproval && (
-                        <ItemApproveButton
-                          itemId={item.id}
-                          size="sm"
-                          onApprovalComplete={() => {
-                            markItemAsApproved(item.id);
-                            onItemApproval?.(item.id);
-                          }}
-                          unreadCount={unreadData.unreadCount}
-                        />
-                      )}
+                  {/* Availability Status - only for approval orders */}
+                  {isApprovalStatus && (
+                    <div className="flex items-center justify-end space-x-2">
+                      {getAvailabilityIcon(item.isAvailable)}
+                      <span className="text-xs text-gray-600">
+                        {getAvailabilityText(item.isAvailable)}
+                      </span>
                     </div>
                   )}
 
-                  {itemNeedsApproval &&
+                  {/* Replacement Proposal Indicator - only for approval orders */}
+                  {isApprovalStatus && pendingReplacement && (
+                    <div className="mt-2 flex items-center space-x-2 text-blue-600">
+                      <RefreshCw className="h-3 w-3" />
+                      <span className="text-xs">
+                        предложена замена - перейдите в чат
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center space-x-2">
+                    {onChatClick && (
+                      <ChatButtonWithIndicator
+                        itemId={item.id}
+                        onClick={() => onChatClick(item)}
+                        unreadCount={unreadData.unreadCount}
+                      />
+                    )}
+                    {isApprovalStatus && showFeedback && (
+                      <Button
+                        onClick={() => handleFeedbackClick(item)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center space-x-1 border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span className="text-xs">Отказ</span>
+                      </Button>
+                    )}
+                    {isApprovalStatus && itemNeedsApproval && (
+                      <ItemApproveButton
+                        itemId={item.id}
+                        size="sm"
+                        onApprovalComplete={() => {
+                          markItemAsApproved(item.id);
+                          onItemApproval?.(item.id);
+                        }}
+                        unreadCount={unreadData.unreadCount}
+                      />
+                    )}
+                  </div>
+
+                  {isApprovalStatus &&
+                    itemNeedsApproval &&
                     !getApprovalStatus(item.id).isApproved && (
                       <div className="text-xs font-medium text-orange-600">
                         Требует одобрения

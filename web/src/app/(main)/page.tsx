@@ -6,21 +6,32 @@ import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
-import { useCatalogBackend } from '@/hooks/useCatalogBackend';
+import { useInfiniteCatalog } from '@/hooks/useInfiniteCatalog';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useState } from 'react';
 
 export default function Home() {
   const {
     products,
     loading,
+    loadingMore,
     error,
     pagination,
     filters,
-    handleSearch,
+    hasNextPage,
     handleFiltersChange,
     handleSortChange,
     clearFilters,
-  } = useCatalogBackend();
+    loadMore,
+    retryLoadMore,
+  } = useInfiniteCatalog();
+
+  // Set up infinite scroll
+  const { setLoadMoreRef } = useInfiniteScroll({
+    hasNextPage,
+    isLoading: loadingMore,
+    onLoadMore: loadMore,
+  });
 
   const [gridCols, setGridCols] = useState<4 | 5>(4);
 
@@ -84,6 +95,12 @@ export default function Home() {
             products={products}
             gridCols={gridCols}
             loading={loading}
+            loadingMore={loadingMore}
+            hasNextPage={hasNextPage}
+            error={error}
+            onLoadMore={loadMore}
+            onRetry={retryLoadMore}
+            loadMoreRef={setLoadMoreRef}
           />
         </div>
       </div>
