@@ -1,5 +1,7 @@
 import { GroqSequentialProcessor } from '../lib/services/groq-sequential-processor';
 import { fetchExtendedBatch } from '../lib/utils/batch-extender';
+import { ParsingCoordinator } from '../lib/services/parsing-coordinator';
+import { ParsingProgressService } from '../lib/services/parsing-progress-service';
 import { env } from '../lib/env';
 import { scriptPrisma as prisma } from '../lib/script-db';
 
@@ -12,11 +14,121 @@ import { scriptPrisma as prisma } from '../lib/script-db';
 async function main() {
   console.log('🚀 Starting Groq Sequential Processing Cron Job...');
 
+  let progressService: ParsingProgressService | null = null;
+  let isShuttingDown = false;
+  let totalProcessed = 0;
+  let totalProductsCreated = 0;
+
+  // Graceful shutdown handler
+  const gracefulShutdown = async (signal: string) => {
+    if (isShuttingDown) {
+      console.log('⚠️ Shutdown already in progress, forcing exit...');
+      process.exit(1);
+    }
+
+    isShuttingDown = true;
+    console.log(`\n🛑 Received ${signal}, initiating graceful shutdown...`);
+
+    // Set a timeout to force exit if graceful shutdown takes too long
+    const shutdownTimeout = setTimeout(() => {
+      console.log('⚠️ Graceful shutdown timeout, forcing exit...');
+      process.exit(1);
+    }, 10000); // 10 second timeout
+
+    try {
+      if (progressService) {
+        console.log('📊 Updating parsing status to failed due to shutdown...');
+        await progressService.updateProgress({
+          status: 'failed',
+          errorMessage: `Process terminated by ${signal} signal`,
+          messagesRead: totalProcessed,
+          productsCreated: totalProductsCreated,
+        });
+        console.log('✅ Parsing status updated successfully');
+      }
+
+      clearTimeout(shutdownTimeout);
+      console.log('👋 Graceful shutdown completed');
+      process.exit(0);
+    } catch (error) {
+      console.error(
+        '❌ Failed to update parsing status during shutdown:',
+        error
+      );
+      clearTimeout(shutdownTimeout);
+      process.exit(1);
+    }
+  };
+
+  // Register signal handlers
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
+  process.on('SIGUSR1', () => gracefulShutdown('SIGUSR1'));
+  process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', async error => {
+    console.error('❌ Uncaught Exception:', error);
+    if (progressService) {
+      try {
+        await progressService.updateProgress({
+          status: 'failed',
+          errorMessage: `Uncaught exception: ${error.message}`,
+          messagesRead: totalProcessed,
+          productsCreated: totalProductsCreated,
+        });
+      } catch (updateError) {
+        console.error('❌ Failed to update parsing status:', updateError);
+      }
+    }
+    process.exit(1);
+  });
+
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', async (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    if (progressService) {
+      try {
+        await progressService.updateProgress({
+          status: 'failed',
+          errorMessage: `Unhandled rejection: ${reason}`,
+          messagesRead: totalProcessed,
+          productsCreated: totalProductsCreated,
+        });
+      } catch (updateError) {
+        console.error('❌ Failed to update parsing status:', updateError);
+      }
+    }
+    process.exit(1);
+  });
+
   try {
+    // Check if parsing can proceed
+    const canProceed = await ParsingCoordinator.canStartParsing({
+      type: 'cron',
+      reason: 'Groq sequential processing cron job',
+    });
+
+    if (!canProceed.canProceed) {
+      console.log('⏸️ Parsing cannot proceed:', canProceed.reason);
+      return;
+    }
+
+    // Create parsing history record
+    const parsingHistoryId = await ParsingCoordinator.createParsingHistory(
+      'cron',
+      'Groq sequential processing cron job'
+    );
+    console.log(`📊 Created parsing history record: ${parsingHistoryId}`);
+
+    // Initialize progress service
+    progressService = new ParsingProgressService();
+    progressService.setParsingHistoryId(parsingHistoryId);
+
     const batchSize = env.PROCESSING_BATCH_SIZE;
     const hoursBack = env.MESSAGE_PROCESSING_HOURS;
-    const processor = new GroqSequentialProcessor(prisma);
-    let totalProcessed = 0;
+    const processor = new GroqSequentialProcessor(prisma, progressService);
     let cycleCount = 0;
     let totalUnprocessed = 0;
 
@@ -37,6 +149,14 @@ async function main() {
 
     if (initialCount === 0) {
       console.log('✅ No unprocessed messages found');
+      // Update progress and mark as completed
+      if (progressService) {
+        await progressService.updateProgress({
+          status: 'completed',
+          messagesRead: 0,
+          productsCreated: 0,
+        });
+      }
       return;
     }
 
@@ -49,6 +169,12 @@ async function main() {
     let currentOffset = 0;
 
     while (true) {
+      // Check if we're shutting down
+      if (isShuttingDown) {
+        console.log('🛑 Shutdown requested, stopping processing...');
+        break;
+      }
+
       cycleCount++;
       console.log(`\n🔄 Starting processing cycle ${cycleCount}...`);
 
@@ -80,13 +206,29 @@ async function main() {
       );
 
       try {
+        // Check if we're shutting down before processing
+        if (isShuttingDown) {
+          console.log('🛑 Shutdown requested, skipping batch processing...');
+          break;
+        }
+
         const result = await processor.processMessagesToProducts(messageIds);
 
         if (result.anyProcessed) {
           console.log(`✅ Batch processed successfully`);
           cycleProcessed += messageIds.length;
+          totalProductsCreated += result.productsCreated || 0; // Add to cumulative total
         } else {
           console.log(`⚠️ No products created from this batch`);
+        }
+
+        // Update progress after each batch with cumulative totals
+        if (progressService && !isShuttingDown) {
+          const currentTotalMessages = totalProcessed + cycleProcessed;
+          await progressService.updateProgress({
+            messagesRead: currentTotalMessages,
+            productsCreated: totalProductsCreated, // Use cumulative total
+          });
         }
       } catch (error) {
         console.error(`❌ Error processing batch:`, error);
@@ -127,19 +269,52 @@ async function main() {
       console.log(`📊 Next offset: ${currentOffset}`);
 
       // Small delay between cycles to avoid overwhelming the system
-      console.log('⏳ Waiting 2 seconds before next cycle...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!isShuttingDown) {
+        console.log('⏳ Waiting 2 seconds before next cycle...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     }
 
-    console.log(`✅ Completed processing all available messages`);
+    if (isShuttingDown) {
+      console.log(`🛑 Processing stopped due to shutdown signal`);
+      // Status will be updated by the shutdown handler
+    } else {
+      console.log(`✅ Completed processing all available messages`);
+
+      // Mark parsing as completed
+      if (progressService) {
+        await progressService.updateProgress({
+          status: 'completed',
+          messagesRead: totalProcessed,
+          productsCreated: totalProductsCreated, // Use the actual cumulative total
+        });
+      }
+    }
 
     console.log(`🎉 Groq Sequential Processing completed!`);
     console.log(`📊 Total cycles: ${cycleCount}`);
     console.log(
       `📊 Total messages processed: ${totalProcessed}/${totalUnprocessed} (${Math.round((totalProcessed / totalUnprocessed) * 100)}%)`
     );
+    console.log(`📊 Total products created: ${totalProductsCreated}`);
   } catch (error) {
     console.error('❌ Error in Groq Sequential Processing:', error);
+
+    // Mark parsing as failed
+    if (progressService) {
+      try {
+        await progressService.updateProgress({
+          status: 'failed',
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
+          messagesRead: totalProcessed,
+          productsCreated: totalProductsCreated,
+        });
+      } catch (progressError) {
+        console.error('❌ Failed to update parsing progress:', progressError);
+      }
+    }
+
     throw error;
   }
 }

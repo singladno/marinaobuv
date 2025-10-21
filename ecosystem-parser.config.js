@@ -29,9 +29,11 @@ module.exports = {
       // Process management
       watch: false,
       restart_delay: 5000,
-      kill_timeout: 10000,
+      kill_timeout: 15000, // Increased to allow graceful shutdown
       listen_timeout: 10000,
       shutdown_with_message: true,
+      wait_ready: true, // Wait for ready signal
+      ready_timeout: 30000, // 30 seconds to start
 
       // Advanced PM2 features
       autorestart: false, // Don't auto-restart parser - run once and exit

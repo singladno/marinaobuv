@@ -4,6 +4,7 @@ import { GroqGroupingService } from './groq-grouping-service';
 import { SimpleProductService } from './simple-product-service';
 import { AnalysisValidationService } from './analysis-validation-service';
 import { FixedColorMappingService } from './fixed-color-mapping-service';
+import { ParsingProgressService } from './parsing-progress-service';
 import { getCategoryTree } from '../catalog-categories';
 import { getGroqConfig } from '../groq-proxy-config';
 import { uploadImage, getObjectKey, getPublicUrl } from '../storage';
@@ -24,9 +25,14 @@ export class GroqSequentialProcessor {
   private batchProductService: SimpleProductService;
   private validationService: AnalysisValidationService;
   private colorMappingService: FixedColorMappingService;
+  private progressService?: ParsingProgressService;
 
-  constructor(prismaClient: PrismaClient) {
+  constructor(
+    prismaClient: PrismaClient,
+    progressService?: ParsingProgressService
+  ) {
     this.prisma = prismaClient;
+    this.progressService = progressService;
     this.groupingService = new GroqGroupingService();
     this.batchProductService = new SimpleProductService();
     this.validationService = new AnalysisValidationService();
@@ -47,6 +53,7 @@ export class GroqSequentialProcessor {
   async processMessagesToProducts(messageIds: string[]): Promise<{
     anyProcessed: boolean;
     finalizedMessageIds: string[];
+    productsCreated: number;
   }> {
     console.log(
       `🚀 Starting Groq sequential processing for ${messageIds.length} messages`
@@ -61,7 +68,11 @@ export class GroqSequentialProcessor {
 
       if (groups.length === 0) {
         console.log('❌ No valid message groups found');
-        return { anyProcessed: false, finalizedMessageIds: [] };
+        return {
+          anyProcessed: false,
+          finalizedMessageIds: [],
+          productsCreated: 0,
+        };
       }
 
       console.log(`✅ Found ${groups.length} message groups`);
@@ -202,10 +213,18 @@ export class GroqSequentialProcessor {
       console.log(
         `🎉 Sequential processing completed: ${processedProducts.length} products processed`
       );
-      return { anyProcessed: true, finalizedMessageIds: messageIds };
+      return {
+        anyProcessed: true,
+        finalizedMessageIds: messageIds,
+        productsCreated: processedProducts.length,
+      };
     } catch (error) {
       console.error('❌ Error in sequential processing:', error);
-      return { anyProcessed: false, finalizedMessageIds: [] };
+      return {
+        anyProcessed: false,
+        finalizedMessageIds: [],
+        productsCreated: 0,
+      };
     }
   }
 
