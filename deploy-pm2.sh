@@ -120,26 +120,55 @@ cd $WEB_DIR
 npm install
 cd ..
 
-# 9. Generate Prisma client
+# 9. Sync migration files to ensure all files are present
+print_status "Syncing migration files..."
+if [ -f "scripts/sync-migration-files.sh" ]; then
+    chmod +x scripts/sync-migration-files.sh
+    if ./scripts/sync-migration-files.sh; then
+        print_success "Migration files synced successfully"
+    else
+        print_warning "Migration sync failed, but continuing with deployment..."
+    fi
+else
+    print_warning "Migration sync script not found, skipping sync..."
+fi
+
+# 10. Generate Prisma client
 print_status "Generating Prisma client..."
 cd $WEB_DIR
 npm run prisma:generate
 cd ..
 
-# 10. Run database migrations
-print_status "Running database migrations..."
+# 10. Run database migrations with conflict resolution
+print_status "Running database migrations with conflict resolution..."
 cd $WEB_DIR
 # Use production environment for migrations
 if [ -f ".env.production" ]; then
     if ./prisma-server.sh npx prisma migrate deploy; then
         print_success "Database migrations completed successfully"
     else
-        print_warning "Database migrations failed, attempting schema fix..."
-        if ../scripts/fix-database-schema.sh; then
-            print_success "Database schema fixed successfully"
+        print_warning "Database migrations failed, attempting conflict resolution..."
+        if [ -f "../scripts/fix-migration-conflicts.sh" ]; then
+            chmod +x ../scripts/fix-migration-conflicts.sh
+            if ../scripts/fix-migration-conflicts.sh; then
+                print_success "Migration conflicts resolved successfully"
+            else
+                print_warning "Migration conflict resolution failed, attempting schema fix..."
+                if ../scripts/fix-database-schema.sh; then
+                    print_success "Database schema fixed successfully"
+                else
+                    print_error "Database schema fix failed!"
+                    exit 1
+                fi
+            fi
         else
-            print_error "Database schema fix failed!"
-            exit 1
+            print_warning "Migration conflict resolution script not found, attempting schema fix..."
+            if ../scripts/fix-database-schema.sh; then
+                print_success "Database schema fixed successfully"
+            else
+                print_error "Database schema fix failed!"
+                exit 1
+            fi
         fi
     fi
 else
@@ -341,6 +370,12 @@ echo "🚀 Deploying MarinaObuv update..."
 
 # Pull latest changes
 git pull origin main
+
+# Sync migration files
+if [ -f "scripts/sync-migration-files.sh" ]; then
+    chmod +x scripts/sync-migration-files.sh
+    ./scripts/sync-migration-files.sh
+fi
 
 # Install dependencies
 cd /var/www/marinaobuv/web
