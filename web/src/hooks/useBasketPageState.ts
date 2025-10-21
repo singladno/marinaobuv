@@ -205,6 +205,13 @@ export function useBasketPageState() {
     }
   };
 
+  // Function to clear transport company selection
+  const clearTransportCompany = () => {
+    setSelectedTransportId(null);
+    setCustomTransportCompany(null);
+    order.setSelectedShipping(null);
+  };
+
   // Shim auth states expected by page/handlers
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -230,6 +237,7 @@ export function useBasketPageState() {
     selectedTransportId,
     setSelectedTransportId,
     setSelectedTransportCompany: handleSetSelectedTransportCompany,
+    clearTransportCompany,
     isEditingUserData,
     setIsEditingUserData,
     userEmail,

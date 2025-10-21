@@ -1,6 +1,6 @@
 import { generateItemCode } from '@/lib/itemCodeGenerator';
 import { generateOrderNumber } from '@/lib/order-number-generator';
-import { prisma } from '@/lib/server/db';
+import { scriptPrisma as prisma } from '@/lib/script-db';
 
 interface CreateOrderItem {
   slug?: string;
@@ -99,6 +99,12 @@ export async function createOrder(
   // Generate order number
   const orderNumber = await generateOrderNumber();
 
+  // Get user's label to inherit it
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { label: true },
+  });
+
   // Create the order
   const order = await prisma.order.create({
     data: {
@@ -110,6 +116,7 @@ export async function createOrder(
       address: customerInfo.address,
       comment: customerInfo.comment,
       transportId: transportCompanyId,
+      label: user?.label || null, // Inherit label from user
       items: {
         create: orderItems,
       },

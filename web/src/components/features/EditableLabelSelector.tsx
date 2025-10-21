@@ -49,10 +49,8 @@ export function EditableLabelSelector({
     setStatus('saving');
     try {
       await onLabelChange(trimmed);
-      setStatus('success');
+      setStatus('idle');
       setIsEditing(false);
-      // Clear success status after 2 seconds
-      setTimeout(() => setStatus('idle'), 2000);
     } catch (error) {
       setStatus('error');
       setEditValue(value || '');
@@ -83,22 +81,6 @@ export function EditableLabelSelector({
       case 'saving':
         return (
           <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-        );
-      case 'success':
-        return (
-          <div className="flex h-3 w-3 items-center justify-center rounded-full bg-green-500">
-            <svg
-              className="h-2 w-2 text-white"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
         );
       case 'error':
         return (

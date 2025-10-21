@@ -56,7 +56,12 @@ interface OrderDetails {
   payment: number;
   gruzchikId: string | null;
   gruzchik?: { id: string; name: string | null } | null;
-  user?: { id: string; name: string | null; phone: string | null } | null;
+  user?: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    label: string | null;
+  } | null;
   items: OrderItem[];
 }
 
@@ -291,7 +296,9 @@ export default function OrderDetailsPage() {
           <CardContent>
             <div className="flex items-center space-x-2">
               <Tag className="h-4 w-4 text-gray-400" />
-              <span className="font-medium">{order.label || 'Без метки'}</span>
+              <span className="font-medium">
+                {order.user?.label || 'Без метки'}
+              </span>
             </div>
             <p className="text-sm text-gray-600">{order.phone}</p>
           </CardContent>

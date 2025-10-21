@@ -312,7 +312,7 @@
   }
 
   .border-card-error {
-    @apply border-2 border-red-500;
+    @apply border-2 border-purple-500;
   }
 
   .border-input {

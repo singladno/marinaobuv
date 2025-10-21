@@ -94,7 +94,7 @@ export function OrdersTableRow({
       {/* Метка */}
       <td className="whitespace-nowrap px-4 py-4">
         <EditableLabelSelector
-          value={order.label}
+          value={order.user?.label || null}
           onLabelChange={async newLabel =>
             onPatch(order.id, { label: newLabel })
           }

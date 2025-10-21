@@ -24,7 +24,12 @@ export type AdminOrder = {
   payment: number;
   gruzchikId: string | null;
   gruzchik?: { id: string; name: string | null } | null;
-  user?: { id: string; name: string | null; phone: string | null } | null;
+  user?: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    label: string | null;
+  } | null;
   items: AdminOrderItem[];
   unreadMessageCount?: number;
 };
@@ -66,11 +71,46 @@ export function useOrders() {
       // Store original state for rollback
       const originalOrders = [...orders];
 
+      // Find the target order to get the user ID
+      const targetOrder = orders.find(order => order.id === id);
+      const targetUserId = targetOrder?.user?.id;
+
       // Apply optimistic update immediately
       setOrders(prevOrders =>
-        prevOrders.map(order =>
-          order.id === id ? { ...order, ...data } : order
-        )
+        prevOrders.map(order => {
+          if (order.id === id) {
+            // Handle label updates specifically for user.label
+            if (data.label !== undefined && order.user) {
+              return {
+                ...order,
+                ...data,
+                user: {
+                  ...order.user,
+                  label: data.label,
+                },
+              };
+            }
+            return { ...order, ...data };
+          }
+
+          // If this is a label update, also update all other orders from the same user
+          if (
+            data.label !== undefined &&
+            targetUserId &&
+            order.user?.id === targetUserId &&
+            order.id !== id
+          ) {
+            return {
+              ...order,
+              user: {
+                ...order.user,
+                label: data.label,
+              },
+            };
+          }
+
+          return order;
+        })
       );
 
       try {

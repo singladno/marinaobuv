@@ -45,6 +45,7 @@ export async function GET(
             id: true,
             phone: true,
             name: true,
+            label: true,
           },
         },
         gruzchik: {

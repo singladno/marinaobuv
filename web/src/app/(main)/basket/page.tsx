@@ -31,6 +31,7 @@ export default function BasketPage() {
     orderComment: basketState.orderComment,
     addNotification: basketState.addNotification,
     clear: basketState.clear,
+    clearTransportCompany: basketState.clearTransportCompany,
     setIsCheckoutModalOpen: handlers.setIsCheckoutModalOpen,
     setValidationErrors: basketState.setValidationErrors,
   });

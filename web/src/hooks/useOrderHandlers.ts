@@ -19,6 +19,7 @@ interface UseOrderHandlersProps {
   orderComment: string;
   addNotification: (notification: any) => void;
   clear: () => void;
+  clearTransportCompany: () => void;
   setIsCheckoutModalOpen: (open: boolean) => void;
   setValidationErrors: (
     updater:
@@ -45,6 +46,7 @@ export function useOrderHandlers({
   orderComment,
   addNotification,
   clear,
+  clearTransportCompany,
   setIsCheckoutModalOpen,
   setValidationErrors,
 }: UseOrderHandlersProps) {
@@ -107,6 +109,7 @@ export function useOrderHandlers({
         message: `Ваш заказ #${formatOrderNumber(result.order.orderNumber)} успешно оформлен.`,
       });
       clear();
+      clearTransportCompany();
       setIsCheckoutModalOpen(false);
       router.push('/orders');
     } catch (error: unknown) {

@@ -42,7 +42,7 @@ export async function GET() {
               },
             },
           },
-          user: { select: { id: true, phone: true, name: true } },
+          user: { select: { id: true, phone: true, name: true, label: true } },
           gruzchik: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -90,21 +90,39 @@ export async function POST(req: NextRequest) {
     if (!id)
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
+    // Get the order to find the user
+    const order = await prisma.order.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
     const data: {
       status?: string;
-      label?: string;
       payment?: number;
       gruzchikId?: string | null;
     } = {};
     if (typeof status === 'string') data.status = status;
-    if (label !== undefined && label !== null) data.label = label;
     if (payment !== undefined && payment !== null)
       data.payment = Number(payment) || 0;
     if (gruzchikId !== undefined) {
       data.gruzchikId = gruzchikId === '' ? null : gruzchikId;
     }
 
+    // Update the order
     const updated = await prisma.order.update({ where: { id }, data });
+
+    // If label is provided and order has a user, update the user's label
+    if (label !== undefined && order.userId) {
+      await prisma.user.update({
+        where: { id: order.userId },
+        data: { label: label || null },
+      });
+    }
+
     return NextResponse.json({ ok: true, order: updated });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unexpected error';

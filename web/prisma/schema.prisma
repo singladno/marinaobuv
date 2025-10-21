@@ -215,6 +215,7 @@ model User {
   role           Role
   providerId     String?
   passwordHash   String
+  label          String?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   gruzchikOrders Order[]            @relation("OrderGruzchik")
