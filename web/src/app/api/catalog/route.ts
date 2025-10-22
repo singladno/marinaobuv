@@ -41,9 +41,35 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Category filter
+    // Category filter - include products from subcategories
     if (categoryId) {
-      where.categoryId = categoryId;
+      // First, get the category and check if it has subcategories
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: {
+          id: true,
+          children: {
+            select: { id: true },
+            where: { isActive: true },
+          },
+        },
+      });
+
+      if (category) {
+        // If category has subcategories, include products from all subcategories
+        if (category.children.length > 0) {
+          const subcategoryIds = category.children.map(child => child.id);
+          where.categoryId = {
+            in: [categoryId, ...subcategoryIds],
+          };
+        } else {
+          // If no subcategories, just use the category itself
+          where.categoryId = categoryId;
+        }
+      } else {
+        // Fallback to direct category if not found
+        where.categoryId = categoryId;
+      }
     }
 
     // Price range filter

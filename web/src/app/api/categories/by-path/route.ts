@@ -633,6 +633,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Fetch parent category information
+    let parentCategory = null;
+    if (category.parentId) {
+      const parent = await prisma.category.findFirst({
+        where: { id: category.parentId, isActive: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          path: true,
+          parentId: true,
+        },
+      });
+
+      if (parent) {
+        parentCategory = {
+          id: parent.id,
+          name: parent.name,
+          path: parent.path.replace(/^obuv\//, ''),
+          href: `/catalog/${parent.path.replace(/^obuv\//, '')}`,
+        };
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       ...category,
@@ -641,6 +665,7 @@ export async function GET(request: NextRequest) {
       subcategories,
       siblingCategories,
       parentChildren,
+      parentCategory,
     });
   } catch (error) {
     console.error('Category by path API error:', error);

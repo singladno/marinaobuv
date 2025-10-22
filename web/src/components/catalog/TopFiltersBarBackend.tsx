@@ -45,6 +45,12 @@ type TopFiltersBarBackendProps = {
     href: string;
     hasChildren?: boolean;
   }>;
+  parentCategory?: {
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+  } | null;
   currentPath?: string;
   currentCategoryName?: string;
 };
@@ -56,6 +62,7 @@ export default function TopFiltersBarBackend({
   subcategories,
   siblingCategories,
   parentChildren,
+  parentCategory,
   currentPath,
   currentCategoryName,
 }: TopFiltersBarBackendProps) {
@@ -125,11 +132,7 @@ export default function TopFiltersBarBackend({
         <CategoryNavigationControl
           currentCategory={currentCategoryName}
           categories={subcategories}
-          parentCategory={
-            siblingCategories && siblingCategories.length > 0
-              ? { name: 'Обувь', href: '/catalog' }
-              : undefined
-          }
+          parentCategory={parentCategory || undefined}
           siblingCategories={siblingCategories}
           parentChildren={parentChildren}
         />
@@ -138,7 +141,7 @@ export default function TopFiltersBarBackend({
       {/* Category Filter Control - Subcategories */}
       {subcategories && subcategories.length > 0 && (
         <CategoryFilterControl
-          selectedCategories={filters.categoryId ? [filters.categoryId] : []}
+          selectedCategories={[]} // Don't show current category as selected
           categories={subcategories}
           onSelectionChange={categoryIds => {
             if (onChange) {

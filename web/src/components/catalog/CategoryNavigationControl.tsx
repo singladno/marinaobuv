@@ -217,7 +217,29 @@ export function CategoryNavigationControl({
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 {currentViewPath
-                  ? currentCategory
+                  ? (() => {
+                      // Generate combined name for custom view
+                      // Extract gender from currentCategory and season from currentViewPath
+                      const genderMatch = currentCategory.match(
+                        /^(Мужская|Женская|Детская)/
+                      );
+                      const gender = genderMatch ? genderMatch[1] : '';
+
+                      // Map season names
+                      const seasonMap: Record<string, string> = {
+                        autumn: 'осенняя',
+                        winter: 'зимняя',
+                        spring: 'весенняя',
+                        summer: 'летняя',
+                      };
+
+                      // Extract season from currentViewPath (last segment)
+                      const pathSegments = currentViewPath.split('/');
+                      const seasonKey = pathSegments[pathSegments.length - 1];
+                      const season = seasonMap[seasonKey] || seasonKey;
+
+                      return `${gender} ${season} обувь`;
+                    })()
                   : showingSiblings && parentCategory
                     ? parentCategory.name
                     : showingParentChildren && parentCategory

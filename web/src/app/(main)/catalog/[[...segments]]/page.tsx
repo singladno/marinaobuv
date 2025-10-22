@@ -31,6 +31,12 @@ export default function CatalogPage() {
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [siblingCategories, setSiblingCategories] = useState<any[]>([]);
   const [parentChildren, setParentChildren] = useState<any[]>([]);
+  const [parentCategory, setParentCategory] = useState<{
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+  } | null>(null);
 
   const {
     products,
@@ -83,6 +89,7 @@ export default function CatalogPage() {
           setSubcategories(data.subcategories || []);
           setSiblingCategories(data.siblingCategories || []);
           setParentChildren(data.parentChildren || []);
+          setParentCategory(data.parentCategory || null);
           setIsParentCategory(data.isParentCategory || false);
           console.log(
             '🔍 Set categoryId:',
@@ -182,6 +189,7 @@ export default function CatalogPage() {
             subcategories={subcategories}
             siblingCategories={siblingCategories}
             parentChildren={parentChildren}
+            parentCategory={parentCategory}
             currentPath={categoryPath}
             currentCategoryName={displayName || categoryName}
           />
