@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 import { getProductById, getProducts } from './product-service';
 import { productInclude } from './product-includes';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(req, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { searchParams } = new URL(req.url);
@@ -38,9 +37,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(req, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { id } = await req.json();
@@ -70,9 +69,9 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(req, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const body = await req.json();
@@ -119,9 +118,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(req, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { id } = await req.json();

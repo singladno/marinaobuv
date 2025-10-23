@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 import { Text } from '@/components/ui/Text';
 
@@ -22,7 +23,7 @@ function buildCatalogUrlFromPath(path: string) {
   return `/catalog/${p}`;
 }
 
-export function CategoryTreeClient({
+function CategoryTreeClientContent({
   tree,
   activePath,
 }: {
@@ -45,6 +46,22 @@ export function CategoryTreeClient({
         ))}
       </ul>
     </nav>
+  );
+}
+
+export function CategoryTreeClient({
+  tree,
+  activePath,
+}: {
+  tree: CategoryTreeNode[];
+  activePath?: string;
+}) {
+  return (
+    <Suspense
+      fallback={<div className="text-sm text-gray-500">Загрузка...</div>}
+    >
+      <CategoryTreeClientContent tree={tree} activePath={activePath} />
+    </Suspense>
   );
 }
 

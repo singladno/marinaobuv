@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string; messageId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'GRUZCHIK') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'GRUZCHIK');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId, messageId } = await params;
@@ -28,7 +27,7 @@ export async function PATCH(
       where: {
         id: itemId,
         order: {
-          gruzchikId: session.userId,
+          gruzchikId: auth.user.id,
         },
       },
     });
@@ -45,7 +44,7 @@ export async function PATCH(
       where: {
         id: messageId,
         orderItemId: itemId,
-        userId: session.userId,
+        userId: auth.user.id,
       },
     });
 
@@ -102,9 +101,9 @@ export async function DELETE(
   { params }: { params: Promise<{ itemId: string; messageId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'GRUZCHIK') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'GRUZCHIK');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId, messageId } = await params;
@@ -114,7 +113,7 @@ export async function DELETE(
       where: {
         id: itemId,
         order: {
-          gruzchikId: session.userId,
+          gruzchikId: auth.user.id,
         },
       },
     });
@@ -131,7 +130,7 @@ export async function DELETE(
       where: {
         id: messageId,
         orderItemId: itemId,
-        userId: session.userId,
+        userId: auth.user.id,
       },
     });
 

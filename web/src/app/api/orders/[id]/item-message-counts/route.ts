@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { prisma } from '@/lib/server/db';
-import { authOptions } from '@/lib/auth';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user || !('id' in session.user)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'CLIENT');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { id: orderId } = await params;
@@ -19,7 +17,7 @@ export async function GET(
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: session.user.id,
+        userId: auth.user.id,
       },
       include: {
         items: {
@@ -51,7 +49,7 @@ export async function GET(
         where: {
           orderItemId: itemId,
           userId: {
-            not: session.user.id, // Exclude messages sent by this user
+            not: auth.user.id, // Exclude messages sent by this user
           },
         },
       });

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -26,7 +24,7 @@ export async function GET(request: NextRequest) {
     const inStock = searchParams.get('inStock') === 'true';
 
     // Get session for search history using NextAuth
-    const session = await getServerSession(authOptions);
+    const auth = await requireAuth(request);
 
     // Build where clause
     const where: any = {
@@ -191,7 +189,7 @@ export async function GET(request: NextRequest) {
     if (search && search.trim().length > 0) {
       try {
         const normalized = search.trim();
-        const userId = session?.user?.id || null;
+        const userId = auth.user?.id || null;
 
         if (userId) {
           // For logged-in users: upsert by case-insensitive query to avoid duplicates

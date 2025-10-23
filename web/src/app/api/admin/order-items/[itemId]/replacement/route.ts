@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
     console.log('Replacement API called');
-    const session = await getSession();
-    console.log('Session:', session);
+    const auth = await requireAuth(request, 'ADMIN');
+    console.log('Auth:', auth);
 
-    if (!session || session.role !== 'ADMIN') {
+    if (auth.error) {
       console.log('Unauthorized access attempt');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return auth.error;
     }
 
     const { itemId } = await params;
@@ -113,7 +112,7 @@ export async function POST(
     // Create replacement proposal
     console.log('Creating replacement with data:', {
       orderItemId: itemId,
-      adminUserId: session.userId,
+      adminUserId: auth.user.id,
       clientUserId: orderItem.order.userId,
       replacementImageUrl: replacementImageUrl || null,
       replacementImageKey: replacementImageKey || null,
@@ -124,7 +123,7 @@ export async function POST(
     const replacement = await prisma.orderItemReplacement.create({
       data: {
         orderItemId: itemId,
-        adminUserId: session.userId,
+        adminUserId: auth.user.id,
         clientUserId: orderItem.order.userId,
         replacementImageUrl: replacementImageUrl || null,
         replacementImageKey: replacementImageKey || null,
@@ -161,7 +160,7 @@ export async function POST(
         attachments?: any;
       } = {
         orderItemId: itemId,
-        userId: session.userId,
+        userId: auth.user.id,
         isService: false, // Not a service message
       };
 
@@ -215,9 +214,9 @@ export async function PUT(
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId } = await params;
@@ -240,7 +239,7 @@ export async function PUT(
       where: {
         id: replacementId,
         orderItemId: itemId,
-        adminUserId: session.userId,
+        adminUserId: auth.user.id,
         status: 'PENDING',
       },
     });
@@ -307,9 +306,9 @@ export async function DELETE(
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId } = await params;
@@ -327,7 +326,7 @@ export async function DELETE(
       where: {
         id: replacementId,
         orderItemId: itemId,
-        adminUserId: session.userId,
+        adminUserId: auth.user.id,
         status: 'PENDING',
       },
     });
@@ -364,9 +363,9 @@ export async function GET(
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId } = await params;

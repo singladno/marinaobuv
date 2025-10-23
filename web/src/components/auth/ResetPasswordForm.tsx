@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
 
-export function ResetPasswordForm() {
+function ResetPasswordFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -155,5 +155,23 @@ export function ResetPasswordForm() {
         </Button>
       </form>
     </div>
+  );
+}
+
+export function ResetPasswordForm() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-6 w-6 animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+            <div className="mx-auto mb-2 h-6 w-48 animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+            <div className="mx-auto h-4 w-64 animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordFormContent />
+    </Suspense>
   );
 }

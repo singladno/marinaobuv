@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'GRUZCHIK') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(req, 'GRUZCHIK');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { searchParams } = new URL(req.url);
@@ -22,7 +21,7 @@ export async function GET(req: NextRequest) {
       gruzchikId: string;
       status?: string;
     } = {
-      gruzchikId: session.userId,
+      gruzchikId: auth.user.id,
     };
 
     if (status) {

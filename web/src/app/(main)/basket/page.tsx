@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { BasketContent } from '@/components/cart/BasketContent';
 import { EmptyCart } from '@/components/cart/EmptyCart';
 import { LoadingSpinner } from '@/components/cart/LoadingSpinner';
@@ -81,10 +82,12 @@ export default function BasketPage() {
         />
       )}
 
-      <AuthModal
-        isOpen={basketState.isLoginModalOpen}
-        onClose={() => basketState.setIsLoginModalOpen(false)}
-      />
+      <Suspense fallback={null}>
+        <AuthModal
+          isOpen={basketState.isLoginModalOpen}
+          onClose={() => basketState.setIsLoginModalOpen(false)}
+        />
+      </Suspense>
 
       {null}
     </div>

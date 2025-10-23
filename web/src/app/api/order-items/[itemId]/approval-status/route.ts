@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'CLIENT');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId } = await params;
@@ -19,7 +18,7 @@ export async function GET(
       where: {
         id: itemId,
         order: {
-          userId: session.userId,
+          userId: auth.user.id,
         },
       },
     });
@@ -35,7 +34,7 @@ export async function GET(
     const approvalMessage = await prisma.orderItemMessage.findFirst({
       where: {
         orderItemId: itemId,
-        userId: session.userId,
+        userId: auth.user.id,
         text: 'Товар одобрен клиентом',
         isService: true,
       },

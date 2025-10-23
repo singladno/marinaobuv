@@ -5,13 +5,12 @@ import {
   validateGruzchikOrderAccess,
 } from '@/lib/gruzchik/orderValidation';
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'GRUZCHIK') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(req, 'GRUZCHIK');
+    if (auth.error) {
+      return auth.error;
     }
 
     const body = await req.json();
@@ -30,7 +29,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Verify the order belongs to this грузчик
-    const validation = await validateGruzchikOrderAccess(id, session.userId);
+    const validation = await validateGruzchikOrderAccess(id, auth.user.id);
     if (!validation.isValid) {
       return NextResponse.json({ error: validation.error }, { status: 404 });
     }

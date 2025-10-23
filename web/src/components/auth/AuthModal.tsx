@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ModernLoginForm } from './ModernLoginForm';
 import { ModernRegisterForm } from './ModernRegisterForm';
@@ -13,7 +13,7 @@ interface AuthModalProps {
   initialMode?: 'login' | 'register';
 }
 
-export function AuthModal({
+function AuthModalContent({
   isOpen,
   onClose,
   initialMode = 'login',
@@ -103,5 +103,15 @@ export function AuthModal({
         </div>
       </div>
     </div>
+  );
+}
+
+export function AuthModal(props: AuthModalProps) {
+  if (!props.isOpen) return null;
+
+  return (
+    <Suspense fallback={null}>
+      <AuthModalContent {...props} />
+    </Suspense>
   );
 }

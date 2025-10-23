@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { useCart } from '@/contexts/CartContext';
 import { useUser } from '@/contexts/NextAuthUserContext';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { Suspense } from 'react';
 import { site } from '@/lib/site';
 
 interface BottomNavigationProps {
@@ -192,10 +193,12 @@ export function BottomNavigation({ className = '' }: BottomNavigationProps) {
         </div>
       </nav>
 
-      <AuthModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
+      <Suspense fallback={null}>
+        <AuthModal
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+        />
+      </Suspense>
     </>
   );
 }

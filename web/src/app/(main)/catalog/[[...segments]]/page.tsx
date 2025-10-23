@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useParams } from 'next/navigation';
 
 import { ProductGrid } from '@/components/catalog/ProductGrid';
@@ -12,7 +12,7 @@ import { useInfiniteCatalog } from '@/hooks/useInfiniteCatalog';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useSearch } from '@/contexts/SearchContext';
 
-export default function CatalogPage() {
+function CatalogPageContent() {
   const searchParams = useSearchParams();
   const params = useParams();
   const { setSearchQuery } = useSearch();
@@ -221,5 +221,40 @@ export default function CatalogPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function CatalogPageFallback() {
+  return (
+    <div className="bg-background min-h-screen">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <div className="mb-4 h-6 w-64 animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+          <div className="mb-2 h-8 w-48 animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+        </div>
+        <div className="mb-6 h-16 w-full animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+        <div className="mb-6 flex items-center justify-between">
+          <div className="h-4 w-32 animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+          <div className="h-8 w-24 animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="aspect-square w-full animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+              <div className="h-4 w-full animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+              <div className="h-4 w-3/4 animate-pulse rounded bg-gray-300 dark:bg-gray-600"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CatalogPage() {
+  return (
+    <Suspense fallback={<CatalogPageFallback />}>
+      <CatalogPageContent />
+    </Suspense>
   );
 }

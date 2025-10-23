@@ -45,11 +45,11 @@ export async function POST(req: NextRequest) {
     const passwordHash = await hash(password, 12);
 
     // Determine role based on admin email/phone
-    let role: 'ADMIN' | 'PROVIDER' | 'CLIENT' = 'CLIENT';
+    let role: 'CLIENT' | 'PROVIDER' | 'CLIENT' = 'CLIENT';
     if (env.ADMIN_EMAIL && email === env.ADMIN_EMAIL) {
-      role = 'ADMIN';
+      role = 'CLIENT';
     } else if (env.ADMIN_PHONE && phone === env.ADMIN_PHONE) {
-      role = 'ADMIN';
+      role = 'CLIENT';
     }
 
     // Check if there's a provider with this phone

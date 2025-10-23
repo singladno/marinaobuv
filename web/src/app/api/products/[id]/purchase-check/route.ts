@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    const auth = await requireAuth(request, 'CLIENT');
 
-    if (!session?.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (auth.error) {
+      return auth.error;
     }
 
     const { id: productId } = await params;
@@ -19,7 +18,7 @@ export async function GET(
     // Check if user has purchased this product
     const hasPurchased = await prisma.order.findFirst({
       where: {
-        userId: session.userId,
+        userId: auth.user.id,
         status: {
           in: ['completed', 'delivered', 'shipped'], // Only count completed orders
         },

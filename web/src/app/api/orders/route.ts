@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 
 import {
   handleOrderCreationError,
@@ -7,18 +6,18 @@ import {
   validateOrderItems,
   validateTransportCompanyId,
 } from '@/lib/orders/orderValidation';
-import { authOptions } from '@/lib/auth';
 import { createOrder, getOrders } from '@/lib/services/order-creation-service';
+import { requireAuth } from '@/lib/server/auth-helpers';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireAuth(request, 'CLIENT');
 
-    if (!session?.user || !('id' in session.user)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (auth.error) {
+      return auth.error;
     }
 
-    const orders = await getOrders(session.user.id);
+    const orders = await getOrders(auth.user.id);
     return NextResponse.json({ orders });
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -31,10 +30,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireAuth(request, 'CLIENT');
 
-    if (!session?.user || !('id' in session.user)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (auth.error) {
+      return auth.error;
     }
 
     const body = await request.json();
@@ -79,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     const order = await createOrder(
-      session.user.id,
+      auth.user.id,
       items,
       {
         name: fullName ?? customerInfo?.name,

@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireAuth(request);
 
     // Get search history for the user (if logged in) or return empty array
     let searchHistory: Array<{ id: string; query: string; createdAt: Date }> =
       [];
 
-    if (session?.user?.id) {
+    if (auth.user?.id) {
       const rows = await prisma.searchHistory.findMany({
         where: {
-          userId: session.user.id,
+          userId: auth.user.id,
         },
         orderBy: {
           createdAt: 'desc',
@@ -51,10 +49,10 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireAuth(request);
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (auth.error) {
+      return auth.error;
     }
 
     const { searchParams } = new URL(request.url);
@@ -65,14 +63,14 @@ export async function DELETE(request: NextRequest) {
       await prisma.searchHistory.delete({
         where: {
           id: searchId,
-          userId: session.user.id, // Ensure user can only delete their own searches
+          userId: auth.user.id, // Ensure user can only delete their own searches
         },
       });
     } else {
       // Delete all search history for the user
       await prisma.searchHistory.deleteMany({
         where: {
-          userId: session.user.id,
+          userId: auth.user.id,
         },
       });
     }

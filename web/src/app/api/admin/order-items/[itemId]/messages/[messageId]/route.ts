@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
-
+import { requireAuth } from '@/lib/server/auth-helpers';
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string; messageId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId, messageId } = await params;
@@ -103,9 +102,9 @@ export async function DELETE(
   { params }: { params: Promise<{ itemId: string; messageId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId, messageId } = await params;

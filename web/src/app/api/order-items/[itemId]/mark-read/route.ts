@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
+import { requireAuth } from '@/lib/server/auth-helpers';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'CLIENT') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request, 'CLIENT');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId } = await params;
@@ -19,7 +19,7 @@ export async function POST(
       where: {
         id: itemId,
         order: {
-          userId: session.userId,
+          userId: auth.user.id,
         },
       },
     });
@@ -37,11 +37,11 @@ export async function POST(
       where: {
         orderItemId: itemId,
         userId: {
-          not: session.userId, // Exclude messages sent by the client themselves
+          not: auth.user.id, // Exclude messages sent by the client themselves
         },
         readBy: {
           none: {
-            userId: session.userId,
+            userId: auth.user.id,
           },
         },
       },
@@ -55,7 +55,7 @@ export async function POST(
       await prisma.orderItemMessageRead.createMany({
         data: unreadMessages.map((message: { id: string }) => ({
           messageId: message.id,
-          userId: session.userId,
+          userId: auth.user.id,
         })),
         skipDuplicates: true,
       });
