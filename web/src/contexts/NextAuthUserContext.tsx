@@ -48,11 +48,16 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
       pathname.startsWith(route)
     );
 
-    if (isProtectedRoute && !user) {
-      // Only redirect unauthenticated users to home
+    // Don't redirect if we're still loading or if status is loading
+    if (loading || status === 'loading') {
+      return;
+    }
+
+    // Only redirect if we're absolutely sure the user is not authenticated
+    if (isProtectedRoute && !user && status === 'unauthenticated') {
       router.replace('/');
     }
-  }, [pathname, router, user]);
+  }, [pathname, router, user, loading, status]);
 
   const fetchUser = async () => {
     try {
@@ -65,7 +70,10 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
 
       if (status === 'unauthenticated' || !session) {
         setUser(null);
-        redirectToLoginIfProtected();
+        // Only redirect if we're sure the user is not authenticated
+        if (status === 'unauthenticated') {
+          redirectToLoginIfProtected();
+        }
         return;
       }
       // Get additional user data from our API
@@ -98,16 +106,7 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
   };
 
   const logout = async () => {
-    console.log('🔍 LOGOUT DEBUG: Starting logout process');
-    console.log('🔍 LOGOUT DEBUG: Current URL:', window.location.href);
-    console.log(
-      '🔍 LOGOUT DEBUG: NEXT_PUBLIC_SITE_URL:',
-      process.env.NEXT_PUBLIC_SITE_URL
-    );
-    console.log('🔍 LOGOUT DEBUG: NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
-
     const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/`;
-    console.log('🔍 LOGOUT DEBUG: Using callbackUrl:', callbackUrl);
     await signOut({
       callbackUrl: callbackUrl,
     });

@@ -23,16 +23,7 @@ export function LogoutButton({
   children = 'Выйти',
 }: LogoutButtonProps) {
   const handleLogout = async () => {
-    console.log('🔍 LOGOUT DEBUG: Starting logout process');
-    console.log('🔍 LOGOUT DEBUG: Current URL:', window.location.href);
-    console.log(
-      '🔍 LOGOUT DEBUG: NEXT_PUBLIC_SITE_URL:',
-      process.env.NEXT_PUBLIC_SITE_URL
-    );
-    console.log('🔍 LOGOUT DEBUG: NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
-
     const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/`;
-    console.log('🔍 LOGOUT DEBUG: Using callbackUrl:', callbackUrl);
 
     await signOut({
       callbackUrl: callbackUrl,

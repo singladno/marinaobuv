@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
+import { requireAuth } from '@/lib/server/auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAuth(req, 'ADMIN');
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
     const [orders, gruzchiks] = await Promise.all([
@@ -49,7 +52,7 @@ export async function GET() {
             where: {
               orderItemId: item.id,
               userId: {
-                not: session.userId, // Exclude messages sent by the admin themselves
+                not: authResult.user.id, // Exclude messages sent by the admin themselves
               },
             },
           });
@@ -60,10 +63,10 @@ export async function GET() {
               message: {
                 orderItemId: item.id,
                 userId: {
-                  not: session.userId, // Exclude messages sent by the admin themselves
+                  not: authResult.user.id, // Exclude messages sent by the admin themselves
                 },
               },
-              userId: session.userId,
+              userId: authResult.user.id,
             },
           });
 
@@ -87,9 +90,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAuth(req, 'ADMIN');
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
     const body = await req.json();

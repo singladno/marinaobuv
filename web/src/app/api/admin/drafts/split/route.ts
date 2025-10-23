@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getSession } from '@/lib/server/session';
+import { requireAuth } from '@/lib/server/auth';
 import { splitDraft } from '@/lib/services/draft-split-service';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAuth(request, 'ADMIN');
+    if ('error' in authResult) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
     }
 
     const { draftId, imageIds } = await request.json();

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { getSession } from '@/lib/server/session';
 
 // Define protected routes and their required roles
 const protectedRoutes = {
@@ -58,47 +57,26 @@ export async function middleware(request: NextRequest) {
 
   // Check if route requires authentication
   const requiredRoles = getRequiredRoles(pathname);
+
   if (!requiredRoles) {
     return NextResponse.next();
   }
 
   try {
-    // First try NextAuth token
+    // Get NextAuth token
     const token = await getToken({ req: request });
 
     if (token && requiredRoles.includes(token.role as string)) {
-      // User is authenticated with NextAuth and has required role
-      return NextResponse.next();
-    }
-
-    // If no NextAuth token, try custom session
-    const session = await getSession();
-
-    if (session && requiredRoles.includes(session.role)) {
-      // User is authenticated with custom session and has required role
       return NextResponse.next();
     }
 
     // No valid authentication - redirect to home
-    console.log(
-      '🔍 MIDDLEWARE DEBUG: Redirecting to home, request.url:',
-      request.url
-    );
     const redirectUrl = new URL('/', request.url);
-    console.log('🔍 MIDDLEWARE DEBUG: Redirect URL:', redirectUrl.toString());
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
-    // Error getting token/session - redirect to home
-    console.error('🔍 MIDDLEWARE DEBUG: Middleware auth error:', error);
-    console.log(
-      '🔍 MIDDLEWARE DEBUG: Error redirect, request.url:',
-      request.url
-    );
+    // Error getting token - redirect to home
+    console.error('Middleware auth error:', error);
     const redirectUrl = new URL('/', request.url);
-    console.log(
-      '🔍 MIDDLEWARE DEBUG: Error redirect URL:',
-      redirectUrl.toString()
-    );
     return NextResponse.redirect(redirectUrl);
   }
 }

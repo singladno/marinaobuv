@@ -5,6 +5,8 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/server/db';
 import { compare } from 'bcryptjs';
 import { env } from '@/lib/env';
+import { normalizePhoneToE164 } from '@/lib/server/sms';
+import { extractNormalizedPhone } from '@/lib/utils/whatsapp-phone-extractor';
 
 // Extend NextAuth types
 declare module 'next-auth' {
@@ -75,8 +77,11 @@ export const authOptions: NextAuthOptions = {
 
         // Handle phone/password login (for existing users)
         if (phone && password) {
+          // Normalize phone number to handle different formats
+          const normalizedPhone = normalizePhoneToE164(phone);
+
           const user = await prisma.user.findUnique({
-            where: { phone },
+            where: { phone: normalizedPhone },
             include: { provider: true },
           });
 
@@ -85,12 +90,58 @@ export const authOptions: NextAuthOptions = {
           const isValid = await compare(password, user.passwordHash);
           if (!isValid) return null;
 
+          // Check if user matches admin phone and update role if needed
+          let updatedUser = user;
+          if (
+            env.ADMIN_PHONE &&
+            env.ADMIN_PHONE === normalizedPhone &&
+            user.role !== 'ADMIN'
+          ) {
+            updatedUser = await prisma.user.update({
+              where: { id: user.id },
+              data: { role: 'ADMIN' },
+              include: { provider: true },
+            });
+          }
+          // If existing user doesn't have a provider but there's a provider with this phone, connect them
+          else if (!user.providerId) {
+            // First try exact match with normalized phone
+            let provider = await prisma.provider.findFirst({
+              where: { phone: normalizedPhone },
+            });
+
+            // If no exact match, try to find provider by WhatsApp ID format
+            if (!provider) {
+              const allProviders = await prisma.provider.findMany({
+                where: { phone: { not: null } },
+              });
+
+              provider =
+                allProviders.find(p => {
+                  if (!p.phone) return false;
+                  const extractedPhone = extractNormalizedPhone(p.phone);
+                  return extractedPhone === normalizedPhone;
+                }) || null;
+            }
+
+            if (provider && user.role !== 'ADMIN') {
+              updatedUser = await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  role: 'PROVIDER',
+                  providerId: provider.id,
+                },
+                include: { provider: true },
+              });
+            }
+          }
+
           return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            providerId: user.providerId,
+            id: updatedUser.id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            role: updatedUser.role,
+            providerId: updatedUser.providerId,
           };
         }
 
@@ -118,29 +169,12 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      console.log('🔍 NEXTAUTH REDIRECT DEBUG: url:', url);
-      console.log('🔍 NEXTAUTH REDIRECT DEBUG: baseUrl:', baseUrl);
-      console.log(
-        '🔍 NEXTAUTH REDIRECT DEBUG: NEXTAUTH_URL:',
-        process.env.NEXTAUTH_URL
-      );
-      console.log(
-        '🔍 NEXTAUTH REDIRECT DEBUG: NEXT_PUBLIC_SITE_URL:',
-        process.env.NEXT_PUBLIC_SITE_URL
-      );
-
       // If url is relative, make it absolute with baseUrl
       if (url.startsWith('/')) {
-        const fullUrl = `${baseUrl}${url}`;
-        console.log(
-          '🔍 NEXTAUTH REDIRECT DEBUG: Constructed fullUrl:',
-          fullUrl
-        );
-        return fullUrl;
+        return `${baseUrl}${url}`;
       }
 
       // If url is absolute, use it as is
-      console.log('🔍 NEXTAUTH REDIRECT DEBUG: Using absolute url:', url);
       return url;
     },
   },

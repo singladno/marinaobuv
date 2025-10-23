@@ -1,10 +1,5 @@
-import { SignJWT, jwtVerify } from 'jose';
-import { cookies } from 'next/headers';
-
-const cookieName = 'mo_session';
-const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET || 'dev-secret-change-me'
-);
+// This file is deprecated - use NextAuth instead
+// Keeping this stub to prevent import errors while migrating API routes
 
 export type SessionPayload = {
   userId: string;
@@ -12,31 +7,21 @@ export type SessionPayload = {
   providerId?: string | null;
 };
 
-export async function createSession(payload: SessionPayload) {
-  const token = await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('7d')
-    .sign(secret);
-  (await cookies()).set(cookieName, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-  });
+export async function getSession(): Promise<SessionPayload | null> {
+  // Always return null to force migration to NextAuth
+  return null;
+}
+
+export async function createSession() {
+  // Deprecated - use NextAuth signIn instead
+  throw new Error(
+    'Custom session system is deprecated. Use NextAuth signIn instead.'
+  );
 }
 
 export async function clearSession() {
-  (await cookies()).delete(cookieName);
-}
-
-export async function getSession(): Promise<SessionPayload | null> {
-  const jar = await cookies();
-  const token = jar.get(cookieName)?.value;
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    return payload as unknown as SessionPayload;
-  } catch {
-    return null;
-  }
+  // Deprecated - use NextAuth signOut instead
+  throw new Error(
+    'Custom session system is deprecated. Use NextAuth signOut instead.'
+  );
 }
