@@ -35,13 +35,23 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   // Fetch search history from backend
   const fetchSearchHistory = useCallback(async () => {
     try {
+      console.log('SearchContext: Fetching from backend');
       const response = await fetch('/api/search-history');
       if (response.ok) {
         const data = await response.json();
+        console.log('SearchContext: Backend response', data);
+        console.log(
+          'SearchContext: Search history length',
+          data.searchHistory?.length || 0
+        );
         setSearchHistory(data.searchHistory);
+        return data.searchHistory.length > 0;
       }
+      console.log('SearchContext: Backend response not ok', response.status);
+      return false;
     } catch (err) {
       console.error('Failed to fetch search history:', err);
+      return false;
     }
   }, []);
 
@@ -49,8 +59,10 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const loadLocalSearchHistory = useCallback(() => {
     try {
       const localHistory = localStorage.getItem('searchHistory');
+      console.log('SearchContext: Loading from localStorage', localHistory);
       if (localHistory) {
         const parsed = JSON.parse(localHistory);
+        console.log('SearchContext: Parsed localStorage history', parsed);
         setSearchHistory(parsed);
       }
     } catch (err) {
@@ -90,10 +102,13 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   // Handle search
   const handleSearch = useCallback(
     (query: string) => {
+      console.log('SearchContext: handleSearch called with', query);
       setSearchQuery(query);
 
-      // Save to local storage for anonymous users
+      // Save to local storage for all users as backup
+      // Database saving happens via catalog API
       if (query.trim()) {
+        console.log('SearchContext: Saving to localStorage');
         saveToLocalSearchHistory(query.trim());
       }
 
@@ -107,6 +122,8 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       const url = searchParams.toString()
         ? `/catalog?${searchParams.toString()}`
         : '/catalog';
+
+      console.log('SearchContext: Navigating to', url, 'with query:', query);
       router.push(url);
 
       // Dispatch a custom event to notify components of the search
@@ -147,10 +164,24 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     [fetchSearchHistory]
   );
 
-  // Load initial search history
+  // Load initial search history and reset search query
   useEffect(() => {
-    fetchSearchHistory();
-    loadLocalSearchHistory();
+    const loadHistory = async () => {
+      console.log('SearchContext: Loading history on page load');
+      // Try to fetch from backend first (for logged-in users)
+      const backendSuccess = await fetchSearchHistory();
+      console.log('SearchContext: Backend success', backendSuccess);
+
+      // If backend fetch failed or returned no results, try localStorage (for anonymous users)
+      if (!backendSuccess) {
+        console.log('SearchContext: Backend failed, trying localStorage');
+        loadLocalSearchHistory();
+      }
+    };
+
+    loadHistory();
+    // Reset search query on page load to prevent prepopulation
+    setSearchQuery('');
   }, [fetchSearchHistory, loadLocalSearchHistory]);
 
   const value: SearchContextType = {

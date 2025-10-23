@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { ProductSourceModal } from './ProductSourceModal';
 
 interface ProductGalleryProps {

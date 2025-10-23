@@ -11,11 +11,16 @@ import { ProductSourceModal } from '@/components/product/ProductSourceModal';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { rub } from '@/lib/format';
 
 // Function to get relative time in Russian
 function getRelativeTime(dateString: string): string {
+  // Only calculate on client side to avoid hydration mismatch
+  if (typeof window === 'undefined') {
+    return 'Проверяется...';
+  }
+
   const now = new Date();
   const date = new Date(dateString);
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);

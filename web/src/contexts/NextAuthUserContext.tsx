@@ -48,11 +48,11 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
       pathname.startsWith(route)
     );
 
-    if (isProtectedRoute) {
-      // Redirect to home - auth is now handled by modal
+    if (isProtectedRoute && !user) {
+      // Only redirect unauthenticated users to home
       router.replace('/');
     }
-  }, [pathname, router]);
+  }, [pathname, router, user]);
 
   const fetchUser = async () => {
     try {
@@ -68,7 +68,6 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
         redirectToLoginIfProtected();
         return;
       }
-
       // Get additional user data from our API
       const res = await fetch('/api/auth/me', {
         cache: 'no-store',
@@ -99,7 +98,19 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
   };
 
   const logout = async () => {
-    await signOut({ callbackUrl: '/' });
+    console.log('🔍 LOGOUT DEBUG: Starting logout process');
+    console.log('🔍 LOGOUT DEBUG: Current URL:', window.location.href);
+    console.log(
+      '🔍 LOGOUT DEBUG: NEXT_PUBLIC_SITE_URL:',
+      process.env.NEXT_PUBLIC_SITE_URL
+    );
+    console.log('🔍 LOGOUT DEBUG: NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+
+    const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/`;
+    console.log('🔍 LOGOUT DEBUG: Using callbackUrl:', callbackUrl);
+    await signOut({
+      callbackUrl: callbackUrl,
+    });
   };
 
   useEffect(() => {
@@ -108,10 +119,15 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
 
   // Handle redirect when user becomes null on protected routes
   useEffect(() => {
-    if (!loading && !user && status === 'unauthenticated') {
+    if (
+      !loading &&
+      !user &&
+      status === 'unauthenticated' &&
+      pathname.startsWith('/profile')
+    ) {
       redirectToLoginIfProtected();
     }
-  }, [user, loading, status, redirectToLoginIfProtected]);
+  }, [user, loading, status, pathname, redirectToLoginIfProtected]);
 
   return (
     <UserContext.Provider

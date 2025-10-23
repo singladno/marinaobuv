@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface BulkDeleteModalProps {
@@ -21,6 +21,12 @@ export function BulkDeleteModal({
   isLoading = false,
 }: BulkDeleteModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure component is mounted on client side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleConfirm = async () => {
     setIsDeleting(true);
@@ -41,7 +47,7 @@ export function BulkDeleteModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const modalContent = (
     <div

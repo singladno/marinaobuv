@@ -59,6 +59,11 @@ export function MessagePreview({
   const senderColor = senderColors[latestMessage.sender];
 
   const formatTime = (dateString: string) => {
+    // Only calculate on client side to avoid hydration mismatch
+    if (typeof window === 'undefined') {
+      return 'Загрузка...';
+    }
+
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
@@ -72,6 +77,7 @@ export function MessagePreview({
       return date.toLocaleDateString('ru-RU', {
         day: '2-digit',
         month: '2-digit',
+        year: '2-digit',
       });
     }
   };

@@ -71,7 +71,7 @@ export default function OrdersPage() {
             <Text className="text-muted-foreground mb-6">
               Начните покупки в нашем каталоге
             </Text>
-            <Button asChild>
+            <Button asChild variant="primary" size="lg">
               <Link href="/">Перейти в каталог</Link>
             </Button>
           </Card>

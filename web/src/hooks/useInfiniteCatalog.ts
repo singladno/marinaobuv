@@ -22,6 +22,14 @@ interface CatalogResponse {
     totalPages: number;
   };
   filters: CatalogFilters;
+  debug?: {
+    searchHistorySaved: boolean;
+    searchQuery: string;
+    timestamp: string;
+    sessionUserId: string;
+    hasSession: boolean;
+    searchHistoryDebug: any;
+  };
 }
 
 export function useInfiniteCatalog(initialCategoryId?: string) {
@@ -114,6 +122,11 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
           append,
           currentProducts: allProducts.length,
         });
+
+        // Log debug information from API
+        if (data.debug) {
+          console.log('🔍 Catalog API Debug Info:', data.debug);
+        }
 
         if (append) {
           // Append new products to existing ones

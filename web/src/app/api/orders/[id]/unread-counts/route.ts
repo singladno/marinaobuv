@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !('id' in session.user)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -18,7 +19,7 @@ export async function GET(
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: session.userId,
+        userId: session.user.id,
       },
       include: {
         items: {
@@ -51,7 +52,7 @@ export async function GET(
         where: {
           orderItemId: itemId,
           userId: {
-            not: session.userId, // Exclude messages sent by this user themselves
+            not: session.user.id, // Exclude messages sent by this user themselves
           },
         },
       });
@@ -62,10 +63,10 @@ export async function GET(
           message: {
             orderItemId: itemId,
             userId: {
-              not: session.userId, // Exclude messages sent by this user themselves
+              not: session.user.id, // Exclude messages sent by this user themselves
             },
           },
-          userId: session.userId,
+          userId: session.user.id,
         },
       });
 

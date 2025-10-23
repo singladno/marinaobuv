@@ -5,7 +5,7 @@ import Header from '@/components/ui/Header';
 import BottomNavigation from '@/components/ui/BottomNavigation';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { SearchProvider } from '@/contexts/SearchContext';
-import { UserProvider } from '@/contexts/UserContext';
+import { NextAuthUserProvider } from '@/contexts/NextAuthUserContext';
 import { ClientChatProvider } from '@/contexts/ClientChatContext';
 
 export default function MainLayout({
@@ -14,7 +14,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <UserProvider>
+    <NextAuthUserProvider>
       <ThemeProvider>
         <SearchProvider>
           <ClientChatProvider>
@@ -31,7 +31,9 @@ export default function MainLayout({
                   {children}
                 </div>
               </main>
-              <Footer />
+              <div className="hidden md:block">
+                <Footer />
+              </div>
               {/* Bottom Navigation - visible on tablet and mobile */}
               <div className="md:hidden">
                 <BottomNavigation />
@@ -43,6 +45,6 @@ export default function MainLayout({
           </ClientChatProvider>
         </SearchProvider>
       </ThemeProvider>
-    </UserProvider>
+    </NextAuthUserProvider>
   );
 }

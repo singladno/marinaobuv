@@ -6,7 +6,7 @@ import { useNotifications } from '@/components/ui/NotificationProvider';
 import { useOptimizedBasketCart } from './useOptimizedBasketCart';
 import { useBasketOrder } from './useBasketOrder';
 import { popularTransportCompanies, TransportCompany } from '@/lib/shipping';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 export function useBasketPageState() {
   const cart = useOptimizedBasketCart();

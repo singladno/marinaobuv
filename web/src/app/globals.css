@@ -16,9 +16,10 @@
   }
 
   .mobile-layout {
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .md\:mobile-layout-none {

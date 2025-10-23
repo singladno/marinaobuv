@@ -2,7 +2,7 @@
 
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { useClientUnreadMessageCount } from '@/hooks/useClientUnreadMessageCount';
 import { useUnreadMessageCount } from '@/hooks/useUnreadMessageCount';
 

@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 interface UseAuthRedirectOptions {
   requireAuth?: boolean;

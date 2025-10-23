@@ -35,16 +35,16 @@ const sizes: Record<Size, string> = {
 const variants: Record<Variant, string> = {
   // Unified brand color: violet gradient
   primary:
-    'bg-gradient-to-r from-violet-600 to-violet-700 text-white shadow-lg hover:from-violet-700 hover:to-violet-800 hover:shadow-xl transition-all duration-200',
+    'bg-gradient-to-r from-violet-600 to-violet-700 !text-white shadow-lg hover:from-violet-700 hover:to-violet-800 hover:shadow-xl transition-all duration-200',
   secondary:
     'bg-white text-gray-900 border border-gray-200 shadow-sm hover:bg-gray-50',
   outline:
     'bg-transparent text-gray-900 border border-gray-300 hover:bg-gray-50',
   subtle: 'bg-violet-100 text-violet-700 hover:bg-violet-200',
   ghost: 'bg-transparent text-gray-900 hover:bg-gray-50',
-  success: 'bg-green-600 text-white shadow-sm hover:bg-green-700',
-  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
-  warning: 'bg-yellow-600 text-white shadow-sm hover:bg-yellow-700',
+  success: 'bg-green-600 !text-white shadow-sm hover:bg-green-700',
+  danger: 'bg-red-600 !text-white shadow-sm hover:bg-red-700',
+  warning: 'bg-yellow-600 !text-white shadow-sm hover:bg-yellow-700',
 };
 
 export function Button({
@@ -65,7 +65,7 @@ export function Button({
   }
 
   return (
-    <button suppressHydrationWarning className={buttonClasses} {...rest}>
+    <button className={buttonClasses} {...rest}>
       {children}
     </button>
   );
@@ -80,7 +80,6 @@ export function ButtonLink({
 }: AnchorProps) {
   return (
     <Link
-      suppressHydrationWarning
       href={href}
       className={clsx(base, variants[variant], sizes[size], className)}
     >

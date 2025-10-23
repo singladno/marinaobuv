@@ -31,6 +31,22 @@ export function SearchWithHistory({
     setInputValue(value);
   }, [value]);
 
+  // Handle search history changes - show dropdown if history becomes available
+  useEffect(() => {
+    if (searchHistory.length > 0 && isOpen) {
+      setIsOpen(true);
+    }
+  }, [searchHistory.length, isOpen]);
+
+  // Debug: Log when search history changes
+  useEffect(() => {
+    console.log(
+      'SearchWithHistory: searchHistory changed',
+      searchHistory.length,
+      searchHistory
+    );
+  }, [searchHistory]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -53,10 +69,11 @@ export function SearchWithHistory({
   };
 
   const handleInputFocus = () => {
-    setIsOpen(true);
+    setIsOpen(inputValue.length > 0 || searchHistory.length > 0);
   };
 
   const handleSearch = (query: string) => {
+    console.log('SearchWithHistory: handleSearch called with', query);
     setInputValue(query);
     onChange(query);
     setIsOpen(false);

@@ -24,7 +24,7 @@ import { MediaPreview, MediaItem } from '../gruzchik/MediaPreview';
 import { MediaViewerModal } from '../gruzchik/MediaViewerModal';
 import { useMediaDraft } from '@/hooks/useMediaDraft';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { useAdminChat } from '@/contexts/AdminChatContext';
 import { AdminPortalSwitcherHeader } from '@/components/ui/AdminPortalSwitcherHeader';
 

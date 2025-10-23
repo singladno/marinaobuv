@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
     const inStock = searchParams.get('inStock') === 'true';
+
+    // Get session for search history using NextAuth
+    const session = await getServerSession(authOptions);
 
     // Build where clause
     const where: any = {
@@ -183,11 +187,11 @@ export async function GET(request: NextRequest) {
     });
 
     // Save search history if user is logged in and search query is provided
+
     if (search && search.trim().length > 0) {
       try {
-        const session = await getSession();
         const normalized = search.trim();
-        const userId = session?.userId || null;
+        const userId = session?.user?.id || null;
 
         if (userId) {
           // For logged-in users: upsert by case-insensitive query to avoid duplicates
@@ -232,7 +236,6 @@ export async function GET(request: NextRequest) {
         }
       } catch (error) {
         // Don't fail the request if search history saving fails
-        console.error('Failed to save search history:', error);
       }
     }
 
@@ -255,7 +258,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching catalog:', error);
     return NextResponse.json(
       { error: 'Failed to fetch catalog' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
+import { authOptions } from '@/lib/auth';
 
 interface OrderItemData {
   itemId: string;
@@ -16,8 +17,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !('id' in session.user)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -27,7 +28,7 @@ export async function GET(
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: session.userId,
+        userId: session.user.id,
       },
       include: {
         items: {
@@ -63,7 +64,7 @@ export async function GET(
         prisma.orderItemMessage.findMany({
           where: {
             orderItemId: { in: itemIds },
-            userId: { not: session.userId },
+            userId: { not: session.user.id },
           },
           select: {
             orderItemId: true,
@@ -77,7 +78,7 @@ export async function GET(
             const totalMessages = await prisma.orderItemMessage.count({
               where: {
                 orderItemId: itemId,
-                userId: { not: session.userId },
+                userId: { not: session.user.id },
               },
             });
             return { itemId, totalMessages, hasMessages: totalMessages > 0 };
@@ -90,7 +91,7 @@ export async function GET(
             const totalMessages = await prisma.orderItemMessage.count({
               where: {
                 orderItemId: itemId,
-                userId: { not: session.userId },
+                userId: { not: session.user.id },
               },
             });
 
@@ -98,9 +99,9 @@ export async function GET(
               where: {
                 message: {
                   orderItemId: itemId,
-                  userId: { not: session.userId },
+                  userId: { not: session.user.id },
                 },
-                userId: session.userId,
+                userId: session.user.id,
               },
             });
 
@@ -115,7 +116,7 @@ export async function GET(
             const approvalMessage = await prisma.orderItemMessage.findFirst({
               where: {
                 orderItemId: itemId,
-                userId: session.userId,
+                userId: session.user.id,
                 text: 'Товар одобрен клиентом',
                 isService: true,
               },

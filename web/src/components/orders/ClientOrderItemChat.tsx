@@ -14,7 +14,7 @@ import { MediaViewerModal } from '../features/gruzchik/MediaViewerModal';
 import { ItemApproveButton } from './ItemApproveButton';
 import { useMediaDraft } from '@/hooks/useMediaDraft';
 import { useClientChat } from '@/contexts/ClientChatContext';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { AdminPortalSwitcherHeader } from '@/components/ui/AdminPortalSwitcherHeader';
 import { cn } from '@/lib/utils';
 

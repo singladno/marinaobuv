@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ExternalLink, MessageSquare } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { ProductSourceModal } from './ProductSourceModal';
 
 interface ProductSourceProps {

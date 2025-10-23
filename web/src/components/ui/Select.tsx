@@ -135,7 +135,7 @@ export const SelectTrigger = React.forwardRef<
       )}
       onClick={() => !disabled && setIsOpen(!isOpen)}
       aria-label={ariaLabel}
-      aria-expanded={isOpen}
+      aria-expanded={isOpen ? 'true' : 'false'}
       disabled={disabled}
       {...props}
     >
@@ -170,6 +170,12 @@ export const SelectContent = React.forwardRef<
 >(({ children, className, ...props }, ref) => {
   const { isOpen, setIsOpen, triggerRef } = React.useContext(SelectContext);
   const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 });
+  const [mounted, setMounted] = React.useState(false);
+
+  // Ensure component is mounted on client side
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -190,7 +196,7 @@ export const SelectContent = React.forwardRef<
   }, [isOpen, setIsOpen, triggerRef]);
 
   React.useEffect(() => {
-    if (isOpen && triggerRef?.current) {
+    if (isOpen && triggerRef?.current && mounted) {
       const trigger = triggerRef.current;
       const rect = trigger.getBoundingClientRect();
       setPosition({
@@ -199,9 +205,9 @@ export const SelectContent = React.forwardRef<
         width: rect.width,
       });
     }
-  }, [isOpen, triggerRef]);
+  }, [isOpen, triggerRef, mounted]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const content = (
     <div

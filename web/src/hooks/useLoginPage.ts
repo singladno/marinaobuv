@@ -2,7 +2,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { useCart } from '@/contexts/CartContext';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 export function useLoginPage(options: { disableRedirect?: boolean } = {}) {
   const router = useRouter();

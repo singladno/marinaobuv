@@ -22,8 +22,15 @@ export function Modal({
   zIndex = 'z-50',
   headerContent,
 }: ModalProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  // Ensure component is mounted on client side
   React.useEffect(() => {
-    if (!isOpen) return;
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!isOpen || !mounted) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -39,9 +46,9 @@ export function Modal({
       document.body.style.overflow = 'unset';
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, mounted]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const sizeClasses = {
     sm: 'max-w-md',

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { PurchaseRequiredModal } from '@/components/ui/PurchaseRequiredModal';
 import { useProductReviews } from '@/hooks/useProductReviews';
 import { usePurchaseCheck } from '@/hooks/usePurchaseCheck';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 interface ProductReviewsProps {
   productId: string;

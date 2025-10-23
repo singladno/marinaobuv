@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Notification } from '@/components/ui/NotificationProvider';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 interface UseBasketPageHandlersProps {
   setLoginLoading: (loading: boolean) => void;

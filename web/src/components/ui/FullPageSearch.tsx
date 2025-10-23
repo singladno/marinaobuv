@@ -146,27 +146,6 @@ export function FullPageSearch() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Search History */}
-            {searchHistory.length > 0 && (
-              <div>
-                <h3 className="mb-3 text-sm font-medium text-gray-700">
-                  Недавние поиски
-                </h3>
-                <div className="space-y-2">
-                  {searchHistory.slice(0, 5).map((item, index) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleLocalSearch(item.query)}
-                      className="flex w-full cursor-pointer items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 text-left hover:bg-gray-100"
-                    >
-                      <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">{item.query}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Back Button - only show if we're in a subcategory */}
             {navigationStack.length > 0 && (
               <div className="mb-4">

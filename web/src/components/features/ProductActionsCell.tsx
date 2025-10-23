@@ -5,7 +5,7 @@ import { MessageSquare } from 'lucide-react';
 
 import { ProductSourceModal } from '@/components/product/ProductSourceModal';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 import type { Product } from '@/types/product';
 

@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
-import { getSession } from '@/lib/server/session';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getServerSession(authOptions);
 
     // Get search history for the user (if logged in) or return empty array
     let searchHistory: Array<{ id: string; query: string; createdAt: Date }> =
       [];
 
-    if (session?.userId) {
+    if (session?.user?.id) {
       const rows = await prisma.searchHistory.findMany({
         where: {
-          userId: session.userId,
+          userId: session.user.id,
         },
         orderBy: {
           createdAt: 'desc',
@@ -39,10 +40,8 @@ export async function GET(request: NextRequest) {
       }
       searchHistory = deduped;
     }
-
     return NextResponse.json({ searchHistory });
   } catch (error) {
-    console.error('Error fetching search history:', error);
     return NextResponse.json(
       { error: 'Failed to fetch search history' },
       { status: 500 }
@@ -52,9 +51,9 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getServerSession(authOptions);
 
-    if (!session?.userId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -66,21 +65,20 @@ export async function DELETE(request: NextRequest) {
       await prisma.searchHistory.delete({
         where: {
           id: searchId,
-          userId: session.userId, // Ensure user can only delete their own searches
+          userId: session.user.id, // Ensure user can only delete their own searches
         },
       });
     } else {
       // Delete all search history for the user
       await prisma.searchHistory.deleteMany({
         where: {
-          userId: session.userId,
+          userId: session.user.id,
         },
       });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting search history:', error);
     return NextResponse.json(
       { error: 'Failed to delete search history' },
       { status: 500 }

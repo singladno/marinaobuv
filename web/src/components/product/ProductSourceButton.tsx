@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react';
 import { useState } from 'react';
 
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 import { ProductSourceModal } from './ProductSourceModal';
 

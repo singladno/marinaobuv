@@ -2,15 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React, { useState } from 'react';
-import { useUser } from '@/contexts/NextAuthUserContext';
+import { useState } from 'react';
 
-export function GruzchikPortalSwitcherHeader() {
+export function MobileAdminSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { user } = useUser();
-  const isOnGruzchik =
-    typeof pathname === 'string' && pathname.startsWith('/gruzchik');
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -19,9 +15,6 @@ export function GruzchikPortalSwitcherHeader() {
   const closeMenu = () => {
     setIsOpen(false);
   };
-
-  // Show for gruzchik users only
-  if (user?.role !== 'GRUZCHIK') return null;
 
   return (
     <div className="relative">
@@ -35,22 +28,22 @@ export function GruzchikPortalSwitcherHeader() {
 
       {/* Menu Items */}
       <div
-        className={`absolute left-0 top-full z-50 mt-2 space-y-2 transition-all duration-300 ${
+        className={`absolute right-0 top-12 z-50 space-y-2 transition-all duration-300 ${
           isOpen
             ? 'translate-y-0 scale-100 opacity-100'
             : 'pointer-events-none translate-y-2 scale-95 opacity-0'
         }`}
       >
-        {isOnGruzchik ? (
-          // Show only Customer portal when currently on gruzchik
+        {/* Only show Customer Portal if currently in Admin */}
+        {pathname.startsWith('/admin') && (
           <Link
             href="/"
             onClick={closeMenu}
-            className="group flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-gray-700 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-50"
+            className="group flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-gray-700 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 group-hover:bg-blue-200">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 group-hover:bg-blue-200 dark:bg-blue-900/30 dark:group-hover:bg-blue-900/50">
               <svg
-                className="h-4 w-4 text-blue-600"
+                className="h-4 w-4 text-blue-600 dark:text-blue-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -68,16 +61,18 @@ export function GruzchikPortalSwitcherHeader() {
               <div className="text-xs opacity-80">Просмотр товаров</div>
             </div>
           </Link>
-        ) : (
-          // Show only Gruzchik portal when currently in customer area
+        )}
+
+        {/* Only show Admin Portal if currently in Customer portal */}
+        {!pathname.startsWith('/admin') && (
           <Link
-            href="/gruzchik"
+            href="/admin"
             onClick={closeMenu}
-            className="group flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-gray-700 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-orange-50"
+            className="group flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-gray-700 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 group-hover:bg-orange-200">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 group-hover:bg-gray-200 dark:bg-gray-900/30 dark:group-hover:bg-gray-900/50">
               <svg
-                className="h-4 w-4 text-orange-600"
+                className="h-4 w-4 text-gray-600 dark:text-gray-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -86,29 +81,42 @@ export function GruzchikPortalSwitcherHeader() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
             </div>
             <div className="text-left">
-              <div className="text-sm font-semibold">Грузчик панель</div>
-              <div className="text-xs opacity-80">Управление заказами</div>
+              <div className="text-sm font-semibold">Админ панель</div>
+              <div className="text-xs opacity-80">Управление товарами</div>
             </div>
           </Link>
         )}
       </div>
 
-      {/* Header Toggle Button */}
+      {/* Main Toggle Button */}
       <button
         onClick={toggleMenu}
-        className="group relative flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+        className="group relative flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white shadow-lg transition-all duration-300 hover:scale-110 hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/30"
         aria-label="Переключить портал"
       >
+        {/* Background Animation */}
+        <div
+          className={`absolute inset-0 rounded-full transition-all duration-300 ${
+            isOpen ? 'scale-150 bg-white/20' : 'scale-100 bg-transparent'
+          }`}
+        />
+
         {/* Icon */}
         <div className="relative z-10 transition-transform duration-300 group-hover:scale-110">
           {isOpen ? (
             <svg
-              className="h-4 w-4"
+              className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -122,7 +130,7 @@ export function GruzchikPortalSwitcherHeader() {
             </svg>
           ) : (
             <svg
-              className="h-4 w-4"
+              className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -135,6 +143,11 @@ export function GruzchikPortalSwitcherHeader() {
               />
             </svg>
           )}
+        </div>
+
+        {/* Current Portal Indicator */}
+        <div className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-xs font-bold text-gray-700 shadow-lg">
+          {pathname.startsWith('/admin') ? 'A' : 'C'}
         </div>
       </button>
     </div>

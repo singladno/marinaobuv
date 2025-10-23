@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useNotifications } from '@/components/ui/NotificationProvider';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 interface OrderItem {
   id: string;

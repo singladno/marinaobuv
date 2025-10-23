@@ -80,11 +80,26 @@ export async function middleware(request: NextRequest) {
     }
 
     // No valid authentication - redirect to home
-    return NextResponse.redirect(new URL('/', request.url));
+    console.log(
+      '🔍 MIDDLEWARE DEBUG: Redirecting to home, request.url:',
+      request.url
+    );
+    const redirectUrl = new URL('/', request.url);
+    console.log('🔍 MIDDLEWARE DEBUG: Redirect URL:', redirectUrl.toString());
+    return NextResponse.redirect(redirectUrl);
   } catch (error) {
     // Error getting token/session - redirect to home
-    console.error('Middleware auth error:', error);
-    return NextResponse.redirect(new URL('/', request.url));
+    console.error('🔍 MIDDLEWARE DEBUG: Middleware auth error:', error);
+    console.log(
+      '🔍 MIDDLEWARE DEBUG: Error redirect, request.url:',
+      request.url
+    );
+    const redirectUrl = new URL('/', request.url);
+    console.log(
+      '🔍 MIDDLEWARE DEBUG: Error redirect URL:',
+      redirectUrl.toString()
+    );
+    return NextResponse.redirect(redirectUrl);
   }
 }
 

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { useAdminChat } from '@/contexts/AdminChatContext';
 import { useClientChat } from '@/contexts/ClientChatContext';
 
@@ -47,7 +47,7 @@ export function PortalSwitcher() {
   if (isAdminChatOpen || isClientChatOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-4 right-4 z-50 hidden sm:bottom-6 sm:right-6 md:block">
       {/* Backdrop */}
       {isOpen && (
         <div

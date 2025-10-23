@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { SourceMessagesModal } from '@/components/features/SourceMessagesModal';
 import type { Product } from '@/types/product';
 

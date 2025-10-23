@@ -24,7 +24,7 @@ import { MediaPreview, MediaItem } from './MediaPreview';
 import { MediaViewerModal } from './MediaViewerModal';
 import { useMediaDraft } from '@/hooks/useMediaDraft';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 interface ChatMessage {
   id: string;

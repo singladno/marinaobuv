@@ -34,6 +34,7 @@ declare module 'next-auth/jwt' {
 }
 
 export const authOptions: NextAuthOptions = {
+  debug: process.env.NODE_ENV === 'development',
   providers: [
     GoogleProvider({
       clientId: env.GOOGLE_CLIENT_ID!,
@@ -115,6 +116,32 @@ export const authOptions: NextAuthOptions = {
         session.user.providerId = token.providerId;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      console.log('🔍 NEXTAUTH REDIRECT DEBUG: url:', url);
+      console.log('🔍 NEXTAUTH REDIRECT DEBUG: baseUrl:', baseUrl);
+      console.log(
+        '🔍 NEXTAUTH REDIRECT DEBUG: NEXTAUTH_URL:',
+        process.env.NEXTAUTH_URL
+      );
+      console.log(
+        '🔍 NEXTAUTH REDIRECT DEBUG: NEXT_PUBLIC_SITE_URL:',
+        process.env.NEXT_PUBLIC_SITE_URL
+      );
+
+      // If url is relative, make it absolute with baseUrl
+      if (url.startsWith('/')) {
+        const fullUrl = `${baseUrl}${url}`;
+        console.log(
+          '🔍 NEXTAUTH REDIRECT DEBUG: Constructed fullUrl:',
+          fullUrl
+        );
+        return fullUrl;
+      }
+
+      // If url is absolute, use it as is
+      console.log('🔍 NEXTAUTH REDIRECT DEBUG: Using absolute url:', url);
+      return url;
     },
   },
   pages: {
