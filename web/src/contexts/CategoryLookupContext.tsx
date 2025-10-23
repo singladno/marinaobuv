@@ -36,8 +36,8 @@ export function CategoryLookupProvider({
   const [lookup, setLookup] = useState<CategoryLookup>(globalCategoryLookup);
   const [isLoading, setIsLoading] = useState(!isLoaded);
 
-  const refreshCategories = useCallback(async () => {
-    return deduplicateRequest('fetch-categories', async () => {
+  const refreshCategories = useCallback(async (): Promise<void> => {
+    await deduplicateRequest('fetch-categories', async () => {
       try {
         const response = await fetch('/api/categories/all');
         if (response.ok) {
@@ -62,7 +62,6 @@ export function CategoryLookupProvider({
             globalCategoryLookup = newLookup;
             isLoaded = true;
             setLookup(globalCategoryLookup);
-            return newLookup;
           }
         }
       } catch (error) {
@@ -89,7 +88,7 @@ export function CategoryLookupProvider({
 
     // Fetch all categories once using deduplication
     loadingPromise = refreshCategories();
-    loadingPromise.then(() => {
+    loadingPromise?.then(() => {
       setLookup(globalCategoryLookup);
       setIsLoading(false);
     });
