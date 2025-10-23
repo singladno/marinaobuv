@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
+import { deduplicateRequest } from '@/lib/request-deduplication';
 
 interface CategoryLookup {
   [id: string]: string;
@@ -36,35 +37,39 @@ export function CategoryLookupProvider({
   const [isLoading, setIsLoading] = useState(!isLoaded);
 
   const refreshCategories = useCallback(async () => {
-    try {
-      const response = await fetch('/api/categories/all');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.ok && data.items) {
-          // Build lookup table from the tree
-          const buildLookup = (categories: any[]): CategoryLookup => {
-            const lookup: CategoryLookup = {};
+    return deduplicateRequest('fetch-categories', async () => {
+      try {
+        const response = await fetch('/api/categories/all');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && data.items) {
+            // Build lookup table from the tree
+            const buildLookup = (categories: any[]): CategoryLookup => {
+              const lookup: CategoryLookup = {};
 
-            const processCategory = (category: any) => {
-              lookup[category.id] = category.name;
-              if (category.children) {
-                Object.assign(lookup, buildLookup(category.children));
-              }
+              const processCategory = (category: any) => {
+                lookup[category.id] = category.name;
+                if (category.children) {
+                  Object.assign(lookup, buildLookup(category.children));
+                }
+              };
+
+              categories.forEach(processCategory);
+              return lookup;
             };
 
-            categories.forEach(processCategory);
-            return lookup;
-          };
-
-          const newLookup = buildLookup(data.items);
-          globalCategoryLookup = newLookup;
-          isLoaded = true;
-          setLookup(globalCategoryLookup);
+            const newLookup = buildLookup(data.items);
+            globalCategoryLookup = newLookup;
+            isLoaded = true;
+            setLookup(globalCategoryLookup);
+            return newLookup;
+          }
         }
+      } catch (error) {
+        console.error('Error refreshing categories:', error);
+        throw error;
       }
-    } catch (error) {
-      console.error('Error refreshing categories:', error);
-    }
+    });
   }, []);
 
   useEffect(() => {
@@ -82,13 +87,13 @@ export function CategoryLookupProvider({
       return;
     }
 
-    // Fetch all categories once
-    loadingPromise = fetchAllCategories();
+    // Fetch all categories once using deduplication
+    loadingPromise = refreshCategories();
     loadingPromise.then(() => {
       setLookup(globalCategoryLookup);
       setIsLoading(false);
     });
-  }, []);
+  }, [refreshCategories]);
 
   const getCategoryName = (
     categoryId: string | null | undefined
@@ -121,38 +126,4 @@ export function useCategoryLookupContext(): CategoryLookupContextValue {
     );
   }
   return context;
-}
-
-async function fetchAllCategories(): Promise<void> {
-  try {
-    const response = await fetch('/api/categories/all');
-    if (response.ok) {
-      const data = await response.json();
-      if (data.ok && data.items) {
-        // Build lookup table from the tree
-        const buildLookup = (categories: any[]): CategoryLookup => {
-          const lookup: CategoryLookup = {};
-
-          const processCategory = (category: any) => {
-            lookup[category.id] = category.name;
-            if (category.children) {
-              Object.assign(lookup, buildLookup(category.children));
-            }
-          };
-
-          categories.forEach(processCategory);
-          return lookup;
-        };
-
-        globalCategoryLookup = buildLookup(data.items);
-        isLoaded = true;
-      } else {
-        console.error('Failed to fetch categories:', data.error);
-      }
-    } else {
-      console.error('Failed to fetch categories:', response.statusText);
-    }
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-  }
 }

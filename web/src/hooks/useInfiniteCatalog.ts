@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearch } from '@/contexts/SearchContext';
 
 interface CatalogFilters {
@@ -57,6 +57,11 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
     pageSize: 20, // Aligned with backend default
   });
 
+  // Use refs to track if we've already made initial requests
+  const hasInitialized = useRef(false);
+  const lastSearchQuery = useRef(searchQuery);
+  const lastCategoryId = useRef(initialCategoryId);
+
   // Check if there are more pages to load
   const hasNextPage = useMemo(() => {
     const hasMore = pagination.page < pagination.totalPages;
@@ -78,6 +83,12 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
   // Fetch products from backend
   const fetchProducts = useCallback(
     async (newFilters?: Partial<CatalogFilters>, append = false) => {
+      // Prevent multiple simultaneous requests
+      if (loading && !append) {
+        console.log('🔍 Request already in progress, skipping...');
+        return;
+      }
+
       const isInitialLoad = !append;
       if (isInitialLoad) {
         setLoading(true);
@@ -87,68 +98,85 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
       setError(null);
 
       try {
-        const currentFilters = { ...filters, ...newFilters };
-        const searchParams = new URLSearchParams();
+        // Get current filters from state at the time of call
+        setFilters(currentFilters => {
+          const updatedFilters = { ...currentFilters, ...newFilters };
+          const searchParams = new URLSearchParams();
 
-        // Add all filter parameters
-        if (currentFilters.search)
-          searchParams.set('search', currentFilters.search);
-        if (currentFilters.categoryId)
-          searchParams.set('categoryId', currentFilters.categoryId);
-        if (currentFilters.sortBy)
-          searchParams.set('sortBy', currentFilters.sortBy);
-        if (currentFilters.minPrice !== undefined)
-          searchParams.set('minPrice', currentFilters.minPrice.toString());
-        if (currentFilters.maxPrice !== undefined)
-          searchParams.set('maxPrice', currentFilters.maxPrice.toString());
-        if (currentFilters.colors.length > 0)
-          searchParams.set('colors', currentFilters.colors.join(','));
-        if (currentFilters.inStock) searchParams.set('inStock', 'true');
-        searchParams.set('page', currentFilters.page.toString());
-        searchParams.set('pageSize', currentFilters.pageSize.toString());
+          // Add all filter parameters
+          if (updatedFilters.search)
+            searchParams.set('search', updatedFilters.search);
+          if (updatedFilters.categoryId)
+            searchParams.set('categoryId', updatedFilters.categoryId);
+          if (updatedFilters.sortBy)
+            searchParams.set('sortBy', updatedFilters.sortBy);
+          if (updatedFilters.minPrice !== undefined)
+            searchParams.set('minPrice', updatedFilters.minPrice.toString());
+          if (updatedFilters.maxPrice !== undefined)
+            searchParams.set('maxPrice', updatedFilters.maxPrice.toString());
+          if (updatedFilters.colors.length > 0)
+            searchParams.set('colors', updatedFilters.colors.join(','));
+          if (updatedFilters.inStock) searchParams.set('inStock', 'true');
+          searchParams.set('page', updatedFilters.page.toString());
+          searchParams.set('pageSize', updatedFilters.pageSize.toString());
 
-        const url = `/api/catalog?${searchParams.toString()}`;
-        console.log('🔍 Fetching products from URL:', url);
-        const response = await fetch(url);
+          const url = `/api/catalog?${searchParams.toString()}`;
+          console.log('🔍 Fetching products from URL:', url);
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch products');
-        }
+          // Make the request
+          fetch(url)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Failed to fetch products');
+              }
+              return response.json();
+            })
+            .then(data => {
+              console.log('🔍 API Response Debug:', {
+                productsReceived: data.products.length,
+                pagination: data.pagination,
+                append,
+                currentProducts: allProducts.length,
+              });
 
-        const data: CatalogResponse = await response.json();
-        console.log('🔍 API Response Debug:', {
-          productsReceived: data.products.length,
-          pagination: data.pagination,
-          append,
-          currentProducts: allProducts.length,
+              // Log debug information from API
+              if (data.debug) {
+                console.log('🔍 Catalog API Debug Info:', data.debug);
+              }
+
+              if (append) {
+                // Append new products to existing ones
+                setAllProducts(prev => [...prev, ...data.products]);
+              } else {
+                // Replace all products (new search/filter)
+                setAllProducts(data.products);
+              }
+
+              setPagination(data.pagination);
+            })
+            .catch(err => {
+              setError(err instanceof Error ? err.message : 'Unknown error');
+              if (!append) {
+                setAllProducts([]);
+              }
+            })
+            .finally(() => {
+              setLoading(false);
+              setLoadingMore(false);
+            });
+
+          return updatedFilters;
         });
-
-        // Log debug information from API
-        if (data.debug) {
-          console.log('🔍 Catalog API Debug Info:', data.debug);
-        }
-
-        if (append) {
-          // Append new products to existing ones
-          setAllProducts(prev => [...prev, ...data.products]);
-        } else {
-          // Replace all products (new search/filter)
-          setAllProducts(data.products);
-        }
-
-        setPagination(data.pagination);
-        setFilters(currentFilters);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
         if (!append) {
           setAllProducts([]);
         }
-      } finally {
         setLoading(false);
         setLoadingMore(false);
       }
     },
-    [filters]
+    [loading, allProducts.length]
   );
 
   // Load more products (for infinite scroll)
@@ -173,39 +201,6 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
     }
   }, [hasNextPage, loadingMore, loading, loadMore]);
 
-  // Update filters when search query changes and fetch products
-  useEffect(() => {
-    if (searchQuery !== filters.search) {
-      const newFilters = { ...filters, search: searchQuery, page: 1 };
-      setFilters(newFilters);
-      fetchProducts(newFilters, false);
-    }
-  }, [searchQuery]);
-
-  // Update categoryId when initialCategoryId changes
-  useEffect(() => {
-    console.log(
-      '🔍 useInfiniteCatalog: initialCategoryId changed:',
-      initialCategoryId,
-      'current categoryId:',
-      filters.categoryId
-    );
-    if (initialCategoryId !== filters.categoryId) {
-      const newFilters = {
-        ...filters,
-        categoryId: initialCategoryId || '',
-        page: 1,
-      };
-      console.log(
-        '🔍 useInfiniteCatalog: updating filters with categoryId:',
-        newFilters.categoryId
-      );
-      setFilters(newFilters);
-      // Call fetchProducts directly without including it in dependencies
-      fetchProducts(newFilters, false);
-    }
-  }, [initialCategoryId]);
-
   // Handle filter changes
   const handleFiltersChange = useCallback(
     (newFilters: Partial<CatalogFilters>) => {
@@ -213,7 +208,7 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
       setFilters(updatedFilters);
       fetchProducts(updatedFilters, false);
     },
-    [filters]
+    [filters, fetchProducts]
   );
 
   // Handle sorting
@@ -239,12 +234,39 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
     };
     setFilters(clearedFilters);
     fetchProducts(clearedFilters, false);
-  }, []);
+  }, [fetchProducts]);
 
-  // Load initial data
+  // Handle search query changes
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    if (searchQuery !== lastSearchQuery.current) {
+      lastSearchQuery.current = searchQuery;
+      const newFilters = { ...filters, search: searchQuery, page: 1 };
+      setFilters(newFilters);
+      fetchProducts(newFilters, false);
+    }
+  }, [searchQuery, fetchProducts]);
+
+  // Handle initial category ID changes
+  useEffect(() => {
+    if (initialCategoryId !== lastCategoryId.current) {
+      lastCategoryId.current = initialCategoryId;
+      const newFilters = {
+        ...filters,
+        categoryId: initialCategoryId || '',
+        page: 1,
+      };
+      setFilters(newFilters);
+      fetchProducts(newFilters, false);
+    }
+  }, [initialCategoryId, fetchProducts]);
+
+  // Load initial data only once
+  useEffect(() => {
+    if (!hasInitialized.current && allProducts.length === 0 && !loading) {
+      hasInitialized.current = true;
+      fetchProducts();
+    }
+  }, [allProducts.length, loading, fetchProducts]);
 
   return {
     // State

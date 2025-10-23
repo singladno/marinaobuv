@@ -59,7 +59,7 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
     }
   }, [pathname, router, user, loading, status]);
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -99,22 +99,32 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [status, session, redirectToLoginIfProtected]);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     await fetchUser();
-  };
+  }, [fetchUser]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/`;
     await signOut({
       callbackUrl: callbackUrl,
     });
-  };
+  }, []);
 
+  // Single effect to handle user fetching with proper dependencies
   useEffect(() => {
-    fetchUser();
-  }, [session, status]);
+    // Only fetch if we have a session and haven't loaded user yet, or if session changed
+    if (
+      status === 'authenticated' &&
+      session &&
+      (!user || user.id !== session.user?.id)
+    ) {
+      fetchUser();
+    } else if (status === 'unauthenticated' && user) {
+      setUser(null);
+    }
+  }, [status, session, user, fetchUser]);
 
   // Handle redirect when user becomes null on protected routes
   useEffect(() => {
