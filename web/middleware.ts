@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 import { getSession } from '@/lib/server/session';
 
 // Define protected routes and their required roles
@@ -17,11 +18,8 @@ const publicRoutes = [
   '/catalog',
   '/product',
   '/cart',
-  '/api/auth/login',
   '/api/auth/register',
-  '/api/auth/request-otp',
-  '/api/auth/verify-otp',
-  '/api/auth/logout',
+  '/api/auth/[...nextauth]',
   '/api/products',
   '/api/categories',
   '/api/search',
@@ -65,30 +63,28 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    // Get session from cookies
+    // First try NextAuth token
+    const token = await getToken({ req: request });
+
+    if (token && requiredRoles.includes(token.role as string)) {
+      // User is authenticated with NextAuth and has required role
+      return NextResponse.next();
+    }
+
+    // If no NextAuth token, try custom session
     const session = await getSession();
 
-    if (!session) {
-      // No session - redirect to login
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+    if (session && requiredRoles.includes(session.role)) {
+      // User is authenticated with custom session and has required role
+      return NextResponse.next();
     }
 
-    // Check if user has required role
-    if (!requiredRoles.includes(session.role)) {
-      // User doesn't have required role - redirect to home
-      return NextResponse.redirect(new URL('/', request.url));
-    }
-
-    // User is authenticated and has required role
-    return NextResponse.next();
+    // No valid authentication - redirect to home
+    return NextResponse.redirect(new URL('/', request.url));
   } catch (error) {
-    // Error getting session - redirect to login
+    // Error getting token/session - redirect to home
     console.error('Middleware auth error:', error);
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/', request.url));
   }
 }
 

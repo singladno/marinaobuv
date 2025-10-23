@@ -17,49 +17,17 @@ export async function POST(req: NextRequest) {
     // Normalize phone number to handle different formats
     const normalizedPhone = normalizePhoneToE164(phone);
 
-    let user = await prisma.user.findUnique({
+    // Find user by phone
+    const user = await prisma.user.findUnique({
       where: { phone: normalizedPhone },
     });
 
-    // If user doesn't exist, check if there's a provider with this phone
-    if (!user) {
-      // First try exact match with normalized phone
-      let provider = await prisma.provider.findFirst({
-        where: { phone: normalizedPhone },
-      });
-
-      // If no exact match, try to find provider by WhatsApp ID format
-      if (!provider) {
-        // Look for providers with WhatsApp ID format that matches this phone
-        const allProviders = await prisma.provider.findMany({
-          where: { phone: { not: null } },
-        });
-
-        provider =
-          allProviders.find(p => {
-            if (!p.phone) return false;
-            const extractedPhone = extractNormalizedPhone(p.phone);
-            return extractedPhone === normalizedPhone;
-          }) || null;
-      }
-
-      if (provider) {
-        // Create user and connect to provider
-        user = await prisma.user.create({
-          data: {
-            phone: normalizedPhone,
-            role: 'PROVIDER',
-            passwordHash: 'otp-login', // Default password for provider login
-            providerId: provider.id,
-          },
-        });
-      } else {
-        return NextResponse.json(
-          { error: 'Invalid credentials' },
-          { status: 401 }
-        );
-      }
-    } else if (!verifyPassword(password, user.passwordHash)) {
+    // User must exist and have a valid password
+    if (
+      !user ||
+      !user.passwordHash ||
+      !verifyPassword(password, user.passwordHash)
+    ) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }

@@ -28,8 +28,14 @@ const schema = z
     GREEN_API_TOKEN: z.string().optional(),
     GREEN_API_BASE_URL: z.string().url().optional(),
     GREEN_API_DASHBOARD_URL: z.string().url().optional(),
-    // Admin phone that gets ADMIN role on OTP login
+    // Admin phone that gets ADMIN role on login
     ADMIN_PHONE: z.string().optional(),
+    // Admin email that gets ADMIN role
+    ADMIN_EMAIL: z.string().email().optional(),
+
+    // Google OAuth
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
 
     // S3 Configuration - make optional during build
     S3_ENDPOINT: isBuildContext
@@ -158,6 +164,11 @@ const raw = {
   GREEN_API_BASE_URL: process.env.GREEN_API_BASE_URL,
   GREEN_API_DASHBOARD_URL: process.env.GREEN_API_DASHBOARD_URL,
   ADMIN_PHONE: process.env.ADMIN_PHONE,
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+
+  // Google OAuth
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 
   // S3 Configuration
   S3_ENDPOINT: process.env.S3_ENDPOINT,

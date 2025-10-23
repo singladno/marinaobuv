@@ -215,16 +215,12 @@ export function useBasketPageState() {
   // Shim auth states expected by page/handlers
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [otpSent, setOtpSent] = useState(false);
 
   return {
     ...cart,
     ...auth,
     ...order,
     finalTotal,
-    // aliases expected by BasketPage/LoginModal
-    otpCode: auth.otp,
-    setOtpCode: auth.setOtp,
     // aliases expected by BasketPage
     remove: cart.handleRemoveItem,
     updateQuantity: cart.handleUpdateQuantity,
@@ -260,8 +256,6 @@ export function useBasketPageState() {
     setLoginLoading,
     loginError,
     setLoginError,
-    otpSent,
-    setOtpSent,
     // updating items state
     updatingItems: cart.updatingItems,
     removingItems: cart.removingItems,

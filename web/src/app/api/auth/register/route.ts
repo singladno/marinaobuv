@@ -1,46 +1,96 @@
-import type { Prisma, Role } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-
+import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/server/db';
-import { hashPassword } from '@/lib/server/password';
+import { env } from '@/lib/env';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { phone, name, password, role } = body as {
-      phone: string;
+    const { email, password, name, phone } = body as {
+      email?: string;
+      password?: string;
       name?: string;
-      password: string;
-      role?: Role;
+      phone?: string;
     };
 
-    if (!phone || !password) {
+    if (!email && !phone) {
       return NextResponse.json(
-        { error: 'phone and password are required' },
+        { error: 'Email or phone is required' },
         { status: 400 }
       );
     }
 
-    const exists = await prisma.user.findUnique({ where: { phone } });
-    if (exists)
-      return NextResponse.json({ error: 'User exists' }, { status: 400 });
+    if (!password) {
+      return NextResponse.json(
+        { error: 'Password is required' },
+        { status: 400 }
+      );
+    }
 
-    // Note: passwordHash is added by pending migration; cast to satisfy current client types.
-    const data = {
-      phone,
-      name: name ?? null,
-      role: (role ?? 'CLIENT') as Role,
-      passwordHash: hashPassword(password),
-    } as unknown as Prisma.UserUncheckedCreateInput;
-
-    const user = await prisma.user.create({
-      data,
-      select: { id: true, phone: true, name: true, role: true },
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [email ? { email } : {}, phone ? { phone } : {}].filter(Boolean),
+      },
     });
 
-    return NextResponse.json({ user });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Unexpected error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User already exists with this email or phone' },
+        { status: 400 }
+      );
+    }
+
+    // Hash password
+    const passwordHash = await hash(password, 12);
+
+    // Determine role based on admin email/phone
+    let role: 'ADMIN' | 'PROVIDER' | 'CLIENT' = 'CLIENT';
+    if (env.ADMIN_EMAIL && email === env.ADMIN_EMAIL) {
+      role = 'ADMIN';
+    } else if (env.ADMIN_PHONE && phone === env.ADMIN_PHONE) {
+      role = 'ADMIN';
+    }
+
+    // Check if there's a provider with this phone
+    let providerId = null;
+    if (phone) {
+      const provider = await prisma.provider.findFirst({
+        where: { phone },
+      });
+      if (provider) {
+        role = 'PROVIDER';
+        providerId = provider.id;
+      }
+    }
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        email,
+        phone,
+        name,
+        passwordHash,
+        role,
+        providerId,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        name: user.name,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

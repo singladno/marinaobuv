@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { ShoppingBagIcon, UserIcon } from '@heroicons/react/24/outline';
 
-import { LoginModal } from '@/components/auth/LoginModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
@@ -73,7 +73,7 @@ export function OrdersLoginPrompt() {
         </div>
       </div>
 
-      <LoginModal
+      <AuthModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
       />

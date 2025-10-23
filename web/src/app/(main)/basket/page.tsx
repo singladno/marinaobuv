@@ -3,7 +3,7 @@
 import { BasketContent } from '@/components/cart/BasketContent';
 import { EmptyCart } from '@/components/cart/EmptyCart';
 import { LoadingSpinner } from '@/components/cart/LoadingSpinner';
-import { LoginModal } from '@/components/cart/LoginModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 import { useBasketPage } from '@/hooks/useBasketPage';
 import { useBasketPageHandlers } from '@/hooks/useBasketPageHandlers';
 import { useOrderHandlers } from '@/hooks/useOrderHandlers';
@@ -13,12 +13,10 @@ export default function BasketPage() {
   const handlers = useBasketPageHandlers({
     setLoginLoading: basketState.setLoginLoading,
     setLoginError: basketState.setLoginError,
-    setOtpSent: basketState.setOtpSent,
     setUserId: basketState.setUserId,
     setIsLoggedIn: () => {}, // This will be handled by the main hook
     setIsLoginModalOpen: basketState.setIsLoginModalOpen,
     addNotification: basketState.addNotification,
-    phone: basketState.phone,
   });
 
   const orderHandlers = useOrderHandlers({
@@ -83,21 +81,9 @@ export default function BasketPage() {
         />
       )}
 
-      <LoginModal
+      <AuthModal
         isOpen={basketState.isLoginModalOpen}
         onClose={() => basketState.setIsLoginModalOpen(false)}
-        phone={basketState.phone}
-        setPhone={basketState.setPhone}
-        otpCode={basketState.otpCode}
-        setOtpCode={basketState.setOtpCode}
-        otpSent={basketState.otpSent}
-        loginLoading={basketState.loginLoading}
-        loginError={basketState.loginError}
-        setOtpSent={basketState.setOtpSent}
-        setLoginLoading={basketState.setLoginLoading}
-        setLoginError={basketState.setLoginError}
-        onSendOtp={handlers.handleRequestOtp}
-        onLogin={handlers.handleLogin}
       />
 
       {null}

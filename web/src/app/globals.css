@@ -2,6 +2,31 @@
 
 /* Cache bust: Updated muted colors to neutral gray */
 
+/* Mobile viewport fixes */
+@supports (height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
+
+/* Ensure mobile layout doesn't overflow */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .mobile-layout {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .md\:mobile-layout-none {
+    height: auto;
+    overflow: visible;
+  }
+}
+
 /* Custom animations for approval items */
 @keyframes attention-pulse {
   0%,

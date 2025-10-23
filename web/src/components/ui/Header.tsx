@@ -12,9 +12,7 @@ import { useState, useEffect, useRef } from 'react';
 import TopRightActions from '@/components/product/TopRightActions';
 import AccountMenu from '@/components/ui/AccountMenu';
 import { Button } from '@/components/ui/Button';
-import MobileMenu from '@/components/ui/MobileMenu';
 import { SearchWithHistory } from '@/components/catalog/SearchWithHistory';
-import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { useSearch } from '@/contexts/SearchContext';
 import { site } from '@/lib/site';
@@ -59,10 +57,6 @@ export default function Header({ onSearch }: HeaderProps) {
       window.removeEventListener('resize', updateHeaderHeight);
     };
   }, []);
-
-  const handleMenuClick = (item: string) => {
-    console.log(`Navigation clicked: ${item}`);
-  };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -123,9 +117,9 @@ export default function Header({ onSearch }: HeaderProps) {
         </div>
 
         {/* Main Header Bar */}
-        <div className="container mx-auto flex items-center gap-4 py-0">
-          {/* Left side - Logo */}
-          <div className="flex items-center">
+        <div className="container mx-auto flex items-center gap-4 px-4 py-0 md:px-0">
+          {/* Left side - Logo - hidden on mobile/tablet */}
+          <div className="hidden items-center md:flex">
             <Link href={site.links.home} className="hover:opacity-90">
               <span className="text-3xl font-bold text-white">
                 {site.brand}
@@ -133,12 +127,14 @@ export default function Header({ onSearch }: HeaderProps) {
             </Link>
           </div>
 
-          {/* Hamburger Menu - Between logo and search */}
-          <HamburgerMenu
-            isOpen={isMenuOpen}
-            onToggle={toggleMenu}
-            className="rounded-xl border border-white/50 bg-transparent py-3 !text-white transition-colors duration-300 ease-in-out hover:border-white hover:bg-transparent"
-          />
+          {/* Hamburger Menu - Desktop only */}
+          <div className="hidden md:block">
+            <HamburgerMenu
+              isOpen={isMenuOpen}
+              onToggle={toggleMenu}
+              className="rounded-xl border border-white/50 bg-transparent py-3 !text-white transition-colors duration-300 ease-in-out hover:border-white hover:bg-transparent"
+            />
+          </div>
 
           {/* Center - Search Bar */}
           <div className="flex flex-1 items-center justify-center">
@@ -169,37 +165,40 @@ export default function Header({ onSearch }: HeaderProps) {
               )}
             </Button>
 
-            {/* Favorites */}
-            <Button
-              variant="ghost"
-              size="icon"
-              asChild
-              className="!text-white hover:bg-white/10"
-            >
-              <Link href="/favorites" aria-label="Избранное">
-                <HeartIcon className="h-5 w-5" />
-              </Link>
-            </Button>
+            {/* Favorites - hidden on mobile/tablet */}
+            <div className="hidden md:block">
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                className="!text-white hover:bg-white/10"
+              >
+                <Link href="/favorites" aria-label="Избранное">
+                  <HeartIcon className="h-5 w-5" />
+                </Link>
+              </Button>
+            </div>
 
-            {/* Account */}
-            <AccountMenu />
+            {/* Account - hidden on mobile/tablet */}
+            <div className="hidden md:block">
+              <AccountMenu />
+            </div>
 
-            {/* Cart */}
-            <TopRightActions />
-          </div>
-
-          {/* Mobile Menu */}
-          <div className="md:hidden">
-            <MobileMenu />
+            {/* Cart - hidden on mobile/tablet */}
+            <div className="hidden md:block">
+              <TopRightActions />
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Sliding Menu */}
-      <AdvancedSlidingMenu
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-      />
+      {/* Sliding Menu - Desktop only */}
+      <div className="hidden md:block">
+        <AdvancedSlidingMenu
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+        />
+      </div>
     </>
   );
 }

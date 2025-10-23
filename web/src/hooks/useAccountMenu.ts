@@ -1,15 +1,17 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { signOut } from 'next-auth/react';
 
 import { useCart } from '@/contexts/CartContext';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 type CurrentUser = {
-  userId: string;
+  id: string;
+  email?: string | null;
+  name?: string | null;
   role: string;
   providerId?: string | null;
-  phone?: string;
-  name?: string | null;
+  phone?: string | null;
 } | null;
 
 export function useAccountMenu() {
@@ -24,7 +26,7 @@ export function useAccountMenu() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { setUserId } = useCart();
-  const { user, clearUser } = useUser();
+  const { user, logout } = useUser();
 
   // Refs for hover delay management
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -32,18 +34,15 @@ export function useAccountMenu() {
 
   // Sync cart with user authentication when user changes
   useEffect(() => {
-    setUserId(user?.userId ?? null);
+    setUserId(user?.id ?? null);
   }, [user, setUserId]);
 
   const handleLogout = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/auth/logout', { method: 'POST' });
-      if (res.ok) {
-        clearUser();
-        setUserId(null);
-        router.push('/');
-      }
+      await logout();
+      setUserId(null);
+      router.push('/');
     } catch {
       setError('Ошибка выхода');
     } finally {

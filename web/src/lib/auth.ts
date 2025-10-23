@@ -1,47 +1,145 @@
-import type { Role } from '@prisma/client';
-import { NextRequest } from 'next/server';
+import { NextAuthOptions } from 'next-auth';
+import GoogleProvider from 'next-auth/providers/google';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { prisma } from '@/lib/server/db';
+import { compare } from 'bcryptjs';
+import { env } from '@/lib/env';
 
-import { getSession } from '@/lib/server/session';
-
-export type AppRole = Role;
-
-export type AuthContext = {
-  userId?: string;
-  role: AppRole | null;
-  providerId?: string | null;
-};
-
-export function getAuthFromHeaders(req: NextRequest): AuthContext {
-  const roleRaw = req.headers.get('x-role');
-  const userId = req.headers.get('x-user-id') ?? undefined;
-  const providerId = req.headers.get('x-provider-id') ?? undefined;
-
-  const allowed: Role[] = ['ADMIN', 'PROVIDER', 'GRUZCHIK', 'CLIENT'];
-  const role = allowed.includes((roleRaw as Role) ?? ('' as Role))
-    ? (roleRaw as Role)
-    : null;
-
-  return { userId, role, providerId };
-}
-
-export async function requireRole(
-  req: NextRequest,
-  roles: AppRole[]
-): Promise<AuthContext> {
-  const headerAuth = getAuthFromHeaders(req);
-  if (headerAuth.role && roles.includes(headerAuth.role)) return headerAuth;
-
-  const session = await getSession();
-  if (session && roles.includes((session.role as AppRole) ?? ('' as AppRole))) {
-    return {
-      userId: session.userId,
-      role: session.role as AppRole,
-      providerId: session.providerId,
-    };
+// Extend NextAuth types
+declare module 'next-auth' {
+  interface User {
+    id: string;
+    role: string;
+    providerId?: string | null;
   }
 
-  const err = new Error('Forbidden');
-  // @ts-expect-error attach status for route handlers
-  err.status = 403;
-  throw err;
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role: string;
+      providerId?: string | null;
+    };
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    role: string;
+    providerId?: string | null;
+  }
+}
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    GoogleProvider({
+      clientId: env.GOOGLE_CLIENT_ID!,
+      clientSecret: env.GOOGLE_CLIENT_SECRET!,
+    }),
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+        phone: { label: 'Phone', type: 'text' },
+      },
+      async authorize(credentials) {
+        if (!credentials) return null;
+
+        const { email, password, phone } = credentials;
+
+        // Handle email/password login
+        if (email && password) {
+          const user = await prisma.user.findUnique({
+            where: { email },
+            include: { provider: true },
+          });
+
+          if (!user || !user.passwordHash) return null;
+
+          const isValid = await compare(password, user.passwordHash);
+          if (!isValid) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            providerId: user.providerId,
+          };
+        }
+
+        // Handle phone/password login (for existing users)
+        if (phone && password) {
+          const user = await prisma.user.findUnique({
+            where: { phone },
+            include: { provider: true },
+          });
+
+          if (!user || !user.passwordHash) return null;
+
+          const isValid = await compare(password, user.passwordHash);
+          if (!isValid) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            providerId: user.providerId,
+          };
+        }
+
+        return null;
+      },
+    }),
+  ],
+  session: {
+    strategy: 'jwt',
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role;
+        token.providerId = user.providerId;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.sub!;
+        session.user.role = token.role;
+        session.user.providerId = token.providerId;
+      }
+      return session;
+    },
+  },
+  pages: {
+    signIn: '/login',
+  },
+};
+
+// Helper function for role-based access control
+export async function requireRole(
+  req: Request,
+  roles: string[]
+): Promise<{ user: any; role: string }> {
+  const { getServerSession } = await import('next-auth/next');
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!roles.includes(session.user.role)) {
+    throw new Error('Forbidden');
+  }
+
+  return {
+    user: session.user,
+    role: session.user.role,
+  };
 }

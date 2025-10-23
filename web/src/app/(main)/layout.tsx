@@ -2,6 +2,7 @@ import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
 import Footer from '@/components/ui/Footer';
 import { GruzchikSwitcher } from '@/components/ui/GruzchikSwitcher';
 import Header from '@/components/ui/Header';
+import BottomNavigation from '@/components/ui/BottomNavigation';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { SearchProvider } from '@/contexts/SearchContext';
 import { UserProvider } from '@/contexts/UserContext';
@@ -23,12 +24,18 @@ export default function MainLayout({
             >
               Пропустить к содержимому
             </a>
-            <div className="flex min-h-screen flex-col">
+            <div className="mobile-layout flex min-h-screen flex-col md:!h-auto md:!overflow-visible">
               <Header />
-              <main className="flex-1">
-                <div id="main-content">{children}</div>
+              <main className="flex-1 pb-20 md:pb-0">
+                <div id="main-content" className="min-h-0">
+                  {children}
+                </div>
               </main>
               <Footer />
+              {/* Bottom Navigation - visible on tablet and mobile */}
+              <div className="md:hidden">
+                <BottomNavigation />
+              </div>
               {/* Portal Switchers for role-based access */}
               <AdminSwitcher />
               <GruzchikSwitcher />

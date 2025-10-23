@@ -9,29 +9,24 @@ export function useBasketAuth() {
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleLogin = useCallback(async () => {
-    if (!phone.trim()) return;
+    if (!phone.trim() || !password.trim()) return;
 
-    setIsOtpSent(true);
-    addNotification({
-      type: 'info',
-      title: 'Код отправлен',
-      message: 'Проверьте SMS с кодом подтверждения',
-    });
-  }, [phone, addNotification]);
-
-  const handleVerifyOtp = useCallback(async () => {
-    if (!otp.trim()) return;
-
-    setIsVerifying(true);
+    setIsLoggingIn(true);
     try {
-      // Simulate OTP verification
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUserId('user-id');
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ phone, password }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Не удалось войти');
+
+      setUserId(json.user.id);
       setIsLoginModalOpen(false);
       addNotification({
         type: 'success',
@@ -42,23 +37,22 @@ export function useBasketAuth() {
       addNotification({
         type: 'error',
         title: 'Ошибка входа',
-        message: 'Неверный код подтверждения',
+        message:
+          error instanceof Error ? error.message : 'Неверные данные для входа',
       });
     } finally {
-      setIsVerifying(false);
+      setIsLoggingIn(false);
     }
-  }, [otp, setUserId, addNotification]);
+  }, [phone, password, setUserId, addNotification]);
 
   return {
     isLoginModalOpen,
     setIsLoginModalOpen,
     phone,
     setPhone,
-    otp,
-    setOtp,
-    isOtpSent,
-    isVerifying,
+    password,
+    setPassword,
+    isLoggingIn,
     handleLogin,
-    handleVerifyOtp,
   };
 }

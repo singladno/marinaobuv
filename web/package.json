@@ -56,6 +56,7 @@
     "logs": "pm2 logs marinaobuv"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.0",
     "@aws-sdk/client-s3": "^3.908.0",
     "@aws-sdk/lib-storage": "^3.888.0",
     "@aws-sdk/s3-request-presigner": "^3.908.0",
@@ -67,6 +68,7 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-table": "8.21.3",
+    "@types/bcryptjs": "^2.4.6",
     "aws-sdk": "^2.1692.0",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
@@ -81,6 +83,7 @@
     "jose": "^5.8.0",
     "lucide-react": "^0.544.0",
     "next": "15.5.3",
+    "next-auth": "^4.24.11",
     "openai": "^5.20.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",

@@ -4,9 +4,12 @@ import { Button } from '@/components/ui/Button';
 
 interface ProfileMenuContentProps {
   user: {
-    userId: string;
-    phone?: string;
+    id: string;
+    email?: string | null;
+    phone?: string | null;
     name?: string | null;
+    role: string;
+    providerId?: string | null;
   } | null;
   onLogout?: () => void;
   loading?: boolean;
@@ -56,7 +59,7 @@ export default function ProfileMenuContent({
             {user?.name || 'Имя не указано'}
           </div>
           <div className="truncate text-sm text-gray-500">
-            {user?.phone || ''}
+            {user?.email || user?.phone || ''}
           </div>
         </div>
       </div>

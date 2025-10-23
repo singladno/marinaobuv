@@ -10,8 +10,7 @@ export function useLoginPage(options: { disableRedirect?: boolean } = {}) {
   const { refreshUser } = useUser();
 
   const [phone, setPhone] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,28 +37,19 @@ export function useLoginPage(options: { disableRedirect?: boolean } = {}) {
     })();
   }, [router, options.disableRedirect]);
 
-  const handleOtpRequest = async () => {
-    const resReq = await fetch('/api/auth/request-otp', {
+  const handleLogin = async () => {
+    const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, password }),
     });
-    if (!resReq.ok)
-      throw new Error(
-        (await resReq.json()).error ?? 'Не удалось отправить код'
-      );
-    setCodeSent(true);
-  };
 
-  const handleOtpVerification = async () => {
-    const resVer = await fetch('/api/auth/verify-otp', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ code }),
-    });
-    if (!resVer.ok)
-      throw new Error((await resVer.json()).error ?? 'Неверный код');
-    const data = await resVer.json();
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error ?? 'Ошибка входа');
+    }
+
+    const data = await res.json();
     setUserId(data.user.id);
     // Refresh user data in global context
     await refreshUser();
@@ -72,55 +62,24 @@ export function useLoginPage(options: { disableRedirect?: boolean } = {}) {
     setError(null);
 
     try {
-      if (!codeSent) {
-        await handleOtpRequest();
-        return;
-      }
-      await handleOtpVerification();
+      await handleLogin();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleOtpResend = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/auth/request-otp', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      });
-      if (!res.ok)
-        throw new Error((await res.json()).error ?? 'Не удалось отправить код');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Произошла ошибка');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBackToPhone = () => {
-    setCodeSent(false);
-    setCode('');
-    setError(null);
   };
 
   return {
     // State
     phone,
-    codeSent,
-    code,
+    password,
     error,
     loading,
 
     // Actions
     setPhone,
-    setCode,
+    setPassword,
     handleSubmit,
-    handleOtpResend,
-    handleBackToPhone,
   };
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { LoginModal } from '@/components/auth/LoginModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 import { ReviewForm } from '@/components/product/ReviewForm';
 import { ReviewList } from '@/components/product/ReviewList';
 import { Button } from '@/components/ui/Button';
@@ -93,7 +93,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
       <ReviewList reviews={reviews} />
 
       {showLoginModal && (
-        <LoginModal
+        <AuthModal
           isOpen={showLoginModal}
           onClose={() => setShowLoginModal(false)}
         />

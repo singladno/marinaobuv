@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { UserIcon } from '@heroicons/react/24/outline';
 
-import { LoginModal } from '@/components/auth/LoginModal';
+import { AuthModal } from '@/components/auth/AuthModal';
 import { Button } from '@/components/ui/Button';
 import ProfileMenuContent from '@/components/ui/ProfileMenuContent';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { useAccountMenu } from '@/hooks/useAccountMenu';
 
 export default function AccountMenu() {
@@ -35,7 +35,7 @@ export default function AccountMenu() {
         >
           <UserIcon className="h-4 w-4 text-white" />
         </Button>
-        <LoginModal
+        <AuthModal
           isOpen={showLoginModal}
           onClose={() => setShowLoginModal(false)}
         />

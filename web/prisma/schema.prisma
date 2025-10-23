@@ -15,15 +15,15 @@ model Category {
   path           String           @unique
   sort           Int              @default(500)
   isActive       Boolean          @default(true)
-  seoTitle       String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  seoCanonical   String?
   seoDescription String?
   seoH1          String?
   seoIntroHtml   String?
-  seoCanonical   String?
   seoNoindex     Boolean          @default(false)
+  seoTitle       String?
   seoUpdatedAt   DateTime?        @default(now())
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
   parent         Category?        @relation("CatToParent", fields: [parentId], references: [id])
   children       Category[]       @relation("CatToParent")
   products       Product[]
@@ -45,7 +45,6 @@ model Product {
   season                Season?
   description           String?
   availabilityCheckedAt DateTime?
-  activeUpdatedAt       DateTime       @default(now())
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   isActive              Boolean        @default(true)
@@ -54,14 +53,15 @@ model Product {
   analysisBatchId       String?        @unique
   colorBatchId          String?        @unique
   batchProcessingStatus String?        @default("pending")
+  activeUpdatedAt       DateTime       @default(now())
   gptRequest            String?
   gptResponse           String?
   providerId            String?
   orderItems            OrderItem[]
   category              Category       @relation(fields: [categoryId], references: [id])
+  provider              Provider?      @relation(fields: [providerId], references: [id])
   images                ProductImage[]
   reviews               Review[]
-  provider              Provider?      @relation(fields: [providerId], references: [id])
 
   @@index([categoryId])
   @@index([season])
@@ -79,10 +79,10 @@ model ProductImage {
   alt       String?
   sort      Int     @default(0)
   isPrimary Boolean @default(false)
-  isActive  Boolean @default(true)
   color     String?
   width     Int?
   height    Int?
+  isActive  Boolean @default(true)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId, sort])
@@ -95,10 +95,10 @@ model Provider {
   place         String?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
+  products      Product[]
   users         User[]
   draftProducts WaDraftProduct[]
   messages      WhatsAppMessage[]
-  products      Product[]
 
   @@index([name])
   @@index([phone])
@@ -122,8 +122,6 @@ model WaDraftProduct {
   gptRequest       String?
   rawGptResponse2  Json?
   gptRequest2      String?
-  gptResponse1     Json?
-  gptResponse2     Json?
   source           Json?
   color            String?
   categoryId       String?
@@ -136,6 +134,8 @@ model WaDraftProduct {
   article          String?
   aiConfidence     Float?
   aiContext        String?
+  gptResponse1     Json?
+  gptResponse2     Json?
   category         Category?             @relation(fields: [categoryId], references: [id])
   message          WhatsAppMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
   provider         Provider              @relation(fields: [providerId], references: [id])
@@ -209,28 +209,74 @@ model WhatsAppMessage {
 }
 
 model User {
-  id             String             @id @default(cuid())
-  phone          String             @unique
-  name           String?
-  role           Role
-  providerId     String?
-  passwordHash   String
-  label          String?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  gruzchikOrders Order[]            @relation("OrderGruzchik")
-  orders         Order[]
-  messages       OrderItemMessage[]
-  messageReads   OrderItemMessageRead[]
-  reviews        Review[]
-  searchHistory  SearchHistory[]
-  feedbacks      OrderItemFeedback[]
-  adminReplacements OrderItemReplacement[] @relation("AdminReplacement")
+  id                 String                 @id @default(cuid())
+  email              String?                @unique
+  phone              String?                @unique
+  name               String?
+  role               Role
+  providerId         String?
+  passwordHash       String?
+  emailVerified      DateTime?
+  image              String?
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  label              String?
+  gruzchikOrders     Order[]                @relation("OrderGruzchik")
+  orders             Order[]
+  feedbacks          OrderItemFeedback[]
+  messages           OrderItemMessage[]
+  messageReads       OrderItemMessageRead[]
+  adminReplacements  OrderItemReplacement[] @relation("AdminReplacement")
   clientReplacements OrderItemReplacement[] @relation("ClientReplacement")
-  provider       Provider?          @relation(fields: [providerId], references: [id])
+  reviews            Review[]
+  searchHistory      SearchHistory[]
+  provider           Provider?              @relation(fields: [providerId], references: [id])
+  accounts           Account[]
+  sessions           Session[]
 
   @@index([role])
   @@index([providerId])
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model Review {
@@ -266,7 +312,6 @@ model Order {
   address       String?
   transportId   String?
   transportName String?
-  comment       String?
   subtotal      Decimal     @default(0)
   total         Decimal     @default(0)
   status        String      @default("Новый")
@@ -274,6 +319,7 @@ model Order {
   payment       Decimal     @default(0)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  comment       String?
   gruzchik      User?       @relation("OrderGruzchik", fields: [gruzchikId], references: [id])
   user          User?       @relation(fields: [userId], references: [id])
   items         OrderItem[]
@@ -286,21 +332,21 @@ model Order {
 }
 
 model OrderItem {
-  id          String             @id @default(cuid())
-  orderId     String
-  productId   String
-  slug        String
-  name        String
-  article     String?
-  priceBox    Decimal
-  qty         Int
-  itemCode    String?            @unique
-  isAvailable Boolean?
-  createdAt   DateTime           @default(now())
-  order       Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product            @relation(fields: [productId], references: [id])
-  messages    OrderItemMessage[]
-  feedbacks   OrderItemFeedback[]
+  id           String                 @id @default(cuid())
+  orderId      String
+  productId    String
+  slug         String
+  name         String
+  article      String?
+  priceBox     Decimal
+  qty          Int
+  itemCode     String?                @unique
+  createdAt    DateTime               @default(now())
+  isAvailable  Boolean?
+  order        Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product                @relation(fields: [productId], references: [id])
+  feedbacks    OrderItemFeedback[]
+  messages     OrderItemMessage[]
   replacements OrderItemReplacement[]
 
   @@index([orderId])
@@ -309,16 +355,16 @@ model OrderItem {
 }
 
 model OrderItemMessage {
-  id          String    @id @default(cuid())
+  id          String                 @id @default(cuid())
   orderItemId String
   userId      String
   text        String?
-  isService   Boolean   @default(false)
+  isService   Boolean                @default(false)
   attachments Json?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  orderItem   OrderItem              @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   readBy      OrderItemMessageRead[]
 
   @@index([orderItemId])
@@ -351,8 +397,8 @@ model ParsingHistory {
   duration        Int?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  reason          String?
   triggeredBy     String?
+  reason          String?
 
   @@index([startedAt])
   @@index([status])
@@ -399,6 +445,41 @@ model SearchHistory {
   @@index([createdAt])
 }
 
+model OrderItemFeedback {
+  id           String       @id @default(cuid())
+  orderItemId  String
+  userId       String
+  feedbackType FeedbackType
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  orderItem    OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orderItemId])
+  @@index([userId])
+}
+
+model OrderItemReplacement {
+  id                  String            @id @default(cuid())
+  orderItemId         String
+  adminUserId         String
+  clientUserId        String
+  replacementImageUrl String?
+  replacementImageKey String?
+  status              ReplacementStatus @default(PENDING)
+  adminComment        String?
+  clientComment       String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  adminUser           User              @relation("AdminReplacement", fields: [adminUserId], references: [id], onDelete: Cascade)
+  clientUser          User              @relation("ClientReplacement", fields: [clientUserId], references: [id], onDelete: Cascade)
+  orderItem           OrderItem         @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([orderItemId])
+  @@index([adminUserId])
+  @@index([clientUserId])
+}
+
 enum Role {
   ADMIN
   PROVIDER
@@ -428,39 +509,4 @@ enum ReplacementStatus {
   PENDING
   ACCEPTED
   REJECTED
-}
-
-model OrderItemFeedback {
-  id          String       @id @default(cuid())
-  orderItemId String
-  userId      String
-  feedbackType FeedbackType
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([orderItemId])
-  @@index([userId])
-}
-
-model OrderItemReplacement {
-  id                  String             @id @default(cuid())
-  orderItemId         String
-  adminUserId         String
-  clientUserId        String
-  replacementImageUrl String?
-  replacementImageKey String?
-  status              ReplacementStatus  @default(PENDING)
-  adminComment        String?
-  clientComment       String?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  orderItem           OrderItem          @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  adminUser           User               @relation("AdminReplacement", fields: [adminUserId], references: [id], onDelete: Cascade)
-  clientUser          User               @relation("ClientReplacement", fields: [clientUserId], references: [id], onDelete: Cascade)
-
-  @@index([orderItemId])
-  @@index([adminUserId])
-  @@index([clientUserId])
 }
