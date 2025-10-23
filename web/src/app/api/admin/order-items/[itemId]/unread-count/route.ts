@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
-import { authenticateRequest } from '@/lib/server/auth-middleware';
+import { requireAuth } from '@/lib/server/auth-helpers';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
-    const auth = await authenticateRequest(request, 'ADMIN');
-    if (auth.response) {
-      return auth.response;
+    const auth = await requireAuth(request, 'ADMIN');
+    if (auth.error) {
+      return auth.error;
     }
 
     const { itemId } = await params;
