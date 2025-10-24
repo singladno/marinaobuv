@@ -64,7 +64,8 @@ export async function requireAuth(
     }
 
     // Check if user has the required role
-    if (session.user.role !== requiredRole) {
+    // ADMIN can access all endpoints, CLIENT can only access CLIENT endpoints
+    if (session.user.role !== requiredRole && session.user.role !== 'ADMIN') {
       return {
         error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
       };
