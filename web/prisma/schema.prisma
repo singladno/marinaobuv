@@ -505,6 +505,18 @@ enum FeedbackType {
   AGREE_REPLACEMENT
 }
 
+model WebhookStatus {
+  id             String    @id @default(cuid())
+  isConnected    Boolean
+  lastCheck      DateTime  @default(now())
+  errorMessage   String?
+  instanceStatus String?
+  createdAt      DateTime  @default(now())
+
+  @@index([lastCheck])
+  @@index([isConnected])
+}
+
 enum ReplacementStatus {
   PENDING
   ACCEPTED

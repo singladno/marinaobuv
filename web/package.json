@@ -38,6 +38,8 @@
     "messages:clean": "tsx src/scripts/clean-messages.ts",
     "messages:clear": "tsx src/scripts/clear-messages.ts",
     "green:queue:poll": "tsx src/scripts/poll-green-api-queue.ts",
+    "webhook:monitor": "tsx src/scripts/webhook-status-monitor.ts",
+    "webhook:configure": "tsx src/scripts/configure-webhook.ts",
     "lint": "eslint .",
     "lint:eslint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",

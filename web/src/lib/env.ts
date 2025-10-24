@@ -141,6 +141,11 @@ const schema = z
     // SMS Configuration (SMS.ru)
     SMS_API_KEY: z.string().optional(),
     SMS_USE_CONSOLE: z.string().optional(),
+
+    // Webhook Status Monitoring
+    WEBHOOK_NOTIFICATIONS_ENABLED: z.string().optional(),
+    WEBHOOK_NOTIFICATION_NUMBERS: z.string().optional(),
+    WEBHOOK_NOTIFICATION_MESSAGE: z.string().optional(),
   })
   .refine(
     data => isBuildContext || data.YC_IAM_TOKEN || data.YC_API_KEY,
@@ -209,6 +214,11 @@ const raw = {
   // SMS Configuration
   SMS_API_KEY: process.env.SMS_API_KEY,
   SMS_USE_CONSOLE: process.env.SMS_USE_CONSOLE,
+
+  // Webhook Status Monitoring
+  WEBHOOK_NOTIFICATIONS_ENABLED: process.env.WEBHOOK_NOTIFICATIONS_ENABLED,
+  WEBHOOK_NOTIFICATION_NUMBERS: process.env.WEBHOOK_NOTIFICATION_NUMBERS,
+  WEBHOOK_NOTIFICATION_MESSAGE: process.env.WEBHOOK_NOTIFICATION_MESSAGE,
 };
 
 const parsed = schema.safeParse(raw);
