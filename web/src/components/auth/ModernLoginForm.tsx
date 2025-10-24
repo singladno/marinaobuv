@@ -80,6 +80,7 @@ export function ModernLoginForm({ onSuccess }: ModernLoginFormProps) {
       <ForgotPasswordForm
         onBack={() => setShowForgotPassword(false)}
         onSuccess={() => setShowForgotPassword(false)}
+        prefilledEmail={formData.email}
       />
     );
   }

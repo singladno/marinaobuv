@@ -8,16 +8,18 @@ import { Text } from '@/components/ui/Text';
 interface ForgotPasswordFormProps {
   onSuccess?: () => void;
   onBack?: () => void;
+  prefilledEmail?: string;
 }
 
 export function ForgotPasswordForm({
   onSuccess,
   onBack,
+  prefilledEmail = '',
 }: ForgotPasswordFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(prefilledEmail);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

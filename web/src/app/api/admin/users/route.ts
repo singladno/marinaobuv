@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { hash } from 'bcryptjs';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
-import { hashPassword } from '@/lib/server/password';
 import { normalizePhoneToE164 } from '@/lib/server/sms';
 
 export async function GET(request: NextRequest) {
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash the password
-    const hashedPassword = hashPassword(password);
+    const hashedPassword = await hash(password, 12);
 
     // Create user with proper password hash
     const user = await prisma.user.create({

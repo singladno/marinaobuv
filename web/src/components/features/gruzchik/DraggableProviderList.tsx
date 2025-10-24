@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -100,7 +100,8 @@ export function DraggableProviderList({
   selectedProviderId,
   onProviderSelect,
 }: DraggableProviderListProps) {
-  const { getSortedProviders, handleDragEnd } = useProviderSorting();
+  const { getSortedProviders, handleDragEnd, sortedProviderIds } =
+    useProviderSorting();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -114,6 +115,7 @@ export function DraggableProviderList({
     })
   );
 
+  // Force re-render when sortedProviderIds changes
   const sortedProviders = getSortedProviders(providers);
 
   const handleDragStart = (event: any) => {

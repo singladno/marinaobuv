@@ -104,16 +104,17 @@ export function ProviderSortingProvider({
         return;
       }
 
-      // Get indices from the drag event
-      const sourceIndex = result.active.data.current?.sortable?.index;
-      const destinationIndex = result.over.data.current?.sortable?.index;
+      const { active, over } = result;
+
+      // Get the sorted providers to find the correct indices
+      const sortedProviders = getSortedProviders(providers);
+
+      // Find indices of active and over items in the sorted array
+      const sourceIndex = sortedProviders.findIndex(p => p.id === active.id);
+      const destinationIndex = sortedProviders.findIndex(p => p.id === over.id);
 
       // Validate indices
-      if (sourceIndex === undefined || sourceIndex < 0) {
-        return;
-      }
-
-      if (destinationIndex === undefined || destinationIndex < 0) {
+      if (sourceIndex === -1 || destinationIndex === -1) {
         return;
       }
 
@@ -122,19 +123,26 @@ export function ProviderSortingProvider({
       }
 
       // Get current provider IDs in the order they appear
-      const currentProviderIds = providers.map(p => p.id);
+      const currentProviderIds = sortedProviders.map(p => p.id);
 
       // If we have saved sorting, use it as base, otherwise use current order
       const baseOrder =
         sortedProviderIds.length > 0 ? sortedProviderIds : currentProviderIds;
 
+      // Filter out null values from baseOrder
+      const filteredBaseOrder = baseOrder.filter(id => id !== null);
+
       // Create new array with reordered items using arrayMove
-      const newSorted = arrayMove(baseOrder, sourceIndex, destinationIndex);
+      const newSorted = arrayMove(
+        filteredBaseOrder,
+        sourceIndex,
+        destinationIndex
+      );
 
       // Save new sorting
       saveSorting(newSorted);
     },
-    [sortedProviderIds, saveSorting]
+    [sortedProviderIds, saveSorting, getSortedProviders]
   );
 
   // Clear sorting (reset to original order)
