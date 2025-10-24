@@ -32,6 +32,14 @@ async function configureWebhook() {
     outgoingMessageWebhook: webhookUrl,
     stateWebhook: webhookUrl,
     deviceWebhook: webhookUrl,
+    // CRITICAL: Enable incoming messages and files webhook
+    incomingWebhookEnabled: true,
+    incomingMessagesAndFilesWebhook: webhookUrl,
+    // Ensure all critical webhooks are enabled
+    incomingWebhookOnAnswer: webhookUrl,
+    outgoingMessageWebhook: webhookUrl,
+    stateWebhook: webhookUrl,
+    deviceWebhook: webhookUrl,
   };
 
   const postData = JSON.stringify(settingsPayload);
