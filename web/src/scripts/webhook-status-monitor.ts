@@ -135,14 +135,13 @@ export class WebhookStatusMonitor {
         };
       }
 
-      // Check if incoming messages and files webhook is configured
-      if (!settingsData.incomingMessagesAndFilesWebhook) {
-        console.log('⚠️ Incoming messages and files webhook is not configured');
+      // Check if basic incoming webhook is enabled
+      if (settingsData.incomingWebhook !== 'yes') {
+        console.log('⚠️ Incoming webhook is not enabled');
         return {
           isConnected: false,
           lastCheck: new Date(),
-          errorMessage:
-            'Incoming messages and files webhook is not configured - images and files will not be received',
+          errorMessage: 'Incoming webhook is not enabled - messages will not be received',
           instanceStatus,
         };
       }

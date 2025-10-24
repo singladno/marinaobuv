@@ -27,7 +27,9 @@ async function configureWebhook() {
 
   const settingsPayload = {
     webhookUrl: webhookUrl,
+    // CRITICAL: Enable incoming messages and files webhook
     incomingWebhook: 'yes',
+    // Enable all message types
     outgoingWebhook: 'yes',
     stateWebhook: 'yes',
     outgoingMessageWebhook: 'yes',
