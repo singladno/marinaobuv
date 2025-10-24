@@ -103,95 +103,102 @@ export function BottomNavigation({ className = '' }: BottomNavigationProps) {
 
   return (
     <>
-      <nav
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white shadow-2xl ${className}`}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50"
+        style={{ bottom: '-1px' }}
       >
-        <div className="flex h-16 items-center justify-around">
-          {navigationItems.map(item => {
-            const Icon = item.icon;
-            const isBasket = item.name === 'Корзина';
-            const isProfile = item.name === 'Профиль';
+        <nav className={`bg-white shadow-2xl ${className}`}>
+          <div className="flex h-16 items-center justify-around">
+            {navigationItems.map(item => {
+              const Icon = item.icon;
+              const isBasket = item.name === 'Корзина';
+              const isProfile = item.name === 'Профиль';
 
-            if (isProfile && item.onClick) {
-              return (
-                <Button
-                  key={item.name}
-                  variant="ghost"
-                  size="sm"
-                  onClick={item.onClick}
-                  className="flex h-full flex-col items-center justify-center px-2 py-2 hover:bg-transparent"
-                >
-                  <div className="relative">
-                    <Icon
-                      className={`h-6 w-6 ${
-                        item.isActive ? 'text-purple-600' : 'text-gray-300'
-                      } transition-transform duration-300`}
-                    />
-                  </div>
-                </Button>
-              );
-            }
-
-            return (
-              <Button
-                key={item.name}
-                variant="ghost"
-                size="sm"
-                asChild={!item.onClick}
-                onClick={item.onClick}
-                className="flex h-full flex-col items-center justify-center px-2 py-2 hover:bg-transparent"
-              >
-                {item.onClick ? (
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="relative">
-                      <Icon
-                        className={`h-6 w-6 ${
-                          item.isActive ? 'text-purple-600' : 'text-gray-300'
-                        } ${
-                          isBasket && isAnimating ? 'scale-110' : 'scale-100'
-                        } transition-transform duration-300`}
-                      />
-                      {isBasket && totalQty > 0 && (
-                        <span
-                          className={`absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-semibold text-white transition-all duration-300 ${
-                            isAnimating ? 'scale-125 bg-green-500' : 'scale-100'
-                          }`}
-                        >
-                          {totalQty}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <Link
-                    href={item.href}
-                    className="flex flex-col items-center justify-center"
+              if (isProfile && item.onClick) {
+                return (
+                  <Button
+                    key={item.name}
+                    variant="ghost"
+                    size="sm"
+                    onClick={item.onClick}
+                    className="flex h-full flex-col items-center justify-center px-2 py-2 hover:bg-transparent"
                   >
                     <div className="relative">
                       <Icon
                         className={`h-6 w-6 ${
                           item.isActive ? 'text-purple-600' : 'text-gray-300'
-                        } ${
-                          isBasket && isAnimating ? 'scale-110' : 'scale-100'
                         } transition-transform duration-300`}
                       />
-                      {isBasket && totalQty > 0 && (
-                        <span
-                          className={`absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-semibold text-white transition-all duration-300 ${
-                            isAnimating ? 'scale-125 bg-green-500' : 'scale-100'
-                          }`}
-                        >
-                          {totalQty}
-                        </span>
-                      )}
                     </div>
-                  </Link>
-                )}
-              </Button>
-            );
-          })}
-        </div>
-      </nav>
+                  </Button>
+                );
+              }
+
+              return (
+                <Button
+                  key={item.name}
+                  variant="ghost"
+                  size="sm"
+                  asChild={!item.onClick}
+                  onClick={item.onClick}
+                  className="flex h-full flex-col items-center justify-center px-2 py-2 hover:bg-transparent"
+                >
+                  {item.onClick ? (
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="relative">
+                        <Icon
+                          className={`h-6 w-6 ${
+                            item.isActive ? 'text-purple-600' : 'text-gray-300'
+                          } ${
+                            isBasket && isAnimating ? 'scale-110' : 'scale-100'
+                          } transition-transform duration-300`}
+                        />
+                        {isBasket && totalQty > 0 && (
+                          <span
+                            className={`absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-semibold text-white transition-all duration-300 ${
+                              isAnimating
+                                ? 'scale-125 bg-green-500'
+                                : 'scale-100'
+                            }`}
+                          >
+                            {totalQty}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      className="flex flex-col items-center justify-center"
+                    >
+                      <div className="relative">
+                        <Icon
+                          className={`h-6 w-6 ${
+                            item.isActive ? 'text-purple-600' : 'text-gray-300'
+                          } ${
+                            isBasket && isAnimating ? 'scale-110' : 'scale-100'
+                          } transition-transform duration-300`}
+                        />
+                        {isBasket && totalQty > 0 && (
+                          <span
+                            className={`absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-semibold text-white transition-all duration-300 ${
+                              isAnimating
+                                ? 'scale-125 bg-green-500'
+                                : 'scale-100'
+                            }`}
+                          >
+                            {totalQty}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  )}
+                </Button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
 
       <Suspense fallback={null}>
         <AuthModal

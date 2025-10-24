@@ -21,6 +21,7 @@ import { site } from '@/lib/site';
 import HamburgerMenu from '@/components/ui/HamburgerMenu';
 import AdvancedSlidingMenu from '@/components/ui/AdvancedSlidingMenu';
 import { MobileAdminSwitcher } from '@/components/ui/MobileAdminSwitcher';
+import { MobileGruzchikSwitcher } from '@/components/ui/MobileGruzchikSwitcher';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -168,6 +169,13 @@ export default function Header({ onSearch }: HeaderProps) {
             {user?.role === 'ADMIN' && (
               <div className="md:hidden">
                 <MobileAdminSwitcher />
+              </div>
+            )}
+
+            {/* Mobile Gruzchik Switcher - only show on mobile for gruzchik users */}
+            {user?.role === 'GRUZCHIK' && (
+              <div className="md:hidden">
+                <MobileGruzchikSwitcher />
               </div>
             )}
 

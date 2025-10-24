@@ -107,7 +107,11 @@ export function OrderCard({ order }: OrderCardProps) {
       </div>
 
       {selectedItem && (
-        <ClientOrderItemChat item={selectedItem} onClose={handleCloseChat} />
+        <ClientOrderItemChat
+          item={selectedItem}
+          onClose={handleCloseChat}
+          orderStatus={order.status}
+        />
       )}
     </>
   );

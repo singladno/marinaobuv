@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { hashPassword } from '@/lib/server/password';
 import { normalizePhoneToE164 } from '@/lib/server/sms';
 
 export async function GET(request: NextRequest) {
@@ -78,39 +79,76 @@ export async function POST(request: NextRequest) {
     await requireRole(request, ['ADMIN']);
 
     const body = await request.json();
-    const { phone, name, role, providerId } = body;
+    const { phone, name, email, password, role, providerId } = body;
 
-    // Validate required fields
-    if (!phone || !role) {
+    // Validate required fields - either phone or email must be provided
+    if (!role || !password) {
       return NextResponse.json(
-        { error: 'Phone and role are required' },
+        { error: 'Role and password are required' },
         { status: 400 }
       );
     }
 
-    // Normalize phone number to ensure consistent format
-    const normalizedPhone = normalizePhoneToE164(phone);
+    if (!phone && !email) {
+      return NextResponse.json(
+        { error: 'Either phone or email must be provided' },
+        { status: 400 }
+      );
+    }
 
-    // Check if user with this phone already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { phone: normalizedPhone },
+    // Validate password length
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long' },
+        { status: 400 }
+      );
+    }
+
+    // Normalize phone number if provided
+    const normalizedPhone = phone ? normalizePhoneToE164(phone) : null;
+
+    // Check if user with this phone or email already exists
+    const whereConditions = [];
+    if (normalizedPhone) {
+      whereConditions.push({ phone: normalizedPhone });
+    }
+    if (email) {
+      whereConditions.push({ email: email });
+    }
+
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: whereConditions,
+      },
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this phone number already exists' },
-        { status: 400 }
-      );
+      if (normalizedPhone && existingUser.phone === normalizedPhone) {
+        return NextResponse.json(
+          { error: 'User with this phone number already exists' },
+          { status: 400 }
+        );
+      }
+      if (email && existingUser.email === email) {
+        return NextResponse.json(
+          { error: 'User with this email already exists' },
+          { status: 400 }
+        );
+      }
     }
 
-    // Create user without password (login by phone number)
+    // Hash the password
+    const hashedPassword = hashPassword(password);
+
+    // Create user with proper password hash
     const user = await prisma.user.create({
       data: {
         phone: normalizedPhone,
+        email: email || null,
         name,
         role,
         providerId: providerId || null,
-        passwordHash: 'phone-login', // Placeholder for phone-based login
+        passwordHash: hashedPassword,
       },
       include: {
         provider: {

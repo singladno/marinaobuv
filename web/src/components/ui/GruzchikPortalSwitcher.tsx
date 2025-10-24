@@ -19,6 +19,7 @@ export function GruzchikPortalSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
   const { user } = useUser();
   const isOnGruzchik =
@@ -26,8 +27,18 @@ export function GruzchikPortalSwitcher() {
 
   useEffect(() => {
     setMounted(true);
+    // Check if device is mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint is 768px
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
     // Show switcher immediately for testing
     setIsVisible(true);
+
+    return () => window.removeEventListener('resize', checkMobile);
   }, [pathname]);
 
   const toggleMenu = () => {
@@ -41,6 +52,9 @@ export function GruzchikPortalSwitcher() {
   // Don't render until visible to prevent flash
   if (!isVisible) return null;
 
+  // Don't render on mobile devices
+  if (isMobile) return null;
+
   // Show for gruzchik users (both in gruzchik portal and customer portal)
   if (user?.role !== 'GRUZCHIK') {
     return null;
@@ -50,7 +64,7 @@ export function GruzchikPortalSwitcher() {
 
   const switcherContent = (
     <div
-      className="gruzchik-switcher fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6"
+      className="gruzchik-switcher fixed bottom-4 right-4 z-50 hidden md:bottom-6 md:right-6 md:block"
       style={{
         position: 'fixed',
         bottom: '16px',

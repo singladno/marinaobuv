@@ -2,6 +2,7 @@ export interface User {
   id: string;
   phone: string;
   name: string | null;
+  email: string | null;
   role: string;
   providerId: string | null;
   provider: {
@@ -24,6 +25,9 @@ export interface Provider {
 export interface CreateUserFormData {
   phone: string;
   name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
   role: string;
   providerId: string;
 }

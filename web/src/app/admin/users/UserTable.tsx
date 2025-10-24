@@ -104,6 +104,11 @@ export function UserTable({
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     {user.phone}
                   </div>
+                  {user.email && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {user.email}
+                    </div>
+                  )}
                 </div>
               </td>
               <td className="whitespace-nowrap px-6 py-4">

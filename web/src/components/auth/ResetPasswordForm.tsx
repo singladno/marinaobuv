@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Text } from '@/components/ui/Text';
 
 function ResetPasswordFormContent() {
@@ -115,11 +116,10 @@ function ResetPasswordFormContent() {
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Новый пароль
           </label>
-          <Input
-            type="password"
-            placeholder="Минимум 6 символов"
+          <PasswordInput
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={setPassword}
+            placeholder="Минимум 6 символов"
             required
             disabled={isLoading}
             minLength={6}
@@ -131,11 +131,10 @@ function ResetPasswordFormContent() {
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Подтвердите пароль
           </label>
-          <Input
-            type="password"
-            placeholder="Повторите пароль"
+          <PasswordInput
             value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
+            onChange={setConfirmPassword}
+            placeholder="Повторите пароль"
             required
             disabled={isLoading}
             className="w-full"

@@ -132,6 +132,19 @@ export function useBasketPageState() {
     // Only depends on user phone; do not re-run on orderPhone changes
   }, [user?.phone]);
 
+  // Prefill email from authenticated user once (avoid refilling after user clears)
+  const hasAutofilledEmailRef = useRef(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (hasAutofilledEmailRef.current) return;
+    // Prefill if user has email and current email is empty
+    if (user?.email && !userEmail) {
+      setUserEmail(user.email);
+      hasAutofilledEmailRef.current = true;
+    }
+    // Only depends on user email; do not re-run on userEmail changes
+  }, [user?.email]);
+
   // Persist basket data to localStorage when any field changes
   useEffect(() => {
     try {

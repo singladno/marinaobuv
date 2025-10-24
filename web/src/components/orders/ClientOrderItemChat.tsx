@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, Send, Camera, FileText } from 'lucide-react';
+import { ArrowLeft, Send, Camera, FileText, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
@@ -57,6 +57,7 @@ interface ClientOrderItemChatProps {
   item: OrderItem;
   onClose: () => void;
   onMessagesRead?: () => void;
+  orderStatus?: string;
 }
 
 // Beautiful Chat Loader Component
@@ -94,6 +95,7 @@ export function ClientOrderItemChat({
   item,
   onClose,
   onMessagesRead,
+  orderStatus,
 }: ClientOrderItemChatProps) {
   const { setClientChatOpen } = useClientChat();
   const { user } = useUser();
@@ -143,16 +145,26 @@ export function ClientOrderItemChat({
     // Set chat as open
     setClientChatOpen(true);
 
+    // Add keyboard support
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
     // Cleanup: restore scroll when chat closes
     return () => {
       document.body.style.overflow = originalOverflow;
       document.body.style.position = originalPosition;
       document.body.style.width = '';
       document.body.style.height = '';
+      document.removeEventListener('keydown', handleKeyDown);
       // Set chat as closed
       setClientChatOpen(false);
     };
-  }, [setClientChatOpen]);
+  }, [setClientChatOpen, onClose]);
 
   // Fetch messages from API and mark as read
   useEffect(() => {
@@ -323,8 +335,18 @@ export function ClientOrderItemChat({
     });
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex h-screen w-screen overflow-hidden bg-black bg-opacity-50">
+    <div
+      className="fixed inset-0 z-[100] flex h-screen w-screen overflow-hidden bg-black bg-opacity-50"
+      onClick={handleBackdropClick}
+      style={{ bottom: '-1px' }}
+    >
       <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-gray-900">
         {/* Header */}
         <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
@@ -333,9 +355,10 @@ export function ClientOrderItemChat({
               onClick={onClose}
               variant="ghost"
               size="sm"
-              className="h-12 w-12 p-0"
+              className="h-10 w-10 p-0 text-gray-800 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+              title="Назад"
             >
-              <ArrowLeft className="h-12 w-12" />
+              <ArrowLeft className="h-6 w-6" />
             </Button>
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -348,8 +371,19 @@ export function ClientOrderItemChat({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center space-x-4">
-            <ItemApproveButton itemId={item.id} size="sm" variant="success" />
+          <div className="flex items-center space-x-2">
+            {orderStatus === 'Согласование' && (
+              <ItemApproveButton itemId={item.id} size="sm" variant="success" />
+            )}
+            <Button
+              onClick={onClose}
+              variant="ghost"
+              size="sm"
+              className="h-10 w-10 p-0 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+              title="Закрыть чат"
+            >
+              <X className="h-5 w-5" />
+            </Button>
             <AdminPortalSwitcherHeader />
           </div>
         </div>
@@ -513,10 +547,10 @@ export function ClientOrderItemChat({
                   // Auto-resize textarea
                   e.target.style.height = 'auto';
                   e.target.style.height =
-                    Math.max(32, e.target.scrollHeight) + 'px';
+                    Math.max(40, e.target.scrollHeight) + 'px';
                 }}
                 placeholder="Введите сообщение..."
-                className="max-h-32 min-h-[40px] w-full resize-none pr-12"
+                className="max-h-32 min-h-[40px] w-full resize-none pr-12 text-base"
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();

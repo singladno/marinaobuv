@@ -21,6 +21,9 @@ export function useUsers() {
   const [formData, setFormData] = useState<CreateUserFormData>({
     phone: '',
     name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
     role: 'CLIENT',
     providerId: '',
   });
@@ -72,6 +75,38 @@ export function useUsers() {
     e.preventDefault();
     setCreating(true);
 
+    // Validate that either phone or email is provided
+    if (!formData.phone && !formData.email) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка',
+        message: 'Необходимо указать либо телефон, либо email',
+      });
+      setCreating(false);
+      return;
+    }
+
+    // Validate password confirmation
+    if (formData.password !== formData.confirmPassword) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка',
+        message: 'Пароли не совпадают',
+      });
+      setCreating(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка',
+        message: 'Пароль должен содержать минимум 6 символов',
+      });
+      setCreating(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/admin/users', {
         method: 'POST',
@@ -91,7 +126,15 @@ export function useUsers() {
       });
 
       setShowCreateForm(false);
-      setFormData({ phone: '', name: '', role: 'CLIENT', providerId: '' });
+      setFormData({
+        phone: '',
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        role: 'CLIENT',
+        providerId: '',
+      });
       fetchUsers();
     } catch (error) {
       console.error('Error creating user:', error);

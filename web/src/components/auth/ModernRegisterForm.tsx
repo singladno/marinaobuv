@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Text } from '@/components/ui/Text';
 import { PhoneInput } from './PhoneInput';
 
@@ -214,11 +215,10 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Пароль
             </label>
-            <Input
-              type="password"
-              placeholder="Минимум 6 символов"
+            <PasswordInput
               value={formData.password}
-              onChange={e => handleInputChange('password', e.target.value)}
+              onChange={password => handleInputChange('password', password)}
+              placeholder="Минимум 6 символов"
               required
               disabled={isLoading}
               minLength={6}
@@ -230,13 +230,12 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Подтвердите пароль
             </label>
-            <Input
-              type="password"
-              placeholder="Повторите пароль"
+            <PasswordInput
               value={formData.confirmPassword}
-              onChange={e =>
-                handleInputChange('confirmPassword', e.target.value)
+              onChange={confirmPassword =>
+                handleInputChange('confirmPassword', confirmPassword)
               }
+              placeholder="Повторите пароль"
               required
               disabled={isLoading}
               className="w-full"

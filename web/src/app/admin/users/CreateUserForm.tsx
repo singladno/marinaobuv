@@ -1,6 +1,7 @@
 'use client';
 
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import {
   Select,
@@ -31,13 +32,26 @@ export function CreateUserForm({
     <form onSubmit={onSubmit} className="space-y-4 p-6">
       <div className="w-full">
         <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Телефон *
+          Email *
+        </label>
+        <Input
+          type="email"
+          value={formData.email}
+          onChange={e => setFormData({ ...formData, email: e.target.value })}
+          placeholder="user@example.com"
+          className="w-full"
+          required
+        />
+      </div>
+
+      <div className="w-full">
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Телефон
         </label>
         <PhoneInput
           value={formData.phone}
           onChange={phone => setFormData({ ...formData, phone })}
           className="w-full"
-          required
         />
       </div>
 
@@ -50,6 +64,35 @@ export function CreateUserForm({
           onChange={e => setFormData({ ...formData, name: e.target.value })}
           placeholder="Имя пользователя"
           className="w-full"
+        />
+      </div>
+
+      <div className="w-full">
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Пароль *
+        </label>
+        <PasswordInput
+          value={formData.password}
+          onChange={password => setFormData({ ...formData, password })}
+          placeholder="Минимум 6 символов"
+          className="w-full"
+          required
+          minLength={6}
+        />
+      </div>
+
+      <div className="w-full">
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Подтвердите пароль *
+        </label>
+        <PasswordInput
+          value={formData.confirmPassword}
+          onChange={confirmPassword =>
+            setFormData({ ...formData, confirmPassword })
+          }
+          placeholder="Повторите пароль"
+          className="w-full"
+          required
         />
       </div>
 
