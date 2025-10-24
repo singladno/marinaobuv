@@ -65,13 +65,6 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
   // Check if there are more pages to load
   const hasNextPage = useMemo(() => {
     const hasMore = pagination.page < pagination.totalPages;
-    console.log('🔍 hasNextPage calculation:', {
-      currentPage: pagination.page,
-      totalPages: pagination.totalPages,
-      hasMore,
-      totalProducts: pagination.total,
-      loadedProducts: allProducts.length,
-    });
     return hasMore;
   }, [
     pagination.page,
@@ -85,7 +78,6 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
     async (newFilters?: Partial<CatalogFilters>, append = false) => {
       // Prevent multiple simultaneous requests
       if (loading && !append) {
-        console.log('🔍 Request already in progress, skipping...');
         return;
       }
 
@@ -121,7 +113,6 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
           searchParams.set('pageSize', updatedFilters.pageSize.toString());
 
           const url = `/api/catalog?${searchParams.toString()}`;
-          console.log('🔍 Fetching products from URL:', url);
 
           // Make the request
           fetch(url)
@@ -132,18 +123,6 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
               return response.json();
             })
             .then(data => {
-              console.log('🔍 API Response Debug:', {
-                productsReceived: data.products.length,
-                pagination: data.pagination,
-                append,
-                currentProducts: allProducts.length,
-              });
-
-              // Log debug information from API
-              if (data.debug) {
-                console.log('🔍 Catalog API Debug Info:', data.debug);
-              }
-
               if (append) {
                 // Append new products to existing ones
                 setAllProducts(prev => [...prev, ...data.products]);
@@ -181,15 +160,8 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
 
   // Load more products (for infinite scroll)
   const loadMore = useCallback(() => {
-    console.log('🚀 loadMore called:', {
-      hasNextPage,
-      loadingMore,
-      loading,
-      currentPage: pagination.page,
-    });
     if (hasNextPage && !loadingMore && !loading) {
       const nextPage = pagination.page + 1;
-      console.log('🚀 Loading next page:', nextPage);
       fetchProducts({ page: nextPage }, true);
     }
   }, [hasNextPage, loadingMore, loading, pagination.page]);

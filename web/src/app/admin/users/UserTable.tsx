@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { EditableRoleBadge } from '@/components/features/EditableRoleBadge';
+import { ChangePasswordModal } from '@/components/admin/ChangePasswordModal';
 
 import type { User } from './types';
 
@@ -10,6 +12,7 @@ interface UserTableProps {
   getRoleLabel: (role: string) => string;
   formatDate: (dateString: string) => string;
   onUpdateUser: (id: string, updates: Partial<User>) => Promise<void>;
+  onPasswordChanged?: () => void;
 }
 
 export function UserTable({
@@ -18,7 +21,37 @@ export function UserTable({
   getRoleLabel,
   formatDate,
   onUpdateUser,
+  onPasswordChanged,
 }: UserTableProps) {
+  const [passwordModal, setPasswordModal] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+  }>({
+    isOpen: false,
+    userId: '',
+    userName: '',
+  });
+
+  const handlePasswordChange = (userId: string, userName: string) => {
+    setPasswordModal({
+      isOpen: true,
+      userId,
+      userName,
+    });
+  };
+
+  const handlePasswordModalClose = () => {
+    setPasswordModal({
+      isOpen: false,
+      userId: '',
+      userName: '',
+    });
+  };
+
+  const handlePasswordChangedCallback = () => {
+    onPasswordChanged?.();
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -51,6 +84,9 @@ export function UserTable({
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
               Создан
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+              Действия
             </th>
           </tr>
         </thead>
@@ -87,10 +123,43 @@ export function UserTable({
               <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                 {formatDate(user.createdAt)}
               </td>
+              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                <button
+                  onClick={() =>
+                    handlePasswordChange(user.id, user.name || 'Без имени')
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg bg-violet-100 px-3 py-1.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:hover:bg-violet-900/50"
+                  title="Изменить пароль"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                    />
+                  </svg>
+                  Пароль
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Password Change Modal */}
+      <ChangePasswordModal
+        isOpen={passwordModal.isOpen}
+        onClose={handlePasswordModalClose}
+        userId={passwordModal.userId}
+        userName={passwordModal.userName}
+        onPasswordChanged={handlePasswordChangedCallback}
+      />
     </div>
   );
 }

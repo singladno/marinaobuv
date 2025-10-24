@@ -43,14 +43,8 @@ export function GruzchikPortalSwitcher() {
 
   // Show for gruzchik users (both in gruzchik portal and customer portal)
   if (user?.role !== 'GRUZCHIK') {
-    console.log(
-      'GruzchikPortalSwitcher: User role is not GRUZCHIK:',
-      user?.role
-    );
     return null;
   }
-
-  console.log('GruzchikPortalSwitcher: Rendering switcher for user:', user);
 
   if (!mounted) return null;
 

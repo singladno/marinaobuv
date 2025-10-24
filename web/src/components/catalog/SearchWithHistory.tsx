@@ -38,15 +38,6 @@ export function SearchWithHistory({
     }
   }, [searchHistory.length, isOpen]);
 
-  // Debug: Log when search history changes
-  useEffect(() => {
-    console.log(
-      'SearchWithHistory: searchHistory changed',
-      searchHistory.length,
-      searchHistory
-    );
-  }, [searchHistory]);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -73,7 +64,6 @@ export function SearchWithHistory({
   };
 
   const handleSearch = (query: string) => {
-    console.log('SearchWithHistory: handleSearch called with', query);
     setInputValue(query);
     onChange(query);
     setIsOpen(false);

@@ -29,6 +29,7 @@ export default function AdminUsersPage() {
     setFormData,
     handleCreateUser,
     updateUser,
+    handlePasswordChanged,
   } = useUsers();
 
   return (
@@ -67,6 +68,7 @@ export default function AdminUsersPage() {
           getRoleLabel={getRoleLabel}
           formatDate={formatDate}
           onUpdateUser={updateUser}
+          onPasswordChanged={handlePasswordChanged}
         />
 
         {/* Pagination */}

@@ -157,6 +157,14 @@ export function useUsers() {
     [addNotification, fetchUsers]
   );
 
+  const handlePasswordChanged = useCallback(() => {
+    addNotification({
+      type: 'success',
+      title: 'Успех',
+      message: 'Пароль пользователя изменен',
+    });
+  }, [addNotification]);
+
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
@@ -183,5 +191,6 @@ export function useUsers() {
     setFormData,
     handleCreateUser,
     updateUser,
+    handlePasswordChanged,
   };
 }
