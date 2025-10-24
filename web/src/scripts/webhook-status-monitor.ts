@@ -123,6 +123,30 @@ export class WebhookStatusMonitor {
         };
       }
 
+      // Check if incoming webhook is enabled
+      if (!settingsData.incomingWebhookEnabled) {
+        console.log('⚠️ Incoming webhook is disabled');
+        return {
+          isConnected: false,
+          lastCheck: new Date(),
+          errorMessage:
+            'Incoming webhook is disabled - messages will not be received',
+          instanceStatus,
+        };
+      }
+
+      // Check if incoming messages and files webhook is configured
+      if (!settingsData.incomingMessagesAndFilesWebhook) {
+        console.log('⚠️ Incoming messages and files webhook is not configured');
+        return {
+          isConnected: false,
+          lastCheck: new Date(),
+          errorMessage:
+            'Incoming messages and files webhook is not configured - images and files will not be received',
+          instanceStatus,
+        };
+      }
+
       console.log(
         '✅ Instance is connected and webhook is properly configured'
       );

@@ -35,11 +35,16 @@ async function configureWebhook() {
     // CRITICAL: Enable incoming messages and files webhook
     incomingWebhookEnabled: true,
     incomingMessagesAndFilesWebhook: webhookUrl,
-    // Ensure all critical webhooks are enabled
-    incomingWebhookOnAnswer: webhookUrl,
-    outgoingMessageWebhook: webhookUrl,
-    stateWebhook: webhookUrl,
-    deviceWebhook: webhookUrl,
+    // CRITICAL: Enable text messages and images
+    incomingTextMessageWebhook: webhookUrl,
+    incomingImageMessageWebhook: webhookUrl,
+    incomingFileMessageWebhook: webhookUrl,
+    incomingVideoMessageWebhook: webhookUrl,
+    incomingAudioMessageWebhook: webhookUrl,
+    incomingDocumentMessageWebhook: webhookUrl,
+    // Ensure all message types are enabled
+    incomingMessageWebhook: webhookUrl,
+    incomingMediaMessageWebhook: webhookUrl,
   };
 
   const postData = JSON.stringify(settingsPayload);
@@ -60,6 +65,12 @@ async function configureWebhook() {
   if (result.saveSettings === true) {
     console.log('✅ Webhook configured successfully!');
     console.log('🔔 Green API will now send webhooks to your server');
+    console.log('📝 Text messages: ENABLED');
+    console.log('🖼️  Image messages: ENABLED');
+    console.log('📁 File messages: ENABLED');
+    console.log('🎥 Video messages: ENABLED');
+    console.log('🎵 Audio messages: ENABLED');
+    console.log('📄 Document messages: ENABLED');
     console.log('📋 Test by sending a message to your WhatsApp group');
     console.log(
       `🎯 Only messages from group ${env.TARGET_GROUP_ID} will be processed`
