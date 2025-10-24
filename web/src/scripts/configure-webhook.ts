@@ -27,16 +27,16 @@ async function configureWebhook() {
 
   const settingsPayload = {
     webhookUrl: webhookUrl,
-    incomingWebhook: "yes",
-    outgoingWebhook: "yes", 
-    stateWebhook: "yes",
-    outgoingMessageWebhook: "yes",
-    outgoingAPIMessageWebhook: "yes",
+    incomingWebhook: 'yes',
+    outgoingWebhook: 'yes',
+    stateWebhook: 'yes',
+    outgoingMessageWebhook: 'yes',
+    outgoingAPIMessageWebhook: 'yes',
     // Additional webhook settings for comprehensive coverage
-    pollMessageWebhook: "yes",
-    incomingCallWebhook: "yes",
-    editedMessageWebhook: "yes",
-    deletedMessageWebhook: "yes",
+    pollMessageWebhook: 'yes',
+    incomingCallWebhook: 'yes',
+    editedMessageWebhook: 'yes',
+    deletedMessageWebhook: 'yes',
   };
 
   const postData = JSON.stringify(settingsPayload);
