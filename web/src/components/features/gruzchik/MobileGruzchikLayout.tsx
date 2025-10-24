@@ -2,7 +2,13 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Package, ShoppingCart, Search, Filter } from 'lucide-react';
+import {
+  Package,
+  ShoppingCart,
+  Search,
+  Filter,
+  CheckCircle,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
@@ -100,6 +106,12 @@ export function MobileGruzchikLayout({ children }: MobileGruzchikLayoutProps) {
       href: '/gruzchik/purchase',
       icon: ShoppingCart,
       description: 'Закупка товаров',
+    },
+    {
+      name: 'Проверка',
+      href: '/gruzchik/verification',
+      icon: CheckCircle,
+      description: 'Проверка заказов',
     },
   ];
 

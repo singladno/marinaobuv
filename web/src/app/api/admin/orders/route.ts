@@ -120,6 +120,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
+    // Validate availability when status is set to "Согласование"
+    if (status === 'Согласование') {
+      const orderItems = await prisma.orderItem.findMany({
+        where: { orderId: id },
+        select: { id: true, name: true, isAvailable: true },
+      });
+
+      const itemsWithoutAvailability = orderItems.filter(
+        item => item.isAvailable === null || item.isAvailable === undefined
+      );
+
+      if (itemsWithoutAvailability.length > 0) {
+        const itemNames = itemsWithoutAvailability
+          .map(item => item.name)
+          .join(', ');
+        return NextResponse.json(
+          {
+            error: `Нельзя изменить статус на "Согласование". Для следующих товаров не указана доступность: ${itemNames}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const data: {
       status?: string;
       payment?: number;

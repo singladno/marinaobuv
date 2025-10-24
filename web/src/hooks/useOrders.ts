@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNotifications } from '@/components/ui/NotificationProvider';
 
 export type AdminOrderItem = {
   id: string;
@@ -45,6 +46,7 @@ export function useOrders() {
   const [gruzchiks, setGruzchiks] = useState<Gruzchik[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { addNotification } = useNotifications();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,43 +77,49 @@ export function useOrders() {
       const targetOrder = orders.find(order => order.id === id);
       const targetUserId = targetOrder?.user?.id;
 
-      // Apply optimistic update immediately
-      setOrders(prevOrders =>
-        prevOrders.map(order => {
-          if (order.id === id) {
-            // Handle label updates specifically for user.label
-            if (data.label !== undefined && order.user) {
+      // Only apply optimistic update for non-status changes
+      // Status changes should only update after API success
+      const isStatusChange = data.status !== undefined;
+
+      if (!isStatusChange) {
+        // Apply optimistic update immediately for non-status changes
+        setOrders(prevOrders =>
+          prevOrders.map(order => {
+            if (order.id === id) {
+              // Handle label updates specifically for user.label
+              if (data.label !== undefined && order.user) {
+                return {
+                  ...order,
+                  ...data,
+                  user: {
+                    ...order.user,
+                    label: data.label,
+                  },
+                };
+              }
+              return { ...order, ...data };
+            }
+
+            // If this is a label update, also update all other orders from the same user
+            if (
+              data.label !== undefined &&
+              targetUserId &&
+              order.user?.id === targetUserId &&
+              order.id !== id
+            ) {
               return {
                 ...order,
-                ...data,
                 user: {
                   ...order.user,
                   label: data.label,
                 },
               };
             }
-            return { ...order, ...data };
-          }
 
-          // If this is a label update, also update all other orders from the same user
-          if (
-            data.label !== undefined &&
-            targetUserId &&
-            order.user?.id === targetUserId &&
-            order.id !== id
-          ) {
-            return {
-              ...order,
-              user: {
-                ...order.user,
-                label: data.label,
-              },
-            };
-          }
-
-          return order;
-        })
-      );
+            return order;
+          })
+        );
+      }
 
       try {
         const res = await fetch('/api/admin/orders', {
@@ -120,17 +128,46 @@ export function useOrders() {
           body: JSON.stringify({ id, ...data }),
         });
         const j = await res.json();
-        if (!res.ok) throw new Error(j.error || 'Update failed');
+        if (!res.ok) {
+          // Show error notification
+          addNotification({
+            type: 'error',
+            title: 'Ошибка обновления заказа',
+            message: j.error || 'Ошибка обновления заказа',
+          });
+          // Don't throw - just return to trigger rollback
+          return;
+        }
 
-        // No need to reload - optimistic update already shows correct state
+        // Apply update after successful API call
+        if (isStatusChange) {
+          // For status changes, update the UI only after API success
+          setOrders(prevOrders =>
+            prevOrders.map(order => {
+              if (order.id === id) {
+                return { ...order, ...data };
+              }
+              return order;
+            })
+          );
+        }
+
         return j.order as AdminOrder;
       } catch (error) {
-        // Rollback on error
-        setOrders(originalOrders);
+        // Rollback on error (only needed for non-status changes)
+        if (!isStatusChange) {
+          setOrders(originalOrders);
+        }
         throw error;
       }
+
+      // If we reach here, it means we returned early due to API error
+      // Rollback the optimistic update (only needed for non-status changes)
+      if (!isStatusChange) {
+        setOrders(originalOrders);
+      }
     },
-    [orders]
+    [orders, addNotification]
   );
 
   const deleteOrders = useCallback(
