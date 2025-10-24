@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
+import { useSwitcher } from '@/contexts/SwitcherContext';
 
 interface MobileProfileProps {
   user: {
@@ -22,6 +23,7 @@ interface MobileProfileProps {
 export function MobileProfile({ user }: MobileProfileProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
+  const { isSwitcherOpen } = useSwitcher();
 
   const handleLogout = async () => {
     try {
@@ -41,7 +43,9 @@ export function MobileProfile({ user }: MobileProfileProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* User Profile Card - Above Header */}
-      <div className="relative z-[60] -mt-4 px-4">
+      <div
+        className={`relative -mt-4 px-4 ${isSwitcherOpen ? 'z-30' : 'z-[60]'}`}
+      >
         <div className="rounded-2xl bg-white p-6 shadow-lg">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-violet-100">

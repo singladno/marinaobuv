@@ -3,17 +3,22 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useSwitcher } from '@/contexts/SwitcherContext';
 
 export function MobileGruzchikSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { setIsSwitcherOpen } = useSwitcher();
 
   const toggleMenu = () => {
-    setIsOpen(!isOpen);
+    const newState = !isOpen;
+    setIsOpen(newState);
+    setIsSwitcherOpen(newState);
   };
 
   const closeMenu = () => {
     setIsOpen(false);
+    setIsSwitcherOpen(false);
   };
 
   return (
