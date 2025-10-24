@@ -38,16 +38,20 @@ export async function GET(
       return NextResponse.json({ itemsWithMessages: [] });
     }
 
-    // Check which items have messages (excluding messages sent by the current user)
+    // Check which items have messages from non-client users (admin/gruzchik)
+    // Items need approval only if there are non-service messages from admin/gruzchik, not from client
     const itemsWithMessages: string[] = [];
 
     for (const itemId of itemIds) {
       const messageCount = await prisma.orderItemMessage.count({
         where: {
           orderItemId: itemId,
-          userId: {
-            not: auth.user.id, // Exclude messages sent by this user
+          user: {
+            role: {
+              not: 'CLIENT', // Only count messages from admin/gruzchik, not from client
+            },
           },
+          isService: false, // Exclude service messages - clients can't see them
         },
       });
 

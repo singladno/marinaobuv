@@ -58,11 +58,17 @@ export async function GET(
     // Get all data for all items in parallel
     const [itemsWithMessages, messageCounts, unreadCounts, approvalStatuses] =
       await Promise.all([
-        // Get items with messages (excluding messages sent by the current user)
+        // Get items with messages from non-client users (admin/gruzchik)
+        // Items need approval only if there are non-service messages from admin/gruzchik, not from client
         prisma.orderItemMessage.findMany({
           where: {
             orderItemId: { in: itemIds },
-            userId: { not: auth.user.id },
+            user: {
+              role: {
+                not: 'CLIENT', // Only count messages from admin/gruzchik, not from client
+              },
+            },
+            isService: false, // Exclude service messages - clients can't see them
           },
           select: {
             orderItemId: true,

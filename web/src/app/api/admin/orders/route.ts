@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth';
+import { emailService } from '@/lib/server/email';
 
 export async function GET(req: NextRequest) {
   try {
@@ -110,10 +111,17 @@ export async function POST(req: NextRequest) {
     if (!id)
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-    // Get the order to find the user
+    // Get the order to find the user and current status
     const order = await prisma.order.findUnique({
       where: { id },
-      select: { userId: true },
+      select: {
+        userId: true,
+        orderNumber: true,
+        status: true,
+        user: {
+          select: { email: true, name: true },
+        },
+      },
     });
 
     if (!order) {
@@ -165,6 +173,26 @@ export async function POST(req: NextRequest) {
         where: { id: order.userId },
         data: { label: label || null },
       });
+    }
+
+    // Send email notification if status changed to "Согласование" and user has email
+    if (status === 'Согласование' && order.user?.email) {
+      try {
+        await emailService.sendOrderStatusChangeEmail(
+          order.user.email,
+          order.orderNumber,
+          status
+        );
+        console.log(
+          `✅ Email notification sent for order ${order.orderNumber} status change to ${status}`
+        );
+      } catch (error) {
+        console.error(
+          `❌ Failed to send email notification for order ${order.orderNumber}:`,
+          error
+        );
+        // Don't fail the request if email fails
+      }
     }
 
     return NextResponse.json({ ok: true, order: updated });

@@ -127,6 +127,21 @@ class EmailService {
     });
   }
 
+  async sendOrderStatusChangeEmail(
+    email: string,
+    orderNumber: string,
+    status: string
+  ): Promise<boolean> {
+    const template = this.getOrderStatusChangeTemplate(orderNumber, status);
+
+    return this.sendEmail({
+      to: email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
   private getPasswordResetTemplate(resetLink: string): EmailTemplate {
     return {
       subject: 'Восстановление пароля - MarinaObuv',
@@ -318,6 +333,138 @@ ${resetLink}
 Мы свяжемся с вами в ближайшее время для подтверждения деталей заказа.
 
 Отследить заказ: ${env.NEXT_PUBLIC_SITE_URL}/orders
+
+С уважением,
+Команда MarinaObuv
+      `,
+    };
+  }
+
+  private getOrderStatusChangeTemplate(
+    orderNumber: string,
+    status: string
+  ): EmailTemplate {
+    const statusMessages: Record<
+      string,
+      { title: string; message: string; color: string }
+    > = {
+      Согласование: {
+        title: 'Заказ готов к согласованию',
+        message:
+          'Ваш заказ готов к согласованию. Пожалуйста, проверьте товары в заказе и подтвердите их.',
+        color: '#f59e0b',
+      },
+      Согласован: {
+        title: 'Заказ согласован',
+        message: 'Ваш заказ был согласован и передан в работу.',
+        color: '#10b981',
+      },
+      Купить: {
+        title: 'Заказ в процессе покупки',
+        message: 'Мы начали процесс покупки товаров для вашего заказа.',
+        color: '#f97316',
+      },
+      Куплен: {
+        title: 'Товары куплены',
+        message: 'Все товары для вашего заказа были успешно куплены.',
+        color: '#059669',
+      },
+      Отправить: {
+        title: 'Заказ готов к отправке',
+        message:
+          'Ваш заказ готов к отправке и будет передан в службу доставки.',
+        color: '#0891b2',
+      },
+      Отправлен: {
+        title: 'Заказ отправлен',
+        message:
+          'Ваш заказ был отправлен. Вы можете отследить его по номеру накладной.',
+        color: '#7c3aed',
+      },
+      Выполнен: {
+        title: 'Заказ выполнен',
+        message: 'Ваш заказ был успешно выполнен. Спасибо за покупку!',
+        color: '#059669',
+      },
+    };
+
+    const statusInfo = statusMessages[status] || {
+      title: `Статус заказа изменен на "${status}"`,
+      message: `Статус вашего заказа был изменен на "${status}".`,
+      color: '#6b7280',
+    };
+
+    return {
+      subject: `${statusInfo.title} - Заказ #${orderNumber} - MarinaObuv`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${statusInfo.title}</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #f8f9fa; padding: 30px; border-radius: 8px;">
+            <h1 style="color: #2c3e50; text-align: center; margin-bottom: 30px;">${statusInfo.title}</h1>
+            
+            <p>Здравствуйте!</p>
+            
+            <p>${statusInfo.message}</p>
+            
+            <div style="background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid ${statusInfo.color};">
+              <h3 style="margin-top: 0; color: ${statusInfo.color};">Детали заказа:</h3>
+              <p><strong>Номер заказа:</strong> #${orderNumber}</p>
+              <p><strong>Новый статус:</strong> <span style="color: ${statusInfo.color}; font-weight: bold;">${status}</span></p>
+              <p><strong>Дата изменения:</strong> ${new Date().toLocaleDateString('ru-RU')}</p>
+            </div>
+            
+             ${
+               status === 'Согласование'
+                 ? `
+             <div style="background: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+               <p style="margin: 0; color: #92400e;"><strong>Важно:</strong> Пожалуйста, перейдите на страницу заказа и проверьте все товары. Убедитесь, что размеры, цвета и модели соответствуют вашим требованиям.</p>
+             </div>
+             `
+                 : ''
+             }
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${env.NEXT_PUBLIC_SITE_URL}/orders" 
+                 style="background: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                ${status === 'Согласование' ? 'Проверить заказ' : 'Отследить заказ'}
+              </a>
+            </div>
+            
+            <p>Если у вас есть вопросы по заказу, не стесняйтесь обращаться к нам!</p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            
+            <p style="color: #666; font-size: 12px; text-align: center;">
+              С уважением,<br>
+              Команда MarinaObuv
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+${statusInfo.title} - Заказ #${orderNumber} - MarinaObuv
+
+Здравствуйте!
+
+${statusInfo.message}
+
+Детали заказа:
+- Номер заказа: #${orderNumber}
+- Новый статус: ${status}
+- Дата изменения: ${new Date().toLocaleDateString('ru-RU')}
+
+${status === 'Согласование' ? 'ВАЖНО: Пожалуйста, перейдите на страницу заказа и проверьте все товары. Убедитесь, что размеры, цвета и модели соответствуют вашим требованиям.\n' : ''}
+
+Отследить заказ: ${env.NEXT_PUBLIC_SITE_URL}/orders
+
+Если у вас есть вопросы по заказу, не стесняйтесь обращаться к нам!
 
 С уважением,
 Команда MarinaObuv
