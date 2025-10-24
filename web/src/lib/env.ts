@@ -142,6 +142,14 @@ const schema = z
     SMS_API_KEY: z.string().optional(),
     SMS_USE_CONSOLE: z.string().optional(),
 
+    // Email Configuration (SMTP)
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.string().optional(),
+    SMTP_SECURE: z.string().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().optional(),
+
     // Webhook Status Monitoring
     WEBHOOK_NOTIFICATIONS_ENABLED: z.string().optional(),
     WEBHOOK_NOTIFICATION_NUMBERS: z.string().optional(),
@@ -214,6 +222,14 @@ const raw = {
   // SMS Configuration
   SMS_API_KEY: process.env.SMS_API_KEY,
   SMS_USE_CONSOLE: process.env.SMS_USE_CONSOLE,
+
+  // Email Configuration
+  SMTP_HOST: process.env.SMTP_HOST,
+  SMTP_PORT: process.env.SMTP_PORT,
+  SMTP_SECURE: process.env.SMTP_SECURE,
+  SMTP_USER: process.env.SMTP_USER,
+  SMTP_PASS: process.env.SMTP_PASS,
+  SMTP_FROM: process.env.SMTP_FROM,
 
   // Webhook Status Monitoring
   WEBHOOK_NOTIFICATIONS_ENABLED: process.env.WEBHOOK_NOTIFICATIONS_ENABLED,

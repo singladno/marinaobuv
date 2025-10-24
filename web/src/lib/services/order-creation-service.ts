@@ -1,6 +1,7 @@
 import { generateItemCode } from '@/lib/itemCodeGenerator';
 import { generateOrderNumber } from '@/lib/order-number-generator';
 import { scriptPrisma as prisma } from '@/lib/script-db';
+import { emailService } from '@/lib/server/email';
 
 interface CreateOrderItem {
   slug?: string;
@@ -139,6 +140,28 @@ export async function createOrder(
       },
     },
   });
+
+  // Send order confirmation email if user has email
+  try {
+    const userWithEmail = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (userWithEmail?.email) {
+      await emailService.sendOrderConfirmationEmail(
+        userWithEmail.email,
+        orderNumber,
+        {
+          order,
+          customerInfo,
+        }
+      );
+    }
+  } catch (error) {
+    console.error('Failed to send order confirmation email:', error);
+    // Don't fail order creation if email fails
+  }
 
   return order;
 }

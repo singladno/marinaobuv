@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/server/db';
+import { emailService } from '@/lib/server/email';
 import { env } from '@/lib/env';
 
 export async function POST(req: NextRequest) {
@@ -75,6 +76,16 @@ export async function POST(req: NextRequest) {
         providerId,
       },
     });
+
+    // Send welcome email if user has email
+    if (email && name) {
+      try {
+        await emailService.sendWelcomeEmail(email, name);
+      } catch (error) {
+        console.error('Failed to send welcome email:', error);
+        // Don't fail registration if email fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

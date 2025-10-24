@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
+import { emailService } from '@/lib/server/email';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -36,14 +37,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // In a real application, you would send an email here
-    // For now, we'll just log the reset link
+    // Send password reset email
     const resetLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
     console.log('Password reset link:', resetLink);
 
-    // TODO: Send email with reset link
-    // await sendPasswordResetEmail(email, resetLink);
+    // Send email with reset link
+    const emailSent = await emailService.sendPasswordResetEmail(
+      email,
+      resetLink
+    );
+
+    if (!emailSent) {
+      console.error('Failed to send password reset email to:', email);
+      // Don't fail the request, just log the error
+    }
 
     return NextResponse.json({
       message:

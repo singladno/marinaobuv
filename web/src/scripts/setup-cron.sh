@@ -7,17 +7,17 @@ echo "Setting up parsing cron job..."
 
 # Get the current directory (should be the web directory)
 WEB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CRON_SCRIPT="$WEB_DIR/src/scripts/hourly-cron.ts"
+CRON_SCRIPT="$WEB_DIR/src/scripts/groq-sequential-cron.ts"
 
 # Check if the cron script exists
 if [ ! -f "$CRON_SCRIPT" ]; then
-    echo "Error: Cron script not found at $CRON_SCRIPT"
+    echo "Error: Groq parser script not found at $CRON_SCRIPT"
     exit 1
 fi
 
 # Create the cron job entry
 # Note: Make sure to set DATABASE_URL in your server's environment or .env.local file
-CRON_ENTRY="0 * * * * cd $WEB_DIR && npx tsx src/scripts/hourly-cron.ts >> logs/parsing-cron.log 2>&1"
+CRON_ENTRY="0 * * * * cd $WEB_DIR && npx tsx src/scripts/groq-sequential-cron.ts >> logs/parsing-cron.log 2>&1"
 
 # Add to crontab
 echo "Adding cron job: $CRON_ENTRY"

@@ -43,9 +43,9 @@ function scheduleEvery(ms: number, label: string, fn: () => void) {
 const HOURLY_MIN = parseInt(process.env.CRON_HOURLY_MINUTES || '60', 10);
 const POLL_MIN = parseInt(process.env.CRON_POLL_MINUTES || '5', 10);
 
-// Hourly parser (advisory lock prevents overlaps)
-scheduleEvery(HOURLY_MIN * 60 * 1000, 'hourly-cron', () => {
-  const script = path.join(ROOT, 'src/scripts/hourly-cron.ts');
+// Groq parser (advisory lock prevents overlaps)
+scheduleEvery(HOURLY_MIN * 60 * 1000, 'groq-parser', () => {
+  const script = path.join(ROOT, 'src/scripts/groq-sequential-cron.ts');
   run('./node_modules/.bin/tsx', [script], 'parsing-cron.log');
 });
 
