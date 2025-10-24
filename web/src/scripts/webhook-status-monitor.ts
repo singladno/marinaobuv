@@ -22,7 +22,7 @@ interface NotificationConfig {
   enabled: boolean;
 }
 
-class WebhookStatusMonitor {
+export class WebhookStatusMonitor {
   private instanceId: string;
   private token: string;
   private baseUrl: string;
