@@ -26,25 +26,17 @@ async function configureWebhook() {
   console.log(`🎯 Target Group: ${env.TARGET_GROUP_ID}`);
 
   const settingsPayload = {
-    incomingWebhook: webhookUrl,
-    incomingWebhookOnAnswer: webhookUrl,
-    outgoingWebhook: webhookUrl,
-    outgoingMessageWebhook: webhookUrl,
-    stateWebhook: webhookUrl,
-    deviceWebhook: webhookUrl,
-    // CRITICAL: Enable incoming messages and files webhook
-    incomingWebhookEnabled: true,
-    incomingMessagesAndFilesWebhook: webhookUrl,
-    // CRITICAL: Enable text messages and images
-    incomingTextMessageWebhook: webhookUrl,
-    incomingImageMessageWebhook: webhookUrl,
-    incomingFileMessageWebhook: webhookUrl,
-    incomingVideoMessageWebhook: webhookUrl,
-    incomingAudioMessageWebhook: webhookUrl,
-    incomingDocumentMessageWebhook: webhookUrl,
-    // Ensure all message types are enabled
-    incomingMessageWebhook: webhookUrl,
-    incomingMediaMessageWebhook: webhookUrl,
+    webhookUrl: webhookUrl,
+    incomingWebhook: "yes",
+    outgoingWebhook: "yes", 
+    stateWebhook: "yes",
+    outgoingMessageWebhook: "yes",
+    outgoingAPIMessageWebhook: "yes",
+    // Additional webhook settings for comprehensive coverage
+    pollMessageWebhook: "yes",
+    incomingCallWebhook: "yes",
+    editedMessageWebhook: "yes",
+    deletedMessageWebhook: "yes",
   };
 
   const postData = JSON.stringify(settingsPayload);
