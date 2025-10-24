@@ -60,7 +60,15 @@ async function configureWebhook() {
     }
   );
 
+  console.log('📤 Sending payload:', JSON.stringify(settingsPayload, null, 2));
+  console.log('📡 Response status:', response.status);
+  console.log(
+    '📡 Response headers:',
+    Object.fromEntries(response.headers.entries())
+  );
+
   const result = await response.json();
+  console.log('📥 Full API response:', JSON.stringify(result, null, 2));
 
   if (result.saveSettings === true) {
     console.log('✅ Webhook configured successfully!');
@@ -77,6 +85,7 @@ async function configureWebhook() {
     );
   } else {
     console.error('❌ Failed to configure webhook:', result);
+    console.error('🔍 This means Green API rejected our configuration');
   }
 }
 
