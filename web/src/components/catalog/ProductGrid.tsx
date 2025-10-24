@@ -59,12 +59,20 @@ export const ProductGrid = memo(function ProductGrid({
     5: 'grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
   };
 
+  // Deduplicate products by ID to prevent duplicate keys
+  const uniqueProducts = products.reduce((acc, product) => {
+    if (!acc.find(p => p.id === product.id)) {
+      acc.push(product);
+    }
+    return acc;
+  }, [] as Product[]);
+
   return (
     <>
       <div className={gridClasses[gridCols]}>
-        {products.map(product => (
+        {uniqueProducts.map((product, index) => (
           <ProductCard
-            key={product.id}
+            key={`${product.id}-${index}`}
             slug={product.slug}
             name={product.name}
             pricePair={product.pricePair}
@@ -113,10 +121,10 @@ export const ProductGrid = memo(function ProductGrid({
       )}
 
       {/* End of results message */}
-      {!hasNextPage && products.length > 0 && (
+      {!hasNextPage && uniqueProducts.length > 0 && (
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            Показаны все товары ({products.length})
+            Показаны все товары ({uniqueProducts.length})
           </p>
         </div>
       )}

@@ -39,6 +39,7 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
   const [user, setUser] = useState<CurrentUser>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -61,6 +62,13 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
 
   const fetchUser = useCallback(async () => {
     try {
+      // Debounce: prevent calls within 1 second of each other
+      const now = Date.now();
+      if (now - lastFetchTime < 1000) {
+        return;
+      }
+      setLastFetchTime(now);
+
       setLoading(true);
       setError(null);
 
@@ -76,9 +84,13 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
         }
         return;
       }
+
       // Get additional user data from our API
       const res = await fetch('/api/auth/me', {
         cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
       });
 
       if (res.status === 401) {
@@ -94,12 +106,13 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
       const json = await res.json();
       setUser(json.user ?? null);
     } catch (err) {
+      console.error('Error fetching user:', err);
       setError('Ошибка загрузки пользователя');
       setUser(null);
     } finally {
       setLoading(false);
     }
-  }, [status, session, redirectToLoginIfProtected]);
+  }, [status, session, redirectToLoginIfProtected, lastFetchTime]);
 
   const refreshUser = useCallback(async () => {
     await fetchUser();
@@ -124,7 +137,7 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
     } else if (status === 'unauthenticated' && user) {
       setUser(null);
     }
-  }, [status, session, user, fetchUser]);
+  }, [status, session, user]); // Removed fetchUser from dependencies to prevent circular dependency
 
   // Handle redirect when user becomes null on protected routes
   useEffect(() => {
