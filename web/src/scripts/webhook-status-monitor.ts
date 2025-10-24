@@ -141,7 +141,8 @@ export class WebhookStatusMonitor {
         return {
           isConnected: false,
           lastCheck: new Date(),
-          errorMessage: 'Incoming webhook is not enabled - messages will not be received',
+          errorMessage:
+            'Incoming webhook is not enabled - messages will not be received',
           instanceStatus,
         };
       }
