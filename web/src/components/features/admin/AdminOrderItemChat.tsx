@@ -19,6 +19,7 @@ import { Switch } from '@/components/ui/Switch';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ScrollArea } from '@/components/ui/ScrollArea';
+import { MessageBubble } from '@/components/ui/MessageBubble';
 import { OrderItemData } from '../gruzchik/OrderItemCard';
 import { MediaPreview, MediaItem } from '../gruzchik/MediaPreview';
 import { MediaViewerModal } from '../gruzchik/MediaViewerModal';
@@ -302,16 +303,6 @@ export function AdminOrderItemChat({
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!deleteConfirmMessage) {
-      setDeleteConfirmMessage(messageId);
-      return;
-    }
-
-    if (deleteConfirmMessage !== messageId) {
-      setDeleteConfirmMessage(messageId);
-      return;
-    }
-
     setIsDeleting(true);
     try {
       const response = await fetch(
@@ -334,6 +325,10 @@ export function AdminOrderItemChat({
     }
   };
 
+  const handleDeleteClick = (messageId: string) => {
+    setDeleteConfirmMessage(messageId);
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
@@ -349,18 +344,20 @@ export function AdminOrderItemChat({
   };
 
   const openMediaViewer = (
-    attachments: {
+    attachments?: {
       type: string;
       name: string;
       size?: number;
       data?: string;
       url?: string;
     }[],
-    index: number
+    index?: number
   ) => {
-    setMediaViewerItems(attachments);
-    setMediaViewerIndex(index);
-    setMediaViewerOpen(true);
+    if (attachments) {
+      setMediaViewerItems(attachments);
+      setMediaViewerIndex(index || 0);
+      setMediaViewerOpen(true);
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -423,139 +420,16 @@ export function AdminOrderItemChat({
                     formatDate(messages[index - 1].timestamp);
 
                 return (
-                  <div key={message.id} className="space-y-2">
-                    {showDate && (
-                      <div className="flex justify-center">
-                        <Badge variant="secondary" className="text-xs">
-                          {formatDate(message.timestamp)}
-                        </Badge>
-                      </div>
-                    )}
-
-                    <div
-                      className={cn(
-                        'flex flex-col',
-                        isCurrentUser ? 'items-end' : 'items-start'
-                      )}
-                    >
-                      <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">
-                        {message.senderName ||
-                          (message.sender === 'admin'
-                            ? 'Админ'
-                            : message.sender === 'gruzchik'
-                              ? 'Грузчик'
-                              : message.sender === 'client'
-                                ? 'Клиент'
-                                : 'Неизвестно')}
-                      </div>
-                      <div
-                        className={cn(
-                          'max-w-xs rounded-lg px-3 py-2',
-                          isCurrentUser
-                            ? message.isService
-                              ? 'border-2 border-orange-400 bg-gradient-to-r from-orange-300 to-amber-300 text-black shadow-md'
-                              : 'bg-blue-600 text-white'
-                            : message.isService
-                              ? 'border-2 border-orange-300 bg-gradient-to-r from-orange-100 to-amber-100 text-black shadow-sm'
-                              : 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
-                        )}
-                      >
-                        {message.isService && (
-                          <div className="mb-1 flex items-center space-x-1">
-                            <div className="h-2 w-2 animate-pulse rounded-full bg-orange-500"></div>
-                            <span className="text-xs font-semibold text-orange-600">
-                              Служебный
-                            </span>
-                          </div>
-                        )}
-
-                        {message.text && (
-                          <p className="text-sm">{message.text}</p>
-                        )}
-
-                        {message.attachments &&
-                          message.attachments.length > 0 && (
-                            <div className="mt-2 space-y-2">
-                              {message.attachments.map(
-                                (attachment, attIndex) => (
-                                  <div key={attIndex}>
-                                    {attachment.type.startsWith('image/') ? (
-                                      <div
-                                        className="cursor-pointer"
-                                        onClick={() =>
-                                          openMediaViewer(
-                                            message.attachments!,
-                                            attIndex
-                                          )
-                                        }
-                                      >
-                                        <Image
-                                          src={
-                                            attachment.data ||
-                                            attachment.url ||
-                                            ''
-                                          }
-                                          alt={attachment.name}
-                                          width={128}
-                                          height={128}
-                                          className="max-h-32 rounded"
-                                        />
-                                      </div>
-                                    ) : attachment.type.startsWith('video/') ? (
-                                      <div
-                                        className="cursor-pointer"
-                                        onClick={() =>
-                                          openMediaViewer(
-                                            message.attachments!,
-                                            attIndex
-                                          )
-                                        }
-                                      >
-                                        <video
-                                          src={
-                                            attachment.data || attachment.url
-                                          }
-                                          className="max-h-32 rounded"
-                                          controls
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center space-x-2 rounded bg-gray-200 p-2 dark:bg-gray-600">
-                                        <FileText className="h-4 w-4" />
-                                        <span className="text-xs">
-                                          {attachment.name}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          )}
-
-                        <div className="mt-1 flex items-center justify-between">
-                          <span className="text-xs opacity-75">
-                            {formatTime(message.timestamp)}
-                          </span>
-                          {isCurrentUser && (
-                            <Button
-                              onClick={() => handleDeleteMessage(message.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
-                              disabled={isDeleting}
-                            >
-                              {deleteConfirmMessage === message.id ? (
-                                <Trash2 className="h-3 w-3 text-red-500" />
-                              ) : (
-                                <Trash2 className="h-3 w-3" />
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    isCurrentUser={isCurrentUser}
+                    showDate={showDate}
+                    onDelete={handleDeleteClick}
+                    onOpenMediaViewer={openMediaViewer}
+                    canDelete={message.sender === 'admin'}
+                    isDeleting={isDeleting}
+                  />
                 );
               })}
               <div ref={messagesEndRef} />

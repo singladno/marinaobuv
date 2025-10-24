@@ -31,8 +31,12 @@ export function Badge({
   className,
   children,
 }: BadgeProps) {
+  // If custom className is provided, use outline variant to avoid conflicts
+  const effectiveVariant = className ? 'outline' : variant;
   return (
-    <span className={clsx(base, variants[variant], sizes[size], className)}>
+    <span
+      className={clsx(base, variants[effectiveVariant], sizes[size], className)}
+    >
       {children}
     </span>
   );

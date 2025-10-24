@@ -21,7 +21,7 @@ export interface AuthenticatedUser {
  */
 export async function requireAuth(
   request: NextRequest,
-  requiredRole?: UserRole
+  requiredRole?: UserRole | UserRole[]
 ): Promise<
   | { user: AuthenticatedUser; error?: never }
   | { user?: never; error: NextResponse }
@@ -64,11 +64,19 @@ export async function requireAuth(
     }
 
     // Check if user has the required role
-    // ADMIN can access all endpoints, CLIENT can only access CLIENT endpoints
-    if (session.user.role !== requiredRole && session.user.role !== 'ADMIN') {
-      return {
-        error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
-      };
+    // ADMIN can access all endpoints
+    if (session.user.role === 'ADMIN') {
+      // ADMIN can access everything
+    } else if (requiredRole) {
+      // Check if user has one of the required roles
+      const allowedRoles = Array.isArray(requiredRole)
+        ? requiredRole
+        : [requiredRole];
+      if (!allowedRoles.includes(session.user.role as UserRole)) {
+        return {
+          error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
+        };
+      }
     }
 
     return {
@@ -96,7 +104,7 @@ export async function requireAuth(
  */
 export async function getUserId(
   request: NextRequest,
-  requiredRole?: UserRole
+  requiredRole?: UserRole | UserRole[]
 ): Promise<string | null> {
   const auth = await requireAuth(request, requiredRole);
   return auth.user?.id || null;

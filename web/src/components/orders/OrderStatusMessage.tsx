@@ -52,14 +52,21 @@ export function OrderStatusMessage({
 
   if (status === 'Новый') {
     return (
-      <Card className="border-blue-200 bg-blue-50 p-6">
-        <div className="flex items-start space-x-3">
-          <Clock className="mt-0.5 h-6 w-6 text-blue-600" />
-          <div>
-            <Text variant="h3" className="mb-2 text-blue-900">
+      <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-6 shadow-sm dark:border-green-800 dark:from-green-950 dark:to-emerald-950">
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+              <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+          <div className="flex-1">
+            <Text
+              variant="h3"
+              className="mb-2 text-green-900 dark:text-green-100"
+            >
               Заказ #{orderNumber} создан
             </Text>
-            <Text className="text-blue-700">
+            <Text className="leading-relaxed text-green-700 dark:text-green-300">
               Ваш заказ успешно создан и будет взят в работу в ближайшее время.
               Мы уведомим вас, когда начнем обработку.
             </Text>
@@ -99,15 +106,22 @@ export function OrderStatusMessage({
     }
 
     return (
-      <Card className="border-yellow-200 bg-yellow-50 p-6">
-        <div className="flex items-start space-x-3">
-          <MessageSquare className="mt-0.5 h-6 w-6 text-yellow-600" />
+      <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-yellow-50 p-6 shadow-sm dark:border-orange-800 dark:from-orange-950 dark:to-yellow-950">
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
+              <MessageSquare className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
           <div className="flex-1">
-            <Text variant="h3" className="mb-2 text-yellow-900">
+            <Text
+              variant="h3"
+              className="mb-2 text-orange-900 dark:text-orange-100"
+            >
               Требуется согласование
             </Text>
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-sm text-yellow-600">
+              <div className="flex items-center space-x-2 text-sm text-orange-700 dark:text-orange-300">
                 <CheckCircle className="h-4 w-4" />
                 <span>Проверьте сообщения для товаров с уведомлениями</span>
               </div>
@@ -129,14 +143,21 @@ export function OrderStatusMessage({
   if (status === 'Наличие' || status === 'Проверено') {
     const clientStatus = getClientStatusDisplay(status);
     return (
-      <Card className="border-amber-200 bg-amber-50 p-6">
-        <div className="flex items-start space-x-3">
-          <ShoppingBag className="mt-0.5 h-6 w-6 text-amber-600" />
-          <div>
-            <Text variant="h3" className="mb-2 text-amber-900">
+      <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 shadow-sm dark:border-blue-800 dark:from-blue-950 dark:to-indigo-950">
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+              <ShoppingBag className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <div className="flex-1">
+            <Text
+              variant="h3"
+              className="mb-2 text-blue-900 dark:text-blue-100"
+            >
               Заказ {clientStatus.toLowerCase()}
             </Text>
-            <Text className="text-amber-700">
+            <Text className="leading-relaxed text-blue-700 dark:text-blue-300">
               Ваш заказ находится в процессе обработки. Мы проверяем наличие
               товаров и подготавливаем их к отправке.
             </Text>

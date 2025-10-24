@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireAuth(request, 'CLIENT');
+    const auth = await requireAuth(request, ['CLIENT', 'GRUZCHIK']);
     if (auth.error) {
       return auth.error;
     }

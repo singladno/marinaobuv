@@ -11,7 +11,7 @@ import { requireAuth } from '@/lib/server/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth(request, 'CLIENT');
+    const auth = await requireAuth(request, ['CLIENT', 'GRUZCHIK']);
 
     if (auth.error) {
       return auth.error;

@@ -130,7 +130,7 @@ export function PortalSwitcher() {
                 Админ панель
               </div>
               <div className="text-xs opacity-80 sm:text-sm">
-                Управление товарами
+                Управление заказами
               </div>
             </div>
           </Link>
