@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     return auth.error;
   }
 
+  console.log('🔍 Looking up user with ID:', auth.user.id);
+
   // Get full user data from database
   const user = await prisma.user.findUnique({
     where: { id: auth.user.id },
@@ -21,7 +23,10 @@ export async function GET(request: NextRequest) {
     },
   });
 
+  console.log('🔍 Database user found:', user);
+
   if (!user) {
+    console.log('❌ User not found in database with ID:', auth.user.id);
     return NextResponse.json({ error: 'User not found' }, { status: 401 });
   }
 

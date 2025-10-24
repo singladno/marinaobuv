@@ -29,11 +29,27 @@ export async function requireAuth(
   try {
     const session = await getServerSession(authOptions);
 
+    console.log('🔍 Full session data:', {
+      session: session ? 'exists' : 'null',
+      user: session?.user ? 'exists' : 'null',
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userRole: session?.user?.role,
+    });
+
     if (!session?.user) {
+      console.log('❌ No session or user found');
       return {
         error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
       };
     }
+
+    console.log('🔍 Session user data:', {
+      id: session.user.id,
+      email: session.user.email,
+      role: session.user.role,
+      name: session.user.name,
+    });
 
     // If no specific role required, just check if user is authenticated
     if (!requiredRole) {

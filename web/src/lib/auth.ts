@@ -37,6 +37,7 @@ declare module 'next-auth/jwt' {
 
 export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === 'development',
+  // adapter: PrismaAdapter(prisma), // Temporarily disabled due to version compatibility issues
   providers: [
     GoogleProvider({
       clientId: env.GOOGLE_CLIENT_ID!,
@@ -153,11 +154,145 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // Handle Google OAuth sign-in
+      if (account?.provider === 'google' && user.email) {
+        try {
+          // Check if user exists
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+          });
+
+          if (existingUser) {
+            // User exists, update their name if it's different and mark email as verified
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: {
+                name: user.name || existingUser.name,
+                emailVerified: new Date(),
+              },
+            });
+
+            // Create or update the Account record to link Google OAuth
+            await prisma.account.upsert({
+              where: {
+                provider_providerAccountId: {
+                  provider: 'google',
+                  providerAccountId: account.providerAccountId,
+                },
+              },
+              update: {
+                userId: existingUser.id,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+              },
+              create: {
+                userId: existingUser.id,
+                type: 'oauth',
+                provider: 'google',
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+              },
+            });
+
+            console.log(
+              `✅ Linked Google OAuth to existing user: ${user.email}`
+            );
+          } else {
+            // Create new user with default role
+            let role = 'CLIENT';
+
+            // Check if this is an admin email
+            if (env.ADMIN_EMAIL && user.email === env.ADMIN_EMAIL) {
+              role = 'ADMIN';
+            }
+
+            const newUser = await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name,
+                role: role as any, // Cast to avoid type issues
+                emailVerified: new Date(),
+              },
+            });
+
+            // Create the Account record to link Google OAuth
+            await prisma.account.create({
+              data: {
+                userId: newUser.id,
+                type: 'oauth',
+                provider: 'google',
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+              },
+            });
+
+            console.log(`✅ Created new user from Google OAuth: ${user.email}`);
+          }
+        } catch (error) {
+          console.error('Error handling Google OAuth sign-in:', error);
+          return false;
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
         token.providerId = user.providerId;
       }
+
+      // For Google OAuth, fetch user data from database using email
+      // Check both on initial call (with account) and subsequent calls (with token.email)
+      if ((account?.provider === 'google' || token.email) && token.email) {
+        try {
+          console.log(
+            '🔍 JWT callback - looking up user by email:',
+            token.email
+          );
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
+            select: { id: true, role: true, providerId: true },
+          });
+
+          console.log('🔍 JWT callback - database user found:', dbUser);
+
+          if (dbUser) {
+            // Only update if the token.sub is not already the database user ID
+            if (token.sub !== dbUser.id) {
+              token.sub = dbUser.id; // Update the subject to the database user ID
+              token.role = dbUser.role;
+              token.providerId = dbUser.providerId;
+              console.log(
+                `✅ JWT updated for existing user: ${token.email} (Google ID: ${account?.providerAccountId || 'unknown'} -> DB ID: ${dbUser.id})`
+              );
+            } else {
+              console.log(
+                `✅ JWT already has correct DB ID for user: ${token.email} (ID: ${dbUser.id})`
+              );
+            }
+          } else {
+            console.log(
+              '❌ JWT callback - no user found in database for email:',
+              token.email
+            );
+          }
+        } catch (error) {
+          console.error('Error fetching user from database:', error);
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
