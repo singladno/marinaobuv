@@ -12,6 +12,7 @@ import {
 import { ChatButtonWithIndicator } from './ChatButtonWithIndicator';
 import { ItemApproveButton } from './ItemApproveButton';
 import { OrderItemFeedbackModal } from '@/components/features/orders/OrderItemFeedbackModal';
+import { OrderItemRefusalModal } from '@/components/features/orders/OrderItemRefusalModal';
 import { useOrderData } from '@/hooks/useOrderData';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
@@ -44,6 +45,12 @@ interface OrderItem {
     adminComment: string | null;
     createdAt: string;
   }>;
+  feedbacks?: Array<{
+    id: string;
+    feedbackType: 'WRONG_SIZE' | 'WRONG_ITEM' | 'AGREE_REPLACEMENT';
+    refusalReason?: string | null;
+    createdAt: string;
+  }>;
 }
 
 interface OrderItemsProps {
@@ -66,7 +73,10 @@ export function OrderItems({
   orderStatus,
 }: OrderItemsProps) {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [refusalModalOpen, setRefusalModalOpen] = useState(false);
   const [selectedItemForFeedback, setSelectedItemForFeedback] =
+    useState<OrderItem | null>(null);
+  const [selectedItemForRefusal, setSelectedItemForRefusal] =
     useState<OrderItem | null>(null);
 
   const {
@@ -113,6 +123,11 @@ export function OrderItems({
     setFeedbackModalOpen(true);
   };
 
+  const handleRefusalClick = (item: OrderItem) => {
+    setSelectedItemForRefusal(item);
+    setRefusalModalOpen(true);
+  };
+
   const handleFeedbackSubmit = async (
     feedbackType: 'WRONG_SIZE' | 'WRONG_ITEM' | 'AGREE_REPLACEMENT'
   ) => {
@@ -142,8 +157,61 @@ export function OrderItems({
     }
   };
 
+  const handleRefusalSubmit = async (
+    reason: string,
+    type: 'WRONG_SIZE' | 'WRONG_ITEM' | 'QUALITY_ISSUE' | 'OTHER'
+  ) => {
+    if (!selectedItemForRefusal) return;
+
+    try {
+      const response = await fetch(
+        `/api/order-items/${selectedItemForRefusal.id}/feedback`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            feedbackType: type === 'QUALITY_ISSUE' ? 'WRONG_ITEM' : type,
+            refusalReason: reason,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        // Refusal submitted successfully
+        setRefusalModalOpen(false);
+        setSelectedItemForRefusal(null);
+        // Refresh the page to show updated totals
+        window.location.reload();
+      } else {
+        console.error('Failed to submit refusal');
+      }
+    } catch (error) {
+      console.error('Failed to submit refusal:', error);
+    }
+  };
+
   const getPendingReplacement = (item: OrderItem) => {
     return item.replacements?.find(rep => rep.status === 'PENDING');
+  };
+
+  const isItemRefused = (item: OrderItem) => {
+    // Check if item has refusal feedback
+    return item.feedbacks?.some(
+      feedback =>
+        feedback.feedbackType === 'WRONG_SIZE' ||
+        feedback.feedbackType === 'WRONG_ITEM'
+    );
+  };
+
+  const getRefusalReason = (item: OrderItem) => {
+    const refusalFeedback = item.feedbacks?.find(
+      feedback =>
+        feedback.feedbackType === 'WRONG_SIZE' ||
+        feedback.feedbackType === 'WRONG_ITEM'
+    );
+    return refusalFeedback?.refusalReason || 'Причина не указана';
   };
 
   return (
@@ -155,14 +223,18 @@ export function OrderItems({
         const itemNeedsApproval = needsApproval(item.id, item.isAvailable);
         const itemHasMessages = hasMessages(item.id);
         const pendingReplacement = getPendingReplacement(item);
+        const itemRefused = isItemRefused(item);
+        const refusalReason = getRefusalReason(item);
 
         return (
           <div
             key={item.id}
             className={`rounded-lg border p-4 transition-all ${
-              isApprovalStatus && itemNeedsApproval
-                ? 'attention-pulse border-orange-200 bg-orange-50'
-                : 'border-gray-200 bg-white'
+              itemRefused
+                ? 'border-red-200 bg-red-50'
+                : isApprovalStatus && itemNeedsApproval
+                  ? 'attention-pulse border-orange-200 bg-orange-50'
+                  : 'border-gray-200 bg-white'
             }`}
           >
             {/* Mobile Layout */}
@@ -201,8 +273,16 @@ export function OrderItems({
                     </div>
                   )}
 
+                  {/* Refusal Status */}
+                  {itemRefused && (
+                    <div className="flex items-center space-x-2 text-red-600">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span className="text-xs font-medium">Отказано</span>
+                    </div>
+                  )}
+
                   {/* Availability Status - only for approval orders */}
-                  {isApprovalStatus && (
+                  {isApprovalStatus && !itemRefused && (
                     <div className="flex items-center space-x-2">
                       {getAvailabilityIcon(item.isAvailable)}
                       <span className="text-xs text-gray-600">
@@ -253,9 +333,9 @@ export function OrderItems({
                       unreadCount={unreadData.unreadCount}
                     />
                   )}
-                  {isApprovalStatus && showFeedback && (
+                  {isApprovalStatus && showFeedback && !itemRefused && (
                     <Button
-                      onClick={() => handleFeedbackClick(item)}
+                      onClick={() => handleRefusalClick(item)}
                       variant="outline"
                       size="sm"
                       className="flex items-center space-x-1 border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
@@ -346,8 +426,16 @@ export function OrderItems({
               {/* Availability Status and Actions */}
               <div className="w-44 flex-shrink-0">
                 <div className="flex flex-col items-end space-y-2">
+                  {/* Refusal Status */}
+                  {itemRefused && (
+                    <div className="flex items-center justify-end space-x-2 text-red-600">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span className="text-xs font-medium">Отказано</span>
+                    </div>
+                  )}
+
                   {/* Availability Status - only for approval orders */}
-                  {isApprovalStatus && (
+                  {isApprovalStatus && !itemRefused && (
                     <div className="flex items-center justify-end space-x-2">
                       {getAvailabilityIcon(item.isAvailable)}
                       <span className="text-xs text-gray-600">
@@ -375,9 +463,9 @@ export function OrderItems({
                         unreadCount={unreadData.unreadCount}
                       />
                     )}
-                    {isApprovalStatus && showFeedback && (
+                    {isApprovalStatus && showFeedback && !itemRefused && (
                       <Button
-                        onClick={() => handleFeedbackClick(item)}
+                        onClick={() => handleRefusalClick(item)}
                         variant="outline"
                         size="sm"
                         className="flex items-center space-x-1 border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
@@ -424,6 +512,19 @@ export function OrderItems({
           onFeedback={handleFeedbackSubmit}
           itemName={selectedItemForFeedback.name}
           hasReplacementProposal={false} // TODO: Check if there's a pending replacement
+        />
+      )}
+
+      {/* Refusal Modal */}
+      {refusalModalOpen && selectedItemForRefusal && (
+        <OrderItemRefusalModal
+          isOpen={refusalModalOpen}
+          onClose={() => {
+            setRefusalModalOpen(false);
+            setSelectedItemForRefusal(null);
+          }}
+          onRefusal={handleRefusalSubmit}
+          itemName={selectedItemForRefusal.name}
         />
       )}
     </div>

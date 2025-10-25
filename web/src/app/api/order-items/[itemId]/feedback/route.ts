@@ -1,6 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+
+// Helper function to recalculate order total when items are refused
+async function recalculateOrderTotal(orderId: string) {
+  try {
+    // Get all non-refused items for this order
+    const orderItems = await prisma.orderItem.findMany({
+      where: {
+        orderId: orderId,
+        feedbacks: {
+          none: {
+            feedbackType: {
+              in: ['WRONG_SIZE', 'WRONG_ITEM'],
+            },
+          },
+        },
+      },
+    });
+
+    // Calculate new total
+    const newTotal = orderItems.reduce((sum, item) => {
+      return sum + Number(item.priceBox) * item.qty;
+    }, 0);
+
+    // Update order total
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        total: newTotal,
+        subtotal: newTotal,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to recalculate order total:', error);
+  }
+}
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -12,7 +47,7 @@ export async function POST(
     }
 
     const { itemId } = await params;
-    const { feedbackType } = await request.json();
+    const { feedbackType, refusalReason } = await request.json();
 
     if (
       !feedbackType ||
@@ -63,6 +98,7 @@ export async function POST(
         orderItemId: itemId,
         userId: auth.user.id,
         feedbackType: feedbackType,
+        refusalReason: refusalReason || null,
       },
       include: {
         user: {
@@ -74,6 +110,11 @@ export async function POST(
         },
       },
     });
+
+    // If this is a refusal (WRONG_SIZE or WRONG_ITEM), recalculate order total
+    if (feedbackType === 'WRONG_SIZE' || feedbackType === 'WRONG_ITEM') {
+      await recalculateOrderTotal(orderItem.orderId);
+    }
 
     return NextResponse.json({
       success: true,

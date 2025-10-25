@@ -450,6 +450,7 @@ model OrderItemFeedback {
   orderItemId  String
   userId       String
   feedbackType FeedbackType
+  refusalReason String?     // Reason for refusal (for WRONG_SIZE, WRONG_ITEM, etc.)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   orderItem    OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
