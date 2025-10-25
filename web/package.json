@@ -33,7 +33,6 @@
     "parse:groq": "tsx src/scripts/groq-sequential-cron.ts",
     "test:colors": "tsx src/scripts/test-color-mapping.ts",
     "test:color-fix": "tsx src/scripts/test-color-fix.ts",
-    "cron:hourly": "tsx src/scripts/hourly-cron.ts",
     "cron:start": "tsx src/scripts/local-cron-runner.ts",
     "messages:clean": "tsx src/scripts/clean-messages.ts",
     "messages:clear": "tsx src/scripts/clear-messages.ts",
