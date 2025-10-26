@@ -88,7 +88,7 @@ export async function POST(
       description: product.description,
       material: product.material,
       sizes: product.sizes,
-      pricePair: product.pricePair,
+      pricePair: product.pricePair.toNumber(),
     });
 
     // Create purchase item
