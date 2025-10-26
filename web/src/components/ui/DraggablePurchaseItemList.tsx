@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useEffect,
 } from 'react';
+import Image from 'next/image';
 import {
   DndContext,
   closestCenter,
@@ -198,12 +199,17 @@ export function DraggablePurchaseItemList({
                 <div className="flex justify-center">
                   {sortedItems.find(item => item.id === activeId)?.product
                     .images[0] ? (
-                    <img
+                    <Image
                       src={
                         sortedItems.find(item => item.id === activeId)?.product
-                          .images[0].url
+                          .images[0].url || ''
                       }
-                      alt={sortedItems.find(item => item.id === activeId)?.name}
+                      alt={
+                        sortedItems.find(item => item.id === activeId)?.name ||
+                        ''
+                      }
+                      width={64}
+                      height={64}
                       className="h-16 w-16 rounded object-cover"
                     />
                   ) : (

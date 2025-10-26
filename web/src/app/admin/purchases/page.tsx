@@ -14,6 +14,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 import { useNotifications } from '@/components/ui/NotificationProvider';
+import { usePurchase } from '@/contexts/PurchaseContext';
 
 interface Purchase {
   id: string;
@@ -47,6 +48,7 @@ export default function PurchasesPage() {
 
   const confirmationModal = useConfirmationModal();
   const { addNotification } = useNotifications();
+  const { refreshPurchases, activePurchase, setActivePurchase } = usePurchase();
 
   const fetchPurchases = async () => {
     try {
@@ -118,6 +120,12 @@ export default function PurchasesPage() {
       }
 
       setPurchases(prev => prev.filter(p => p.id !== id));
+      // Refresh the PurchaseContext to sync the deletion
+      await refreshPurchases();
+      // Clear active purchase if the deleted purchase was active
+      if (activePurchase?.id === id) {
+        setActivePurchase(null);
+      }
       addNotification({
         type: 'success',
         title: 'Закупка удалена',

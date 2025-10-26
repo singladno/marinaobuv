@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { formatPurchaseDescription } from '@/utils/purchaseDescriptionFormatter';
 
 export async function POST(
   request: NextRequest,
@@ -82,13 +83,21 @@ export async function POST(
     // Calculate old price (price + 80%)
     const oldPrice = Number(product.pricePair) * 1.8;
 
+    // Format description according to template
+    const formattedDescription = formatPurchaseDescription({
+      description: product.description,
+      material: product.material,
+      sizes: product.sizes,
+      pricePair: product.pricePair,
+    });
+
     // Create purchase item
     const purchaseItem = await prisma.purchaseItem.create({
       data: {
         purchaseId: id,
         productId,
         name: product.name,
-        description: product.description || '',
+        description: formattedDescription,
         price: product.pricePair,
         oldPrice,
         sortIndex: nextSortIndex,
