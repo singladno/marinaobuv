@@ -11,6 +11,7 @@ import { HighlightedProductsProvider } from '@/contexts/HighlightedProductsConte
 import { NextAuthUserProvider } from '@/contexts/NextAuthUserContext';
 import { AdminChatProvider } from '@/contexts/AdminChatContext';
 import { ClientChatProvider } from '@/contexts/ClientChatContext';
+import { PurchaseProvider } from '@/contexts/PurchaseContext';
 
 interface ClientProvidersProps {
   children: React.ReactNode;
@@ -28,7 +29,9 @@ export function ClientProviders({ children }: ClientProvidersProps) {
                   <HighlightedProductsProvider>
                     <FavoritesProvider>
                       <FlyingAnimationProvider>
-                        <CartProvider>{children}</CartProvider>
+                        <PurchaseProvider>
+                          <CartProvider>{children}</CartProvider>
+                        </PurchaseProvider>
                       </FlyingAnimationProvider>
                     </FavoritesProvider>
                   </HighlightedProductsProvider>

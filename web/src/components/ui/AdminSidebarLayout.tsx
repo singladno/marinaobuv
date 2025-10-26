@@ -34,7 +34,14 @@ export default function AdminSidebarLayout({
       />
 
       {/* Main content area - Right column */}
-      <div className="flex flex-1 flex-col overflow-y-auto bg-gray-50 transition-all duration-300 ease-in-out dark:bg-gray-900">
+      <div
+        className="flex flex-1 flex-col overflow-y-auto bg-gray-50 transition-all duration-300 ease-in-out dark:bg-gray-900"
+        style={
+          {
+            '--sidebar-width': isCollapsed ? '80px' : '224px',
+          } as React.CSSProperties
+        }
+      >
         {/* Mobile header */}
         <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden dark:border-gray-700 dark:bg-gray-900">
           <div className="flex items-center gap-3">

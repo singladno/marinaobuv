@@ -22,6 +22,7 @@ import HamburgerMenu from '@/components/ui/HamburgerMenu';
 import AdvancedSlidingMenu from '@/components/ui/AdvancedSlidingMenu';
 import { MobileAdminSwitcher } from '@/components/ui/MobileAdminSwitcher';
 import { MobileGruzchikSwitcher } from '@/components/ui/MobileGruzchikSwitcher';
+import { PurchaseModeIcon } from '@/components/ui/PurchaseModeIcon';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -172,10 +173,24 @@ export default function Header({ onSearch }: HeaderProps) {
               </div>
             )}
 
+            {/* Mobile Purchase Mode Icon - only show on mobile for admin users */}
+            {user?.role === 'ADMIN' && (
+              <div className="md:hidden">
+                <PurchaseModeIcon />
+              </div>
+            )}
+
             {/* Mobile Gruzchik Switcher - only show on mobile for gruzchik users */}
             {user?.role === 'GRUZCHIK' && (
               <div className="md:hidden">
                 <MobileGruzchikSwitcher />
+              </div>
+            )}
+
+            {/* Purchase Mode Icon - only show for admin users */}
+            {user?.role === 'ADMIN' && (
+              <div className="hidden md:block">
+                <PurchaseModeIcon />
               </div>
             )}
 

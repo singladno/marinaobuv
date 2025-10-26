@@ -108,3 +108,27 @@ export const ParsingIcon = () => (
     />
   </svg>
 );
+
+export const PurchasesIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    {/* Green petals */}
+    <path
+      d="M12 2L14.5 8.5L21 6L15.5 12L21 18L14.5 15.5L12 22L9.5 15.5L3 18L8.5 12L3 6L9.5 8.5L12 2Z"
+      fill="#10B981"
+      opacity="0.8"
+    />
+    {/* Yellow petals */}
+    <path
+      d="M12 2L9.5 8.5L3 6L8.5 12L3 18L9.5 15.5L12 22L14.5 15.5L21 18L15.5 12L21 6L14.5 8.5L12 2Z"
+      fill="#F59E0B"
+      opacity="0.8"
+    />
+    {/* Center circle */}
+    <circle cx="12" cy="12" r="2" fill="#6B7280" />
+  </svg>
+);

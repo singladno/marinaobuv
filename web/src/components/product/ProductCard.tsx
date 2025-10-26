@@ -2,7 +2,7 @@
 import { Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 
 import CartActionButton from '@/components/product/CartActionButton';
 import ColorSwitcher from '@/components/product/ColorSwitcher';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useUser } from '@/contexts/NextAuthUserContext';
+import { usePurchase } from '@/contexts/PurchaseContext';
 import { rub } from '@/lib/format';
 
 // Function to get relative time in Russian
@@ -81,8 +82,22 @@ export default function ProductCard({
 }: Props) {
   const { user } = useUser();
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const [isEditingSortIndex, setIsEditingSortIndex] = useState(false);
+  const [editSortIndexValue, setEditSortIndexValue] = useState('');
+  const sortIndexInputRef = useRef<HTMLInputElement>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const {
+    isPurchaseMode,
+    activePurchase,
+    setActivePurchase,
+    selectedProductIds,
+    addProductToPurchase,
+    removeProductFromPurchase,
+    refreshPurchases,
+    updateActivePurchaseItems,
+  } = usePurchase();
   useEffect(() => {
     if (!selectedColor && colorOptions.length > 0) {
       setSelectedColor(colorOptions[0]?.color ?? null);
@@ -100,9 +115,221 @@ export default function ProductCard({
   }, [selectedColor, colorOptions, imageUrl]);
   const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
   const computedPairPrice = useMemo(() => pricePair ?? null, [pricePair]);
+
+  // Purchase mode logic
+  const isInPurchase = productId ? selectedProductIds.has(productId) : false;
+  const purchaseSortIndex = activePurchase?.items.find(
+    item => item.productId === productId
+  )?.sortIndex;
+
+  // Debug logging for sort index
+  useEffect(() => {
+    if (isInPurchase && purchaseSortIndex) {
+      console.log(
+        '🔍 Current sort index for product:',
+        productId,
+        'is:',
+        purchaseSortIndex
+      );
+    }
+  }, [isInPurchase, purchaseSortIndex, productId]);
+
+  const handlePurchaseClick = async (e: React.MouseEvent) => {
+    console.log('🖱️ Purchase click triggered:', {
+      isPurchaseMode,
+      productId,
+      activePurchase: activePurchase?.id,
+      isInPurchase,
+    });
+
+    if (!isPurchaseMode || !productId || !activePurchase || isProcessing) {
+      console.log('❌ Purchase click blocked:', {
+        isPurchaseMode,
+        productId,
+        activePurchase: activePurchase?.id,
+        isProcessing,
+      });
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Set loading state immediately for optimistic UI
+    setIsProcessing(true);
+
+    try {
+      if (isInPurchase) {
+        console.log('🗑️ Removing product from purchase:', productId);
+        await removeProductFromPurchase(productId);
+      } else {
+        console.log('➕ Adding product to purchase:', productId);
+        await addProductToPurchase(productId);
+      }
+    } catch (error) {
+      console.error('❌ Purchase operation failed:', error);
+      // The error is already handled in the context functions
+      // The optimistic UI will be reverted automatically since the state wasn't updated
+    } finally {
+      // Remove loading state after operation completes
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSortIndexClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (purchaseSortIndex) {
+      setEditSortIndexValue(purchaseSortIndex.toString());
+      setIsEditingSortIndex(true);
+    }
+  };
+
+  const handleSortIndexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow positive numbers
+    if (value === '' || (/^\d+$/.test(value) && parseInt(value) > 0)) {
+      setEditSortIndexValue(value);
+    }
+  };
+
+  const handleSortIndexSubmit = async () => {
+    if (!editSortIndexValue || !activePurchase || !productId) return;
+
+    const newIndex = parseInt(editSortIndexValue);
+    if (newIndex <= 0) return;
+
+    setIsProcessing(true);
+    try {
+      // Find the purchase item
+      const purchaseItem = activePurchase.items.find(
+        item => item.productId === productId
+      );
+      if (!purchaseItem) return;
+
+      // Update the single item's sort index
+      const response = await fetch(
+        `/api/admin/purchases/${activePurchase.id}/items/${purchaseItem.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sortIndex: newIndex,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update sort index');
+      }
+
+      const updatedItem = await response.json();
+
+      // Update local state immediately (same as purchase detail page)
+      const updatedItems = activePurchase.items.map(item =>
+        item.id === updatedItem.id ? updatedItem : item
+      );
+
+      // Handle position insertion - if new index conflicts, shift other items
+      const recalculatedItems = [...updatedItems];
+
+      // Find the item we're updating
+      const targetItem = recalculatedItems.find(
+        item => item.id === updatedItem.id
+      );
+      if (targetItem) {
+        // Remove the target item temporarily
+        const otherItems = recalculatedItems.filter(
+          item => item.id !== targetItem.id
+        );
+
+        // Insert the target item at the desired position
+        otherItems.splice(newIndex - 1, 0, targetItem);
+
+        // Reassign sequential indexes
+        otherItems.forEach((item, index) => {
+          item.sortIndex = index + 1;
+        });
+
+        // Update the recalculated items
+        recalculatedItems.length = 0;
+        recalculatedItems.push(...otherItems);
+      }
+
+      // Update the active purchase items immediately for UI
+      updateActivePurchaseItems(recalculatedItems);
+
+      // Update indexes in database asynchronously (same as purchase detail page)
+      const updatePromises = recalculatedItems.map(item =>
+        fetch(`/api/admin/purchases/${activePurchase.id}/items/${item.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sortIndex: item.sortIndex,
+          }),
+        })
+      );
+
+      // Don't await this - let it run in background
+      Promise.all(updatePromises).catch(err =>
+        console.error('Failed to update item indexes:', err)
+      );
+
+      console.log('✅ Sort index updated successfully');
+    } catch (error) {
+      console.error('Error updating sort index:', error);
+    } finally {
+      setIsProcessing(false);
+      setIsEditingSortIndex(false);
+    }
+  };
+
+  const handleSortIndexCancel = () => {
+    setIsEditingSortIndex(false);
+    setEditSortIndexValue('');
+  };
+
+  const handleSortIndexKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSortIndexSubmit();
+    } else if (e.key === 'Escape') {
+      handleSortIndexCancel();
+    }
+  };
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditingSortIndex && sortIndexInputRef.current) {
+      sortIndexInputRef.current.focus();
+      sortIndexInputRef.current.select();
+    }
+  }, [isEditingSortIndex]);
+
   return (
     <>
-      <div className="bg-surface rounded-card-large shadow-card hover:shadow-card-hover group relative flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1">
+      <div
+        className={`bg-surface rounded-card-large shadow-card hover:shadow-card-hover group relative flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+          isPurchaseMode && (isInPurchase || isProcessing)
+            ? 'bg-purple-50 ring-2 ring-purple-500'
+            : ''
+        }`}
+      >
+        {/* Processing Loader Overlay */}
+        {isProcessing && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"></div>
+              <span className="text-xs font-medium text-purple-600">
+                {isInPurchase ? 'Удаление...' : 'Добавление...'}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Heart overlay outside the Link to avoid navigation */}
         <button
           type="button"
@@ -119,7 +346,51 @@ export default function ProductCard({
           />
         </button>
 
-        <Link href={`/product/${slug}`} className="block flex-1">
+        {/* Purchase Mode Indicators */}
+        {isPurchaseMode && (
+          <>
+            {/* Purchase Sort Index */}
+            {isInPurchase && purchaseSortIndex && (
+              <div className="absolute left-3 top-3 z-30">
+                {isEditingSortIndex ? (
+                  <input
+                    ref={sortIndexInputRef}
+                    type="text"
+                    value={editSortIndexValue}
+                    onChange={handleSortIndexChange}
+                    onKeyDown={handleSortIndexKeyDown}
+                    onBlur={handleSortIndexSubmit}
+                    className="h-6 w-8 rounded border border-purple-300 bg-white px-1 text-center text-xs font-bold text-purple-600 focus:border-purple-500 focus:outline-none"
+                    maxLength={3}
+                    aria-label="Порядковый номер в закупке"
+                    placeholder="№"
+                  />
+                ) : (
+                  <button
+                    onClick={handleSortIndexClick}
+                    className="inline-flex cursor-pointer items-center rounded-md bg-purple-600 px-2.5 py-0.5 text-xs font-bold text-white transition-colors hover:bg-purple-700"
+                    title="Нажмите для изменения порядка"
+                  >
+                    {purchaseSortIndex}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Purchase Mode Overlay */}
+            <div
+              className={`absolute inset-0 z-20 cursor-pointer ${isEditingSortIndex ? 'pointer-events-none' : ''}`}
+              onClick={handlePurchaseClick}
+              title={isInPurchase ? 'Убрать из закупки' : 'Добавить в закупку'}
+            />
+          </>
+        )}
+
+        <Link
+          href={isPurchaseMode ? '#' : `/product/${slug}`}
+          className="block flex-1"
+          onClick={isPurchaseMode ? e => e.preventDefault() : undefined}
+        >
           {/* Image Container */}
           <div className="bg-muted group/image relative aspect-square w-full overflow-hidden">
             {hasImage ? (
@@ -136,7 +407,7 @@ export default function ProductCard({
             )}
 
             {/* Category Badge */}
-            {showCategory && category && (
+            {showCategory && category && !isPurchaseMode && (
               <Badge
                 variant="secondary"
                 className="bg-background/90 absolute left-3 top-3 shadow-sm backdrop-blur-sm"
@@ -145,8 +416,8 @@ export default function ProductCard({
               </Badge>
             )}
 
-            {/* Source Chip - shows on hover (admin only) */}
-            {user?.role === 'ADMIN' && productId && (
+            {/* Source Chip - always visible on mobile/tablet, hover on desktop (admin only) - hidden in purchase mode */}
+            {user?.role === 'ADMIN' && productId && !isPurchaseMode && (
               <button
                 type="button"
                 onClick={e => {
@@ -154,7 +425,7 @@ export default function ProductCard({
                   e.stopPropagation();
                   setIsSourceModalOpen(true);
                 }}
-                className="absolute left-3 top-3 z-20 opacity-0 transition-all duration-200 group-hover:opacity-100"
+                className="absolute left-3 top-3 z-20 opacity-100 transition-all duration-200 md:opacity-0 md:group-hover:opacity-100"
                 title="Просмотр источника сообщений"
               >
                 <Badge

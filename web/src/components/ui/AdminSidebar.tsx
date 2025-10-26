@@ -32,6 +32,11 @@ export default function AdminSidebar({
           isCollapsed ? 'w-20 px-2' : 'w-56 px-3'
         } fixed inset-y-0 left-0 z-50 -translate-x-full py-8 md:relative md:translate-x-0`}
         data-state={isMobileOpen ? 'open' : 'closed'}
+        style={
+          {
+            '--sidebar-width': isCollapsed ? '80px' : '224px',
+          } as React.CSSProperties
+        }
       >
         <div
           className={`h-full w-full transform transition-transform duration-300 ease-in-out ${

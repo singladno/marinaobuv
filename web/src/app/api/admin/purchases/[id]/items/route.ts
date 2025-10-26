@@ -1,0 +1,115 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/server/db';
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { productId } = await request.json();
+
+    if (!productId) {
+      return NextResponse.json(
+        { error: 'Product ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Await params before using
+    const { id } = await params;
+
+    // Verify purchase exists and belongs to user
+    const purchase = await prisma.purchase.findFirst({
+      where: {
+        id,
+        createdById: session.user.id,
+      },
+    });
+
+    if (!purchase) {
+      return NextResponse.json(
+        { error: 'Purchase not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if product is already in this purchase
+    const existingItem = await prisma.purchaseItem.findFirst({
+      where: {
+        purchaseId: id,
+        productId,
+      },
+    });
+
+    if (existingItem) {
+      return NextResponse.json(
+        { error: 'Product already in purchase' },
+        { status: 400 }
+      );
+    }
+
+    // Get product details
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        images: {
+          where: { isPrimary: true },
+          take: 1,
+        },
+      },
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    // Get the next sort index
+    const lastItem = await prisma.purchaseItem.findFirst({
+      where: { purchaseId: id },
+      orderBy: { sortIndex: 'desc' },
+    });
+
+    const nextSortIndex = (lastItem?.sortIndex || 0) + 1;
+
+    // Calculate old price (price + 80%)
+    const oldPrice = Number(product.pricePair) * 1.8;
+
+    // Create purchase item
+    const purchaseItem = await prisma.purchaseItem.create({
+      data: {
+        purchaseId: id,
+        productId,
+        name: product.name,
+        description: product.description || '',
+        price: product.pricePair,
+        oldPrice,
+        sortIndex: nextSortIndex,
+      },
+      include: {
+        product: {
+          include: {
+            images: {
+              orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(purchaseItem, { status: 201 });
+  } catch (error) {
+    console.error('Error adding item to purchase:', error);
+    return NextResponse.json(
+      { error: 'Failed to add item to purchase' },
+      { status: 500 }
+    );
+  }
+}

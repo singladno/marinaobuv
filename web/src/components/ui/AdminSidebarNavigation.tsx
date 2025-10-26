@@ -8,6 +8,7 @@ import {
   UsersIcon,
   ParsingIcon,
   DraftsIcon,
+  PurchasesIcon,
 } from './AdminSidebarIcons';
 import { AdminSidebarLink } from './AdminSidebarLink';
 
@@ -49,6 +50,13 @@ export function AdminSidebarNavigation({
         icon={<ParsingIcon />}
         collapsed={isCollapsed}
         isParsingActive={isParsingActive}
+      />
+
+      <AdminSidebarLink
+        href="/admin/purchases"
+        label="Закупки"
+        icon={<PurchasesIcon />}
+        collapsed={isCollapsed}
       />
     </nav>
   );

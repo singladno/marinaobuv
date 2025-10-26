@@ -62,6 +62,7 @@ model Product {
   provider              Provider?      @relation(fields: [providerId], references: [id])
   images                ProductImage[]
   reviews               Review[]
+  purchaseItems         PurchaseItem[]
 
   @@index([categoryId])
   @@index([season])
@@ -235,6 +236,7 @@ model User {
   provider           Provider?              @relation(fields: [providerId], references: [id])
   accounts           Account[]
   sessions           Session[]
+  purchases          Purchase[]
 
   @@index([role])
   @@index([providerId])
@@ -522,4 +524,36 @@ enum ReplacementStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+model Purchase {
+  id          String         @id @default(cuid())
+  name        String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  items       PurchaseItem[]
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model PurchaseItem {
+  id           String   @id @default(cuid())
+  purchaseId   String
+  productId    String
+  name         String   // Copied from product
+  description  String   // Copied from product
+  price        Decimal  // Copied from product
+  oldPrice     Decimal  // Calculated as price * 1.8
+  sortIndex    Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id])
+
+  @@index([purchaseId])
+  @@index([productId])
+  @@index([sortIndex])
 }
