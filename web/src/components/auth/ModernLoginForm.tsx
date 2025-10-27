@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Text } from '@/components/ui/Text';
-import { PhoneInput } from './PhoneInput';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 
 interface ModernLoginFormProps {
@@ -18,11 +17,9 @@ export function ModernLoginForm({ onSuccess }: ModernLoginFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    phone: '',
     password: '',
   });
 
@@ -32,10 +29,10 @@ export function ModernLoginForm({ onSuccess }: ModernLoginFormProps) {
     setError(null);
 
     try {
-      const credentials =
-        loginMethod === 'email'
-          ? { email: formData.email, password: formData.password }
-          : { phone: formData.phone, password: formData.password };
+      const credentials = {
+        email: formData.email,
+        password: formData.password,
+      };
 
       const result = await signIn('credentials', {
         ...credentials,
@@ -87,93 +84,38 @@ export function ModernLoginForm({ onSuccess }: ModernLoginFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Login Method Toggle */}
-      <div className="flex rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
-        <button
-          type="button"
-          onClick={() => setLoginMethod('email')}
-          className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            loginMethod === 'email'
-              ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
-              : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
-          }`}
-        >
-          Email
-        </button>
-        <button
-          type="button"
-          onClick={() => setLoginMethod('phone')}
-          className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            loginMethod === 'phone'
-              ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
-              : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
-          }`}
-        >
-          Телефон
-        </button>
-      </div>
-
       {/* Login Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {loginMethod === 'email' ? (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email
-              </label>
-              <Input
-                type="email"
-                placeholder="Введите ваш email"
-                value={formData.email}
-                onChange={e => handleInputChange('email', e.target.value)}
-                required
-                disabled={isLoading}
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Пароль
-              </label>
-              <PasswordInput
-                value={formData.password}
-                onChange={password => handleInputChange('password', password)}
-                placeholder="Введите пароль"
-                required
-                disabled={isLoading}
-                className="w-full"
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Телефон
-              </label>
-              <PhoneInput
-                value={formData.phone}
-                onChange={value => handleInputChange('phone', value || '')}
-                disabled={isLoading}
-                className="w-full"
-                placeholder="Введите номер телефона"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Пароль
-              </label>
-              <PasswordInput
-                value={formData.password}
-                onChange={password => handleInputChange('password', password)}
-                placeholder="Введите пароль"
-                required
-                disabled={isLoading}
-                className="w-full"
-              />
-            </div>
-          </div>
-        )}
+        {/* Email Field */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Email
+          </label>
+          <Input
+            type="email"
+            placeholder="Введите ваш email"
+            value={formData.email}
+            onChange={e => handleInputChange('email', e.target.value)}
+            required
+            disabled={isLoading}
+            className="w-full"
+          />
+        </div>
+
+        {/* Password Field */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Пароль
+          </label>
+          <PasswordInput
+            value={formData.password}
+            onChange={password => handleInputChange('password', password)}
+            placeholder="Введите пароль"
+            required
+            disabled={isLoading}
+            className="w-full"
+          />
+        </div>
 
         {error && (
           <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
@@ -188,17 +130,15 @@ export function ModernLoginForm({ onSuccess }: ModernLoginFormProps) {
         </Button>
 
         {/* Forgot Password Link */}
-        {loginMethod === 'email' && (
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setShowForgotPassword(true)}
-              className="text-sm text-purple-600 hover:text-purple-500 dark:text-purple-400 dark:hover:text-purple-300"
-            >
-              Забыли пароль?
-            </button>
-          </div>
-        )}
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            className="text-sm text-purple-600 hover:text-purple-500 dark:text-purple-400 dark:hover:text-purple-300"
+          >
+            Забыли пароль?
+          </button>
+        </div>
       </form>
 
       {/* Divider */}

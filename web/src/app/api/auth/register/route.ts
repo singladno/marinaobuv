@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
       phone?: string;
     };
 
-    if (!email && !phone) {
+    if (!email || !phone) {
       return NextResponse.json(
-        { error: 'Email or phone is required' },
+        { error: 'Email and phone are both required' },
         { status: 400 }
       );
     }
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [email ? { email } : {}, phone ? { phone } : {}].filter(Boolean),
+        OR: [{ email }, { phone }],
       },
     });
 
