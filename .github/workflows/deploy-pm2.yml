@@ -374,18 +374,8 @@ jobs:
             echo "ℹ️ Skipping DB init/seed during deploy"
             cd ..
 
-            # Stop existing PM2 processes BEFORE rebuilding to avoid race with next start
-            echo "🛑 Stopping PM2 apps before rebuild and clearing dump..."
-            pm2 delete all 2>/dev/null || true
-            pm2 save --force || true
-
-            # Clean up any orphaned PM2 processes
-            echo "🧹 Cleaning up orphaned PM2 processes..."
-            pm2 kill 2>/dev/null || true
-            sleep 2
-
-            # Rebuild application on server to ensure all routes are present
-            echo "🔧 Rebuilding application on server to ensure routes are included..."
+            # Build application (blue-green deployment will handle PM2)
+            echo "🔧 Building application..."
             cd web
             # Ensure path alias '@' resolves during build
             if ! grep -q '"baseUrl"' tsconfig.json; then
@@ -400,14 +390,12 @@ jobs:
             cd ..
             echo "✅ Server-side build completed"
 
-            # Ensure production build exists before starting PM2
+            # Ensure production build exists
             if [ ! -f "web/.next/BUILD_ID" ]; then
               echo "❌ Build artifact missing (.next/BUILD_ID not found)"
               ls -la web/.next || true
               exit 1
             fi
-
-            # PM2 already stopped above; continue to start fresh below
 
             # Setup HTTPS and nginx configuration
             echo "🔒 Setting up HTTPS and nginx configuration..."
