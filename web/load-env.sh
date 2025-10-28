@@ -12,8 +12,8 @@ while IFS= read -r line || [ -n "$line" ]; do
     
     # Extract key and value, handling quotes properly
     if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
-        local key="${BASH_REMATCH[1]}"
-        local value="${BASH_REMATCH[2]}"
+        key="${BASH_REMATCH[1]}"
+        value="${BASH_REMATCH[2]}"
         
         # Remove surrounding quotes if they exist and match
         if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
@@ -21,9 +21,9 @@ while IFS= read -r line || [ -n "$line" ]; do
         fi
         
         # Export the variable
-        export "$key=$value"
+        export "$key"="$value"
     fi
-done < .env.local
+done < .env
 
 set +a  # turn off automatic export
 
