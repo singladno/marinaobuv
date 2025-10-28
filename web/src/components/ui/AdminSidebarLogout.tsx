@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 
 type AdminSidebarLogoutProps = {
@@ -8,16 +8,13 @@ type AdminSidebarLogoutProps = {
 };
 
 export function AdminSidebarLogout({ isCollapsed }: AdminSidebarLogoutProps) {
-  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      const res = await fetch('/api/auth/logout', { method: 'POST' });
-      if (!res.ok) throw new Error('Logout failed');
-      router.push('/');
-      router.refresh();
+      const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/`;
+      await signOut({ callbackUrl });
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
