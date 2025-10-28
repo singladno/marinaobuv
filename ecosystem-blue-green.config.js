@@ -55,13 +55,13 @@ module.exports = {
       exec_mode: "fork",
       env: {
         NODE_ENV: "production",
-        PORT: 3001,
+        PORT: 3000,
         HOSTNAME: "0.0.0.0",
         DEPLOYMENT_COLOR: "green",
       },
       env_production: {
         NODE_ENV: "production",
-        PORT: 3001,
+        PORT: 3000,
         HOSTNAME: "0.0.0.0",
         DEPLOYMENT_COLOR: "green",
       },
