@@ -24,7 +24,7 @@
     "parse:groq": "cd web && tsx src/scripts/groq-sequential-cron.ts",
     "test:color-fix": "cd web && tsx src/scripts/test-color-fix.ts",
     "health": "curl -s http://localhost:3000/api/health || echo 'Application not responding'",
-    "prisma": "cd web && export $(cat .env.local | grep -v '^#' | xargs) && npx prisma studio",
+    "prisma": "cd web && bash -c 'set -a; while IFS= read -r line || [ -n \"$line\" ]; do if [[ -z \"$line\" || \"$line\" =~ ^[[:space:]]*# ]]; then continue; fi; export \"$line\"; done < .env.local; set +a' && npx prisma studio",
     "prisma:generate": "cd web && npx prisma generate",
     "prisma:migrate": "cd web && npx prisma migrate dev",
     "prisma:reset": "cd web && npx prisma migrate reset",

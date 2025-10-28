@@ -266,8 +266,19 @@ jobs:
               sudo systemctl enable postgresql
             fi
 
-            # Load DATABASE_URL from environment file
-            export $(cat web/.env | grep -v '^#' | xargs)
+            # Load DATABASE_URL from environment file safely
+            echo "🔧 Loading environment variables safely..."
+            set -a  # automatically export all variables
+            # Process the .env file line by line, handling quotes properly
+            while IFS= read -r line || [ -n "$line" ]; do
+                # Skip empty lines and comments
+                if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                    continue
+                fi
+                # Export the variable (this handles quotes correctly)
+                export "$line"
+            done < web/.env
+            set +a  # turn off automatic export
 
             # Verify database connection string is valid
             if [ -z "$DATABASE_URL" ]; then
@@ -518,9 +529,19 @@ jobs:
             echo "🕒 Installing cron jobs from scripts/cron-jobs.conf..."
             bash -s < scripts/install-crons.sh || echo "⚠️ Cron installation step failed"
 
-            # Load runtime environment for PM2
+            # Load runtime environment for PM2 safely
             echo "🔧 Exporting environment for PM2 runtime..."
-            export $(cat web/.env | grep -v '^#' | xargs)
+            set -a  # automatically export all variables
+            # Process the .env file line by line, handling quotes properly
+            while IFS= read -r line || [ -n "$line" ]; do
+                # Skip empty lines and comments
+                if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                    continue
+                fi
+                # Export the variable (this handles quotes correctly)
+                export "$line"
+            done < web/.env
+            set +a  # turn off automatic export
 
             # Use Blue-Green Zero-Downtime Deployment
             echo "🚀 Starting Blue-Green Zero-Downtime Deployment..."
@@ -588,7 +609,17 @@ jobs:
               # Fix database authentication issues
               echo "🔧 Fixing database authentication issues..."
               cd ..
-              export $(cat web/.env | grep -v '^#' | xargs)
+              set -a  # automatically export all variables
+              # Process the .env file line by line, handling quotes properly
+              while IFS= read -r line || [ -n "$line" ]; do
+                  # Skip empty lines and comments
+                  if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                      continue
+                  fi
+                  # Export the variable (this handles quotes correctly)
+                  export "$line"
+              done < web/.env
+              set +a  # turn off automatic export
               ./scripts/fix-database-auth.sh
               
               # Test connection again

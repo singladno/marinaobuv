@@ -13,14 +13,30 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_ROOT"
 
-# Load environment variables
-if [ -f "web/.env" ]; then
-    echo "🔧 Loading environment variables..."
-    export $(cat web/.env | grep -v '^#' | xargs)
-else
-    echo "❌ Environment file not found: web/.env"
-    exit 1
-fi
+# Load environment variables safely
+load_env() {
+    local env_file="$1"
+    if [ -f "$env_file" ]; then
+        echo "🔧 Loading environment variables from $env_file..."
+        # Use a safer method that preserves quotes and handles special characters
+        set -a  # automatically export all variables
+        # Process the .env file line by line, handling quotes properly
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Skip empty lines and comments
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                continue
+            fi
+            # Export the variable (this handles quotes correctly)
+            export "$line"
+        done < "$env_file"
+        set +a  # turn off automatic export
+    else
+        echo "❌ Environment file not found: $env_file"
+        exit 1
+    fi
+}
+
+load_env "web/.env"
 
 # Function to get current active deployment
 get_active_deployment() {

@@ -92,12 +92,34 @@ psql -d marinaobuv -c "CREATE USER marina_local WITH PASSWORD 'Q6sRk2pVw8yHf3Xb1
 psql -d marinaobuv -c "GRANT ALL PRIVILEGES ON DATABASE marinaobuv TO marina_local;" 2>/dev/null || print_warning "Privileges may already be granted"
 psql -d marinaobuv -c "ALTER USER marina_local CREATEDB;" 2>/dev/null || print_warning "User may already have CREATEDB privilege"
 
+# Load environment variables safely
+load_env() {
+    local env_file="$1"
+    if [ -f "$env_file" ]; then
+        print_status "Loading environment variables from $env_file..."
+        # Use a safer method that preserves quotes and handles special characters
+        set -a  # automatically export all variables
+        # Process the .env file line by line, handling quotes properly
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Skip empty lines and comments
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                continue
+            fi
+            # Export the variable (this handles quotes correctly)
+            export "$line"
+        done < "$env_file"
+        set +a  # turn off automatic export
+    else
+        print_error "Environment file not found: $env_file"
+        exit 1
+    fi
+}
+
 # Check database connection
 print_status "🔍 Testing database connection..."
 cd web
 # Use .env file for local development
-export $(cat .env | grep -v '^#' | xargs)
-print_status "Using .env for local development"
+load_env ".env"
 if npx prisma db pull --print > /dev/null 2>&1; then
     print_success "Database connection successful"
 else
@@ -210,7 +232,7 @@ done
 # Database connectivity health check
 print_status "🔍 Testing database connectivity..."
 cd web
-export $(cat .env | grep -v '^#' | xargs)
+load_env ".env"
 npx prisma db pull --print > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     print_success "Database connectivity verified"

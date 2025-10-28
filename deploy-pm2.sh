@@ -173,7 +173,21 @@ if [ -f ".env.production" ]; then
     fi
 else
     print_warning ".env.production not found, using local environment"
-    export $(cat .env.local | grep -v '^#' | xargs) && npm run prisma:migrate
+else
+    print_warning ".env.production not found, using local environment"
+    # Load environment variables safely
+    set -a  # automatically export all variables
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip empty lines and comments
+        if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
+        # Export the variable (this handles quotes correctly)
+        export "$line"
+    done < .env.local
+    set +a  # turn off automatic export
+    npm run prisma:migrate
+fi
 fi
 cd ..
 
@@ -389,7 +403,21 @@ if [ -f ".env.production" ]; then
     ./prisma-server.sh npx prisma migrate deploy
 else
     print_warning ".env.production not found, using local environment"
-    export $(cat .env.local | grep -v '^#' | xargs) && npm run prisma:migrate
+else
+    print_warning ".env.production not found, using local environment"
+    # Load environment variables safely
+    set -a  # automatically export all variables
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip empty lines and comments
+        if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
+        # Export the variable (this handles quotes correctly)
+        export "$line"
+    done < .env.local
+    set +a  # turn off automatic export
+    npm run prisma:migrate
+fi
 fi
 
 # Build application
