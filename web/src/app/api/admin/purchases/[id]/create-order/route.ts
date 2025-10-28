@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { generateOrderNumber } from '@/lib/order-number-generator';
+import { generateItemCode } from '@/lib/itemCodeGenerator';
 
 export async function POST(
   request: NextRequest,
@@ -58,6 +59,11 @@ export async function POST(
     );
     const total = subtotal; // No additional fees for now
 
+    // Generate item codes for all items
+    const itemCodes = await Promise.all(
+      purchase.items.map(() => generateItemCode())
+    );
+
     // Create order
     const order = await prisma.order.create({
       data: {
@@ -72,13 +78,14 @@ export async function POST(
         status: 'Новый',
         comment: `Создано из закупки: ${purchase.name}`,
         items: {
-          create: purchase.items.map((item: any) => ({
+          create: purchase.items.map((item: any, index: number) => ({
             productId: item.productId,
             slug: item.product.slug,
             name: item.name,
             article: item.product.article,
             priceBox: item.price,
             qty: 1,
+            itemCode: itemCodes[index],
           })),
         },
       },

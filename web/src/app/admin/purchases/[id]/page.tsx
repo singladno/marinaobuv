@@ -78,6 +78,7 @@ function PurchaseDetailPageContent() {
   } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
   const confirmationModal = useConfirmationModal();
   const { addNotification } = useNotifications();
@@ -246,6 +247,7 @@ function PurchaseDetailPageContent() {
     if (!purchase || purchase.items.length === 0) return;
 
     try {
+      setIsCreatingOrder(true);
       const response = await fetch(
         `/api/admin/purchases/${params.id}/create-order`,
         {
@@ -261,6 +263,49 @@ function PurchaseDetailPageContent() {
       router.push(`/admin/orders/${order.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create order');
+    } finally {
+      setIsCreatingOrder(false);
+    }
+  };
+
+  const exportPurchase = async () => {
+    if (!purchase) return;
+
+    try {
+      const response = await fetch(`/api/admin/purchases/${params.id}/export`);
+
+      if (!response.ok) {
+        throw new Error('Failed to export purchase');
+      }
+
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get('content-disposition');
+      const filename = contentDisposition
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+        : `purchase-export-${purchase.name}-${new Date().toISOString().split('T')[0]}.csv`;
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      addNotification({
+        type: 'success',
+        title: 'Экспорт завершен',
+        message: 'Файл выгрузки успешно скачан',
+      });
+    } catch (err) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка экспорта',
+        message: err instanceof Error ? err.message : 'Не удалось экспортировать закупку',
+      });
     }
   };
 
@@ -504,9 +549,7 @@ function PurchaseDetailPageContent() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => {
-                  /* TODO: Implement export */
-                }}
+                onClick={exportPurchase}
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
@@ -514,11 +557,11 @@ function PurchaseDetailPageContent() {
               </Button>
               <Button
                 onClick={createOrder}
-                disabled={purchase.items.length === 0}
+                disabled={purchase.items.length === 0 || isCreatingOrder}
                 className="flex items-center gap-2"
               >
                 <ShoppingCart className="h-4 w-4" />
-                Создать заказ
+                {isCreatingOrder ? 'Создание заказа...' : 'Создать заказ'}
               </Button>
             </div>
           </div>
