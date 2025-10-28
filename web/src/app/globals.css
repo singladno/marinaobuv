@@ -43,6 +43,61 @@
   animation: attention-pulse 2s ease-in-out infinite;
 }
 
+/* Mobile chat layout fixes */
+.mobile-chat-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: white;
+}
+
+/* Ensure proper mobile viewport handling */
+@supports (height: 100dvh) {
+  .mobile-chat-container {
+    height: 100dvh;
+  }
+}
+
+/* Android Chrome specific fixes */
+@supports (height: 100dvh) {
+  .android-chrome-chat {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}
+
+/* Safe area handling for mobile browsers */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .mobile-chat-input {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Chat overlay to prevent main page flash */
+.chat-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: white;
+  pointer-events: none; /* Allow clicks to pass through to chat */
+}
+
+/* Auto-resize textarea */
+.auto-resize-textarea {
+  resize: none;
+  overflow: hidden;
+}
+
+/* Progress bar with custom property */
+.progress-bar {
+  width: var(--progress, 0%);
+}
+
 /* Custom scrollbar styles */
 .scrollbar-thin {
   /* Webkit scrollbar styles for better cross-browser support */

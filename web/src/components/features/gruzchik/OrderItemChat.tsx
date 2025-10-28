@@ -102,8 +102,13 @@ export function OrderItemChat({ item, onClose }: OrderItemChatProps) {
     }[]
   >([]);
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isAndroidChrome, setIsAndroidChrome] = useState(false);
+  const [actualViewportHeight, setActualViewportHeight] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Use the media draft hook
   const {
@@ -122,21 +127,136 @@ export function OrderItemChat({ item, onClose }: OrderItemChatProps) {
     // Store original overflow style
     const originalOverflow = document.body.style.overflow;
     const originalPosition = document.body.style.position;
+    const originalHeight = document.body.style.height;
 
     // Lock body scroll when chat opens
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
     document.body.style.height = '100%';
+    document.body.style.top = '0';
+    document.body.style.left = '0';
 
     // Cleanup: restore scroll when chat closes
     return () => {
       document.body.style.overflow = originalOverflow;
       document.body.style.position = originalPosition;
       document.body.style.width = '';
-      document.body.style.height = '';
+      document.body.style.height = originalHeight;
+      document.body.style.top = '';
+      document.body.style.left = '';
     };
   }, []);
+
+  // Detect Android Chrome and calculate proper viewport
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isAndroid = /android/.test(userAgent);
+    const isChrome = /chrome/.test(userAgent) && !/edge/.test(userAgent);
+    const isAndroidChromeBrowser = isAndroid && isChrome;
+
+    setIsAndroidChrome(isAndroidChromeBrowser);
+
+    // Calculate actual viewport height for Android Chrome
+    const calculateViewportHeight = () => {
+      if (isAndroidChromeBrowser) {
+        // For Android Chrome, use visualViewport.height which accounts for browser UI
+        const visualHeight =
+          window.visualViewport?.height || window.innerHeight;
+        const screenHeight = window.screen.height;
+
+        // If visualViewport is significantly smaller than screen, browser UI is visible
+        if (visualHeight < screenHeight * 0.9) {
+          setActualViewportHeight(visualHeight);
+        } else {
+          // Browser UI is hidden, use full height minus safe area
+          setActualViewportHeight(window.innerHeight);
+        }
+      } else {
+        setActualViewportHeight(window.innerHeight);
+      }
+    };
+
+    calculateViewportHeight();
+
+    // Listen for viewport changes
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', calculateViewportHeight);
+    } else {
+      window.addEventListener('resize', calculateViewportHeight);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener(
+          'resize',
+          calculateViewportHeight
+        );
+      } else {
+        window.removeEventListener('resize', calculateViewportHeight);
+      }
+    };
+  }, []);
+
+  // Detect mobile keyboard open/close with actual height calculation
+  useEffect(() => {
+    let initialViewportHeight = window.innerHeight;
+
+    const handleResize = () => {
+      // Check if we're on mobile
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile) {
+        setIsKeyboardOpen(false);
+        setKeyboardHeight(0);
+        return;
+      }
+
+      // Get current viewport dimensions
+      const currentViewportHeight =
+        window.visualViewport?.height || window.innerHeight;
+      const screenHeight = window.screen.height;
+
+      // Calculate keyboard height
+      const calculatedKeyboardHeight = screenHeight - currentViewportHeight;
+
+      // Keyboard is considered open if height difference is significant
+      const keyboardThreshold = 150; // Minimum height to consider keyboard open
+      const isOpen = calculatedKeyboardHeight > keyboardThreshold;
+
+      setIsKeyboardOpen(isOpen);
+      setKeyboardHeight(isOpen ? calculatedKeyboardHeight : 0);
+
+      // Store initial height for future calculations
+      if (!isOpen) {
+        initialViewportHeight = currentViewportHeight;
+      }
+    };
+
+    // Listen for viewport changes (more reliable than resize for mobile keyboard)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
+
+  // Auto-resize textarea when content changes
+  // eslint-disable-next-line react/no-unknown-property
+  useEffect(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.max(32, textarea.scrollHeight)}px`;
+    }
+  }, [draft.text]);
 
   // Fetch messages from API
   useEffect(() => {
@@ -417,255 +537,304 @@ export function OrderItemChat({ item, onClose }: OrderItemChatProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-white">
-      {/* Header */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b bg-white p-4">
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={onClose} className="p-2">
-            <ArrowLeft className="h-10 w-10" />
-          </Button>
-          <div>
-            <h2 className="font-semibold text-gray-900">Комментарии</h2>
-            <p className="text-sm text-gray-500">
-              {item.itemName} • #{item.itemCode}
-            </p>
+    <>
+      {/* Full-screen overlay to prevent main page flash */}
+      <div
+        className="chat-overlay"
+        // eslint-disable-next-line react/no-unknown-property
+        style={{
+          height: '100vh',
+          width: '100vw',
+        }}
+      />
+
+      {/* Chat container */}
+      <div
+        className="fixed inset-0 z-50 flex w-screen flex-col overflow-hidden bg-white"
+        // eslint-disable-next-line react/no-unknown-property
+        style={{
+          height: isKeyboardOpen
+            ? `${window.visualViewport?.height || window.innerHeight}px`
+            : `${actualViewportHeight || window.innerHeight}px`,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: isKeyboardOpen ? `${keyboardHeight}px` : 0,
+        }}
+      >
+        {/* Header */}
+        <div className="flex flex-shrink-0 items-center justify-between border-b bg-white p-4">
+          <div className="flex items-center space-x-3">
+            <Button variant="ghost" size="sm" onClick={onClose} className="p-2">
+              <ArrowLeft className="h-10 w-10" />
+            </Button>
+            <div>
+              <h2 className="font-semibold text-gray-900">Комментарии</h2>
+              <p className="text-sm text-gray-500">
+                {item.itemName} • #{item.itemCode}
+              </p>
+            </div>
           </div>
+
+          {/* Admin Service Message Toggle - moved to header */}
+          {user?.role === 'ADMIN' && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="service-message-header"
+                checked={draft.isService}
+                onCheckedChange={updateIsService}
+              />
+              <label
+                htmlFor="service-message-header"
+                className="flex items-center space-x-1 text-sm font-medium text-gray-700"
+              >
+                {draft.isService && (
+                  <>
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-orange-500"></div>
+                    <span className="font-semibold text-orange-600">
+                      Служебное сообщение
+                    </span>
+                  </>
+                )}
+              </label>
+            </div>
+          )}
         </div>
 
-        {/* Admin Service Message Toggle - moved to header */}
-        {user?.role === 'ADMIN' && (
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="service-message-header"
-              checked={draft.isService}
-              onCheckedChange={updateIsService}
-            />
-            <label
-              htmlFor="service-message-header"
-              className="flex items-center space-x-1 text-sm font-medium text-gray-700"
-            >
-              {draft.isService && (
-                <>
-                  <div className="h-2 w-2 animate-pulse rounded-full bg-orange-500"></div>
-                  <span className="font-semibold text-orange-600">
-                    Служебное сообщение
-                  </span>
-                </>
-              )}
-            </label>
-          </div>
-        )}
-      </div>
+        {/* Messages */}
+        <ScrollArea
+          className="flex-1 overflow-hidden p-4"
+          // eslint-disable-next-line react/no-unknown-property
+          style={{
+            height: isKeyboardOpen
+              ? `calc(${window.visualViewport?.height || window.innerHeight}px - 200px)` // Full available height minus header and input
+              : `calc(${actualViewportHeight || window.innerHeight}px - 200px)`, // Use actual viewport height for Android Chrome
+          }}
+        >
+          {isLoadingMessages ? (
+            <ChatLoader />
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message, index) => {
+                const isCurrentUser = message.sender === 'gruzchik';
+                const showDate =
+                  index === 0 ||
+                  formatDate(message.timestamp) !==
+                    formatDate(messages[index - 1].timestamp);
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 overflow-hidden p-4">
-        {isLoadingMessages ? (
-          <ChatLoader />
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message, index) => {
-              const isCurrentUser = message.sender === 'gruzchik';
-              const showDate =
-                index === 0 ||
-                formatDate(message.timestamp) !==
-                  formatDate(messages[index - 1].timestamp);
+                return (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    isCurrentUser={isCurrentUser}
+                    showDate={showDate}
+                    onDelete={handleDeleteClick}
+                    onOpenMediaViewer={handleOpenMediaViewer}
+                    canDelete={message.sender === 'gruzchik'}
+                    isDeleting={isDeleting}
+                  />
+                );
+              })}
 
-              return (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  isCurrentUser={isCurrentUser}
-                  showDate={showDate}
-                  onDelete={handleDeleteClick}
-                  onOpenMediaViewer={handleOpenMediaViewer}
-                  canDelete={message.sender === 'gruzchik'}
-                  isDeleting={isDeleting}
-                />
-              );
-            })}
-
-            {/* Uploading Messages */}
-            {Object.entries(uploadingMessages).map(([fileId, uploadData]) => (
-              <div key={fileId} className="flex justify-end">
-                <div
-                  className={cn(
-                    'max-w-[80%] rounded-2xl p-3 text-black',
-                    draft.isService ? 'bg-orange-200' : 'bg-green-200'
-                  )}
-                >
-                  <div className="mb-1 flex items-center justify-between">
-                    <div className="flex min-w-0 flex-1 items-center space-x-2">
-                      <span className="truncate text-xs font-medium opacity-75">
-                        {user?.name || user?.phone || 'Грузчик'}
-                      </span>
-                    </div>
-                    {draft.isService && (
-                      <div className="ml-2 flex flex-shrink-0 items-center space-x-1">
-                        <div className="h-1 w-1 rounded-full bg-black/30"></div>
-                        <span className="text-xs opacity-50">Служебный</span>
-                      </div>
+              {/* Uploading Messages */}
+              {Object.entries(uploadingMessages).map(([fileId, uploadData]) => (
+                <div key={fileId} className="flex justify-end">
+                  <div
+                    className={cn(
+                      'max-w-[80%] rounded-2xl p-3 text-black',
+                      draft.isService ? 'bg-orange-200' : 'bg-green-200'
                     )}
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"></div>
-                      <span className="text-sm">
-                        Загрузка {uploadData.fileName}...
+                  >
+                    <div className="mb-1 flex items-center justify-between">
+                      <div className="flex min-w-0 flex-1 items-center space-x-2">
+                        <span className="truncate text-xs font-medium opacity-75">
+                          {user?.name || user?.phone || 'Грузчик'}
+                        </span>
+                      </div>
+                      {draft.isService && (
+                        <div className="ml-2 flex flex-shrink-0 items-center space-x-1">
+                          <div className="h-1 w-1 rounded-full bg-black/30"></div>
+                          <span className="text-xs opacity-50">Служебный</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"></div>
+                        <span className="text-sm">
+                          Загрузка {uploadData.fileName}...
+                        </span>
+                      </div>
+                      <span className="text-xs opacity-75">
+                        {uploadData.progress}%
                       </span>
                     </div>
-                    <span className="text-xs opacity-75">
-                      {uploadData.progress}%
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <div className="relative h-1 w-full overflow-hidden rounded-full bg-white/20">
-                      <div
-                        className="h-full bg-white transition-all duration-300 ease-in-out"
-                        style={{ width: `${uploadData.progress}%` }}
-                      />
+                    <div className="mt-2">
+                      <div className="relative h-1 w-full overflow-hidden rounded-full bg-white/20">
+                        <div
+                          className="progress-bar h-full bg-white transition-all duration-300 ease-in-out"
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          style={
+                            {
+                              '--progress': `${uploadData.progress}%`,
+                            } as React.CSSProperties
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </ScrollArea>
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </ScrollArea>
 
-      {/* Message Input */}
-      <div className="flex-shrink-0 border-t bg-gray-50 p-4">
-        {/* Service Message Toggle - only show for non-admin users */}
-        {user?.role !== 'ADMIN' && (
-          <div className="mb-3 flex items-center space-x-2">
-            <Switch
-              id="service-message"
-              checked={draft.isService}
-              onCheckedChange={updateIsService}
-            />
-            <label
-              htmlFor="service-message"
-              className="flex items-center space-x-1 text-sm font-medium text-gray-700"
-            >
-              {draft.isService ? (
-                <>
-                  <div className="h-2 w-2 animate-pulse rounded-full bg-orange-500"></div>
-                  <span className="font-semibold text-orange-600">
-                    Служебное сообщение
-                  </span>
-                </>
-              ) : (
-                <span>Видно клиенту</span>
+        {/* Message Input */}
+        <div
+          className={cn(
+            'flex-shrink-0 border-t bg-gray-50',
+            isKeyboardOpen ? 'p-2 pb-1' : 'p-4 pb-4', // Ensure proper padding in normal mode
+            isAndroidChrome && !isKeyboardOpen && 'mobile-chat-input' // Add safe area handling for Android Chrome
+          )}
+        >
+          {/* Service Message Toggle - only show for non-admin users */}
+          {user?.role !== 'ADMIN' && (
+            <div
+              className={cn(
+                'flex items-center space-x-2',
+                isKeyboardOpen ? 'mb-2' : 'mb-3'
               )}
-            </label>
-          </div>
-        )}
-
-        {/* Media Preview */}
-        <MediaPreview
-          mediaItems={draft.mediaItems}
-          onRemove={removeMediaItem}
-          className="border-t border-gray-100"
-        />
-
-        {/* Text Input */}
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1">
-            <Textarea
-              value={draft.text}
-              onChange={e => {
-                updateText(e.target.value);
-                // Auto-resize textarea
-                e.target.style.height = 'auto';
-                e.target.style.height =
-                  Math.max(32, e.target.scrollHeight) + 'px';
-              }}
-              placeholder="Введите сообщение..."
-              className="max-h-32 min-h-[40px] w-full resize-none pr-12"
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,video/*"
-              onChange={handleFileUpload}
-              className="hidden"
-              aria-label="Выберите файлы для отправки"
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              title="Добавить фото или видео"
             >
-              <Camera className="h-5 w-5" />
+              <Switch
+                id="service-message"
+                checked={draft.isService}
+                onCheckedChange={updateIsService}
+              />
+              <label
+                htmlFor="service-message"
+                className="flex items-center space-x-1 text-sm font-medium text-gray-700"
+              >
+                {draft.isService ? (
+                  <>
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-orange-500"></div>
+                    <span className="font-semibold text-orange-600">
+                      Служебное сообщение
+                    </span>
+                  </>
+                ) : (
+                  <span>Видно клиенту</span>
+                )}
+              </label>
+            </div>
+          )}
+
+          {/* Media Preview */}
+          <MediaPreview
+            mediaItems={draft.mediaItems}
+            onRemove={removeMediaItem}
+            className="border-t border-gray-100"
+          />
+
+          {/* Text Input */}
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-1">
+              <Textarea
+                ref={textareaRef}
+                value={draft.text}
+                onChange={e => updateText(e.target.value)}
+                placeholder="Введите сообщение..."
+                className={cn(
+                  'auto-resize-textarea w-full pr-12',
+                  isKeyboardOpen
+                    ? 'max-h-20 min-h-[32px]'
+                    : 'max-h-32 min-h-[44px]' // Increased minimum height for normal mode
+                )}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                aria-label="Выберите файлы для отправки"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                title="Добавить фото или видео"
+              >
+                <Camera className="h-5 w-5" />
+              </button>
+            </div>
+            <button
+              onClick={handleSendMessage}
+              disabled={!hasContent || isLoading}
+              className="flex h-10 w-10 items-center justify-center text-purple-500 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+              title="Отправить сообщение"
+            >
+              <Send className="h-5 w-5" />
             </button>
           </div>
-          <button
-            onClick={handleSendMessage}
-            disabled={!hasContent || isLoading}
-            className="flex h-10 w-10 items-center justify-center text-purple-500 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
-            title="Отправить сообщение"
-          >
-            <Send className="h-5 w-5" />
-          </button>
         </div>
-      </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Удалить сообщение
-              </h3>
-              <p className="mt-2 text-sm text-gray-600">
-                Вы уверены, что хотите удалить это сообщение? Это действие
-                нельзя отменить.
-              </p>
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteConfirmMessage(null)}
-                className="flex-1"
-              >
-                Отмена
-              </Button>
-              <Button
-                onClick={() => handleDeleteMessage(deleteConfirmMessage)}
-                disabled={isDeleting}
-                className="flex-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {isDeleting ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    <span>Удаление...</span>
-                  </div>
-                ) : (
-                  'Удалить'
-                )}
-              </Button>
+        {/* Delete Confirmation Modal */}
+        {deleteConfirmMessage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Удалить сообщение
+                </h3>
+                <p className="mt-2 text-sm text-gray-600">
+                  Вы уверены, что хотите удалить это сообщение? Это действие
+                  нельзя отменить.
+                </p>
+              </div>
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteConfirmMessage(null)}
+                  className="flex-1"
+                >
+                  Отмена
+                </Button>
+                <Button
+                  onClick={() => handleDeleteMessage(deleteConfirmMessage)}
+                  disabled={isDeleting}
+                  className="flex-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      <span>Удаление...</span>
+                    </div>
+                  ) : (
+                    'Удалить'
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Media Viewer Modal */}
-      {mediaViewerOpen && (
-        <MediaViewerModal
-          mediaItems={mediaViewerItems}
-          initialIndex={mediaViewerIndex}
-          onClose={() => setMediaViewerOpen(false)}
-        />
-      )}
-    </div>
+        {/* Media Viewer Modal */}
+        {mediaViewerOpen && (
+          <MediaViewerModal
+            mediaItems={mediaViewerItems}
+            initialIndex={mediaViewerIndex}
+            onClose={() => setMediaViewerOpen(false)}
+          />
+        )}
+      </div>
+    </>
   );
 }

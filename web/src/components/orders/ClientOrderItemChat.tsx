@@ -114,8 +114,13 @@ export function ClientOrderItemChat({
     }[]
   >([]);
   const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isAndroidChrome, setIsAndroidChrome] = useState(false);
+  const [actualViewportHeight, setActualViewportHeight] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Prevent duplicate network calls in React Strict Mode/dev
   const fetchedForItemRef = useRef<string | null>(null);
 
@@ -136,12 +141,15 @@ export function ClientOrderItemChat({
     // Store original overflow style
     const originalOverflow = document.body.style.overflow;
     const originalPosition = document.body.style.position;
+    const originalHeight = document.body.style.height;
 
     // Lock body scroll when chat opens
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
     document.body.style.height = '100%';
+    document.body.style.top = '0';
+    document.body.style.left = '0';
 
     // Set chat as open
     setClientChatOpen(true);
@@ -160,12 +168,124 @@ export function ClientOrderItemChat({
       document.body.style.overflow = originalOverflow;
       document.body.style.position = originalPosition;
       document.body.style.width = '';
-      document.body.style.height = '';
+      document.body.style.height = originalHeight;
+      document.body.style.top = '';
+      document.body.style.left = '';
       document.removeEventListener('keydown', handleKeyDown);
       // Set chat as closed
       setClientChatOpen(false);
     };
   }, [setClientChatOpen, onClose]);
+
+  // Detect Android Chrome and calculate proper viewport
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isAndroid = /android/.test(userAgent);
+    const isChrome = /chrome/.test(userAgent) && !/edge/.test(userAgent);
+    const isAndroidChromeBrowser = isAndroid && isChrome;
+
+    setIsAndroidChrome(isAndroidChromeBrowser);
+
+    // Calculate actual viewport height for Android Chrome
+    const calculateViewportHeight = () => {
+      if (isAndroidChromeBrowser) {
+        // For Android Chrome, use visualViewport.height which accounts for browser UI
+        const visualHeight =
+          window.visualViewport?.height || window.innerHeight;
+        const screenHeight = window.screen.height;
+
+        // If visualViewport is significantly smaller than screen, browser UI is visible
+        if (visualHeight < screenHeight * 0.9) {
+          setActualViewportHeight(visualHeight);
+        } else {
+          // Browser UI is hidden, use full height minus safe area
+          setActualViewportHeight(window.innerHeight);
+        }
+      } else {
+        setActualViewportHeight(window.innerHeight);
+      }
+    };
+
+    calculateViewportHeight();
+
+    // Listen for viewport changes
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', calculateViewportHeight);
+    } else {
+      window.addEventListener('resize', calculateViewportHeight);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener(
+          'resize',
+          calculateViewportHeight
+        );
+      } else {
+        window.removeEventListener('resize', calculateViewportHeight);
+      }
+    };
+  }, []);
+
+  // Detect mobile keyboard open/close with actual height calculation
+  useEffect(() => {
+    let initialViewportHeight = window.innerHeight;
+
+    const handleResize = () => {
+      // Check if we're on mobile
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile) {
+        setIsKeyboardOpen(false);
+        setKeyboardHeight(0);
+        return;
+      }
+
+      // Get current viewport dimensions
+      const currentViewportHeight =
+        window.visualViewport?.height || window.innerHeight;
+      const screenHeight = window.screen.height;
+
+      // Calculate keyboard height
+      const calculatedKeyboardHeight = screenHeight - currentViewportHeight;
+
+      // Keyboard is considered open if height difference is significant
+      const keyboardThreshold = 150; // Minimum height to consider keyboard open
+      const isOpen = calculatedKeyboardHeight > keyboardThreshold;
+
+      setIsKeyboardOpen(isOpen);
+      setKeyboardHeight(isOpen ? calculatedKeyboardHeight : 0);
+
+      // Store initial height for future calculations
+      if (!isOpen) {
+        initialViewportHeight = currentViewportHeight;
+      }
+    };
+
+    // Listen for viewport changes (more reliable than resize for mobile keyboard)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
+
+  // Auto-resize textarea when content changes
+  // eslint-disable-next-line react/no-unknown-property
+  useEffect(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.max(32, textarea.scrollHeight)}px`;
+    }
+  }, [draft.text]);
 
   // Fetch messages from API and mark as read
   useEffect(() => {
@@ -345,151 +465,191 @@ export function ClientOrderItemChat({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex h-screen w-screen overflow-hidden bg-black bg-opacity-50"
-      onClick={handleBackdropClick}
-      style={{ bottom: '-1px' }}
-    >
-      <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-gray-900">
-        {/* Header */}
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex items-center space-x-3">
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="sm"
-              className="h-10 w-10 p-0 text-gray-800 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-              title="Назад"
-            >
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Чат по товару
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {item.name}
-              </p>
-            </div>
-          </div>
+    <>
+      {/* Full-screen overlay to prevent main page flash */}
+      <div
+        className="chat-overlay"
+        // eslint-disable-next-line react/no-unknown-property
+        style={{
+          height: '100vh',
+          width: '100vw',
+        }}
+      />
 
-          {/* Actions */}
-          <div className="flex items-center space-x-2">
-            {orderStatus === 'Согласование' && (
-              <ItemApproveButton itemId={item.id} size="sm" variant="success" />
-            )}
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="sm"
-              className="h-10 w-10 p-0 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-              title="Закрыть чат"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-            <AdminPortalSwitcherHeader />
-          </div>
-        </div>
-
-        {/* Messages */}
-        <ScrollArea className="flex-1 overflow-hidden px-4 py-4">
-          {isLoadingMessages ? (
-            <ChatLoader />
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message, index) => {
-                const isCurrentUser = message.sender === 'client';
-                const showDate =
-                  index === 0 ||
-                  formatDate(message.timestamp) !==
-                    formatDate(messages[index - 1].timestamp);
-
-                return (
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    isCurrentUser={isCurrentUser}
-                    showDate={showDate}
-                    onOpenMediaViewer={openMediaViewer}
-                    canDelete={false}
-                  />
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </ScrollArea>
-
-        {/* Input */}
-        <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          {/* Media Preview */}
-          {draft.mediaItems.length > 0 && (
-            <div className="mb-3">
-              <MediaPreview
-                mediaItems={draft.mediaItems}
-                onRemove={removeMediaItem}
-              />
-            </div>
-          )}
-
-          {/* Text Input */}
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-1">
-              <Textarea
-                value={draft.text}
-                onChange={e => {
-                  updateText(e.target.value);
-                  // Auto-resize textarea
-                  e.target.style.height = 'auto';
-                  e.target.style.height =
-                    Math.max(40, e.target.scrollHeight) + 'px';
-                }}
-                placeholder="Введите сообщение..."
-                className="max-h-32 min-h-[40px] w-full resize-none pr-12 text-base"
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-              />
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                onChange={handleFileSelect}
-                className="hidden"
-                aria-label="Выберите файлы для отправки"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                title="Добавить фото или видео"
+      {/* Chat container */}
+      <div
+        className="fixed inset-0 z-[100] flex w-screen overflow-hidden bg-black bg-opacity-50"
+        onClick={handleBackdropClick}
+        // eslint-disable-next-line react/no-unknown-property
+        style={{
+          height: isKeyboardOpen
+            ? `${window.visualViewport?.height || window.innerHeight}px`
+            : `${actualViewportHeight || window.innerHeight}px`,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: isKeyboardOpen ? `${keyboardHeight}px` : '-1px',
+        }}
+      >
+        <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-gray-900">
+          {/* Header */}
+          <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                size="sm"
+                className="h-10 w-10 p-0 text-gray-800 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+                title="Назад"
               >
-                <Camera className="h-5 w-5" />
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Чат по товару
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {item.name}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-2">
+              {orderStatus === 'Согласование' && (
+                <ItemApproveButton
+                  itemId={item.id}
+                  size="sm"
+                  variant="success"
+                />
+              )}
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                size="sm"
+                className="h-10 w-10 p-0 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                title="Закрыть чат"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+              <AdminPortalSwitcherHeader />
+            </div>
+          </div>
+
+          {/* Messages */}
+          <ScrollArea
+            className="flex-1 overflow-hidden px-4 py-4"
+            // eslint-disable-next-line react/no-unknown-property
+            style={{
+              height: isKeyboardOpen
+                ? `calc(${window.visualViewport?.height || window.innerHeight}px - 200px)` // Full available height minus header and input
+                : `calc(${actualViewportHeight || window.innerHeight}px - 200px)`, // Use actual viewport height for Android Chrome
+            }}
+          >
+            {isLoadingMessages ? (
+              <ChatLoader />
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message, index) => {
+                  const isCurrentUser = message.sender === 'client';
+                  const showDate =
+                    index === 0 ||
+                    formatDate(message.timestamp) !==
+                      formatDate(messages[index - 1].timestamp);
+
+                  return (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      isCurrentUser={isCurrentUser}
+                      showDate={showDate}
+                      onOpenMediaViewer={openMediaViewer}
+                      canDelete={false}
+                    />
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </ScrollArea>
+
+          {/* Input */}
+          <div
+            className={cn(
+              'flex-shrink-0 border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800',
+              isKeyboardOpen ? 'p-2 pb-1' : 'p-4 pb-4', // Ensure proper padding in normal mode
+              isAndroidChrome && !isKeyboardOpen && 'mobile-chat-input' // Add safe area handling for Android Chrome
+            )}
+          >
+            {/* Media Preview */}
+            {draft.mediaItems.length > 0 && (
+              <div className="mb-3">
+                <MediaPreview
+                  mediaItems={draft.mediaItems}
+                  onRemove={removeMediaItem}
+                />
+              </div>
+            )}
+
+            {/* Text Input */}
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Textarea
+                  ref={textareaRef}
+                  value={draft.text}
+                  onChange={e => updateText(e.target.value)}
+                  placeholder="Введите сообщение..."
+                  className={cn(
+                    'auto-resize-textarea w-full pr-12 text-base',
+                    isKeyboardOpen
+                      ? 'max-h-20 min-h-[32px]'
+                      : 'max-h-32 min-h-[44px]' // Increased minimum height for normal mode
+                  )}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  aria-label="Выберите файлы для отправки"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  title="Добавить фото или видео"
+                >
+                  <Camera className="h-5 w-5" />
+                </button>
+              </div>
+              <button
+                onClick={handleSendMessage}
+                disabled={!hasContent || isLoading}
+                className="flex h-10 w-10 items-center justify-center text-purple-500 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Отправить сообщение"
+              >
+                <Send className="h-5 w-5" />
               </button>
             </div>
-            <button
-              onClick={handleSendMessage}
-              disabled={!hasContent || isLoading}
-              className="flex h-10 w-10 items-center justify-center text-purple-500 hover:text-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
-              title="Отправить сообщение"
-            >
-              <Send className="h-5 w-5" />
-            </button>
           </div>
         </div>
-      </div>
 
-      {/* Media Viewer Modal */}
-      {mediaViewerOpen && (
-        <MediaViewerModal
-          onClose={() => setMediaViewerOpen(false)}
-          mediaItems={mediaViewerItems}
-          initialIndex={mediaViewerIndex}
-        />
-      )}
-    </div>
+        {/* Media Viewer Modal */}
+        {mediaViewerOpen && (
+          <MediaViewerModal
+            onClose={() => setMediaViewerOpen(false)}
+            mediaItems={mediaViewerItems}
+            initialIndex={mediaViewerIndex}
+          />
+        )}
+      </div>
+    </>
   );
 }
