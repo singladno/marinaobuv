@@ -534,51 +534,58 @@ jobs:
             echo "🔧 Exporting environment for PM2 runtime..."
             export $(cat web/.env | grep -v '^#' | xargs)
 
-            # Clean up PM2 state before starting
-            echo "🧹 Cleaning up PM2 state..."
-            pm2 kill 2>/dev/null || true
-            sleep 2
-
-            # Start PM2 application with updated env
-            echo "🚀 Starting PM2 applications..."
-            pm2 start ecosystem.config.js --env production
-            if [ $? -ne 0 ]; then
-              echo "PM2 start failed!"
-              pm2 logs marinaobuv --lines 50
-              exit 1
+            # Use Blue-Green Zero-Downtime Deployment
+            echo "🚀 Starting Blue-Green Zero-Downtime Deployment..."
+            if [ -f "scripts/blue-green-deploy.sh" ]; then
+              chmod +x scripts/blue-green-deploy.sh
+              if ./scripts/blue-green-deploy.sh; then
+                echo "✅ Blue-Green deployment completed successfully!"
+              else
+                echo "❌ Blue-Green deployment failed!"
+                pm2 logs --lines 50
+                exit 1
+              fi
+            else
+              echo "❌ Blue-Green deployment script not found!"
+              echo "Falling back to traditional deployment..."
+              
+              # Fallback to traditional deployment
+              pm2 kill 2>/dev/null || true
+              sleep 2
+              pm2 start ecosystem.config.js --env production
+              if [ $? -ne 0 ]; then
+                echo "PM2 start failed!"
+                pm2 logs marinaobuv --lines 50
+                exit 1
+              fi
+              
+              # Wait for application to start
+              echo "Waiting for application to start..."
+              sleep 15
+              
+              # Health check with retries
+              for i in {1..5}; do
+                echo "Health check attempt $i/5..."
+                if curl -f http://localhost:3000/api/health; then
+                  echo "Health check passed!"
+                  break
+                else
+                  echo "Health check failed, attempt $i/5"
+                  if [ $i -eq 5 ]; then
+                    echo "Health check failed after 5 attempts"
+                    pm2 logs marinaobuv --lines 50
+                    exit 1
+                  fi
+                  sleep 5
+                fi
+              done
             fi
-
-            # Deploy proxy server to serverspace (separate server)
-            echo "🌐 Deploying proxy server to serverspace..."
-            echo "📋 Note: Proxy server runs on separate serverspace server (31.44.2.216)"
-            echo "✅ Main application server deployment complete"
 
             # Save PM2 configuration
             pm2 save
 
             # Show status
             pm2 status
-
-            # Wait for application to start
-            echo "Waiting for application to start..."
-            sleep 15
-
-            # Health check with retries
-            for i in {1..5}; do
-              echo "Health check attempt $i/5..."
-              if curl -f http://localhost:3000/api/health; then
-                echo "Health check passed!"
-                break
-              else
-                echo "Health check failed, attempt $i/5"
-                if [ $i -eq 5 ]; then
-                  echo "Health check failed after 5 attempts"
-                  pm2 logs marinaobuv --lines 50
-                  exit 1
-                fi
-                sleep 5
-              fi
-            done
 
             # Database connectivity health check
             echo "🔍 Testing database connectivity..."

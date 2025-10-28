@@ -17,7 +17,7 @@
     "monitor": "pm2 monit",
     "setup": "npm install && cd web && npm install",
     "deploy": "./deploy-pm2.sh",
-    "deploy:fast": "./scripts/fast-deploy.sh",
+    "deploy:blue-green": "./scripts/blue-green-deploy.sh",
     "deploy:full": "./deploy-pm2.sh",
     "deploy:local": "./scripts/local-deploy.sh",
     "setup:local": "./scripts/setup-local-env.sh",
