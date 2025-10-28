@@ -14,9 +14,6 @@ interface OrdersTableContentProps {
   gruzchiks: Gruzchik[];
   loading?: boolean;
   error?: string | null;
-  selected: Record<string, boolean>;
-  onToggle: (id: string) => void;
-  onSelectAll: (selectAll: boolean) => void;
   onPatch: (id: string, patch: Partial<AdminOrder>) => Promise<void>;
 }
 
@@ -25,9 +22,6 @@ export function OrdersTableContent({
   gruzchiks,
   loading,
   error,
-  selected,
-  onToggle,
-  onSelectAll,
   onPatch,
 }: OrdersTableContentProps) {
   const gruzchikById = React.useMemo(() => {
@@ -54,34 +48,20 @@ export function OrdersTableContent({
     return <OrdersEmptyState />;
   }
 
-  const allSelected =
-    orders.length > 0 && orders.every(order => selected[order.id]);
-  const someSelected = Object.values(selected).some(Boolean);
-
   return (
     <div className="h-full overflow-auto transition-opacity duration-200 ease-in-out">
       <table className="w-full border-collapse">
         {/* Header */}
         <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
           <tr>
-            <th className="sticky left-0 z-30 border-b border-r border-gray-200 bg-gray-50 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={input => {
-                  if (input) input.indeterminate = someSelected && !allSelected;
-                }}
-                onChange={e => onSelectAll(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                title="Выбрать все"
-                aria-label="Выбрать все заказы"
-              />
-            </th>
             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
               Дата
             </th>
             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
               №
+            </th>
+            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              Пользователь
             </th>
             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
               Сообщения
@@ -97,9 +77,6 @@ export function OrdersTableContent({
             </th>
             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
               Статус
-            </th>
-            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-              Пользователь
             </th>
             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
               Грузчик
@@ -118,8 +95,6 @@ export function OrdersTableContent({
               order={order}
               gruzchikById={gruzchikById}
               gruzchiks={gruzchiks}
-              isSelected={selected[order.id] || false}
-              onToggle={onToggle}
               onPatch={onPatch}
             />
           ))}

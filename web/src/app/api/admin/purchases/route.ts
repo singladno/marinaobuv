@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
     const purchases = await prisma.purchase.findMany({
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching purchases:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch purchases' },
+      { error: 'Ошибка при получении закупок' },
       { status: 500 }
     );
   }
@@ -51,13 +51,16 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
     const { name } = await request.json();
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Требуется название' },
+        { status: 400 }
+      );
     }
 
     const purchase = await prisma.purchase.create({
@@ -77,7 +80,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating purchase:', error);
     return NextResponse.json(
-      { error: 'Failed to create purchase' },
+      { error: 'Ошибка при создании закупки' },
       { status: 500 }
     );
   }

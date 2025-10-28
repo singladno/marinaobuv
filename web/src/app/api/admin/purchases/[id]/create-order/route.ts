@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { generateOrderNumber } from '@/lib/order-number-generator';
 
 export async function POST(
   request: NextRequest,
@@ -48,8 +49,7 @@ export async function POST(
     }
 
     // Generate order number
-    const orderCount = await prisma.order.count();
-    const orderNumber = `ORD-${String(orderCount + 1).padStart(6, '0')}`;
+    const orderNumber = await generateOrderNumber();
 
     // Calculate totals
     const subtotal = purchase.items.reduce(

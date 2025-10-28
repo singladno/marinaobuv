@@ -257,7 +257,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch catalog' },
+      { error: 'Ошибка при получении каталога' },
       { status: 500 }
     );
   }

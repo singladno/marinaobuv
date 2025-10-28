@@ -18,7 +18,7 @@ export async function PATCH(
     // Validate required fields
     if (!newPassword) {
       return NextResponse.json(
-        { error: 'New password is required' },
+        { error: 'Требуется новый пароль' },
         { status: 400 }
       );
     }
@@ -37,7 +37,10 @@ export async function PATCH(
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Пользователь не найден' },
+        { status: 404 }
+      );
     }
 
     // Hash the new password
@@ -53,7 +56,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating user password:', error);
     return NextResponse.json(
-      { error: 'Failed to update user password' },
+      { error: 'Ошибка при обновлении пароля пользователя' },
       { status: 500 }
     );
   }

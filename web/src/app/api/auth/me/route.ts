@@ -27,7 +27,10 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     console.log('❌ User not found in database with ID:', auth.user.id);
-    return NextResponse.json({ error: 'User not found' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Пользователь не найден' },
+      { status: 401 }
+    );
   }
 
   return NextResponse.json({

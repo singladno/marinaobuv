@@ -26,7 +26,7 @@ export function flattenOrdersToItems(
         itemId: item.id,
         productId: item.productId,
         itemName: item.name,
-        itemArticle: item.article,
+        itemArticle: item.product.article,
         itemQty: item.qty,
         itemPrice: item.priceBox,
         itemCode: item.itemCode,

@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
 
     if (!path) {
       return NextResponse.json(
-        { ok: false, error: 'Path parameter is required' },
+        { ok: false, error: 'Требуется параметр пути' },
         { status: 400 }
       );
     }
@@ -448,7 +448,7 @@ export async function GET(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { ok: false, error: 'Category not found' },
+        { ok: false, error: 'Категория не найдена' },
         { status: 404 }
       );
     }

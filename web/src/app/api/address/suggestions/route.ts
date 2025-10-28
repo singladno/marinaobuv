@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
 
     if (!query || typeof query !== 'string') {
       return NextResponse.json(
-        { success: false, error: 'Query parameter is required' },
+        { success: false, error: 'Требуется параметр запроса' },
         { status: 400 }
       );
     }
@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Internal server error',
+        error:
+          error instanceof Error ? error.message : 'Внутренняя ошибка сервера',
       },
       { status: 500 }
     );

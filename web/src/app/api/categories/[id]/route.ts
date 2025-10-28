@@ -21,7 +21,7 @@ export async function GET(
 
     if (!category) {
       return NextResponse.json(
-        { ok: false, error: 'Category not found' },
+        { ok: false, error: 'Категория не найдена' },
         { status: 404 }
       );
     }

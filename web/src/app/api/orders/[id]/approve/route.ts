@@ -24,7 +24,7 @@ export async function POST(
 
     if (!order) {
       return NextResponse.json(
-        { error: 'Order not found or not in approval status' },
+        { error: 'Заказ не найден или не находится в статусе согласования' },
         { status: 404 }
       );
     }

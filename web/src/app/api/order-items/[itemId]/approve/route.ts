@@ -29,7 +29,7 @@ export async function POST(
 
     if (!orderItem) {
       return NextResponse.json(
-        { error: 'Order item not found or not in approval status' },
+        { error: 'Товар не найден или не находится в статусе согласования' },
         { status: 404 }
       );
     }
@@ -46,12 +46,12 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Item approved successfully',
+      message: 'Товар успешно одобрен',
     });
   } catch (error) {
     console.error('Failed to approve item:', error);
     return NextResponse.json(
-      { error: 'Failed to approve item' },
+      { error: 'Ошибка при одобрении товара' },
       { status: 500 }
     );
   }

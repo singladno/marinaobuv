@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Product ID is required' },
+        { error: 'Требуется ID товара' },
         { status: 400 }
       );
     }
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const product = await getProductById(id);
 
     if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Товар не найден' }, { status: 404 });
     }
 
     return NextResponse.json({ product });
@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Product ID is required' },
+        { error: 'Требуется ID товара' },
         { status: 400 }
       );
     }
@@ -103,7 +103,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     if (!updatedProduct) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Товар не найден' }, { status: 404 });
     }
 
     return NextResponse.json({ product: updatedProduct });
@@ -127,7 +127,7 @@ export async function DELETE(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Product ID is required' },
+        { error: 'Требуется ID товара' },
         { status: 400 }
       );
     }

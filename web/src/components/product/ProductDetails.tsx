@@ -25,6 +25,7 @@ type Props = {
   sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
   sourceMessageIds?: string[] | null;
   imageUrl?: string; // Primary image URL for cart animations
+  isActive: boolean;
 };
 
 export default function ProductDetails(props: Props) {
@@ -40,6 +41,7 @@ export default function ProductDetails(props: Props) {
     season,
     sizes,
     sourceMessageIds,
+    isActive,
   } = props;
 
   const { add } = useCart();
@@ -103,6 +105,7 @@ export default function ProductDetails(props: Props) {
         productSlug={slug}
         productName={name}
         productImageUrl={props.imageUrl || undefined}
+        isActive={isActive}
       />
       <Separator />
       <ProductFeatures

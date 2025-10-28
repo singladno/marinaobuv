@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useUser } from '@/contexts/NextAuthUserContext';
 import { ProductSourceModal } from './ProductSourceModal';
+import { UnavailableProductOverlay } from './UnavailableProductOverlay';
 
 interface ProductGalleryProps {
   images: Array<{ url: string; alt?: string }>;
@@ -16,6 +17,7 @@ interface ProductGalleryProps {
   height?: number; // px height for main image container
   productId?: string;
   sourceMessageIds?: string[] | null;
+  isActive: boolean;
 }
 
 export default function ProductGalleryVertical({
@@ -24,6 +26,7 @@ export default function ProductGalleryVertical({
   height = 560,
   productId,
   sourceMessageIds,
+  isActive,
 }: ProductGalleryProps) {
   const { user } = useUser();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -95,6 +98,9 @@ export default function ProductGalleryVertical({
             className="object-contain"
             priority
           />
+
+          {/* Unavailable overlay */}
+          {!isActive && <UnavailableProductOverlay />}
         </div>
 
         {/* Source Chip - shows on hover, only for admin users */}

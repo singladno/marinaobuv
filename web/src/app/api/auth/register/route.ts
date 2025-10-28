@@ -16,16 +16,13 @@ export async function POST(req: NextRequest) {
 
     if (!email || !phone) {
       return NextResponse.json(
-        { error: 'Email and phone are both required' },
+        { error: 'Требуются email и номер телефона' },
         { status: 400 }
       );
     }
 
     if (!password) {
-      return NextResponse.json(
-        { error: 'Password is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Требуется пароль' }, { status: 400 });
     }
 
     // Check if user already exists
@@ -37,7 +34,10 @@ export async function POST(req: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User already exists with this email or phone' },
+        {
+          error:
+            'Пользователь с таким email или номером телефона уже существует',
+        },
         { status: 400 }
       );
     }
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Внутренняя ошибка сервера' },
       { status: 500 }
     );
   }

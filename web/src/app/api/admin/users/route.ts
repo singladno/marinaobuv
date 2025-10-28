@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch users' },
+      { error: 'Ошибка при получении пользователей' },
       { status: 500 }
     );
   }
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // Validate required fields - either phone or email must be provided
     if (!role || !password) {
       return NextResponse.json(
-        { error: 'Role and password are required' },
+        { error: 'Требуются роль и пароль' },
         { status: 400 }
       );
     }
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(
-      { error: 'Failed to create user' },
+      { error: 'Ошибка при создании пользователя' },
       { status: 500 }
     );
   }

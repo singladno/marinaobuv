@@ -30,7 +30,15 @@ export async function GET(req: NextRequest) {
               },
             },
           },
-          user: { select: { id: true, phone: true, name: true, label: true } },
+          user: {
+            select: {
+              id: true,
+              phone: true,
+              name: true,
+              email: true,
+              label: true,
+            },
+          },
           gruzchik: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -84,7 +92,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ orders: ordersWithUnreadCount, gruzchiks });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Unexpected error';
+    const message = e instanceof Error ? e.message : 'Неожиданная ошибка';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -109,7 +117,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (!id)
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Требуется ID' }, { status: 400 });
 
     // Get the order to find the user and current status
     const order = await prisma.order.findUnique({
@@ -125,7 +133,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
     }
 
     // Validate availability when status is set to "Согласование"
@@ -197,7 +205,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, order: updated });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Unexpected error';
+    const message = e instanceof Error ? e.message : 'Неожиданная ошибка';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

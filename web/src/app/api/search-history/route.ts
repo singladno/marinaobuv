@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ searchHistory });
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch search history' },
+      { error: 'Ошибка при получении истории поиска' },
       { status: 500 }
     );
   }
@@ -78,7 +78,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to delete search history' },
+      { error: 'Ошибка при удалении истории поиска' },
       { status: 500 }
     );
   }

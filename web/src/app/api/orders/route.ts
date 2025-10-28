@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching orders:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Внутренняя ошибка сервера' },
       { status: 500 }
     );
   }
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       (!transportOptions || transportOptions.length === 0)
     ) {
       return NextResponse.json(
-        { error: 'Transport company or transport options are required' },
+        { error: 'Требуется транспортная компания или варианты транспорта' },
         { status: 400 }
       );
     }

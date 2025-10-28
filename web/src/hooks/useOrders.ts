@@ -29,6 +29,7 @@ export type AdminOrder = {
     id: string;
     name: string | null;
     phone: string | null;
+    email: string | null;
     label: string | null;
   } | null;
   items: AdminOrderItem[];

@@ -20,8 +20,6 @@ export async function PATCH(
     const updatedItem = await prisma.orderItem.update({
       where: { id: itemId },
       data: {
-        // Assuming you have an isAvailable field in your OrderItem model
-        // If not, you might need to add it to your Prisma schema
         isAvailable,
       },
       include: {
@@ -33,6 +31,35 @@ export async function PATCH(
         },
       },
     });
+
+    // Handle product activation/deactivation based on availability
+    if (isAvailable === false) {
+      // Deactivate the product when availability is set to false
+      await prisma.product.update({
+        where: { id: updatedItem.productId },
+        data: {
+          isActive: false,
+          activeUpdatedAt: new Date(),
+        },
+      });
+
+      console.log(
+        `Product ${updatedItem.productId} deactivated due to availability set to false for order item ${itemId}`
+      );
+    } else if (isAvailable === true) {
+      // Activate the product when availability is set to true
+      await prisma.product.update({
+        where: { id: updatedItem.productId },
+        data: {
+          isActive: true,
+          activeUpdatedAt: new Date(),
+        },
+      });
+
+      console.log(
+        `Product ${updatedItem.productId} activated due to availability set to true for order item ${itemId}`
+      );
+    }
 
     return NextResponse.json({
       success: true,

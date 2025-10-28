@@ -18,8 +18,6 @@ interface OrdersTableRowProps {
   order: AdminOrder;
   gruzchikById: Map<string, string>;
   gruzchiks?: { id: string; name: string | null; phone: string | null }[];
-  isSelected: boolean;
-  onToggle: (id: string) => void;
   onPatch: (id: string, patch: Partial<AdminOrder>) => Promise<void>;
 }
 
@@ -27,8 +25,6 @@ export function OrdersTableRow({
   order,
   gruzchikById,
   gruzchiks,
-  isSelected,
-  onToggle,
   onPatch,
 }: OrdersTableRowProps) {
   const router = useRouter();
@@ -66,19 +62,7 @@ export function OrdersTableRow({
   };
 
   return (
-    <tr
-      className={`cursor-pointer hover:bg-gray-50 ${isSelected ? 'bg-violet-50' : ''}`}
-      onClick={handleRowClick}
-    >
-      <td className="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggle(order.id)}
-          aria-label="Выбрать заказ"
-          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-      </td>
+    <tr className="cursor-pointer hover:bg-gray-50" onClick={handleRowClick}>
       {/* Дата */}
       <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500">
         {formatDate(order.createdAt)}
@@ -86,6 +70,24 @@ export function OrdersTableRow({
       {/* № */}
       <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-900">
         {formatOrderNumber(order.orderNumber) || `#${order.id.slice(-8)}`}
+      </td>
+      {/* Пользователь */}
+      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-900">
+        <div className="space-y-1">
+          {order.user?.name && (
+            <div className="font-medium text-gray-900 dark:text-white">
+              {order.user.name}
+            </div>
+          )}
+          {order.user?.email && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {order.user.email}
+            </div>
+          )}
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {order.phone || '—'}
+          </div>
+        </div>
       </td>
       {/* Сообщения */}
       <td className="whitespace-nowrap px-4 py-4">
@@ -116,10 +118,6 @@ export function OrdersTableRow({
             onPatch(order.id, { status: newStatus })
           }
         />
-      </td>
-      {/* Пользователь */}
-      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-900">
-        {order.phone || '—'}
       </td>
       {/* Грузчик */}
       <td className="whitespace-nowrap px-4 py-4">

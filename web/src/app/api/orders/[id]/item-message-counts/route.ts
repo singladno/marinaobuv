@@ -29,7 +29,7 @@ export async function GET(
     });
 
     if (!order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
     }
 
     const itemIds = order.items.map(item => item.id);

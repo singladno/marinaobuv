@@ -89,6 +89,7 @@ export async function GET(
             id: true,
             phone: true,
             name: true,
+            email: true,
             label: true,
           },
         },
@@ -102,12 +103,12 @@ export async function GET(
     });
 
     if (!order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
     }
 
     return NextResponse.json({ order });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Unexpected error';
+    const message = e instanceof Error ? e.message : 'Неожиданная ошибка';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

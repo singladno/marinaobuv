@@ -26,7 +26,7 @@ export async function POST(
 
     if (!orderItem) {
       return NextResponse.json(
-        { error: 'Order item not found' },
+        { error: 'Товар заказа не найден' },
         { status: 404 }
       );
     }

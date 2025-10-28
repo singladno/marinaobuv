@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     if (!orderId) {
       return NextResponse.json(
-        { error: 'Order ID is required' },
+        { error: 'Требуется ID заказа' },
         { status: 400 }
       );
     }
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     if (!order) {
       return NextResponse.json(
-        { error: 'Order not found or not assigned to you' },
+        { error: 'Заказ не найден или не назначен вам' },
         { status: 404 }
       );
     }

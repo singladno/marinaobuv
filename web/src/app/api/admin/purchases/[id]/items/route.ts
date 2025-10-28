@@ -12,14 +12,14 @@ export async function POST(
     const session = await getServerSession(authOptions);
 
     if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
     const { productId } = await request.json();
 
     if (!productId) {
       return NextResponse.json(
-        { error: 'Product ID is required' },
+        { error: 'Требуется ID товара' },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function POST(
 
     if (!purchase) {
       return NextResponse.json(
-        { error: 'Purchase not found' },
+        { error: 'Закупка не найдена' },
         { status: 404 }
       );
     }
@@ -69,7 +69,7 @@ export async function POST(
     });
 
     if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Товар не найден' }, { status: 404 });
     }
 
     // Get the next sort index

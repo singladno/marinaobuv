@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Order ID is required' },
+        { error: 'Требуется ID заказа' },
         { status: 400 }
       );
     }

@@ -30,6 +30,7 @@ export default async function ProductPage({
       availabilityCheckedAt: true,
       sizes: true,
       sourceMessageIds: true,
+      isActive: true,
       images: {
         orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
       },
@@ -98,6 +99,7 @@ export default async function ProductPage({
                   ? (product.sourceMessageIds as string[])
                   : null
               }
+              isActive={product.isActive}
             />
           </div>
 
@@ -125,6 +127,7 @@ export default async function ProductPage({
                   : null
               }
               imageUrl={images[0]?.url}
+              isActive={product.isActive}
             />
           </div>
         </div>
