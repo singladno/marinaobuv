@@ -16,8 +16,20 @@ load_env() {
             if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
                 continue
             fi
-            # Export the variable (this handles quotes correctly)
-            export "$line"
+            
+            # Extract key and value, handling quotes properly
+            if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+                local key="${BASH_REMATCH[1]}"
+                local value="${BASH_REMATCH[2]}"
+                
+                # Remove surrounding quotes if they exist and match
+                if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
+                    value="${BASH_REMATCH[1]}"
+                fi
+                
+                # Export the variable
+                export "$key=$value"
+            fi
         done < "$env_file"
         set +a  # turn off automatic export
     else
