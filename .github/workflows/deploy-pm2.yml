@@ -278,8 +278,8 @@ jobs:
                 
                 # Extract key and value, handling quotes properly
                 if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
-                    local key="${BASH_REMATCH[1]}"
-                    local value="${BASH_REMATCH[2]}"
+                    key="${BASH_REMATCH[1]}"
+                    value="${BASH_REMATCH[2]}"
                     
                     # Remove surrounding quotes if they exist and match
                     if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
@@ -287,7 +287,7 @@ jobs:
                     fi
                     
                     # Export the variable
-                    export "$key=$value"
+                    export "$key"="$value"
                 fi
             done < web/.env
             set +a  # turn off automatic export
@@ -553,8 +553,8 @@ jobs:
                 
                 # Extract key and value, handling quotes properly
                 if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
-                    local key="${BASH_REMATCH[1]}"
-                    local value="${BASH_REMATCH[2]}"
+                    key="${BASH_REMATCH[1]}"
+                    value="${BASH_REMATCH[2]}"
                     
                     # Remove surrounding quotes if they exist and match
                     if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
@@ -562,7 +562,7 @@ jobs:
                     fi
                     
                     # Export the variable
-                    export "$key=$value"
+                    export "$key"="$value"
                 fi
             done < web/.env
             set +a  # turn off automatic export
