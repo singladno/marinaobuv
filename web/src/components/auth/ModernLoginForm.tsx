@@ -118,8 +118,8 @@ export function ModernLoginForm({ onSuccess }: ModernLoginFormProps) {
         </div>
 
         {error && (
-          <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-            <Text className="text-sm text-red-600 dark:text-red-400">
+          <div className="rounded-md bg-purple-50 p-3 dark:bg-purple-900/20">
+            <Text className="text-sm text-purple-600 dark:text-purple-400">
               {error}
             </Text>
           </div>

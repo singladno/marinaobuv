@@ -52,13 +52,6 @@ export function ChatButtonWithIndicator({
           {unreadCount > 99 ? '99+' : unreadCount}
         </div>
       )}
-
-      {/* Show total message count for clients */}
-      {user?.role === 'CLIENT' && unreadCount === 0 && (
-        <div className="absolute -top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">
-          <MessageSquare className="h-3 w-3" />
-        </div>
-      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import ColorFilter from '@/components/product/filters/ColorFilter';
 import PriceControl from '@/components/product/filters/PriceControl';
@@ -24,6 +24,8 @@ type TopFiltersBarBackendProps = {
   filters: CatalogFilters;
   onChange?: (filters: Partial<CatalogFilters>) => void;
   onClear?: () => void;
+  // The base category id from the current page context; used to revert when subcategory is cleared
+  baseCategoryId?: string;
   subcategories?: Array<{
     id: string;
     name: string;
@@ -59,6 +61,7 @@ export default function TopFiltersBarBackend({
   filters,
   onChange,
   onClear,
+  baseCategoryId,
   subcategories,
   siblingCategories,
   parentChildren,
@@ -66,15 +69,25 @@ export default function TopFiltersBarBackend({
   currentPath,
   currentCategoryName,
 }: TopFiltersBarBackendProps) {
+  // State for selected subcategories
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>(
+    []
+  );
+
   const hasActive = useMemo(() => {
-    return (
-      filters.categoryId.length > 0 ||
+    // Check if there are any user-applied filters (excluding the base category context)
+    const hasUserAppliedFilters =
       (filters.minPrice !== undefined && filters.minPrice > 0) ||
       (filters.maxPrice !== undefined && filters.maxPrice < 100000) ||
       filters.colors.length > 0 ||
-      filters.inStock
-    );
-  }, [filters]);
+      filters.inStock ||
+      filters.search.length > 0;
+
+    // Also check if there are selected subcategories that differ from the current path
+    const hasSubcategorySelection = selectedSubcategories.length > 0;
+
+    return hasUserAppliedFilters || hasSubcategorySelection;
+  }, [filters, selectedSubcategories]);
 
   // Convert backend filters to frontend format
   const frontendFilters = useMemo(
@@ -141,18 +154,28 @@ export default function TopFiltersBarBackend({
       {/* Category Filter Control - Subcategories */}
       {subcategories && subcategories.length > 0 && (
         <CategoryFilterControl
-          selectedCategories={[]} // Don't show current category as selected
+          selectedCategories={selectedSubcategories}
           categories={subcategories}
           onSelectionChange={categoryIds => {
+            console.log(
+              '🔍 TopFiltersBarBackend: Selection changed to:',
+              categoryIds
+            );
+            setSelectedSubcategories(categoryIds);
             if (onChange) {
               onChange({
-                categoryId: categoryIds.length > 0 ? categoryIds[0] : '',
+                categoryId:
+                  categoryIds.length > 0
+                    ? categoryIds[0]
+                    : baseCategoryId || '',
               });
             }
           }}
           onClear={() => {
+            console.log('🔍 TopFiltersBarBackend: Clearing selection');
+            setSelectedSubcategories([]);
             if (onChange) {
-              onChange({ categoryId: '' });
+              onChange({ categoryId: baseCategoryId || '' });
             }
           }}
         />
@@ -168,6 +191,7 @@ export default function TopFiltersBarBackend({
       <ColorFilter
         value={frontendFilters.colors}
         onChange={colors => handleFiltersChange({ colors })}
+        categoryId={filters.categoryId}
       />
 
       {/* Clear button */}

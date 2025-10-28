@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       address,
       comment,
       transportCompanyId,
+      transportOptions,
       customerInfo,
     } = body;
 
@@ -68,11 +69,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate required transport company id
+    // Validate required transport company id or transport options
     const transportValidation = validateTransportCompanyId(transportCompanyId);
-    if (!transportValidation.isValid) {
+    if (
+      !transportValidation.isValid &&
+      (!transportOptions || transportOptions.length === 0)
+    ) {
       return NextResponse.json(
-        { error: transportValidation.error },
+        { error: 'Transport company or transport options are required' },
         { status: 400 }
       );
     }
@@ -86,7 +90,8 @@ export async function POST(request: NextRequest) {
         address: address ?? customerInfo?.address,
         comment: comment ?? customerInfo?.comment,
       },
-      String(transportCompanyId)
+      String(transportCompanyId),
+      transportOptions
     );
 
     return NextResponse.json({

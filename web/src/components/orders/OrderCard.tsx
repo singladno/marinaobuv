@@ -8,6 +8,7 @@ import { OrderCustomer } from './OrderCustomer';
 import { OrderHeader } from './OrderHeader';
 import { OrderItems } from './OrderItems';
 import { OrderSummary } from './OrderSummary';
+import { TransportOptions } from './TransportOptions';
 
 interface OrderItem {
   id: string;
@@ -46,6 +47,12 @@ interface Order {
   total: number;
   createdAt: string;
   items: OrderItem[];
+  transportOptions?: Array<{
+    id: string;
+    transportId: string;
+    transportName: string;
+    isSelected: boolean;
+  }>;
 }
 
 interface OrderCardProps {
@@ -87,6 +94,8 @@ export function OrderCard({ order }: OrderCardProps) {
         <Card className="p-6">
           <div className="space-y-4">
             <OrderHeader order={order} />
+
+            <TransportOptions transportOptions={order.transportOptions} />
 
             <div>
               <h4 className="mb-2 text-sm font-medium text-gray-900">Товары</h4>

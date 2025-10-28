@@ -166,7 +166,7 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
       {message && (
         <>
           <svg
-            className="h-3 w-3 text-red-500"
+            className="h-3 w-3 text-purple-500"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -176,7 +176,7 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
               clipRule="evenodd"
             />
           </svg>
-          <Text className="text-xs text-red-600 dark:text-red-400">
+          <Text className="text-xs text-purple-600 dark:text-purple-400">
             {message}
           </Text>
         </>
@@ -199,7 +199,7 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
             value={formData.name}
             onChange={e => handleInputChange('name', e.target.value)}
             disabled={isLoading}
-            className={`w-full ${fieldErrors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+            className={`w-full ${fieldErrors.name ? 'border-purple-500 focus:border-purple-500 focus:ring-purple-500' : ''}`}
           />
           <ErrorMessage message={fieldErrors.name || ''} />
         </div>
@@ -215,7 +215,7 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
             value={formData.email}
             onChange={e => handleInputChange('email', e.target.value)}
             disabled={isLoading}
-            className={`w-full ${fieldErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+            className={`w-full ${fieldErrors.email ? 'border-purple-500 focus:border-purple-500 focus:ring-purple-500' : ''}`}
           />
           <ErrorMessage message={fieldErrors.email || ''} />
         </div>
@@ -229,7 +229,7 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
             value={formData.phone}
             onChange={value => handleInputChange('phone', value || '')}
             disabled={isLoading}
-            className={`w-full ${fieldErrors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+            className={`w-full ${fieldErrors.phone ? 'border-purple-500 focus:border-purple-500 focus:ring-purple-500' : ''}`}
             placeholder="Введите номер телефона"
           />
           <ErrorMessage message={fieldErrors.phone || ''} />
@@ -247,7 +247,7 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
               placeholder="Минимум 6 символов"
               disabled={isLoading}
               minLength={6}
-              className={`w-full ${fieldErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              className={`w-full ${fieldErrors.password ? 'border-purple-500 focus:border-purple-500 focus:ring-purple-500' : ''}`}
             />
             <ErrorMessage message={fieldErrors.password || ''} />
           </div>
@@ -263,15 +263,15 @@ export function ModernRegisterForm({ onSuccess }: ModernRegisterFormProps) {
               }
               placeholder="Повторите пароль"
               disabled={isLoading}
-              className={`w-full ${fieldErrors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              className={`w-full ${fieldErrors.confirmPassword ? 'border-purple-500 focus:border-purple-500 focus:ring-purple-500' : ''}`}
             />
             <ErrorMessage message={fieldErrors.confirmPassword || ''} />
           </div>
         </div>
 
         {error && (
-          <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-            <Text className="text-sm text-red-600 dark:text-red-400">
+          <div className="rounded-md bg-purple-50 p-3 dark:bg-purple-900/20">
+            <Text className="text-sm text-purple-600 dark:text-purple-400">
               {error}
             </Text>
           </div>

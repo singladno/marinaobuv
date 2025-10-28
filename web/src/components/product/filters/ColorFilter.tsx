@@ -16,6 +16,7 @@ interface ColorOption {
 interface ColorFilterProps {
   value: string[];
   onChange: (colors: string[]) => void;
+  categoryId?: string;
 }
 
 // Color mapping from Russian names to hex values
@@ -38,14 +39,23 @@ const COLOR_MAP: Record<string, string> = {
   фуксия: '#FF00FF',
 };
 
-export default function ColorFilter({ value, onChange }: ColorFilterProps) {
+export default function ColorFilter({
+  value,
+  onChange,
+  categoryId,
+}: ColorFilterProps) {
   const [colors, setColors] = useState<ColorOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchColors = async () => {
       try {
-        const response = await fetch('/api/colors');
+        // Build URL with categoryId parameter if provided
+        const url = categoryId
+          ? `/api/colors?categoryId=${encodeURIComponent(categoryId)}`
+          : '/api/colors';
+
+        const response = await fetch(url);
         const data = await response.json();
 
         if (data.colors) {
@@ -64,7 +74,7 @@ export default function ColorFilter({ value, onChange }: ColorFilterProps) {
     };
 
     fetchColors();
-  }, []);
+  }, [categoryId]);
 
   const handleColorToggle = (colorValue: string) => {
     const newColors = value.includes(colorValue)

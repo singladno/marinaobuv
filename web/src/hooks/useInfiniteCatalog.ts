@@ -32,7 +32,42 @@ interface CatalogResponse {
   };
 }
 
-export function useInfiniteCatalog(initialCategoryId?: string) {
+interface CategoryData {
+  subcategories?: Array<{
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+    hasChildren?: boolean;
+  }>;
+  siblingCategories?: Array<{
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+    hasChildren?: boolean;
+  }>;
+  parentChildren?: Array<{
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+    hasChildren?: boolean;
+  }>;
+  parentCategory?: {
+    id: string;
+    name: string;
+    path: string;
+    href: string;
+  } | null;
+  breadcrumbs?: any[];
+}
+
+export function useInfiniteCatalog(
+  initialCategoryId?: string,
+  waitForCategory = false,
+  sharedCategoryData?: CategoryData
+) {
   const { searchQuery } = useSearch();
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -61,8 +96,13 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
   const hasInitialized = useRef(false);
   const lastSearchQuery = useRef(searchQuery);
   const lastCategoryId = useRef(initialCategoryId);
+  const requestInProgress = useRef(false);
+  const currentFiltersRef = useRef(filters);
 
-  // Check if there are more pages to load
+  // Update filters ref whenever filters change
+  useEffect(() => {
+    currentFiltersRef.current = filters;
+  }, [filters]);
   const hasNextPage = useMemo(() => {
     const hasMore = pagination.page < pagination.totalPages;
     return hasMore;
@@ -76,16 +116,31 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
   // Fetch products from backend
   const fetchProducts = useCallback(
     async (newFilters?: Partial<CatalogFilters>, append = false) => {
-      // Prevent multiple simultaneous requests
-      if (loading && !append) {
+      console.log(
+        '🔄 fetchProducts called. append:',
+        append,
+        'newFilters:',
+        newFilters
+      );
+
+      // Prevent multiple simultaneous requests only for non-append requests
+      if (requestInProgress.current && !append) {
+        console.log('🚫 fetchProducts: Request already in progress, skipping.');
         return;
       }
 
       const isInitialLoad = !append;
       if (isInitialLoad) {
+        requestInProgress.current = true;
         setLoading(true);
+        console.log(
+          '⏳ fetchProducts: Setting loading to true for initial load.'
+        );
       } else {
         setLoadingMore(true);
+        console.log(
+          '⏳ fetchProducts: Setting loadingMore to true for append.'
+        );
       }
       setError(null);
 
@@ -113,6 +168,7 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
           searchParams.set('pageSize', updatedFilters.pageSize.toString());
 
           const url = `/api/catalog?${searchParams.toString()}`;
+          console.log('📡 fetchProducts: Making API call to:', url);
 
           // Make the request
           fetch(url)
@@ -123,6 +179,10 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
               return response.json();
             })
             .then(data => {
+              console.log(
+                '✅ fetchProducts: API call successful. Products received:',
+                data.products.length
+              );
               if (append) {
                 // Append new products to existing ones
                 setAllProducts(prev => [...prev, ...data.products]);
@@ -140,8 +200,15 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
               }
             })
             .finally(() => {
+              console.log('🏁 fetchProducts: Finally block executed.');
               setLoading(false);
               setLoadingMore(false);
+              if (isInitialLoad) {
+                requestInProgress.current = false;
+                console.log(
+                  '🔓 fetchProducts: Resetting requestInProgress for initial load.'
+                );
+              }
             });
 
           return updatedFilters;
@@ -153,9 +220,12 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
         }
         setLoading(false);
         setLoadingMore(false);
+        if (isInitialLoad) {
+          requestInProgress.current = false;
+        }
       }
     },
-    [loading, allProducts.length]
+    [] // Remove dependencies to prevent cascade re-renders
   );
 
   // Load more products (for infinite scroll)
@@ -191,11 +261,11 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
     [handleFiltersChange]
   );
 
-  // Clear all filters
+  // Clear all filters but preserve the current category context
   const clearFilters = useCallback(() => {
     const clearedFilters: CatalogFilters = {
       search: '',
-      categoryId: '',
+      categoryId: initialCategoryId || '', // Preserve the current category from URL
       sortBy: 'newest',
       minPrice: undefined,
       maxPrice: undefined,
@@ -206,39 +276,92 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
     };
     setFilters(clearedFilters);
     fetchProducts(clearedFilters, false);
-  }, [fetchProducts]);
+  }, [initialCategoryId]);
 
   // Handle search query changes
   useEffect(() => {
+    console.log(
+      '🔍 useEffect (searchQuery): Checking search query. Current:',
+      searchQuery,
+      'Last:',
+      lastSearchQuery.current
+    );
     if (searchQuery !== lastSearchQuery.current) {
+      console.log(
+        '🔍 useEffect (searchQuery): Search query changed from',
+        lastSearchQuery.current,
+        'to',
+        searchQuery
+      );
       lastSearchQuery.current = searchQuery;
       const newFilters = { ...filters, search: searchQuery, page: 1 };
       setFilters(newFilters);
       fetchProducts(newFilters, false);
     }
-  }, [searchQuery, fetchProducts]);
+  }, [searchQuery]);
 
   // Handle initial category ID changes
   useEffect(() => {
+    console.log(
+      '🏷️ useEffect (initialCategoryId): Checking category ID. Current:',
+      initialCategoryId,
+      'Last:',
+      lastCategoryId.current
+    );
     if (initialCategoryId !== lastCategoryId.current) {
+      console.log(
+        '🏷️ useEffect (initialCategoryId): Category ID changed from',
+        lastCategoryId.current,
+        'to',
+        initialCategoryId
+      );
       lastCategoryId.current = initialCategoryId;
+      // Create new filters and update state
       const newFilters = {
-        ...filters,
+        ...currentFiltersRef.current,
         categoryId: initialCategoryId || '',
         page: 1,
       };
       setFilters(newFilters);
+      // Fetch products with the new filters
       fetchProducts(newFilters, false);
+      // Mark as initialized since we're handling the initial load
+      hasInitialized.current = true;
     }
-  }, [initialCategoryId, fetchProducts]);
+  }, [initialCategoryId]);
 
   // Load initial data only once
   useEffect(() => {
+    console.log(
+      '🚀 useEffect (initial load): Checking initialization status. hasInitialized:',
+      hasInitialized.current,
+      'allProducts.length:',
+      allProducts.length,
+      'loading:',
+      loading,
+      'waitForCategory:',
+      waitForCategory,
+      'initialCategoryId:',
+      initialCategoryId
+    );
+
+    // Skip initialization entirely if we're on a category page (waitForCategory = true)
+    if (waitForCategory) {
+      console.log(
+        '⏳ useEffect (initial load): On category page, skipping initialization - category effect will handle it.'
+      );
+      return;
+    }
+
     if (!hasInitialized.current && allProducts.length === 0 && !loading) {
+      console.log(
+        '✅ useEffect (initial load): Initializing catalog (main page) with categoryId:',
+        initialCategoryId
+      );
       hasInitialized.current = true;
       fetchProducts();
     }
-  }, [allProducts.length, loading, fetchProducts]);
+  }, [allProducts.length, loading, initialCategoryId, waitForCategory]);
 
   return {
     // State
@@ -249,6 +372,9 @@ export function useInfiniteCatalog(initialCategoryId?: string) {
     pagination,
     filters,
     hasNextPage,
+
+    // Shared category data
+    categoryData: sharedCategoryData,
 
     // Actions
     handleFiltersChange,

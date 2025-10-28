@@ -58,9 +58,11 @@ export function CategoryFilterControl({
 
   const toggleCategory = (categoryId: string) => {
     if (selectedCategories.includes(categoryId)) {
-      onSelectionChange(selectedCategories.filter(id => id !== categoryId));
+      const newSelection = selectedCategories.filter(id => id !== categoryId);
+      onSelectionChange(newSelection);
     } else {
-      onSelectionChange([...selectedCategories, categoryId]);
+      const newSelection = [...selectedCategories, categoryId];
+      onSelectionChange(newSelection);
     }
   };
 
@@ -147,7 +149,7 @@ export function CategoryFilterControl({
                   return (
                     <label
                       key={category.id}
-                      className="flex cursor-pointer items-center gap-3 rounded-lg py-2 hover:bg-gray-50"
+                      className="flex cursor-pointer items-center gap-3 rounded-lg py-2 pl-2 hover:bg-gray-50"
                       onClick={e => e.stopPropagation()}
                     >
                       <Checkbox

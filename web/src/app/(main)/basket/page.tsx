@@ -23,6 +23,7 @@ export default function BasketPage() {
   const orderHandlers = useOrderHandlers({
     products: basketState.products,
     selectedTransportId: basketState.selectedTransportId,
+    selectedTransportOptions: basketState.selectedTransportOptions,
     orderPhone: basketState.orderPhone,
     userFullName: basketState.userFullName,
     userAddress: basketState.userAddress,
@@ -33,6 +34,7 @@ export default function BasketPage() {
     clearTransportCompany: basketState.clearTransportCompany,
     setIsCheckoutModalOpen: handlers.setIsCheckoutModalOpen,
     setValidationErrors: basketState.setValidationErrors,
+    triggerScroll: basketState.triggerScroll,
   });
 
   if (basketState.loading) {
@@ -54,6 +56,8 @@ export default function BasketPage() {
           selectedTransportId={basketState.selectedTransportId}
           setSelectedTransportId={basketState.setSelectedTransportId}
           setSelectedTransportCompany={basketState.setSelectedTransportCompany}
+          selectedTransportOptions={basketState.selectedTransportOptions}
+          setSelectedTransportOptions={basketState.setSelectedTransportOptions}
           isLoggedIn={basketState.isLoggedIn}
           setIsLoginModalOpen={basketState.setIsLoginModalOpen}
           isEditingUserData={basketState.isEditingUserData}
@@ -79,6 +83,7 @@ export default function BasketPage() {
           favorites={basketState.favorites}
           updatingItems={basketState.updatingItems}
           removingItems={basketState.removingItems}
+          scrollTrigger={basketState.scrollTrigger}
         />
       )}
 

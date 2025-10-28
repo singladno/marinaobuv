@@ -6,6 +6,7 @@ import { useNotifications } from '@/components/ui/NotificationProvider';
 import { useOptimizedBasketCart } from './useOptimizedBasketCart';
 import { useBasketOrder } from './useBasketOrder';
 import { popularTransportCompanies, TransportCompany } from '@/lib/shipping';
+import { TransportOption } from '@/components/features/TransportOptionSelector';
 import { useUser } from '@/contexts/NextAuthUserContext';
 
 export function useBasketPageState() {
@@ -22,8 +23,11 @@ export function useBasketPageState() {
   );
   const [customTransportCompany, setCustomTransportCompany] =
     useState<TransportCompany | null>(null);
+  const [selectedTransportOptions, setSelectedTransportOptions] = useState<
+    TransportOption[]
+  >([]);
   const selectedTransport: TransportCompany | null =
-    order.selectedShipping || null;
+    customTransportCompany || order.selectedShipping || null;
 
   const [isEditingTransport, setIsEditingTransport] = useState(false);
   const [isEditingUserData, setIsEditingUserData] = useState(false);
@@ -37,6 +41,7 @@ export function useBasketPageState() {
     transport?: boolean;
     userData?: boolean;
   }>({});
+  const [scrollTrigger, setScrollTrigger] = useState(0);
 
   // Local persistence helpers
   const getUserDataStorageKey = (uid: string | null | undefined) =>
@@ -92,28 +97,29 @@ export function useBasketPageState() {
       ) {
         setOrderPhone(saved.orderPhone);
       }
-      if (typeof saved.userEmail === 'string') setUserEmail(saved.userEmail);
-      if (typeof saved.userFullName === 'string')
+      if (typeof saved.userEmail === 'string' && saved.userEmail.trim())
+        setUserEmail(saved.userEmail);
+      if (typeof saved.userFullName === 'string' && saved.userFullName.trim())
         setUserFullName(saved.userFullName);
       if (typeof saved.userAddress === 'string')
         setUserAddress(saved.userAddress);
       if (typeof saved.orderComment === 'string')
         setOrderComment(saved.orderComment);
-      if (saved.selectedTransportId) {
+      // Restore transport company selection
+      if (saved.customTransportCompany) {
+        // Custom transport company takes priority
+        setCustomTransportCompany(saved.customTransportCompany);
+        setSelectedTransportId('other');
+        order.setSelectedShipping(saved.customTransportCompany);
+      } else if (saved.selectedTransportId) {
+        // Regular transport company
         setSelectedTransportId(saved.selectedTransportId);
-        // Find the company and set it in order state
         const company = popularTransportCompanies.find(
           c => c.id === saved.selectedTransportId
         );
         if (company) {
           order.setSelectedShipping(company);
         }
-      }
-      if (saved.customTransportCompany) {
-        setCustomTransportCompany(saved.customTransportCompany);
-        order.setSelectedShipping(saved.customTransportCompany);
-        // Ensure selectedTransportId is set for custom companies
-        setSelectedTransportId('other');
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,12 +144,55 @@ export function useBasketPageState() {
   useEffect(() => {
     if (hasAutofilledEmailRef.current) return;
     // Prefill if user has email and current email is empty
-    if (user?.email && !userEmail) {
+    if (user?.email && !userEmail?.trim()) {
       setUserEmail(user.email);
       hasAutofilledEmailRef.current = true;
     }
     // Only depends on user email; do not re-run on userEmail changes
   }, [user?.email]);
+
+  // Prefill name from authenticated user once (avoid refilling after user clears)
+  const hasAutofilledNameRef = useRef(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (hasAutofilledNameRef.current) return;
+    // Prefill if user has name and current name is empty
+    if (user?.name && !userFullName?.trim()) {
+      setUserFullName(user.name);
+      hasAutofilledNameRef.current = true;
+    }
+    // Only depends on user name; do not re-run on userFullName changes
+  }, [user?.name]);
+
+  // Additional prefilling after localStorage restoration
+  useEffect(() => {
+    // Only run if user is loaded and we haven't autofilled yet
+    if (!user) return;
+
+    // Prefill email if empty and user has email
+    if (user.email && !userEmail?.trim() && !hasAutofilledEmailRef.current) {
+      setUserEmail(user.email);
+      hasAutofilledEmailRef.current = true;
+    }
+
+    // Prefill name if empty and user has name
+    if (user.name && !userFullName?.trim() && !hasAutofilledNameRef.current) {
+      setUserFullName(user.name);
+      hasAutofilledNameRef.current = true;
+    }
+  }, [user, userEmail, userFullName]);
+
+  // Debug: Log user data and prefilling status
+  useEffect(() => {
+    console.log('User data:', {
+      email: user?.email,
+      name: user?.name,
+      currentEmail: userEmail,
+      currentName: userFullName,
+      hasAutofilledEmail: hasAutofilledEmailRef.current,
+      hasAutofilledName: hasAutofilledNameRef.current,
+    });
+  }, [user?.email, user?.name, userEmail, userFullName]);
 
   // Persist basket data to localStorage when any field changes
   useEffect(() => {
@@ -178,9 +227,18 @@ export function useBasketPageState() {
   // Clear validation errors when user fixes issues
   useEffect(() => {
     if (Boolean(userId) && validationErrors.userData) {
-      setValidationErrors(prev => ({ ...prev, userData: false }));
+      // Only clear if all required fields are actually filled
+      if (userFullName?.trim() && orderPhone?.trim() && userAddress?.trim()) {
+        setValidationErrors(prev => ({ ...prev, userData: false }));
+      }
     }
-  }, [userId, validationErrors.userData]);
+  }, [
+    userId,
+    validationErrors.userData,
+    userFullName,
+    orderPhone,
+    userAddress,
+  ]);
 
   useEffect(() => {
     if (selectedTransportId && validationErrors.transport) {
@@ -188,14 +246,28 @@ export function useBasketPageState() {
     }
   }, [selectedTransportId, validationErrors.transport]);
 
-  // Keep order.selectedShipping in sync with selectedTransportId
+  // Clear userData validation error when all required fields are filled
+  useEffect(() => {
+    if (
+      validationErrors.userData &&
+      userFullName?.trim() &&
+      orderPhone?.trim() &&
+      userAddress?.trim()
+    ) {
+      setValidationErrors(prev => ({ ...prev, userData: false }));
+    }
+  }, [userFullName, orderPhone, userAddress, validationErrors.userData]);
+
+  // Keep order.selectedShipping in sync with selectedTransportId and customTransportCompany
   useEffect(() => {
     if (!selectedTransportId) return;
 
     // Handle custom companies (id === 'other')
     if (selectedTransportId === 'other') {
-      // For custom companies, we don't need to do anything here
-      // as the company is already set via setSelectedTransportCompany
+      // For custom companies, ensure the order state is updated
+      if (customTransportCompany) {
+        order.setSelectedShipping(customTransportCompany);
+      }
       return;
     }
 
@@ -206,7 +278,7 @@ export function useBasketPageState() {
     if (company) {
       order.setSelectedShipping(company);
     }
-  }, [selectedTransportId, order]);
+  }, [selectedTransportId, customTransportCompany, order]);
 
   // Custom setSelectedTransportCompany function that also updates customTransportCompany state
   const handleSetSelectedTransportCompany = (company: TransportCompany) => {
@@ -229,6 +301,11 @@ export function useBasketPageState() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
+  // Function to trigger scrolling to validation errors
+  const triggerScroll = () => {
+    setScrollTrigger(prev => prev + 1);
+  };
+
   return {
     ...cart,
     ...auth,
@@ -246,6 +323,8 @@ export function useBasketPageState() {
     selectedTransportId,
     setSelectedTransportId,
     setSelectedTransportCompany: handleSetSelectedTransportCompany,
+    selectedTransportOptions,
+    setSelectedTransportOptions,
     clearTransportCompany,
     isEditingUserData,
     setIsEditingUserData,
@@ -263,6 +342,8 @@ export function useBasketPageState() {
     setIsEditingComment,
     validationErrors,
     setValidationErrors,
+    scrollTrigger,
+    triggerScroll,
     // compatibility fields expected by basket page and handlers
     isLoggedIn: Boolean(userId),
     loginLoading,

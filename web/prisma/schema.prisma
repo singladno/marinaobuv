@@ -61,8 +61,8 @@ model Product {
   category              Category       @relation(fields: [categoryId], references: [id])
   provider              Provider?      @relation(fields: [providerId], references: [id])
   images                ProductImage[]
-  reviews               Review[]
   purchaseItems         PurchaseItem[]
+  reviews               Review[]
 
   @@index([categoryId])
   @@index([season])
@@ -224,6 +224,7 @@ model User {
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
   label              String?
+  accounts           Account[]
   gruzchikOrders     Order[]                @relation("OrderGruzchik")
   orders             Order[]
   feedbacks          OrderItemFeedback[]
@@ -231,12 +232,11 @@ model User {
   messageReads       OrderItemMessageRead[]
   adminReplacements  OrderItemReplacement[] @relation("AdminReplacement")
   clientReplacements OrderItemReplacement[] @relation("ClientReplacement")
+  purchases          Purchase[]
   reviews            Review[]
   searchHistory      SearchHistory[]
-  provider           Provider?              @relation(fields: [providerId], references: [id])
-  accounts           Account[]
   sessions           Session[]
-  purchases          Purchase[]
+  provider           Provider?              @relation(fields: [providerId], references: [id])
 
   @@index([role])
   @@index([providerId])
@@ -249,15 +249,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -325,6 +324,7 @@ model Order {
   gruzchik      User?       @relation("OrderGruzchik", fields: [gruzchikId], references: [id])
   user          User?       @relation(fields: [userId], references: [id])
   items         OrderItem[]
+  transportOptions OrderTransportOption[]
 
   @@index([userId])
   @@index([status])
@@ -354,6 +354,20 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
   @@index([itemCode])
+}
+
+model OrderTransportOption {
+  id          String   @id @default(cuid())
+  orderId     String
+  transportId String
+  transportName String
+  isSelected  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([transportId])
 }
 
 model OrderItemMessage {
@@ -448,15 +462,15 @@ model SearchHistory {
 }
 
 model OrderItemFeedback {
-  id           String       @id @default(cuid())
-  orderItemId  String
-  userId       String
-  feedbackType FeedbackType
-  refusalReason String?     // Reason for refusal (for WRONG_SIZE, WRONG_ITEM, etc.)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  orderItem    OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String       @id @default(cuid())
+  orderItemId   String
+  userId        String
+  feedbackType  FeedbackType
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  refusalReason String?
+  orderItem     OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([orderItemId])
   @@index([userId])
@@ -481,6 +495,50 @@ model OrderItemReplacement {
   @@index([orderItemId])
   @@index([adminUserId])
   @@index([clientUserId])
+}
+
+model WebhookStatus {
+  id             String   @id @default(cuid())
+  isConnected    Boolean
+  lastCheck      DateTime @default(now())
+  errorMessage   String?
+  instanceStatus String?
+  createdAt      DateTime @default(now())
+
+  @@index([lastCheck])
+  @@index([isConnected])
+}
+
+model Purchase {
+  id          String         @id @default(cuid())
+  name        String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  items       PurchaseItem[]
+
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model PurchaseItem {
+  id          String   @id @default(cuid())
+  purchaseId  String
+  productId   String
+  name        String
+  description String
+  price       Decimal
+  oldPrice    Decimal
+  sortIndex   Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  product     Product  @relation(fields: [productId], references: [id])
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseId])
+  @@index([productId])
+  @@index([sortIndex])
 }
 
 enum Role {
@@ -508,52 +566,8 @@ enum FeedbackType {
   AGREE_REPLACEMENT
 }
 
-model WebhookStatus {
-  id             String    @id @default(cuid())
-  isConnected    Boolean
-  lastCheck      DateTime  @default(now())
-  errorMessage   String?
-  instanceStatus String?
-  createdAt      DateTime  @default(now())
-
-  @@index([lastCheck])
-  @@index([isConnected])
-}
-
 enum ReplacementStatus {
   PENDING
   ACCEPTED
   REJECTED
-}
-
-model Purchase {
-  id          String         @id @default(cuid())
-  name        String
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  items       PurchaseItem[]
-  createdById String
-  createdBy   User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
-
-  @@index([createdById])
-  @@index([createdAt])
-}
-
-model PurchaseItem {
-  id           String   @id @default(cuid())
-  purchaseId   String
-  productId    String
-  name         String   // Copied from product
-  description  String   // Copied from product
-  price        Decimal  // Copied from product
-  oldPrice     Decimal  // Calculated as price * 1.8
-  sortIndex    Int      @default(1)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  product      Product  @relation(fields: [productId], references: [id])
-
-  @@index([purchaseId])
-  @@index([productId])
-  @@index([sortIndex])
 }

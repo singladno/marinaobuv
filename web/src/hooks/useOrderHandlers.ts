@@ -12,6 +12,7 @@ interface CartItemWithProduct {
 interface UseOrderHandlersProps {
   products: CartItemWithProduct[];
   selectedTransportId: string | null;
+  selectedTransportOptions: Array<{ id: string; name: string }>;
   orderPhone: string;
   userFullName: string;
   userAddress: string;
@@ -29,6 +30,7 @@ interface UseOrderHandlersProps {
           userData?: boolean;
         })
   ) => void;
+  triggerScroll?: () => void;
 }
 
 import { useState } from 'react';
@@ -39,6 +41,7 @@ import { formatOrderNumber } from '@/utils/orderNumberUtils';
 export function useOrderHandlers({
   products,
   selectedTransportId,
+  selectedTransportOptions,
   orderPhone,
   userFullName,
   userAddress,
@@ -49,6 +52,7 @@ export function useOrderHandlers({
   clearTransportCompany,
   setIsCheckoutModalOpen,
   setValidationErrors,
+  triggerScroll,
 }: UseOrderHandlersProps) {
   const router = useRouter();
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -60,14 +64,37 @@ export function useOrderHandlers({
   };
 
   const handlePlaceOrder = async () => {
-    if (!selectedTransportId) {
+    console.log('Place order clicked, checking validation...');
+    console.log('Current values:', {
+      selectedTransportId,
+      userFullName,
+      orderPhone,
+      userAddress,
+    });
+
+    // Check transport company selection
+    if (
+      !selectedTransportId &&
+      (!selectedTransportOptions || selectedTransportOptions.length === 0)
+    ) {
+      console.log('Transport validation failed');
       setValidationErrors(prev => ({ ...prev, transport: true }));
+      triggerScroll?.();
       return;
     }
 
-    // Only phone should be required for placing an order
-    if (!orderPhone) {
+    // Check required user data fields
+    const missingFields = [];
+    if (!userFullName?.trim()) missingFields.push('name');
+    if (!orderPhone?.trim()) missingFields.push('phone');
+    if (!userAddress?.trim()) missingFields.push('address');
+
+    console.log('Missing fields:', missingFields);
+
+    if (missingFields.length > 0) {
+      console.log('User data validation failed, setting errors');
       setValidationErrors(prev => ({ ...prev, userData: true }));
+      triggerScroll?.();
       return;
     }
 
@@ -92,6 +119,7 @@ export function useOrderHandlers({
           address: userAddress,
           comment: orderComment,
           transportCompanyId: selectedTransportId,
+          transportOptions: selectedTransportOptions,
           total: calculateSubtotal(),
           subtotal: calculateSubtotal(),
         }),

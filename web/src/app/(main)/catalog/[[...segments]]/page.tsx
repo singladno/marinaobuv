@@ -51,7 +51,17 @@ function CatalogPageContent() {
     clearFilters,
     loadMore,
     retryLoadMore,
-  } = useInfiniteCatalog(categoryId);
+    categoryData,
+  } = useInfiniteCatalog(categoryId, !!categoryPath, {
+    subcategories,
+    siblingCategories,
+    parentChildren,
+    parentCategory,
+    breadcrumbs,
+  });
+
+  // Note: Removed sync effect to prevent duplicate catalog requests
+  // The useInfiniteCatalog hook already handles categoryId changes properly
 
   // Set up infinite scroll
   const { setLoadMoreRef } = useInfiniteScroll({
@@ -149,9 +159,11 @@ function CatalogPageContent() {
         {/* Header */}
         <div className="mb-6">
           {/* Breadcrumbs */}
-          {breadcrumbs.length > 0 && (
+          {(categoryData?.breadcrumbs || breadcrumbs).length > 0 && (
             <div className="mb-4">
-              <CategoryBreadcrumbs items={breadcrumbs} />
+              <CategoryBreadcrumbs
+                items={categoryData?.breadcrumbs || breadcrumbs}
+              />
             </div>
           )}
 
@@ -186,10 +198,13 @@ function CatalogPageContent() {
             filters={filters}
             onChange={handleFiltersChange}
             onClear={clearFilters}
-            subcategories={subcategories}
-            siblingCategories={siblingCategories}
-            parentChildren={parentChildren}
-            parentCategory={parentCategory}
+            baseCategoryId={categoryId}
+            subcategories={categoryData?.subcategories || subcategories}
+            siblingCategories={
+              categoryData?.siblingCategories || siblingCategories
+            }
+            parentChildren={categoryData?.parentChildren || parentChildren}
+            parentCategory={categoryData?.parentCategory || parentCategory}
             currentPath={categoryPath}
             currentCategoryName={displayName || categoryName}
           />

@@ -23,7 +23,8 @@ export async function createOrder(
     address?: string;
     comment?: string;
   },
-  transportCompanyId?: string
+  transportCompanyId?: string,
+  transportOptions?: Array<{ id: string; name: string }>
 ) {
   // Get products with their details
   // Support items defined by slug or by productId
@@ -121,6 +122,15 @@ export async function createOrder(
       items: {
         create: orderItems,
       },
+      transportOptions: transportOptions
+        ? {
+            create: transportOptions.map(option => ({
+              transportId: option.id,
+              transportName: option.name,
+              isSelected: true,
+            })),
+          }
+        : undefined,
     },
     include: {
       items: {
@@ -138,6 +148,7 @@ export async function createOrder(
           },
         },
       },
+      transportOptions: true,
     },
   });
 
@@ -207,6 +218,7 @@ export async function getOrders(userId: string) {
           },
         },
       },
+      transportOptions: true,
     },
     orderBy: {
       createdAt: 'desc',

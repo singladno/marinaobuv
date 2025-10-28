@@ -46,6 +46,8 @@ interface OrderSummaryProps {
   setUserAddress: (address: string) => void;
   onPlaceOrder: () => void;
   isPlacingOrder?: boolean;
+  // Add scroll trigger prop
+  scrollTrigger?: number;
 }
 
 export function OrderSummary({
@@ -69,6 +71,7 @@ export function OrderSummary({
   setUserAddress,
   onPlaceOrder,
   isPlacingOrder,
+  scrollTrigger,
 }: OrderSummaryProps) {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ru-RU', {
