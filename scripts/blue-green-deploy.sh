@@ -173,11 +173,16 @@ main() {
         target_port=3001
     fi
     
-    # Build application
-    echo "🔨 Building application..."
-    cd web
-    npm run build
-    cd ..
+    # Build application (skip if already built)
+    echo "🔨 Checking if application needs building..."
+    if [ ! -f "web/.next/BUILD_ID" ]; then
+        echo "🔨 Building application..."
+        cd web
+        npm run build
+        cd ..
+    else
+        echo "✅ Application already built, skipping build step"
+    fi
     
     # Start target deployment
     echo "🚀 Starting $target_deployment deployment on port $target_port..."
