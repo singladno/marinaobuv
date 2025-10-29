@@ -315,6 +315,7 @@ export class ProductCreationCore {
         pricePair: analysis.price || 0,
         currency: 'RUB',
         sourceMessageIds: sourceMessageIds, // Store WhatsApp message IDs directly
+        source: 'WA', // Products from WhatsApp parser
         isActive: true, // Set as active immediately
         images: {
           create: images.map((image, index) => ({

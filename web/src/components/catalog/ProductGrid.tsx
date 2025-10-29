@@ -14,6 +14,7 @@ interface Product {
   } | null;
   colorOptions?: Array<{ color: string; imageUrl: string }>;
   activeUpdatedAt?: string;
+  source?: 'WA' | 'AG';
 }
 
 interface ProductGridProps {
@@ -82,6 +83,7 @@ export const ProductGrid = memo(function ProductGrid({
             colorOptions={product.colorOptions}
             productId={product.id}
             activeUpdatedAt={product.activeUpdatedAt}
+            source={product.source}
           />
         ))}
       </div>

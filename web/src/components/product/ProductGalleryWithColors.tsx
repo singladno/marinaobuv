@@ -14,6 +14,7 @@ type Props = {
   productId?: string;
   sourceMessageIds?: string[] | null;
   isActive: boolean;
+  source?: 'WA' | 'AG';
 };
 
 export default function ProductGalleryWithColors({
@@ -22,6 +23,7 @@ export default function ProductGalleryWithColors({
   productId,
   sourceMessageIds,
   isActive,
+  source,
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
@@ -65,6 +67,7 @@ export default function ProductGalleryWithColors({
           productId={productId}
           sourceMessageIds={sourceMessageIds}
           isActive={isActive}
+          source={source}
         />
       </div>
       {colorOptions.length > 1 && (

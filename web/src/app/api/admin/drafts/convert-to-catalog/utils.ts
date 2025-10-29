@@ -99,6 +99,7 @@ export function createProductData(
     season: draft.season ?? null,
     description: draft.description ?? null,
     sourceMessageIds: sourceMessageIds || [], // Store WhatsApp message IDs
+    source: 'WA', // Products converted from WhatsApp drafts
     providerId: providerId, // Add provider ID
     images: {
       create: processedImages.map(img => ({

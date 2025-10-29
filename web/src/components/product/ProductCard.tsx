@@ -66,6 +66,7 @@ type Props = {
   colorOptions?: Array<{ color: string; imageUrl: string }>;
   productId?: string; // Add productId for source button
   activeUpdatedAt?: string; // Add activeUpdatedAt for availability display
+  source?: 'WA' | 'AG'; // Product source: WA (WhatsApp) or AG (aggregator)
 };
 
 export default function ProductCard({
@@ -79,6 +80,7 @@ export default function ProductCard({
   colorOptions = [],
   productId,
   activeUpdatedAt,
+  source,
 }: Props) {
   const { user } = useUser();
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -425,15 +427,28 @@ export default function ProductCard({
                   e.stopPropagation();
                   setIsSourceModalOpen(true);
                 }}
-                className="absolute left-3 top-3 z-20 opacity-100 transition-all duration-200 md:opacity-0 md:group-hover:opacity-100"
+                className="absolute left-2 top-2 z-20 opacity-100 transition-all duration-200 focus:outline-none md:opacity-0 md:group-hover:opacity-100"
                 title="Просмотр источника сообщений"
               >
-                <Badge
-                  variant="secondary"
-                  className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
-                >
-                  Источник
-                </Badge>
+                {source === 'WA' ? (
+                  <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                    <Image
+                      src="/images/whatsapp-icon.png"
+                      alt="WhatsApp"
+                      width={36}
+                      height={36}
+                      className="h-full w-full rounded"
+                      unoptimized
+                    />
+                  </div>
+                ) : (
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                  >
+                    Источник
+                  </Badge>
+                )}
               </button>
             )}
 

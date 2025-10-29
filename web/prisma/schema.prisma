@@ -57,6 +57,7 @@ model Product {
   gptRequest            String?
   gptResponse           String?
   providerId            String?
+  source                ProductSource  @default(WA)
   orderItems            OrderItem[]
   category              Category       @relation(fields: [categoryId], references: [id])
   provider              Provider?      @relation(fields: [providerId], references: [id])
@@ -570,4 +571,9 @@ enum ReplacementStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+enum ProductSource {
+  WA
+  AG
 }

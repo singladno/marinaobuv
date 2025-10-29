@@ -107,6 +107,7 @@ export class SimpleProductService {
         description: 'Product is being processed...',
         isActive: false, // Inactive until processing completes
         sourceMessageIds: messageIds,
+        source: 'WA', // Products from WhatsApp parser
         batchProcessingStatus: 'pending',
         gptRequest: gptRequest || null,
         gptResponse: gptResponse || null,

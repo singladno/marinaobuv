@@ -18,6 +18,7 @@ interface ProductGalleryProps {
   productId?: string;
   sourceMessageIds?: string[] | null;
   isActive: boolean;
+  source?: 'WA' | 'AG';
 }
 
 export default function ProductGalleryVertical({
@@ -27,6 +28,7 @@ export default function ProductGalleryVertical({
   productId,
   sourceMessageIds,
   isActive,
+  source,
 }: ProductGalleryProps) {
   const { user } = useUser();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -103,7 +105,7 @@ export default function ProductGalleryVertical({
           {!isActive && <UnavailableProductOverlay />}
         </div>
 
-        {/* Source Chip - shows on hover, only for admin users */}
+        {/* Source indicator - WA icon or badge; always visible on mobile/tablet, hover on desktop (admin only) */}
         {user?.role === 'ADMIN' &&
           productId &&
           sourceMessageIds &&
@@ -111,15 +113,28 @@ export default function ProductGalleryVertical({
             <button
               type="button"
               onClick={() => setIsSourceModalOpen(true)}
-              className="absolute left-3 top-3 z-20 opacity-0 transition-all duration-200 group-hover:opacity-100"
+              className="absolute left-2 top-2 z-20 opacity-100 transition-all duration-200 focus:outline-none md:opacity-0 md:group-hover:opacity-100"
               title="Просмотр источника сообщений"
             >
-              <Badge
-                variant="secondary"
-                className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
-              >
-                Источник
-              </Badge>
+              {source === 'WA' ? (
+                <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                  <Image
+                    src="/images/whatsapp-icon.png"
+                    alt="WhatsApp"
+                    width={48}
+                    height={48}
+                    className="h-full w-full rounded"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                >
+                  Источник
+                </Badge>
+              )}
             </button>
           )}
 

@@ -34,6 +34,7 @@ export default async function ProductPage({
       images: {
         orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
       },
+      source: true,
       category: true,
     },
   });
@@ -100,6 +101,7 @@ export default async function ProductPage({
                   : null
               }
               isActive={product.isActive}
+              source={product.source as any}
             />
           </div>
 
