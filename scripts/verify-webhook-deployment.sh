@@ -38,14 +38,9 @@ test_webhook_endpoint() {
     while [ $attempt -le $max_attempts ]; do
         log_info "Attempt $attempt/$max_attempts..."
         
-        # Test local endpoint first
-        if curl -f -s http://localhost:3000/api/webhooks/green-api > /dev/null 2>&1; then
-            log_success "Local webhook endpoint is responding"
-            return 0
-        fi
-        
-        # Test external endpoint
-        if curl -f -s https://marina-obuv.ru/api/webhooks/green-api > /dev/null 2>&1; then
+        # Prefer testing via Nginx (port-agnostic)
+        if curl -f -s http://localhost/api/webhooks/green-api > /dev/null 2>&1 || \
+           curl -f -s https://marina-obuv.ru/api/webhooks/green-api > /dev/null 2>&1; then
             log_success "External webhook endpoint is responding"
             return 0
         fi
@@ -75,19 +70,19 @@ check_application_status() {
     log_info "Note: Groq proxy runs on separate serverspace server"
     log_info "Proxy connectivity will be tested via nginx configuration"
     
-    # Check if port 3000 is listening (prefer ss, fallback to netstat)
+    # Check if app port (3000 or 3001) is listening (prefer ss, fallback to netstat)
     if command -v ss >/dev/null 2>&1; then
-        if ss -tlnp | grep -q ":3000"; then
-            log_success "Port 3000 is listening"
+        if ss -tlnp | grep -Eq ":3000|:3001"; then
+            log_success "Application port is listening (3000 or 3001)"
         else
-            log_error "Port 3000 is not listening"
+            log_error "Application port is not listening on 3000/3001"
             return 1
         fi
     elif command -v netstat >/dev/null 2>&1; then
-        if netstat -tlnp | grep -q ":3000"; then
-            log_success "Port 3000 is listening"
+        if netstat -tlnp | grep -E ":3000|:3001" >/dev/null; then
+            log_success "Application port is listening (3000 or 3001)"
         else
-            log_error "Port 3000 is not listening"
+            log_error "Application port is not listening on 3000/3001"
             return 1
         fi
     else
