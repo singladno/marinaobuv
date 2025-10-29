@@ -738,13 +738,23 @@ jobs:
               fi
             fi
 
-            # Test application endpoints
-            echo "🔍 Testing application endpoints..."
-            if curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
-              echo "✅ Health endpoint working"
+            # Test application endpoints (via Nginx, not direct Node port)
+            echo "🔍 Testing application endpoints via Nginx..."
+            HEALTH_OK=false
+            for i in {1..5}; do
+              if curl -f -s http://localhost/api/health > /dev/null 2>&1 || \
+                 curl -f -s https://marina-obuv.ru/api/health > /dev/null 2>&1; then
+                HEALTH_OK=true
+                break
+              fi
+              echo "⏳ Nginx health check retry $i/5..."
+              sleep 3
+            done
+            if [ "$HEALTH_OK" = true ]; then
+              echo "✅ Health endpoint working via Nginx"
             else
-              echo "❌ CRITICAL: Health endpoint failed!"
-              echo "💡 DEPLOYMENT FAILED - application is not responding"
+              echo "❌ CRITICAL: Health endpoint failed via Nginx!"
+              echo "💡 DEPLOYMENT FAILED - application is not responding through the reverse proxy"
               exit 1
             fi
 
