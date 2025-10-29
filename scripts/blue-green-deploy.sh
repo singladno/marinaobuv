@@ -161,16 +161,9 @@ server {
 }
 EOF
 
-  # Choose certificate paths (prefer Let's Encrypt, fallback to self-signed)
-  local CERT_PATH
-  local KEY_PATH
-  if [ -f "/etc/letsencrypt/live/marina-obuv.ru/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/marina-obuv.ru/privkey.pem" ]; then
-    CERT_PATH="/etc/letsencrypt/live/marina-obuv.ru/fullchain.pem"
-    KEY_PATH="/etc/letsencrypt/live/marina-obuv.ru/privkey.pem"
-  else
-    CERT_PATH="/etc/ssl/certs/marinaobuv.ru.crt"
-    KEY_PATH="/etc/ssl/private/marinaobuv.ru.key"
-  fi
+  # Always use Let's Encrypt certificate paths; CI ensures certbot deploys them
+  local CERT_PATH="/etc/letsencrypt/live/marina-obuv.ru/fullchain.pem"
+  local KEY_PATH="/etc/letsencrypt/live/marina-obuv.ru/privkey.pem"
 
   # Update nginx HTTPS configuration to point to the new deployment (with proper certs)
   sudo tee /etc/nginx/sites-available/marinaobuv-https > /dev/null << EOF
