@@ -161,14 +161,25 @@ server {
 }
 EOF
 
-  # Update nginx HTTPS configuration to point to the new deployment
+  # Choose certificate paths (prefer Let's Encrypt, fallback to self-signed)
+  local CERT_PATH
+  local KEY_PATH
+  if [ -f "/etc/letsencrypt/live/marina-obuv.ru/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/marina-obuv.ru/privkey.pem" ]; then
+    CERT_PATH="/etc/letsencrypt/live/marina-obuv.ru/fullchain.pem"
+    KEY_PATH="/etc/letsencrypt/live/marina-obuv.ru/privkey.pem"
+  else
+    CERT_PATH="/etc/ssl/certs/marinaobuv.ru.crt"
+    KEY_PATH="/etc/ssl/private/marinaobuv.ru.key"
+  fi
+
+  # Update nginx HTTPS configuration to point to the new deployment (with proper certs)
   sudo tee /etc/nginx/sites-available/marinaobuv-https > /dev/null << EOF
 server {
     listen 443 ssl http2;
     server_name marina-obuv.ru www.marina-obuv.ru;
 
-    ssl_certificate /etc/ssl/certs/marinaobuv.ru.crt;
-    ssl_certificate_key /etc/ssl/private/marinaobuv.ru.key;
+    ssl_certificate ${CERT_PATH};
+    ssl_certificate_key ${KEY_PATH};
 
     # Security headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
