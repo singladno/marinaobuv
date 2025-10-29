@@ -61,7 +61,7 @@ export function Modal({
     <div className={`fixed inset-0 ${zIndex} grid place-items-center p-4`}>
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 cursor-pointer bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -88,7 +88,7 @@ export function Modal({
               </div>
               <button
                 onClick={onClose}
-                className="rounded-card p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                className="rounded-card cursor-pointer p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                 aria-label="Закрыть"
               >
                 <svg

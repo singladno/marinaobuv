@@ -72,7 +72,7 @@ export function ImageThumbnail({
     <div key={image.id} className="group relative h-12 w-12 flex-shrink-0">
       <button
         onClick={() => onImageClick(index)}
-        className={`relative h-full w-full overflow-hidden rounded-md border transition-colors hover:border-blue-300 dark:hover:border-blue-600 ${borderClasses}`}
+        className={`relative h-full w-full cursor-pointer overflow-hidden rounded-md border transition-colors hover:border-blue-300 dark:hover:border-blue-600 ${borderClasses}`}
         title="Нажмите для просмотра в полном размере"
       >
         {imageError ? (

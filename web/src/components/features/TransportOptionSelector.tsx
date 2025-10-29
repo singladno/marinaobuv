@@ -97,7 +97,7 @@ export default function TransportOptionSelector({
                 <button
                   type="button"
                   onClick={() => removeCustomOption(option.id)}
-                  className="text-purple-600 hover:text-purple-800"
+                  className="cursor-pointer text-purple-600 hover:text-purple-800"
                   title={`Удалить ${option.name}`}
                 >
                   <svg
@@ -129,7 +129,7 @@ export default function TransportOptionSelector({
               key={company.id}
               type="button"
               onClick={() => toggleOption(company.id)}
-              className={`flex h-28 w-full flex-col items-center justify-center gap-2 rounded-lg border p-3 text-center transition-colors duration-150 ${
+              className={`flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border p-3 text-center transition-colors duration-150 ${
                 isSelected
                   ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200'
                   : 'border-gray-200 hover:border-gray-300'
@@ -177,7 +177,7 @@ export default function TransportOptionSelector({
         <button
           type="button"
           onClick={() => setShowOtherInput(true)}
-          className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-lg border border-gray-200 p-3 text-center transition-colors duration-150 hover:border-gray-300"
+          className="flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-gray-200 p-3 text-center transition-colors duration-150 hover:border-gray-300"
         >
           <div className="flex h-10 w-10 items-center justify-center">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
@@ -204,7 +204,7 @@ export default function TransportOptionSelector({
       {showOtherInput && (
         <div className="fixed inset-0 z-[9999] grid min-h-screen place-content-center p-4">
           <div
-            className="absolute inset-0 bg-black/20"
+            className="absolute inset-0 cursor-pointer bg-black/20"
             onClick={() => setShowOtherInput(false)}
             aria-hidden="true"
           />

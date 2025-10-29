@@ -75,6 +75,7 @@ export function useBasketPageState() {
         orderComment?: string;
         selectedTransportId?: string | null;
         customTransportCompany?: TransportCompany;
+        selectedTransportOptions?: TransportOption[];
         version?: number;
       };
 
@@ -105,7 +106,14 @@ export function useBasketPageState() {
         setUserAddress(saved.userAddress);
       if (typeof saved.orderComment === 'string')
         setOrderComment(saved.orderComment);
-      // Restore transport company selection
+      // Restore transport options selection
+      if (
+        Array.isArray(saved.selectedTransportOptions) &&
+        saved.selectedTransportOptions.length > 0
+      ) {
+        setSelectedTransportOptions(saved.selectedTransportOptions);
+      }
+      // Restore transport company selection (legacy support)
       if (saved.customTransportCompany) {
         // Custom transport company takes priority
         setCustomTransportCompany(saved.customTransportCompany);
@@ -206,6 +214,7 @@ export function useBasketPageState() {
         orderComment,
         selectedTransportId,
         customTransportCompany,
+        selectedTransportOptions,
         timestamp: Date.now(),
         version: 1,
       };
@@ -221,6 +230,7 @@ export function useBasketPageState() {
     orderComment,
     selectedTransportId,
     customTransportCompany,
+    selectedTransportOptions,
     userId,
   ]);
 
@@ -241,10 +251,17 @@ export function useBasketPageState() {
   ]);
 
   useEffect(() => {
-    if (selectedTransportId && validationErrors.transport) {
+    if (
+      (selectedTransportOptions.length > 0 || selectedTransportId) &&
+      validationErrors.transport
+    ) {
       setValidationErrors(prev => ({ ...prev, transport: false }));
     }
-  }, [selectedTransportId, validationErrors.transport]);
+  }, [
+    selectedTransportId,
+    selectedTransportOptions,
+    validationErrors.transport,
+  ]);
 
   // Clear userData validation error when all required fields are filled
   useEffect(() => {

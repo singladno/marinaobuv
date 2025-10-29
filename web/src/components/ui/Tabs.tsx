@@ -48,7 +48,7 @@ export function Tab({
   return (
     <button
       onClick={onClick}
-      className={`flex-1 rounded-none border-b-2 py-3 text-sm font-medium transition-all duration-200 ${
+      className={`flex-1 cursor-pointer rounded-none border-b-2 py-3 text-sm font-medium transition-all duration-200 ${
         isActive
           ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300'
           : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-800/50 dark:hover:text-gray-200'

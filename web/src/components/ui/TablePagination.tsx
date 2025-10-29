@@ -48,14 +48,14 @@ export function TablePagination({
         <button
           onClick={handlePrevious}
           disabled={currentPage <= 1 || loading}
-          className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="relative inline-flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
         >
           Назад
         </button>
         <button
           onClick={handleNext}
           disabled={currentPage >= totalPages || loading}
-          className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="relative ml-3 inline-flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
         >
           Вперед
         </button>
@@ -94,7 +94,7 @@ export function TablePagination({
             <button
               onClick={handlePrevious}
               disabled={currentPage <= 1 || loading}
-              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+              className="relative inline-flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
             >
               <span className="sr-only">Назад</span>
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -126,7 +126,7 @@ export function TablePagination({
                   key={pageNum}
                   onClick={() => onPageChange(pageNum)}
                   disabled={loading}
-                  className={`relative inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${
+                  className={`relative inline-flex cursor-pointer items-center rounded-md px-4 py-2 text-sm font-medium ${
                     isActive
                       ? 'bg-blue-600 text-white'
                       : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -140,7 +140,7 @@ export function TablePagination({
             <button
               onClick={handleNext}
               disabled={currentPage >= totalPages || loading}
-              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+              className="relative inline-flex cursor-pointer items-center rounded-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
             >
               <span className="sr-only">Вперед</span>
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">

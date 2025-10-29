@@ -239,7 +239,7 @@ function GruzchikSidebarLink({
   return (
     <Link
       href={href}
-      className={`group relative mt-3 flex transform items-center rounded-lg transition-all duration-300 hover:scale-105 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 ${
+      className={`group relative mt-3 flex transform cursor-pointer items-center rounded-lg transition-all duration-300 hover:scale-105 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 ${
         collapsed ? 'justify-center px-3 py-3' : 'px-4 py-3'
       } ${
         isActive

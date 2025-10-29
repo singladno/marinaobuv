@@ -84,7 +84,7 @@ export function CartItem({
           <div className="absolute -right-2 -top-2 flex gap-1">
             <button
               onClick={() => onToggleFavorite?.(item.slug)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50"
               title={
                 isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'
               }
@@ -103,7 +103,7 @@ export function CartItem({
               disabled={isRemoving}
               className={`flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md hover:bg-red-50 ${
                 isRemoving ? 'cursor-not-allowed opacity-50' : ''
-              }`}
+              } ${!isRemoving ? 'cursor-pointer' : ''}`}
               title="Удалить из корзины"
               aria-label="Удалить из корзины"
             >
@@ -152,7 +152,7 @@ export function CartItem({
               disabled={isUpdating}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 ${
                 isUpdating ? 'cursor-not-allowed opacity-50' : ''
-              }`}
+              } ${!isUpdating ? 'cursor-pointer' : ''}`}
               title="Уменьшить количество"
               aria-label="Уменьшить количество"
             >
@@ -166,7 +166,7 @@ export function CartItem({
               disabled={isUpdating}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 ${
                 isUpdating ? 'cursor-not-allowed opacity-50' : ''
-              }`}
+              } ${!isUpdating ? 'cursor-pointer' : ''}`}
               title="Увеличить количество"
               aria-label="Увеличить количество"
             >
@@ -238,7 +238,7 @@ export function CartItem({
           <div className="flex flex-col gap-1">
             <button
               onClick={() => onToggleFavorite?.(item.slug)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50"
               title={
                 isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'
               }
@@ -257,7 +257,7 @@ export function CartItem({
               disabled={isRemoving}
               className={`flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md hover:bg-red-50 ${
                 isRemoving ? 'cursor-not-allowed opacity-50' : ''
-              }`}
+              } ${!isRemoving ? 'cursor-pointer' : ''}`}
               title="Удалить из корзины"
               aria-label="Удалить из корзины"
             >
@@ -281,7 +281,7 @@ export function CartItem({
               disabled={isUpdating}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 ${
                 isUpdating ? 'cursor-not-allowed opacity-50' : ''
-              }`}
+              } ${!isUpdating ? 'cursor-pointer' : ''}`}
               title="Уменьшить количество"
               aria-label="Уменьшить количество"
             >
@@ -295,7 +295,7 @@ export function CartItem({
               disabled={isUpdating}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 ${
                 isUpdating ? 'cursor-not-allowed opacity-50' : ''
-              }`}
+              } ${!isUpdating ? 'cursor-pointer' : ''}`}
               title="Увеличить количество"
               aria-label="Увеличить количество"
             >

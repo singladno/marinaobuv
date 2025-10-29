@@ -115,7 +115,7 @@ export function OrderSummary({
 
         <button
           onClick={isLoggedIn ? onPlaceOrder : () => setIsLoginModalOpen(true)}
-          className="mt-6 w-full rounded-lg bg-purple-600 px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50"
+          className="mt-6 w-full cursor-pointer rounded-lg bg-purple-600 px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={!!isPlacingOrder}
         >
           {isLoggedIn ? (
@@ -154,7 +154,7 @@ export function OrderSummary({
         <div className="mt-4 flex items-start gap-2">
           <input
             type="checkbox"
-            className="mt-1"
+            className="mt-1 cursor-pointer"
             defaultChecked
             aria-label="Согласие с правилами"
             title="Согласие с правилами"

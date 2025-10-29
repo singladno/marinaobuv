@@ -58,7 +58,11 @@ export function SheetTrigger({ asChild, children }: SheetTriggerProps) {
     });
   }
 
-  return <button onClick={() => onOpenChange(true)}>{children}</button>;
+  return (
+    <button className="cursor-pointer" onClick={() => onOpenChange(true)}>
+      {children}
+    </button>
+  );
 }
 
 interface SheetContentProps {
@@ -108,7 +112,7 @@ export function SheetContent({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 cursor-pointer bg-black/50 transition-opacity duration-300 ${
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => onOpenChange(false)}

@@ -108,6 +108,7 @@ export function BasketContent({
 }: BasketContentProps) {
   const transportSectionRef = useRef<HTMLDivElement>(null);
   const userDataSectionRef = useRef<HTMLDivElement>(null);
+  const transportSelectorRef = useRef<HTMLDivElement>(null);
 
   // Debug: Log validation errors
   useEffect(() => {
@@ -143,6 +144,27 @@ export function BasketContent({
       }, 100);
     }
   }, [validationErrors?.userData, setIsEditingUserData, scrollTrigger]);
+
+  // Handle click outside transport selector
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isEditingTransport &&
+        transportSelectorRef.current &&
+        !transportSelectorRef.current.contains(event.target as Node) &&
+        !transportSectionRef.current?.contains(event.target as Node)
+      ) {
+        setIsEditingTransport(false);
+      }
+    };
+
+    if (isEditingTransport) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isEditingTransport, setIsEditingTransport]);
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
@@ -171,7 +193,7 @@ export function BasketContent({
               )}
             </h2>
             <button
-              className="text-purple-600 hover:text-purple-700"
+              className="cursor-pointer text-purple-600 hover:text-purple-700"
               aria-label="Редактировать выбор ТК"
               title="Редактировать выбор ТК"
               onClick={() => setIsEditingTransport(!isEditingTransport)}
@@ -192,7 +214,7 @@ export function BasketContent({
             </button>
           </div>
           {isEditingTransport ? (
-            <div className="space-y-4">
+            <div ref={transportSelectorRef} className="space-y-4">
               {validationErrors?.transport &&
                 selectedTransportOptions.length === 0 && (
                   <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
@@ -225,10 +247,7 @@ export function BasketContent({
                 selectedOptions={selectedTransportOptions}
                 onChange={options => {
                   setSelectedTransportOptions(options);
-                  // Close editing when at least one option is selected
-                  if (options.length > 0) {
-                    setIsEditingTransport(false);
-                  }
+                  // Don't auto-close - let user close via edit icon or click outside
                 }}
                 initialCustomNames={{}}
               />
@@ -237,7 +256,7 @@ export function BasketContent({
             <button
               type="button"
               onClick={() => setIsEditingTransport(true)}
-              className="rounded-card border-card hover:bg-card-hover w-full p-4 text-left transition-colors"
+              className="rounded-card border-card hover:bg-card-hover w-full cursor-pointer p-4 text-left transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -294,7 +313,10 @@ export function BasketContent({
               <p className="mb-3 text-gray-600">
                 Транспортная компания не выбрана
               </p>
-              <Button onClick={() => setIsEditingTransport(true)}>
+              <Button
+                onClick={() => setIsEditingTransport(true)}
+                className="cursor-pointer"
+              >
                 Выбрать компанию
               </Button>
             </div>
@@ -315,6 +337,28 @@ export function BasketContent({
                 </span>
               )}
             </h2>
+            {isLoggedIn && (
+              <button
+                className="cursor-pointer text-purple-600 hover:text-purple-700"
+                aria-label="Редактировать данные"
+                title="Редактировать данные"
+                onClick={() => setIsEditingUserData(!isEditingUserData)}
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </button>
+            )}
           </div>
 
           {isLoggedIn ? (
@@ -323,7 +367,7 @@ export function BasketContent({
                 <button
                   type="button"
                   onClick={() => setIsEditingUserData(true)}
-                  className="rounded-card border-card hover:bg-card-hover w-full p-4 text-left transition-colors"
+                  className="rounded-card border-card hover:bg-card-hover w-full cursor-pointer p-4 text-left transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
@@ -529,7 +573,7 @@ export function BasketContent({
             <button
               type="button"
               onClick={() => setIsLoginModalOpen(true)}
-              className="rounded-card border-card hover:bg-card-hover w-full p-4 text-left transition-colors"
+              className="rounded-card border-card hover:bg-card-hover w-full cursor-pointer p-4 text-left transition-colors"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">

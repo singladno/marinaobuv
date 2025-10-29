@@ -47,7 +47,7 @@ export function OrderComment({
           Комментарий к заказу
         </h2>
         <button
-          className="text-purple-600 hover:text-purple-700"
+          className="cursor-pointer text-purple-600 hover:text-purple-700"
           aria-label="Редактировать комментарий"
           title="Редактировать комментарий"
           onClick={() => setIsEditing(!isEditing)}

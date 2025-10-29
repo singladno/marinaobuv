@@ -78,7 +78,7 @@ export function GruzchikPortalSwitcher() {
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm"
+          className="fixed inset-0 cursor-pointer bg-black/20 backdrop-blur-sm"
           onClick={closeMenu}
         />
       )}
@@ -101,7 +101,7 @@ export function GruzchikPortalSwitcher() {
       {/* Main Toggle Button */}
       <button
         onClick={toggleMenu}
-        className="group relative flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg shadow-purple-500/25 transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-offset-2 sm:h-14 sm:w-14"
+        className="group relative flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-purple-600 text-white shadow-lg shadow-purple-500/25 transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-offset-2 sm:h-14 sm:w-14"
         aria-label="Переключить портал"
       >
         {/* Background Animation */}

@@ -125,7 +125,7 @@ export const SelectTrigger = React.forwardRef<
       ref={combinedRef}
       type="button"
       className={cn(
-        'flex h-10 w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-none outline-none',
+        'flex h-10 w-full cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-none outline-none',
         'placeholder:text-gray-500',
         'focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:ring-offset-0',
         'hover:border-gray-300',

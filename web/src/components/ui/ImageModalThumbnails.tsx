@@ -36,7 +36,7 @@ export function ImageModalThumbnails({
           <div key={img.id} className="relative">
             <button
               onClick={() => onImageSelect(index)}
-              className={`h-12 w-12 overflow-hidden rounded-lg border-2 shadow-lg transition-all ${
+              className={`h-12 w-12 cursor-pointer overflow-hidden rounded-lg border-2 shadow-lg transition-all ${
                 isCurrent
                   ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800'
                   : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
@@ -62,7 +62,7 @@ export function ImageModalThumbnails({
                 e.stopPropagation();
                 onToggleSelection(img.id);
               }}
-              className={`absolute -right-1 -top-1 h-5 w-5 rounded-full border-2 shadow-sm transition-all ${
+              className={`absolute -right-1 -top-1 h-5 w-5 cursor-pointer rounded-full border-2 shadow-sm transition-all ${
                 isSelected
                   ? 'border-green-500 bg-green-500 text-white'
                   : 'border-gray-300 bg-white hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800'

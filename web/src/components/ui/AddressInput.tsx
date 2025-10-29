@@ -180,7 +180,7 @@ export function AddressInput({
           'focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:ring-offset-0',
           // Error styles
           error &&
-            'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-200',
+            'border-purple-500 bg-purple-50 focus:border-purple-500 focus:ring-purple-200',
           // Disabled styles
           disabled && 'cursor-not-allowed bg-gray-50 text-gray-500',
           className
@@ -204,7 +204,7 @@ export function AddressInput({
                   type="button"
                   onClick={() => handleSuggestionSelect(suggestion)}
                   className={clsx(
-                    'w-full px-3 py-2 text-left text-sm transition-colors',
+                    'w-full cursor-pointer px-3 py-2 text-left text-sm transition-colors',
                     'hover:bg-gray-50 focus:bg-gray-50 focus:outline-none',
                     index === highlightedIndex && 'bg-purple-50 text-purple-900'
                   )}

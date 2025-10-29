@@ -45,7 +45,7 @@ export function DataTablePagination({
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="rounded border border-gray-300 bg-white px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          className="cursor-pointer rounded border border-gray-300 bg-white px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
         >
           Назад
         </button>
@@ -55,7 +55,7 @@ export function DataTablePagination({
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="rounded border border-gray-300 bg-white px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          className="cursor-pointer rounded border border-gray-300 bg-white px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
         >
           Вперед
         </button>

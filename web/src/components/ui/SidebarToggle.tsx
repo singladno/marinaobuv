@@ -19,7 +19,7 @@ export function SidebarToggle({
       onClick={onToggle}
       aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       className={cn(
-        'group relative inline-flex items-center justify-center rounded-lg',
+        'group relative inline-flex cursor-pointer items-center justify-center rounded-lg',
         'transition-all duration-300 ease-in-out',
         'hover:scale-105 hover:bg-gray-100 hover:shadow-md',
         'focus:outline-none',
