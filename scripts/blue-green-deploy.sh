@@ -107,7 +107,7 @@ switch_nginx_traffic() {
     
     echo "🔄 Switching nginx traffic to $target_color deployment (port $target_port)..."
     
-    # Update nginx configuration to point to the new deployment
+  # Update nginx HTTP configuration to point to the new deployment
     sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << EOF
 server {
     listen 80;
@@ -160,6 +160,59 @@ server {
     }
 }
 EOF
+
+  # Update nginx HTTPS configuration to point to the new deployment
+  sudo tee /etc/nginx/sites-available/marinaobuv-https > /dev/null << EOF
+server {
+    listen 443 ssl http2;
+    server_name marina-obuv.ru www.marina-obuv.ru;
+
+    ssl_certificate /etc/ssl/certs/marinaobuv.ru.crt;
+    ssl_certificate_key /etc/ssl/private/marinaobuv.ru.key;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Main application - proxy to active deployment
+    location / {
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+
+    # API routes
+    location /api/ {
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Health check
+    location /health {
+        proxy_pass http://localhost:${target_port}/api/health;
+        access_log off;
+    }
+}
+EOF
+
+  # Ensure symlink is present
+  sudo ln -sf /etc/nginx/sites-available/marinaobuv-https /etc/nginx/sites-enabled/
 
     # Test nginx configuration
     if sudo nginx -t; then
