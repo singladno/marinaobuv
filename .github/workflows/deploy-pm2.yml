@@ -192,12 +192,13 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          timeout: 600s
-          command_timeout: 600s
+          timeout: 1200s
+          command_timeout: 1800s
           debug: true
           use_insecure_cipher: false
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script: |
+            set -e
             # Check if application directory exists
             if [ ! -d "/var/www/marinaobuv" ]; then
                 echo "Setting up application directory..."
@@ -424,8 +425,9 @@ jobs:
             echo "🔒 Setting up HTTPS and nginx configuration..."
 
             # Install required packages for HTTPS
-            sudo apt-get update
-            sudo apt-get install -y certbot python3-certbot-nginx openssl
+            export DEBIAN_FRONTEND=noninteractive
+            timeout 300 sudo apt-get update || echo "⚠️ apt-get update timed out"
+            timeout 600 sudo apt-get install -y certbot python3-certbot-nginx openssl || echo "⚠️ Package install timed out"
 
             # Create SSL directory structure
             sudo mkdir -p /etc/ssl/certs
@@ -524,7 +526,7 @@ jobs:
 
             # Setup Let's Encrypt certificate
             echo "🔐 Setting up Let's Encrypt certificate..."
-            sudo certbot --nginx -d marina-obuv.ru -d www.marina-obuv.ru --non-interactive --agree-tos --email admin@marina-obuv.ru || echo "⚠️ Let's Encrypt setup failed, using self-signed certificate"
+            timeout 180 sudo certbot --nginx -d marina-obuv.ru -d www.marina-obuv.ru --non-interactive --agree-tos --email admin@marina-obuv.ru || echo "⚠️ Let's Encrypt setup failed or timed out, using self-signed certificate"
 
             # Setup auto-renewal
             echo "🔄 Setting up certificate auto-renewal..."
@@ -532,10 +534,10 @@ jobs:
 
             # Configure firewall
             echo "🔥 Configuring firewall..."
-            sudo ufw allow 22/tcp
-            sudo ufw allow 80/tcp
-            sudo ufw allow 443/tcp
-            sudo ufw --force enable || echo "⚠️ Firewall configuration failed"
+            timeout 60 sudo ufw allow 22/tcp || true
+            timeout 60 sudo ufw allow 80/tcp || true
+            timeout 60 sudo ufw allow 443/tcp || true
+            timeout 60 sudo ufw --force enable || echo "⚠️ Firewall configuration failed or timed out"
 
             # Install/refresh server cron jobs from repository config
             echo "🕒 Installing cron jobs from scripts/cron-jobs.conf..."
