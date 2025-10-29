@@ -499,30 +499,8 @@ jobs:
             EOF
             fi
 
-            # Copy HTTPS nginx configuration
-            sudo cp nginx/conf.d/marinaobuv-https.conf /etc/nginx/sites-available/marinaobuv-https
-
-            # Enable the site
-            echo "🔗 Enabling nginx HTTPS site..."
-            sudo ln -sf /etc/nginx/sites-available/marinaobuv-https /etc/nginx/sites-enabled/
-
-            # Remove default nginx site if it exists
-            sudo rm -f /etc/nginx/sites-enabled/default
-
-            # Test nginx configuration
-            echo "🧪 Testing nginx configuration..."
-            sudo nginx -t
-
-            if [ $? -eq 0 ]; then
-                echo "✅ Nginx configuration is valid"
-                # Reload nginx
-                echo "🔄 Reloading nginx..."
-                sudo systemctl reload nginx
-                echo "✅ Nginx configuration updated successfully!"
-            else
-                echo "❌ Nginx configuration test failed!"
-                exit 1
-            fi
+            # HTTPS vhost is managed dynamically by blue-green script; skip static copy to avoid overwriting LE cert paths
+            echo "ℹ️ Skipping static HTTPS vhost copy; managed by blue-green switch"
 
             # Setup Let's Encrypt certificate
             echo "🔐 Setting up Let's Encrypt certificate..."
