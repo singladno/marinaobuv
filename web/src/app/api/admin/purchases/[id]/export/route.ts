@@ -115,11 +115,11 @@ export async function GET(
             img => (img.color || '').toLowerCase() === primaryColor
           );
         } else {
-          const noColor = allImages.filter(img => !img.color);
-          if (noColor.length > 0) sameColorImages = noColor;
-        }
-        if (sameColorImages.length === 0 && primaryImage) {
-          sameColorImages = [primaryImage];
+        const noColor = allImages.filter(img => !img.color);
+        if (noColor.length > 0) sameColorImages = noColor;
+      }
+      if (sameColorImages.length === 0 && primaryImage) {
+        sameColorImages = [primaryImage];
         }
       }
       const imageUrls = sameColorImages.map(img => img.url).filter(Boolean).join(',');
