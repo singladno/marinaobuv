@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import { ProductActions } from '@/components/product/ProductActions';
 import { ProductFeatures } from '@/components/product/ProductFeatures';
@@ -46,6 +47,8 @@ export default function ProductDetails(props: Props) {
 
   const { add } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const searchParams = useSearchParams();
+  const selectedColor = (searchParams?.get('color') || '').trim() || null;
   const packPairs = useMemo(() => {
     if (!Array.isArray(sizes)) return null;
     return sizes.length > 0
@@ -63,15 +66,25 @@ export default function ProductDetails(props: Props) {
   }, [pairPrice, packPairs]);
 
   const handleAddToCart = () =>
-    add(slug, quantity, {
-      imageUrl: props.imageUrl || '',
-      name: name,
-    });
+    add(
+      slug,
+      quantity,
+      {
+        imageUrl: props.imageUrl || '',
+        name: name,
+      },
+      selectedColor
+    );
   const handleBuyNow = () =>
-    add(slug, quantity, {
-      imageUrl: props.imageUrl || '',
-      name: name,
-    });
+    add(
+      slug,
+      quantity,
+      {
+        imageUrl: props.imageUrl || '',
+        name: name,
+      },
+      selectedColor
+    );
 
   return (
     <div className="space-y-6">

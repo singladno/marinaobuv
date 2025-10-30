@@ -344,6 +344,7 @@ model OrderItem {
   priceBox     Decimal
   qty          Int
   itemCode     String?                @unique
+  color        String?
   createdAt    DateTime               @default(now())
   isAvailable  Boolean?
   order        Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)

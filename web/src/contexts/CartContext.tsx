@@ -8,6 +8,7 @@ import { useFlyingAnimationContext } from './FlyingAnimationContext';
 type CartItem = {
   slug: string;
   qty: number;
+  color?: string | null;
 };
 
 type CartContextValue = {
@@ -16,10 +17,11 @@ type CartContextValue = {
   add: (
     slug: string,
     qty?: number,
-    productData?: { imageUrl: string; name: string }
+    productData?: { imageUrl: string; name: string },
+    color?: string | null
   ) => void;
-  remove: (slug: string) => void;
-  updateQuantity: (slug: string, qty: number) => void;
+  remove: (slug: string, color?: string | null) => void;
+  updateQuantity: (slug: string, qty: number, color?: string | null) => void;
   clear: () => void;
   userId: string | null;
   setUserId: (userId: string | null) => void;
@@ -58,10 +60,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addWithAnimation = (
     slug: string,
     qty: number = 1,
-    productData?: { imageUrl: string; name: string }
+    productData?: { imageUrl: string; name: string },
+    color?: string | null
   ) => {
     // Add to cart first
-    add(slug, qty);
+    add(slug, qty, color ?? null);
     // Trigger flying animation if product data is provided and context is available
     if (productData && triggerFlyingAnimation) {
       triggerFlyingAnimation({

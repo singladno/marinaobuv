@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams, useParams } from 'next/navigation';
+import { useSearchParams, useParams, usePathname } from 'next/navigation';
 
 import { ProductGrid } from '@/components/catalog/ProductGrid';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
 import CategoryBreadcrumbs from '@/components/catalog/CategoryBreadcrumbs';
 import { Text } from '@/components/ui/Text';
-import { useInfiniteCatalog } from '@/hooks/useInfiniteCatalog';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useCatalogBackend } from '@/hooks/useCatalogBackend';
 import { useSearch } from '@/contexts/SearchContext';
+import CatalogPagination from '@/components/ui/CatalogPagination';
 
 function CatalogPageContent() {
   const searchParams = useSearchParams();
@@ -41,34 +41,16 @@ function CatalogPageContent() {
   const {
     products,
     loading,
-    loadingMore,
     error,
     pagination,
     filters,
-    hasNextPage,
     handleFiltersChange,
     handleSortChange,
+    handlePageChange,
     clearFilters,
-    loadMore,
-    retryLoadMore,
-    categoryData,
-  } = useInfiniteCatalog(categoryId, !!categoryPath, {
-    subcategories,
-    siblingCategories,
-    parentChildren,
-    parentCategory,
-    breadcrumbs,
-  });
+  } = useCatalogBackend();
 
-  // Note: Removed sync effect to prevent duplicate catalog requests
-  // The useInfiniteCatalog hook already handles categoryId changes properly
-
-  // Set up infinite scroll
-  const { setLoadMoreRef } = useInfiniteScroll({
-    hasNextPage,
-    isLoading: loadingMore,
-    onLoadMore: loadMore,
-  });
+  const pathname = usePathname();
 
   // Grid columns state for switcher (4 or 5)
   const [gridCols, setGridCols] = useState<4 | 5>(4);
@@ -101,16 +83,8 @@ function CatalogPageContent() {
           setParentChildren(data.parentChildren || []);
           setParentCategory(data.parentCategory || null);
           setIsParentCategory(data.isParentCategory || false);
-          console.log(
-            '🔍 Set categoryId:',
-            data.id,
-            'categoryName:',
-            data.name,
-            'displayName:',
-            data.displayName,
-            'subcategories:',
-            data.subcategories?.length || 0
-          );
+          // sync filters with category
+          handleFiltersChange({ categoryId: data.id });
         } else {
           setCategoryId('');
           setCategoryName('');
@@ -139,7 +113,18 @@ function CatalogPageContent() {
     if (searchParam) {
       setSearchQuery(searchParam);
     }
-  }, [searchParams, setSearchQuery]);
+    const pageParam = parseInt(searchParams.get('page') || '1', 10);
+    const pageSizeParam = parseInt(searchParams.get('pageSize') || '20', 10);
+    if (pageParam !== filters.page || pageSizeParam !== filters.pageSize) {
+      handleFiltersChange({ page: pageParam, pageSize: pageSizeParam });
+    }
+  }, [
+    searchParams,
+    setSearchQuery,
+    handleFiltersChange,
+    filters.page,
+    filters.pageSize,
+  ]);
 
   if (error) {
     return (
@@ -159,11 +144,9 @@ function CatalogPageContent() {
         {/* Header */}
         <div className="mb-6">
           {/* Breadcrumbs */}
-          {(categoryData?.breadcrumbs || breadcrumbs).length > 0 && (
+          {breadcrumbs.length > 0 && (
             <div className="mb-4">
-              <CategoryBreadcrumbs
-                items={categoryData?.breadcrumbs || breadcrumbs}
-              />
+              <CategoryBreadcrumbs items={breadcrumbs} />
             </div>
           )}
 
@@ -199,12 +182,10 @@ function CatalogPageContent() {
             onChange={handleFiltersChange}
             onClear={clearFilters}
             baseCategoryId={categoryId}
-            subcategories={categoryData?.subcategories || subcategories}
-            siblingCategories={
-              categoryData?.siblingCategories || siblingCategories
-            }
-            parentChildren={categoryData?.parentChildren || parentChildren}
-            parentCategory={categoryData?.parentCategory || parentCategory}
+            subcategories={subcategories}
+            siblingCategories={siblingCategories}
+            parentChildren={parentChildren}
+            parentCategory={parentCategory}
             currentPath={categoryPath}
             currentCategoryName={displayName || categoryName}
           />
@@ -226,14 +207,21 @@ function CatalogPageContent() {
             products={products}
             gridCols={gridCols}
             loading={loading}
-            loadingMore={loadingMore}
-            hasNextPage={hasNextPage}
+            hasNextPage={false}
             error={error}
-            onLoadMore={loadMore}
-            onRetry={retryLoadMore}
-            loadMoreRef={setLoadMoreRef}
+            showEndMessage={false}
           />
         </div>
+
+        {/* Pagination */}
+        <CatalogPagination
+          basePath={pathname}
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          total={pagination.total}
+          filters={filters}
+          categoryId={categoryId || undefined}
+        />
       </div>
     </div>
   );

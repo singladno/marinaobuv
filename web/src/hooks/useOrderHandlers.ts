@@ -3,6 +3,7 @@
 interface CartItemWithProduct {
   slug: string;
   qty: number;
+  color?: string | null;
   product: {
     id: string;
     pricePair: number;
@@ -104,6 +105,7 @@ export function useOrderHandlers({
         productId: item.product.id,
         qty: item.qty,
         priceBox: item.product.pricePair,
+        color: item.color ?? null,
       }));
 
       const response = await fetch('/api/orders', {

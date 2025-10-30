@@ -15,6 +15,7 @@ import { useEffect, useRef } from 'react';
 interface CartItemWithProduct {
   slug: string;
   qty: number;
+  color?: string | null;
   product: {
     id: string;
     slug: string;
@@ -59,8 +60,12 @@ interface BasketContentProps {
   };
   onPlaceOrder: () => void;
   isPlacingOrder?: boolean;
-  onRemove: (slug: string) => void;
-  onUpdateQuantity: (slug: string, quantity: number) => void;
+  onRemove: (slug: string, color?: string | null) => void;
+  onUpdateQuantity: (
+    slug: string,
+    quantity: number,
+    color?: string | null
+  ) => void;
   onToggleFavorite?: (slug: string) => void;
   favorites?: Set<string>;
   updatingItems?: Set<string>;

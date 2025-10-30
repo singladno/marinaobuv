@@ -125,7 +125,28 @@ export function useCatalogBackend() {
   // Handle filter changes
   const handleFiltersChange = useCallback(
     (newFilters: Partial<CatalogFilters>) => {
-      const updatedFilters = { ...filters, ...newFilters, page: 1 };
+      // Decide whether to reset page to 1 based on which filters changed
+      const affectsResultSet =
+        'search' in newFilters ||
+        'categoryId' in newFilters ||
+        'minPrice' in newFilters ||
+        'maxPrice' in newFilters ||
+        'colors' in newFilters ||
+        'inStock' in newFilters ||
+        'sortBy' in newFilters;
+
+      const nextPage = affectsResultSet
+        ? 1
+        : newFilters.page !== undefined
+          ? newFilters.page
+          : filters.page;
+
+      const updatedFilters: CatalogFilters = {
+        ...filters,
+        ...newFilters,
+        page: nextPage,
+      };
+
       setFilters(updatedFilters);
       fetchProducts(updatedFilters);
     },

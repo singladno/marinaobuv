@@ -27,6 +27,7 @@ interface ProductGridProps {
   onLoadMore?: () => void;
   onRetry?: () => void;
   loadMoreRef?: (node: HTMLDivElement | null) => void;
+  showEndMessage?: boolean;
 }
 
 export const ProductGrid = memo(function ProductGrid({
@@ -39,6 +40,7 @@ export const ProductGrid = memo(function ProductGrid({
   onLoadMore,
   onRetry,
   loadMoreRef,
+  showEndMessage = true,
 }: ProductGridProps) {
   if (loading) {
     return <ProductGridSkeleton gridCols={gridCols} />;
@@ -122,8 +124,8 @@ export const ProductGrid = memo(function ProductGrid({
         </div>
       )}
 
-      {/* End of results message */}
-      {!hasNextPage && uniqueProducts.length > 0 && (
+      {/* End of results message (only when explicitly enabled) */}
+      {showEndMessage && !hasNextPage && uniqueProducts.length > 0 && (
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
             Показаны все товары ({uniqueProducts.length})

@@ -9,16 +9,22 @@ interface CartActionButtonProps {
   slug: string;
   productName?: string;
   productImageUrl?: string;
+  color?: string | null;
 }
 
 export default function CartActionButton({
   slug,
   productName,
   productImageUrl,
+  color = null,
 }: CartActionButtonProps) {
   const router = useRouter();
   const { add, items } = useCart();
-  const inCart = useMemo(() => items.some(i => i.slug === slug), [items, slug]);
+  const inCart = useMemo(
+    () =>
+      items.some(i => i.slug === slug && (i as any).color === (color ?? null)),
+    [items, slug, color]
+  );
 
   if (inCart) {
     return (
@@ -43,10 +49,15 @@ export default function CartActionButton({
       data-product-slug={slug}
       onClick={e => {
         e.preventDefault();
-        add(slug, 1, {
-          imageUrl: productImageUrl || '',
-          name: productName || '',
-        });
+        add(
+          slug,
+          1,
+          {
+            imageUrl: productImageUrl || '',
+            name: productName || '',
+          },
+          color ?? null
+        );
       }}
       className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white"
     >

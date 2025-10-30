@@ -7,6 +7,7 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useMemo } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
@@ -20,6 +21,7 @@ interface CartItemProps {
   item: {
     slug: string;
     qty: number;
+    color?: string | null;
     product: {
       id: string;
       name: string;
@@ -30,8 +32,12 @@ interface CartItemProps {
       sizes: Array<{ size: string; count: number }>;
     };
   };
-  onRemove: (slug: string) => void;
-  onUpdateQuantity: (slug: string, quantity: number) => void;
+  onRemove: (slug: string, color?: string | null) => void;
+  onUpdateQuantity: (
+    slug: string,
+    quantity: number,
+    color?: string | null
+  ) => void;
   onToggleFavorite?: (slug: string) => void;
   isFavorite?: boolean;
   isUpdating?: boolean;
@@ -64,16 +70,47 @@ export function CartItem({
   // Total should be price per box * quantity (not price per pair * quantity)
   const totalPrice = pricePerBox * item.qty;
 
+  // Pick image for selected color if available
+  const displayImageUrl = useMemo(() => {
+    const preferredColor = (item.color || '').toLowerCase();
+    if (preferredColor) {
+      const matched = item.product.images.find(
+        img => (img.alt || '').toLowerCase() === preferredColor
+      );
+      if (matched?.url) return matched.url;
+    }
+    return item.product.images[0]?.url || '/placeholder.svg';
+  }, [item.color, item.product.images]);
+
+  const displayAlt = useMemo(() => {
+    return item.color
+      ? `${item.product.name} — ${item.color}`
+      : item.product.name;
+  }, [item.product.name, item.color]);
+
+  const displayColor = useMemo(() => {
+    const explicit = (item.color || '').trim();
+    if (explicit) return explicit;
+    const inferred = (item.product.images[0]?.alt || '').trim();
+    return inferred || 'не указан';
+  }, [item.color, item.product.images]);
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       {/* Desktop Layout */}
       <div className="hidden md:flex md:items-center md:gap-4">
         {/* Product Image with Action Icons */}
         <div className="relative flex-shrink-0">
-          <Link href={`/product/${item.slug}`} className="block">
+          <Link
+            href={{
+              pathname: `/product/${item.slug}`,
+              query: item.color ? { color: item.color } : {},
+            }}
+            className="block"
+          >
             <Image
-              src={item.product.images[0]?.url || '/placeholder.svg'}
-              alt={item.product.images[0]?.alt || item.product.name}
+              src={displayImageUrl}
+              alt={displayAlt}
               width={120}
               height={120}
               className="h-24 w-24 rounded-lg object-cover"
@@ -99,7 +136,7 @@ export function CartItem({
               )}
             </button>
             <button
-              onClick={() => onRemove(item.slug)}
+              onClick={() => onRemove(item.slug, item.color ?? null)}
               disabled={isRemoving}
               className={`flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md hover:bg-red-50 ${
                 isRemoving ? 'cursor-not-allowed opacity-50' : ''
@@ -118,11 +155,19 @@ export function CartItem({
 
         {/* Product Information */}
         <div className="min-w-0 flex-1">
-          <Link href={`/product/${item.slug}`} className="block">
+          <Link
+            href={{
+              pathname: `/product/${item.slug}`,
+              query: item.color ? { color: item.color } : {},
+            }}
+            className="block"
+          >
             <h3 className="text-lg font-semibold text-gray-900 transition-colors hover:text-purple-600">
               {item.product.name}
             </h3>
           </Link>
+
+          <p className="mt-1 text-sm text-gray-600">Цвет: {displayColor}</p>
 
           {item.product.article && (
             <p className="mt-1 text-sm text-gray-500">
@@ -147,7 +192,11 @@ export function CartItem({
           <div className="flex items-center gap-2">
             <button
               onClick={() =>
-                onUpdateQuantity(item.slug, Math.max(1, item.qty - 1))
+                onUpdateQuantity(
+                  item.slug,
+                  Math.max(1, item.qty - 1),
+                  item.color ?? null
+                )
               }
               disabled={isUpdating}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 ${
@@ -162,7 +211,9 @@ export function CartItem({
               {isUpdating ? '...' : item.qty}
             </span>
             <button
-              onClick={() => onUpdateQuantity(item.slug, item.qty + 1)}
+              onClick={() =>
+                onUpdateQuantity(item.slug, item.qty + 1, item.color ?? null)
+              }
               disabled={isUpdating}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 ${
                 isUpdating ? 'cursor-not-allowed opacity-50' : ''
@@ -204,10 +255,16 @@ export function CartItem({
         <div className="flex items-start gap-3">
           {/* Product Image */}
           <div className="relative flex-shrink-0">
-            <Link href={`/product/${item.slug}`} className="block">
+            <Link
+              href={{
+                pathname: `/product/${item.slug}`,
+                query: item.color ? { color: item.color } : {},
+              }}
+              className="block"
+            >
               <Image
-                src={item.product.images[0]?.url || '/placeholder.svg'}
-                alt={item.product.images[0]?.alt || item.product.name}
+                src={displayImageUrl}
+                alt={displayAlt}
                 width={80}
                 height={80}
                 className="h-20 w-20 rounded-lg object-cover"
@@ -217,11 +274,19 @@ export function CartItem({
 
           {/* Product Information */}
           <div className="min-w-0 flex-1">
-            <Link href={`/product/${item.slug}`} className="block">
+            <Link
+              href={{
+                pathname: `/product/${item.slug}`,
+                query: item.color ? { color: item.color } : {},
+              }}
+              className="block"
+            >
               <h3 className="text-base font-semibold text-gray-900 transition-colors hover:text-purple-600">
                 {item.product.name}
               </h3>
             </Link>
+
+            <p className="mt-1 text-xs text-gray-600">Цвет: {displayColor}</p>
 
             {item.product.article && (
               <p className="mt-1 text-xs text-gray-500">
@@ -253,7 +318,7 @@ export function CartItem({
               )}
             </button>
             <button
-              onClick={() => onRemove(item.slug)}
+              onClick={() => onRemove(item.slug, item.color ?? null)}
               disabled={isRemoving}
               className={`flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md hover:bg-red-50 ${
                 isRemoving ? 'cursor-not-allowed opacity-50' : ''
@@ -276,7 +341,11 @@ export function CartItem({
           <div className="flex items-center gap-2">
             <button
               onClick={() =>
-                onUpdateQuantity(item.slug, Math.max(1, item.qty - 1))
+                onUpdateQuantity(
+                  item.slug,
+                  Math.max(1, item.qty - 1),
+                  item.color ?? null
+                )
               }
               disabled={isUpdating}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 ${
@@ -291,7 +360,9 @@ export function CartItem({
               {isUpdating ? '...' : item.qty}
             </span>
             <button
-              onClick={() => onUpdateQuantity(item.slug, item.qty + 1)}
+              onClick={() =>
+                onUpdateQuantity(item.slug, item.qty + 1, item.color ?? null)
+              }
               disabled={isUpdating}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 ${
                 isUpdating ? 'cursor-not-allowed opacity-50' : ''

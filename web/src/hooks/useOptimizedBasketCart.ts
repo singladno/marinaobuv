@@ -18,6 +18,7 @@ interface Product {
 interface CartItemWithProduct {
   slug: string;
   qty: number;
+  color?: string | null;
   product: Product;
 }
 
@@ -46,8 +47,10 @@ export function useOptimizedBasketCart() {
 
   // Fetch only the products that are in the cart
   const fetchBasketProducts = useCallback(
-    async (cartSlugs: string[]) => {
-      if (cartSlugs.length === 0) {
+    async (
+      cartItems: { slug: string; qty: number; color?: string | null }[]
+    ) => {
+      if (cartItems.length === 0) {
         setProducts([]);
         setLoading(false);
         return;
@@ -55,12 +58,13 @@ export function useOptimizedBasketCart() {
 
       setLoading(true);
       try {
+        const uniqueSlugs = Array.from(new Set(cartItems.map(i => i.slug)));
         const response = await fetch('/api/basket/products', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ slugs: cartSlugs }),
+          body: JSON.stringify({ slugs: uniqueSlugs }),
         });
 
         if (!response.ok) {
@@ -91,19 +95,15 @@ export function useOptimizedBasketCart() {
           });
         }
 
-        // Convert CartItem[] to CartItemWithProduct[] with real product data
-        const productsWithData: CartItemWithProduct[] = cartSlugs
-          .map(slug => {
-            const cartItem = items.find(item => item.slug === slug);
-            const product = data.products.find((p: any) => p.slug === slug);
-
-            if (!cartItem || !product) {
-              return null;
-            }
-
+        // Convert current cart items to view model with real product data
+        const productsWithData: CartItemWithProduct[] = cartItems
+          .map(ci => {
+            const product = data.products.find((p: any) => p.slug === ci.slug);
+            if (!product) return null;
             return {
-              slug: cartItem.slug,
-              qty: cartItem.qty,
+              slug: ci.slug,
+              qty: ci.qty,
+              color: (ci as any).color ?? null,
               product: {
                 id: product.id,
                 slug: product.slug,
@@ -137,11 +137,13 @@ export function useOptimizedBasketCart() {
       return;
     }
 
-    const slugs = items.map(item => item.slug);
-    const slugsString = slugs.join(',');
+    const compositeKeys = items.map(
+      item => `${item.slug}::${(item as any).color ?? ''}`
+    );
+    const keysString = compositeKeys.join(',');
 
     // Always handle the empty-cart case to avoid stuck loading on first render
-    if (slugs.length === 0) {
+    if (items.length === 0) {
       setProducts([]);
       setLoading(false);
       prevSlugsRef.current = '';
@@ -149,25 +151,37 @@ export function useOptimizedBasketCart() {
     }
 
     // Only fetch if this is a new set of items (not just a removal)
-    if (slugsString !== prevSlugsRef.current) {
-      prevSlugsRef.current = slugsString;
-      fetchBasketProducts(slugs);
+    if (keysString !== prevSlugsRef.current) {
+      prevSlugsRef.current = keysString;
+      fetchBasketProducts(
+        items.map(i => ({
+          slug: i.slug,
+          qty: i.qty,
+          color: (i as any).color ?? null,
+        }))
+      );
     }
   }, [items, fetchBasketProducts]);
 
   const handleRemoveItem = useCallback(
-    (slug: string) => {
+    (slug: string, color?: string | null) => {
       // Mark that we're removing an item to prevent useEffect from triggering
       isRemovingRef.current = true;
 
       // Mark item as removing to show local loader
-      setRemovingItems(prev => new Set(prev).add(slug));
+      const key = `${slug}::${color ?? ''}`;
+      setRemovingItems(prev => new Set(prev).add(key));
 
       // Remove from context (this is synchronous and fast)
-      remove(slug);
+      remove(slug, color ?? null);
 
       // Update local state optimistically
-      setProducts(prev => prev.filter(item => item.slug !== slug));
+      setProducts(prev =>
+        prev.filter(
+          item =>
+            !(item.slug === slug && (item.color ?? null) === (color ?? null))
+        )
+      );
 
       // Show notification
       addNotification({
@@ -180,7 +194,7 @@ export function useOptimizedBasketCart() {
       setTimeout(() => {
         setRemovingItems(prev => {
           const newSet = new Set(prev);
-          newSet.delete(slug);
+          newSet.delete(key);
           return newSet;
         });
         // Reset the removing flag
@@ -191,22 +205,27 @@ export function useOptimizedBasketCart() {
   );
 
   const handleUpdateQuantity = useCallback(
-    async (slug: string, qty: number) => {
+    async (slug: string, qty: number, color?: string | null) => {
       if (qty <= 0) {
-        handleRemoveItem(slug);
+        handleRemoveItem(slug, color ?? null);
         return;
       }
 
       // Mark item as updating to prevent UI blocking
-      setUpdatingItems(prev => new Set(prev).add(slug));
+      const key = `${slug}::${color ?? ''}`;
+      setUpdatingItems(prev => new Set(prev).add(key));
 
       try {
         // Update quantity in context (this is synchronous and fast)
-        updateQuantity(slug, qty);
+        updateQuantity(slug, qty, color ?? null);
 
         // Update local state optimistically
         setProducts(prev =>
-          prev.map(item => (item.slug === slug ? { ...item, qty } : item))
+          prev.map(item =>
+            item.slug === slug && (item.color ?? null) === (color ?? null)
+              ? { ...item, qty }
+              : item
+          )
         );
       } catch (error) {
         console.error('Error updating quantity:', error);
@@ -219,7 +238,7 @@ export function useOptimizedBasketCart() {
         // Remove from updating set
         setUpdatingItems(prev => {
           const newSet = new Set(prev);
-          newSet.delete(slug);
+          newSet.delete(key);
           return newSet;
         });
       }

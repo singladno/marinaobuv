@@ -7,6 +7,7 @@ import { CartItem } from './CartItem';
 interface CartItemWithProduct {
   slug: string;
   qty: number;
+  color?: string | null;
   product: {
     id: string;
     name: string;
@@ -20,8 +21,12 @@ interface CartItemWithProduct {
 
 interface CartItemsListProps {
   items: CartItemWithProduct[];
-  onRemove: (slug: string) => void;
-  onUpdateQuantity: (slug: string, quantity: number) => void;
+  onRemove: (slug: string, color?: string | null) => void;
+  onUpdateQuantity: (
+    slug: string,
+    quantity: number,
+    color?: string | null
+  ) => void;
   onToggleFavorite?: (slug: string) => void;
   favorites?: Set<string>;
   updatingItems?: Set<string>;
@@ -52,14 +57,14 @@ export function CartItemsList({
     <div className="space-y-4">
       {items.map(item => (
         <CartItem
-          key={item.product.id}
+          key={`${item.slug}::${item.color ?? ''}`}
           item={item}
           onRemove={onRemove}
           onUpdateQuantity={onUpdateQuantity}
           onToggleFavorite={onToggleFavorite}
           isFavorite={favorites.has(item.slug)}
-          isUpdating={updatingItems.has(item.slug)}
-          isRemoving={removingItems.has(item.slug)}
+          isUpdating={updatingItems.has(`${item.slug}::${item.color ?? ''}`)}
+          isRemoving={removingItems.has(`${item.slug}::${item.color ?? ''}`)}
         />
       ))}
     </div>

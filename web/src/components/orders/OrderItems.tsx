@@ -24,6 +24,7 @@ interface OrderItem {
   article: string | null;
   priceBox: number;
   qty: number;
+  color?: string | null;
   isAvailable?: boolean | null;
   boxes?: number;
   pricePair?: number;
@@ -36,6 +37,7 @@ interface OrderItem {
       id: string;
       url: string;
       alt: string | null;
+      color?: string | null;
     }>;
   };
   replacements?: Array<{
@@ -217,7 +219,14 @@ export function OrderItems({
   return (
     <div className="space-y-4">
       {items.map(item => {
-        const primaryImage = item.product.images[0];
+        const preferred = (item.color || '').toLowerCase();
+        const matched = preferred
+          ? item.product.images.find(img => {
+              const key = (img.color || img.alt || '').toLowerCase();
+              return key === preferred;
+            })
+          : undefined;
+        const primaryImage = matched || item.product.images[0];
         const unreadData = getUnreadCount(item.id);
         const totalMessages = getTotalMessages(item.id);
         const itemNeedsApproval = needsApproval(item.id, item.isAvailable);
@@ -243,7 +252,10 @@ export function OrderItems({
                 {/* Product Image */}
                 <div className="h-16 w-16 flex-shrink-0">
                   <Link
-                    href={`/product/${item.product.slug}`}
+                    href={{
+                      pathname: `/product/${item.product.slug}`,
+                      query: item.color ? { color: item.color } : {},
+                    }}
                     className="block"
                   >
                     {primaryImage ? (
@@ -272,6 +284,15 @@ export function OrderItems({
                       Арт: {item.article}
                     </div>
                   )}
+                  <div className="text-xs text-gray-600">
+                    Цвет:{' '}
+                    {
+                      (item.color ||
+                        primaryImage?.color ||
+                        primaryImage?.alt ||
+                        'не указан') as string
+                    }
+                  </div>
 
                   {/* Refusal Status */}
                   {itemRefused && (
@@ -370,7 +391,13 @@ export function OrderItems({
             <div className="hidden items-start space-x-3 md:flex">
               {/* Product Image */}
               <div className="h-16 w-16 flex-shrink-0">
-                <Link href={`/product/${item.product.slug}`} className="block">
+                <Link
+                  href={{
+                    pathname: `/product/${item.product.slug}`,
+                    query: item.color ? { color: item.color } : {},
+                  }}
+                  className="block"
+                >
                   {primaryImage ? (
                     <Image
                       src={primaryImage.url}
@@ -398,6 +425,15 @@ export function OrderItems({
                       Арт: {item.article}
                     </div>
                   )}
+                  <div className="text-xs text-gray-600">
+                    Цвет:{' '}
+                    {
+                      (item.color ||
+                        primaryImage?.color ||
+                        primaryImage?.alt ||
+                        'не указан') as string
+                    }
+                  </div>
                 </div>
 
                 {/* Pricing Info */}

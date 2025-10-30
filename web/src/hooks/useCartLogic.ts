@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 type CartItem = {
   slug: string;
   qty: number;
+  color?: string | null;
 };
 
 export function useCartLogic() {
@@ -30,16 +31,20 @@ export function useCartLogic() {
             .map(i => ({
               slug: i.slug.trim(),
               qty: typeof i.qty === 'number' && i.qty > 0 ? i.qty : 1,
+              color:
+                typeof i.color === 'string' && i.color.trim() !== ''
+                  ? i.color.trim()
+                  : null,
             }));
 
           // Only set items if they're different to avoid infinite loops
           setItems(prevItems => {
             const prevSlugs = prevItems
-              .map(i => i.slug)
+              .map(i => `${i.slug}::${i.color ?? ''}`)
               .sort()
               .join(',');
             const newSlugs = sanitized
-              .map(i => i.slug)
+              .map(i => `${i.slug}::${i.color ?? ''}`)
               .sort()
               .join(',');
             return prevSlugs === newSlugs ? prevItems : sanitized;
@@ -63,28 +68,41 @@ export function useCartLogic() {
     }
   }, [items, userId]);
 
-  const add = (slug: string, qty: number = 1) => {
+  const add = (slug: string, qty: number = 1, color?: string | null) => {
     setItems(prev => {
-      const existing = prev.find(i => i.slug === slug);
+      const keyColor = (color ?? '').trim() || null;
+      const existing = prev.find(
+        i => i.slug === slug && (i.color ?? null) === keyColor
+      );
       if (existing) {
         return prev.map(i =>
-          i.slug === slug ? { ...i, qty: i.qty + qty } : i
+          i.slug === slug && (i.color ?? null) === keyColor
+            ? { ...i, qty: i.qty + qty }
+            : i
         );
       }
-      return [...prev, { slug, qty }];
+      return [...prev, { slug, qty, color: keyColor }];
     });
   };
 
-  const remove = (slug: string) => {
-    setItems(prev => prev.filter(i => i.slug !== slug));
+  const remove = (slug: string, color?: string | null) => {
+    const keyColor = (color ?? '').trim() || null;
+    setItems(prev =>
+      prev.filter(i => !(i.slug === slug && (i.color ?? null) === keyColor))
+    );
   };
 
-  const updateQuantity = (slug: string, qty: number) => {
+  const updateQuantity = (slug: string, qty: number, color?: string | null) => {
+    const keyColor = (color ?? '').trim() || null;
     if (qty <= 0) {
-      remove(slug);
+      remove(slug, keyColor);
       return;
     }
-    setItems(prev => prev.map(i => (i.slug === slug ? { ...i, qty } : i)));
+    setItems(prev =>
+      prev.map(i =>
+        i.slug === slug && (i.color ?? null) === keyColor ? { ...i, qty } : i
+      )
+    );
   };
 
   const clear = () => {

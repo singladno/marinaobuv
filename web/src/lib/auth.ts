@@ -248,49 +248,34 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account }) {
+      // Seed token with user info on initial sign-in
       if (user) {
         token.role = user.role;
         token.providerId = user.providerId;
       }
 
-      // For Google OAuth, fetch user data from database using email
-      // Check both on initial call (with account) and subsequent calls (with token.email)
-      if ((account?.provider === 'google' || token.email) && token.email) {
-        try {
-          console.log(
-            '🔍 JWT callback - looking up user by email:',
-            token.email
-          );
-          const dbUser = await prisma.user.findUnique({
-            where: { email: token.email },
-            select: { id: true, role: true, providerId: true },
-          });
+      // Always refresh role/providerId from DB so role changes apply without relogin
+      try {
+        // Prefer lookup by stable subject (user id), fallback to email
+        const dbUser = token.sub
+          ? await prisma.user.findUnique({
+              where: { id: token.sub },
+              select: { id: true, role: true, providerId: true },
+            })
+          : token.email
+            ? await prisma.user.findUnique({
+                where: { email: token.email },
+                select: { id: true, role: true, providerId: true },
+              })
+            : null;
 
-          console.log('🔍 JWT callback - database user found:', dbUser);
-
-          if (dbUser) {
-            // Only update if the token.sub is not already the database user ID
-            if (token.sub !== dbUser.id) {
-              token.sub = dbUser.id; // Update the subject to the database user ID
-              token.role = dbUser.role;
-              token.providerId = dbUser.providerId;
-              console.log(
-                `✅ JWT updated for existing user: ${token.email} (Google ID: ${account?.providerAccountId || 'unknown'} -> DB ID: ${dbUser.id})`
-              );
-            } else {
-              console.log(
-                `✅ JWT already has correct DB ID for user: ${token.email} (ID: ${dbUser.id})`
-              );
-            }
-          } else {
-            console.log(
-              '❌ JWT callback - no user found in database for email:',
-              token.email
-            );
-          }
-        } catch (error) {
-          console.error('Error fetching user from database:', error);
+        if (dbUser) {
+          token.sub = dbUser.id;
+          token.role = dbUser.role;
+          token.providerId = dbUser.providerId;
         }
+      } catch (error) {
+        console.error('Error refreshing JWT user role from database:', error);
       }
 
       return token;

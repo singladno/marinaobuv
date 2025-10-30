@@ -17,6 +17,7 @@ interface OrderItem {
   article: string | null;
   priceBox: number;
   qty: number;
+  color?: string | null;
   isAvailable?: boolean | null;
   product: {
     id: string;

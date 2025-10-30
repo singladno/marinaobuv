@@ -7,6 +7,7 @@ interface CreateOrderItem {
   slug?: string;
   productId?: string;
   qty: number;
+  color?: string | null;
 }
 
 function getBoxPriceFromPair(pricePair: any, sizes: any): number {
@@ -65,7 +66,12 @@ export async function createOrder(
     },
   });
 
-  if (products.length !== items.length) {
+  // Allow duplicate items for the same product (e.g., different colors)
+  // Validate that every referenced product (by slug or id) exists at least once
+  const missing = items.filter(
+    i => !products.some(p => p.slug === i.slug || p.id === i.productId)
+  );
+  if (missing.length > 0) {
     throw new Error('Some products not found');
   }
 
@@ -91,6 +97,7 @@ export async function createOrder(
       name: product.name,
       priceBox: boxPrice,
       qty: item.qty,
+      color: item.color ?? null,
       product: {
         connect: { id: product.id },
       },
@@ -197,6 +204,7 @@ export async function getOrders(userId: string) {
                   id: true,
                   url: true,
                   alt: true,
+                  color: true,
                 },
               },
             },

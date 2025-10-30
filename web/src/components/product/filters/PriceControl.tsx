@@ -16,9 +16,11 @@ export default function PriceControl({ value, onChange }: Props) {
   const [max, setMax] = useState<string>(String(value[1]));
 
   useEffect(() => {
-    setMin(String(value[0]));
-    setMax(String(value[1]));
-  }, [value]);
+    const nextMin = String(value[0]);
+    const nextMax = String(value[1]);
+    setMin(prev => (prev !== nextMin ? nextMin : prev));
+    setMax(prev => (prev !== nextMax ? nextMax : prev));
+  }, [value[0], value[1]]);
 
   const apply = () => {
     const parsed: [number, number] = [

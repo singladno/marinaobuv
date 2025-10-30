@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 // import ProductGallery from '@/components/product/ProductGallery';
@@ -15,6 +16,7 @@ type Props = {
   sourceMessageIds?: string[] | null;
   isActive: boolean;
   source?: 'WA' | 'AG';
+  initialSelectedColor?: string | null;
 };
 
 export default function ProductGalleryWithColors({
@@ -24,8 +26,15 @@ export default function ProductGalleryWithColors({
   sourceMessageIds,
   isActive,
   source,
+  initialSelectedColor = null,
 }: Props) {
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [selectedColor, setSelectedColor] = useState<string | null>(
+    initialSelectedColor
+  );
 
   const colorOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -56,6 +65,17 @@ export default function ProductGalleryWithColors({
     }
     return images;
   }, [selectedColor, colorOptions, images]);
+
+  // Keep URL `color` in sync for other components (e.g., ProductDetails)
+  useEffect(() => {
+    const effective = selectedColor || colorOptions[0]?.color || null;
+    const current = searchParams?.get('color') || null;
+    if (effective && effective !== current) {
+      const params = new URLSearchParams(searchParams?.toString() || '');
+      params.set('color', effective);
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  }, [selectedColor, colorOptions, router, pathname, searchParams]);
 
   return (
     <div className="flex gap-4">

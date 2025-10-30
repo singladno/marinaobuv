@@ -11,10 +11,16 @@ import { buildCategoryPath } from '@/lib/catalog-utils';
 
 export default async function ProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const awaited = await params;
+  const awaitedSearch = (await searchParams) || {};
+  const initialColorParam = Array.isArray(awaitedSearch.color)
+    ? awaitedSearch.color[0]
+    : (awaitedSearch.color as string | undefined);
   const product = await prisma.product.findUnique({
     where: { slug: awaited.slug },
     select: {
@@ -102,6 +108,7 @@ export default async function ProductPage({
               }
               isActive={product.isActive}
               source={product.source as any}
+              initialSelectedColor={initialColorParam || null}
             />
           </div>
 

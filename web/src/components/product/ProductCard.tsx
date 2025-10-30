@@ -471,6 +471,7 @@ export default function ProductCard({
                 slug={slug}
                 productName={name}
                 productImageUrl={displayImageUrl || undefined}
+                color={selectedColor || colorOptions[0]?.color || null}
               />
             </div>
             <ColorSwitcher
