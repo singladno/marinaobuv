@@ -32,7 +32,12 @@ interface SearchHistoryItem {
   createdAt: string;
 }
 
-export function useCatalogBackend() {
+type UseCatalogBackendOptions = {
+  initialFilters?: Partial<CatalogFilters>;
+  skipInitialFetch?: boolean;
+};
+
+export function useCatalogBackend(options?: UseCatalogBackendOptions) {
   const { searchQuery } = useSearch();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,15 +50,15 @@ export function useCatalogBackend() {
   });
 
   const [filters, setFilters] = useState<CatalogFilters>({
-    search: searchQuery,
-    categoryId: '',
-    sortBy: 'newest',
-    minPrice: undefined,
-    maxPrice: undefined,
-    colors: [],
-    inStock: false,
-    page: 1,
-    pageSize: 20,
+    search: options?.initialFilters?.search ?? searchQuery,
+    categoryId: options?.initialFilters?.categoryId ?? '',
+    sortBy: options?.initialFilters?.sortBy ?? 'newest',
+    minPrice: options?.initialFilters?.minPrice,
+    maxPrice: options?.initialFilters?.maxPrice,
+    colors: options?.initialFilters?.colors ?? [],
+    inStock: options?.initialFilters?.inStock ?? false,
+    page: options?.initialFilters?.page ?? 1,
+    pageSize: options?.initialFilters?.pageSize ?? 20,
   });
 
   // Fetch products from backend
@@ -186,9 +191,11 @@ export function useCatalogBackend() {
     fetchProducts(clearedFilters);
   }, [fetchProducts]);
 
-  // Load initial data
+  // Load initial data (optional)
   useEffect(() => {
+    if (options?.skipInitialFetch) return;
     fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

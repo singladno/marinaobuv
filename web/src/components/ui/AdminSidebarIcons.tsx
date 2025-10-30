@@ -116,19 +116,22 @@ export const PurchasesIcon = () => (
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    {/* Green petals */}
-    <path
-      d="M12 2L14.5 8.5L21 6L15.5 12L21 18L14.5 15.5L12 22L9.5 15.5L3 18L8.5 12L3 6L9.5 8.5L12 2Z"
-      fill="#10B981"
-      opacity="0.8"
+    {/* Circle badge */}
+    <circle
+      cx="12"
+      cy="12"
+      r="8.5"
+      stroke="currentColor"
+      strokeWidth="2"
     />
-    {/* Yellow petals */}
+    {/* Star */}
     <path
-      d="M12 2L9.5 8.5L3 6L8.5 12L3 18L9.5 15.5L12 22L14.5 15.5L21 18L15.5 12L21 6L14.5 8.5L12 2Z"
-      fill="#F59E0B"
-      opacity="0.8"
+      d="M12 7.5l1.4 2.9 3.2.47-2.3 2.24.54 3.19L12 15.7l-2.84 1.6.54-3.19-2.3-2.24 3.2-.47L12 7.5z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
     />
-    {/* Center circle */}
-    <circle cx="12" cy="12" r="2" fill="#6B7280" />
   </svg>
 );

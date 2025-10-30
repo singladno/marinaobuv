@@ -111,13 +111,15 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
   }, [isPurchaseMode, user, hasInitialized]);
 
   // Persist active purchase to localStorage
+  // Note: When activePurchase is null (e.g., purchase mode turned off),
+  // we intentionally DO NOT remove the saved id so the last used purchase
+  // can be restored when purchase mode is turned back on.
   useEffect(() => {
     if (typeof window !== 'undefined' && user && hasInitialized) {
       try {
         if (activePurchase) {
           localStorage.setItem('active-purchase-id', activePurchase.id);
-        } else {
-          localStorage.removeItem('active-purchase-id');
+          setSavedActivePurchaseId(activePurchase.id);
         }
       } catch (error) {
         console.warn('Failed to save active purchase to localStorage:', error);
@@ -361,24 +363,15 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Enhanced setIsPurchaseMode that clears state when turning off
+  // Enhanced setIsPurchaseMode that clears transient state when turning off,
+  // but keeps the last active purchase id for future restoration.
   const handleSetIsPurchaseMode = (value: boolean) => {
     setIsPurchaseMode(value);
     if (!value) {
       // When turning off purchase mode, clear the active purchase and selected products
       setActivePurchase(null);
       setSelectedProductIds(new Set());
-      setSavedActivePurchaseId(null);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.removeItem('active-purchase-id');
-        } catch (error) {
-          console.warn(
-            'Failed to clear active purchase from localStorage:',
-            error
-          );
-        }
-      }
+      // Do NOT clear savedActivePurchaseId or localStorage here to allow restoration on next enable
     }
   };
 

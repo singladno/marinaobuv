@@ -18,17 +18,30 @@ export function ProductCategoryCell({
 }: ProductCategoryCellProps) {
   const [isSaving, setIsSaving] = React.useState(false);
 
+  const initialIds = React.useMemo(() => (product.categoryId ? [product.categoryId] : []), [product.categoryId]);
+  const [selectedIds, setSelectedIds] = React.useState<string[]>(initialIds);
+
+  // Keep selectedIds in sync with product
+  React.useEffect(() => {
+    setSelectedIds(product.categoryId ? [product.categoryId] : []);
+  }, [product.categoryId]);
+
   const categoryOptions = React.useMemo(() => {
     const flat = flattenCategoryTree(categories);
     return flat.map(c => ({ id: c.id, label: c.label, level: c.level }));
   }, [categories]);
 
   const handleCategoryChange = async (categoryIds: string[]) => {
+    // Optimistic update without indicators
+    setSelectedIds(categoryIds);
     setIsSaving(true);
     try {
       await onUpdateProduct(product.id, {
         categoryId: categoryIds.length > 0 ? categoryIds[0] : undefined,
       });
+    } catch (e) {
+      // Revert on error
+      setSelectedIds(product.categoryId ? [product.categoryId] : []);
     } finally {
       setIsSaving(false);
     }
@@ -37,7 +50,7 @@ export function ProductCategoryCell({
   return (
     <div className="flex items-center space-x-2">
       <CategoryControl
-        value={product.categoryId ? [product.categoryId] : []}
+        value={selectedIds}
         onChange={handleCategoryChange}
         options={categoryOptions}
         tree={categories}
@@ -45,9 +58,6 @@ export function ProductCategoryCell({
         label=""
         disabled={isSaving}
       />
-      {isSaving && (
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
-      )}
     </div>
   );
 }

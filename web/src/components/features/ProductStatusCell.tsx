@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import type { Product, ProductUpdateData } from '@/types/product';
 
-import { EditableProductCell } from './EditableProductCell';
+import { StatusSelect } from '@/components/features/StatusSelect';
 
 interface ProductStatusCellProps {
   product: Product;
@@ -13,44 +13,38 @@ export function ProductStatusCell({
   product,
   onUpdateProduct,
 }: ProductStatusCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  // No visual indicators during requests
 
   const statusOptions = [
     { value: 'active', label: 'Активный' },
     { value: 'inactive', label: 'Неактивный' },
-    { value: 'draft', label: 'Черновик' },
   ];
+  const getStatusLabel = (isActive: boolean) => (isActive ? 'Активный' : 'Неактивный');
 
-  const getStatusLabel = (status: string) => {
-    const option = statusOptions.find(opt => opt.value === status);
-    return option?.label || status;
-  };
+  const [displayValue, setDisplayValue] = useState<string>(getStatusLabel(product.isActive));
 
-  const handleSave = async (value: string) => {
-    setIsSaving(true);
+  useEffect(() => {
+    setDisplayValue(getStatusLabel(product.isActive));
+  }, [product.isActive]);
+
+  const handleChange = async (nextLabel: string) => {
+    // Optimistic value update without indicators
+    setDisplayValue(nextLabel);
     try {
-      const selectedOption = statusOptions.find(opt => opt.label === value);
-      if (selectedOption) {
-        await onUpdateProduct(product.id, {
-          isActive: selectedOption.value === 'active',
-        });
-      }
-    } finally {
-      setIsSaving(false);
-      setIsEditing(false);
+      const isActive = nextLabel === 'Активный';
+      await onUpdateProduct(product.id, { isActive });
+    } catch (e) {
+      // Revert on error
+      setDisplayValue(getStatusLabel(product.isActive));
     }
   };
 
   return (
-    <EditableProductCell
-      value={getStatusLabel(product.isActive ? 'active' : 'inactive')}
-      onSave={handleSave}
-      isEditing={isEditing}
-      onEdit={() => setIsEditing(true)}
-      isSaving={isSaving}
-      type="select"
+    <StatusSelect
+      value={displayValue}
       options={statusOptions}
+      onChange={val => handleChange(val)}
+      aria-label="Статус товара"
       className="text-sm"
     />
   );

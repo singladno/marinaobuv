@@ -38,6 +38,7 @@ export default function PriceControl({ value, onChange }: Props) {
       isActive={value[0] > 0 || value[1] < 100000}
       onClear={() => onChange([0, 100000])}
     >
+      {(api: { close: () => void }) => (
       <div className="space-y-3 p-3">
         <div className="text-sm font-semibold">Диапазон цены</div>
         <div className="grid grid-cols-2 gap-2">
@@ -46,6 +47,13 @@ export default function PriceControl({ value, onChange }: Props) {
             inputMode="numeric"
             value={min}
             onChange={e => setMin(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                apply();
+                api.close();
+              }
+            }}
             placeholder="От"
             className="h-11 rounded-xl border border-transparent bg-gray-100 px-3 text-sm text-gray-900 outline-none ring-0 transition-shadow focus:border-purple-500 focus:bg-white"
           />
@@ -54,17 +62,28 @@ export default function PriceControl({ value, onChange }: Props) {
             inputMode="numeric"
             value={max}
             onChange={e => setMax(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                apply();
+                api.close();
+              }
+            }}
             placeholder="До"
             className="h-11 rounded-xl border border-transparent bg-gray-100 px-3 text-sm text-gray-900 outline-none ring-0 transition-shadow focus:border-purple-500 focus:bg-white"
           />
         </div>
         <Button
-          onClick={apply}
+          onClick={() => {
+            apply();
+            api.close();
+          }}
           className="h-11 w-full rounded-xl bg-purple-600 text-white hover:bg-purple-600/90"
         >
           Готово
         </Button>
       </div>
+      )}
     </FilterPill>
   );
 }

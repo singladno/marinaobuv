@@ -18,6 +18,7 @@ import { FeedbackStatusIconsCompact } from '@/components/features/admin/Feedback
 import { MessagePreviewCompact } from '@/components/features/admin/MessagePreview';
 import { AdminReplacementModal } from '@/components/features/admin/AdminReplacementModal';
 import { cn } from '@/lib/utils';
+import { formatOrderNumber } from '@/utils/orderNumberUtils';
 
 interface OrderItem {
   id: string;
@@ -488,7 +489,7 @@ export default function OrderDetailsPage() {
           <div className="flex items-center space-x-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Заказ {order.orderNumber}
+                Заказ {formatOrderNumber(order.orderNumber)}
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {formatDate(order.createdAt)}

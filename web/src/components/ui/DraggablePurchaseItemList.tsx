@@ -6,6 +6,7 @@ import React, {
   useRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
 } from 'react';
 import Image from 'next/image';
 import {
@@ -57,6 +58,7 @@ function SortableItemWrapper({ item, children }: SortableItemWrapperProps) {
     isDragging,
   } = useSortable({
     id: item.id,
+    animateLayoutChanges: () => true,
   });
 
   const style: React.CSSProperties = {
@@ -67,6 +69,7 @@ function SortableItemWrapper({ item, children }: SortableItemWrapperProps) {
   return (
     <div
       ref={setNodeRef}
+      data-item-id={item.id}
       style={style}
       className={cn(
         'cursor-grab touch-none select-none transition-opacity active:cursor-grabbing',
@@ -89,6 +92,8 @@ export function DraggablePurchaseItemList({
   const { getSortedItems, handleDragEnd } = usePurchaseItemSorting();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const prevRectsRef = useRef<Map<string, DOMRect>>(new Map());
 
   // Load sorting for this purchase when component mounts or purchaseId changes
   useEffect(() => {
@@ -115,6 +120,40 @@ export function DraggablePurchaseItemList({
 
   // Force re-render when sortedItemIds changes
   const sortedItems = getSortedItems(items, purchaseId);
+
+  // FLIP animation for programmatic reorders (manual index edits)
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const nodes = Array.from(
+      container.querySelectorAll<HTMLElement>('[data-item-id]')
+    );
+    const nextRects = new Map<string, DOMRect>();
+    nodes.forEach(node => {
+      const id = node.getAttribute('data-item-id');
+      if (!id) return;
+      const rect = node.getBoundingClientRect();
+      nextRects.set(id, rect);
+      const prev = prevRectsRef.current.get(id);
+      if (prev) {
+        const dx = prev.left - rect.left;
+        const dy = prev.top - rect.top;
+        if (dx !== 0 || dy !== 0) {
+          node.style.transform = `translate(${dx}px, ${dy}px)`;
+          node.style.transition = 'transform 250ms ease';
+          requestAnimationFrame(() => {
+            node.style.transform = '';
+          });
+          const handleEnd = () => {
+            node.style.transition = '';
+            node.removeEventListener('transitionend', handleEnd);
+          };
+          node.addEventListener('transitionend', handleEnd);
+        }
+      }
+    });
+    prevRectsRef.current = nextRects;
+  }, [sortedItems.map(i => i.id).join(',')]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -178,7 +217,7 @@ export function DraggablePurchaseItemList({
         items={sortedItems.map(item => item.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="touch-none space-y-4">
+        <div ref={containerRef} className="touch-none space-y-4">
           {sortedItems.map(item => (
             <SortableItemWrapper key={item.id} item={item}>
               {isDragging => children(item, isDragging)}

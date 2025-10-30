@@ -4,7 +4,7 @@ import type { Metadata, Viewport } from 'next';
 
 import './globals.css';
 import { ClientProviders } from '@/components/ClientProviders';
-// import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
+import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
 // import Footer from '@/components/ui/Footer';
 // import Header from '@/components/ui/Header';
 import { defaultMetadata } from '@/lib/seo';
@@ -35,7 +35,10 @@ export default function RootLayout({
         </div>
 
         <div className="relative min-h-screen">
-          <ClientProviders>{children}</ClientProviders>
+          <ClientProviders>
+            {children}
+            <AdminSwitcher />
+          </ClientProviders>
         </div>
       </body>
     </html>

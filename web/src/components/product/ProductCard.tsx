@@ -389,7 +389,17 @@ export default function ProductCard({
         )}
 
         <Link
-          href={isPurchaseMode ? '#' : `/product/${slug}`}
+          href={
+            isPurchaseMode
+              ? '#'
+              : {
+                  pathname: `/product/${slug}`,
+                  query:
+                    (selectedColor || null)
+                      ? { color: selectedColor as string }
+                      : undefined,
+                }
+          }
           className="block flex-1"
           onClick={isPurchaseMode ? e => e.preventDefault() : undefined}
         >

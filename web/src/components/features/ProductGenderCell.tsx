@@ -19,7 +19,6 @@ export function ProductGenderCell({
   disabled = false,
 }: ProductGenderCellProps) {
   const [isSaving, setIsSaving] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
   const getGenderLabel = (gender: string | null) => {
     switch (gender) {
@@ -34,7 +33,6 @@ export function ProductGenderCell({
 
   const handleSave = async (value: string) => {
     setIsSaving(true);
-    setStatus('saving');
     try {
       const genderMap: Record<string, string | null> = {
         Женский: 'FEMALE',
@@ -42,13 +40,8 @@ export function ProductGenderCell({
         '-': null,
       };
       await onUpdateProduct(product.id, { gender: genderMap[value] || null });
-      // Keep editing visible
-      setStatus('success');
-      setTimeout(() => setStatus('idle'), 1500);
     } catch (error) {
       console.error('Error updating product gender:', error);
-      setStatus('error');
-      setTimeout(() => setStatus('idle'), 2000);
     } finally {
       setIsSaving(false);
     }
@@ -64,7 +57,6 @@ export function ProductGenderCell({
       ]}
       onChange={val => handleSave(val)}
       disabled={disabled}
-      status={status}
       aria-label="Пол"
     />
   );

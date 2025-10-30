@@ -13,7 +13,7 @@ import {
 type Props = {
   label: React.ReactNode;
   badgeCount?: number;
-  children: React.ReactNode;
+  children: React.ReactNode | ((api: { close: () => void }) => React.ReactNode);
   contentClassName?: string;
   isActive?: boolean;
   onClear?: () => void;
@@ -117,7 +117,11 @@ export default function FilterPill({
         onMouseEnter={openNow}
         onMouseLeave={scheduleClose}
       >
-        {children}
+        {typeof children === 'function'
+          ? (children as (api: { close: () => void }) => React.ReactNode)({
+              close: () => setOpen(false),
+            })
+          : children}
       </PopoverContent>
     </Popover>
   );

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { Button } from '@/components/ui/Button';
 
@@ -20,6 +21,7 @@ export default function ProfileMenuContent({
   onLogout,
   loading,
 }: ProfileMenuContentProps) {
+  const pathname = usePathname();
   // If user is not logged in, only show the login button
   if (!user) {
     return (
@@ -67,6 +69,20 @@ export default function ProfileMenuContent({
       <nav className="p-2">
         <MenuItem href="/orders" icon={BoxIcon} label="Заказы" />
         <MenuItem href="/favorites" icon={HeartIcon} label="Избранное" />
+        {user?.role === 'ADMIN' && (
+          <MenuItem
+            href={pathname.startsWith('/admin') ? '/' : '/admin'}
+            icon={AdminIcon}
+            label={pathname.startsWith('/admin') ? 'Клиентский портал' : 'Админ-панель'}
+          />
+        )}
+        {user?.role === 'GRUZCHIK' && (
+          <MenuItem
+            href={pathname.startsWith('/gruzchik') ? '/' : '/gruzchik'}
+            icon={GruzchikIcon}
+            label={pathname.startsWith('/gruzchik') ? 'Клиентский портал' : 'Панель грузчика'}
+          />
+        )}
       </nav>
 
       <div className="border-t border-gray-100 p-2">
@@ -139,6 +155,25 @@ function HeartIcon(props: React.SVGProps<SVGSVGElement>) {
         strokeLinejoin="round"
         d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364 4.318 12.682a4.5 4.5 0 010-6.364z"
       />
+    </svg>
+  );
+}
+
+function AdminIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M12 3l7 4v6c0 5-7 8-7 8s-7-3-7-8V7l7-4z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 8v4l3 1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function GruzchikIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M3 3h6l2 3h10v12H3z" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="8" cy="19" r="2" />
+      <circle cx="17" cy="19" r="2" />
     </svg>
   );
 }

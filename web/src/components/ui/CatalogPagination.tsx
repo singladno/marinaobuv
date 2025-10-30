@@ -1,6 +1,11 @@
+'use client';
+
 import Link from 'next/link';
 import { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { buildQueryString } from '@/lib/filters';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
+import { getPaginationPages } from '@/utils/getPaginationPages';
 
 type CatalogPaginationProps = {
   basePath: string;
@@ -9,25 +14,9 @@ type CatalogPaginationProps = {
   total: number;
   filters?: any;
   categoryId?: string;
+  pageSizeOptions?: number[];
 };
-
-function getPages(current: number, totalPages: number) {
-  const pages: (number | 'ellipsis')[] = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pages.push(i);
-    return pages;
-  }
-  const addRange = (from: number, to: number) => {
-    for (let i = from; i <= to; i++) pages.push(i);
-  };
-  pages.push(1);
-  if (current > 4) pages.push('ellipsis');
-  addRange(Math.max(2, current - 1), Math.min(totalPages - 1, current + 1));
-  if (current < totalPages - 3) pages.push('ellipsis');
-  pages.push(totalPages);
-  return pages;
-}
-
+ 
 export default function CatalogPagination({
   basePath,
   page,
@@ -35,100 +24,79 @@ export default function CatalogPagination({
   total,
   filters,
   categoryId,
+  pageSizeOptions = [20, 40, 60],
 }: CatalogPaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const items = useMemo(() => getPages(page, totalPages), [page, totalPages]);
+  const items = useMemo(() => getPaginationPages(page, totalPages), [page, totalPages]);
+  const router = useRouter();
 
   const buildHref = (n: number) => {
-    const queryParams: { page: number; categoryId?: string } = { page: n };
+    const queryParams: { page: number; pageSize: number; categoryId?: string } = {
+      page: n,
+      pageSize,
+    };
     if (categoryId) queryParams.categoryId = categoryId;
     return `${basePath}${buildQueryString(queryParams, filters ? { ...filters, categoryId } : undefined)}`;
   };
 
-  if (totalPages <= 1) return null;
-
   return (
     <nav className="mt-8 w-full">
-      {/* Desktop: numbers centered, full labels sides */}
-      <div className="hidden w-full items-center justify-between sm:flex">
-        <Link
-          href={buildHref(Math.max(1, page - 1))}
-          aria-label="Предыдущая страница"
-          className="text-primary transition-colors duration-200 hover:text-purple-700"
-        >
-          ← Предыдущая страница
-        </Link>
+      <div className="flex items-center gap-3">
+        {totalPages > 1 && (
+          <Link href={buildHref(Math.max(1, page - 1))} aria-label="Предыдущая страница" className="text-primary rounded px-2 py-1 text-sm transition-colors duration-200 hover:bg-[color-mix(in_oklab,var(--color-background),#000_3%)]">←</Link>
+        )}
 
-        <ul className="flex items-center gap-6">
-          {items.map((it, idx) => (
-            <li key={`${it}-${idx}`}>
-              {it === 'ellipsis' ? (
-                <span className="text-foreground/60 px-2">…</span>
-              ) : (
-                <Link
-                  href={buildHref(it)}
-                  aria-current={it === page ? 'page' : undefined}
-                  className={
-                    it === page
-                      ? 'flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 !text-white transition-colors duration-200'
-                      : 'text-foreground flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-200 hover:bg-[color-mix(in_oklab,var(--color-background),#000_3%)]'
-                  }
-                >
-                  {it}
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
+        {totalPages > 1 && (
+          <ul className="flex items-center gap-2">
+            {items.map((it, idx) => (
+              <li key={`${it}-${idx}`}>
+                {it === 'ellipsis' ? (
+                  <span className="text-foreground/60 px-1">…</span>
+                ) : (
+                  <Link href={buildHref(it)} aria-current={it === page ? 'page' : undefined} className={it === page ? 'flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 !text-white text-sm' : 'text-foreground flex h-8 w-8 items-center justify-center rounded-full text-sm hover:bg-[color-mix(in_oklab,var(--color-background),#000_3%)]'}>
+                    {it}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
 
-        <Link
-          href={buildHref(Math.min(totalPages, page + 1))}
-          aria-label="Следующая страница"
-          className="text-primary transition-colors duration-200 hover:text-purple-700"
-        >
-          Следующая страница →
-        </Link>
-      </div>
+        {totalPages > 1 && (
+          <Link href={buildHref(Math.min(totalPages, page + 1))} aria-label="Следующая страница" className="text-primary rounded px-2 py-1 text-sm transition-colors duration-200 hover:bg-[color-mix(in_oklab,var(--color-background),#000_3%)]">→</Link>
+        )}
 
-      {/* Mobile: compact arrows + numbers */}
-      <div className="flex items-center gap-4 sm:hidden">
-        <Link
-          href={buildHref(Math.max(1, page - 1))}
-          aria-label="Предыдущая страница"
-          className="text-primary transition-colors duration-200 hover:text-purple-700"
-        >
-          ←
-        </Link>
+        <div className="ml-3 h-5 w-px bg-[color-mix(in_oklab,var(--color-foreground),transparent_85%)]" />
 
-        <ul className="flex items-center gap-4">
-          {items.map((it, idx) => (
-            <li key={`m-${it}-${idx}`}>
-              {it === 'ellipsis' ? (
-                <span className="text-foreground/60 px-2">…</span>
-              ) : (
-                <Link
-                  href={buildHref(it)}
-                  aria-current={it === page ? 'page' : undefined}
-                  className={
-                    it === page
-                      ? 'flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 !text-white transition-colors duration-200'
-                      : 'text-foreground flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200 hover:bg-[color-mix(in_oklab,var(--color-background),#000_3%)]'
-                  }
-                >
-                  {it}
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
-
-        <Link
-          href={buildHref(Math.min(totalPages, page + 1))}
-          aria-label="Следующая страница"
-          className="text-primary transition-colors duration-200 hover:text-purple-700"
-        >
-          →
-        </Link>
+        <div className="flex items-center gap-2 text-sm text-foreground/80">
+          <span>На странице</span>
+          <Select
+            value={String(pageSize)}
+            placement="auto"
+            onValueChange={(val) => {
+              const nextSize = Number(val);
+              const queryParams = { page: 1, pageSize: nextSize, categoryId } as {
+                page: number;
+                pageSize: number;
+                categoryId?: string;
+              };
+              const href = `${basePath}${buildQueryString(queryParams, filters ? { ...filters, categoryId } : undefined)}`;
+              router.push(href);
+            }}
+            className="w-[84px]"
+          >
+            <SelectTrigger className="h-8 rounded-md px-2 text-sm" aria-label="Выбрать размер страницы">
+              <SelectValue>{String(pageSize)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map((opt) => (
+                <SelectItem key={opt} value={String(opt)}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </nav>
   );

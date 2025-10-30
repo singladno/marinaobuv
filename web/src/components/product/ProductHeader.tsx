@@ -29,7 +29,15 @@ export function ProductHeader({ name, article, gender, season, slug }: Props) {
           title: name,
           url: window.location.href,
         });
-      } catch (error) {
+      } catch (error: unknown) {
+        // Ignore user-cancelled share actions (AbortError)
+        const isAbort =
+          typeof error === 'object' &&
+          error !== null &&
+          'name' in error &&
+          // @ts-expect-error safeguarded above
+          (error.name === 'AbortError' || error.name === 'NotAllowedError');
+        if (isAbort) return;
         console.error('Error sharing:', error);
       }
     } else {

@@ -19,7 +19,6 @@ export function ProductSeasonCell({
   disabled = false,
 }: ProductSeasonCellProps) {
   const [isSaving, setIsSaving] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
   const getSeasonLabel = (season: string | null) => {
     switch (season) {
@@ -38,7 +37,6 @@ export function ProductSeasonCell({
 
   const handleSave = async (value: string) => {
     setIsSaving(true);
-    setStatus('saving');
     try {
       const seasonMap: Record<string, string | null> = {
         Весна: 'SPRING',
@@ -48,13 +46,8 @@ export function ProductSeasonCell({
         '-': null,
       };
       await onUpdateProduct(product.id, { season: seasonMap[value] || null });
-      // Keep editing visible
-      setStatus('success');
-      setTimeout(() => setStatus('idle'), 1500);
     } catch (error) {
       console.error('Error updating product season:', error);
-      setStatus('error');
-      setTimeout(() => setStatus('idle'), 2000);
     } finally {
       setIsSaving(false);
     }
@@ -72,7 +65,6 @@ export function ProductSeasonCell({
       ]}
       onChange={val => handleSave(val)}
       disabled={disabled}
-      status={status}
       aria-label="Сезон"
     />
   );

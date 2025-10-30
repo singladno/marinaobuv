@@ -46,6 +46,13 @@ export function PortalSwitcher() {
   // Hide when admin chat or client chat is open
   if (isAdminChatOpen || isClientChatOpen) return null;
 
+  // Hide on pages with fixed scroll arrows or where floating UI should be minimal
+  const hiddenOnPaths = [
+    '/catalog',
+    '/admin/purchases/',
+  ];
+  if (hiddenOnPaths.some(p => pathname.startsWith(p))) return null;
+
   return (
     <div className="fixed bottom-4 right-4 z-50 hidden sm:bottom-6 sm:right-6 md:block">
       {/* Backdrop */}

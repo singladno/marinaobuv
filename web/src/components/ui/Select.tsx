@@ -12,6 +12,7 @@ interface SelectProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  placement?: 'auto' | 'top' | 'bottom';
 }
 
 interface SelectTriggerProps {
@@ -46,6 +47,7 @@ const SelectContext = React.createContext<{
   setSelectedText?: (text: string) => void;
   registerItem?: (value: string, text: string) => void;
   disabled?: boolean;
+  preferredPlacement?: 'auto' | 'top' | 'bottom';
 }>({
   isOpen: false,
   setIsOpen: () => {},
@@ -57,6 +59,7 @@ export function Select({
   children,
   className,
   disabled = false,
+  placement = 'auto',
 }: SelectProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedText, setSelectedText] = React.useState<string>('');
@@ -89,6 +92,7 @@ export function Select({
         setSelectedText,
         registerItem,
         disabled,
+        preferredPlacement: placement,
       }}
     >
       <div className={cn('relative', className)}>{children}</div>
@@ -168,9 +172,11 @@ export const SelectContent = React.forwardRef<
   HTMLDivElement,
   SelectContentProps
 >(({ children, className, ...props }, ref) => {
-  const { isOpen, setIsOpen, triggerRef } = React.useContext(SelectContext);
+  const { isOpen, setIsOpen, triggerRef, preferredPlacement } = React.useContext(SelectContext);
   const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 });
+  const [placement, setPlacement] = React.useState<'bottom' | 'top'>('bottom');
   const [mounted, setMounted] = React.useState(false);
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
 
   // Ensure component is mounted on client side
   React.useEffect(() => {
@@ -199,22 +205,32 @@ export const SelectContent = React.forwardRef<
     if (isOpen && triggerRef?.current && mounted) {
       const trigger = triggerRef.current;
       const rect = trigger.getBoundingClientRect();
+      const viewportSpaceBelow = window.innerHeight - rect.bottom;
+      const autoFlip = viewportSpaceBelow < 200;
+      const shouldFlipUp = preferredPlacement === 'top' ? true : preferredPlacement === 'bottom' ? false : autoFlip;
+      setPlacement(shouldFlipUp ? 'top' : 'bottom');
+      // For fixed-positioned portal content, rect values are viewport-relative;
+      // do NOT add window scroll offsets, or the menu will drift off-screen.
       setPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: shouldFlipUp ? rect.top : rect.bottom,
+        left: rect.left,
         width: rect.width,
       });
     }
-  }, [isOpen, triggerRef, mounted]);
+  }, [isOpen, triggerRef, mounted, preferredPlacement]);
 
   if (!isOpen || !mounted) return null;
 
   const content = (
     <div
-      ref={ref}
+      ref={(node) => {
+        if (typeof ref === 'function') ref(node as HTMLDivElement);
+        else if (ref && 'current' in (ref as any)) (ref as any).current = node;
+        contentRef.current = node as HTMLDivElement | null;
+      }}
       data-select-content
       className={cn(
-        'fixed z-[9999] rounded-lg border border-gray-200 bg-white shadow-lg',
+        'fixed z-[110000] rounded-lg border border-gray-200 bg-white shadow-xl',
         'dark:border-gray-600 dark:bg-gray-800',
         className
       )}
@@ -222,10 +238,18 @@ export const SelectContent = React.forwardRef<
         top: position.top,
         left: position.left,
         width: position.width,
+        transform: placement === 'top' ? 'translateY(calc(-100% - 6px))' : 'translateY(6px)',
       }}
       {...props}
     >
-      <div className="p-1">{children}</div>
+      <div
+        className={cn(
+          'p-1 max-h-[320px] overflow-auto',
+          placement === 'top' && ''
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 

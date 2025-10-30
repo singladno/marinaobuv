@@ -25,8 +25,11 @@ import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { SmartHeader } from '@/components/ui/SmartHeader';
 import { DraggablePurchaseItemList } from '@/components/ui/DraggablePurchaseItemList';
 import { PurchaseItemSortingProvider } from '@/contexts/PurchaseItemSortingContext';
+import { usePurchaseItemSorting } from '@/contexts/PurchaseItemSortingContext';
 import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 import { useNotifications } from '@/components/ui/NotificationProvider';
+import ScrollArrows from '@/components/ui/ScrollArrows';
+import BulkDescriptionEditModal from '@/components/features/BulkDescriptionEditModal';
 
 interface PurchaseItem {
   id: string;
@@ -79,9 +82,12 @@ function PurchaseDetailPageContent() {
   const [editValue, setEditValue] = useState('');
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   const confirmationModal = useConfirmationModal();
   const { addNotification } = useNotifications();
+  const { getSortedItems, handleDragEnd } = usePurchaseItemSorting();
 
   const fetchPurchase = async () => {
     try {
@@ -156,6 +162,24 @@ function PurchaseDetailPageContent() {
       }
 
       const updatedItem = await response.json();
+      // Trigger DnD-like animation BEFORE state update to avoid context setState in render
+      if (hasSortIndexChanged && purchase) {
+        try {
+          const sortedBefore = getSortedItems(purchase.items, purchase.id);
+          const destinationIndex = editSortIndex - 1;
+          const overCandidate = sortedBefore[destinationIndex];
+          if (overCandidate && overCandidate.id !== editingItem.id) {
+            handleDragEnd(
+              {
+                active: { id: editingItem.id },
+                over: { id: overCandidate.id },
+              },
+              purchase.items,
+              purchase.id
+            );
+          }
+        } catch {}
+      }
       setPurchase(prev => {
         if (!prev) return null;
         const updatedItems = prev.items.map(item =>
@@ -304,7 +328,10 @@ function PurchaseDetailPageContent() {
       addNotification({
         type: 'error',
         title: 'Ошибка экспорта',
-        message: err instanceof Error ? err.message : 'Не удалось экспортировать закупку',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'Не удалось экспортировать закупку',
       });
     }
   };
@@ -455,6 +482,24 @@ function PurchaseDetailPageContent() {
       }
 
       const updatedItem = await response.json();
+      // Trigger DnD-like animation BEFORE state update
+      if (editingField.field === 'sortIndex' && purchase) {
+        try {
+          const sortedBefore = getSortedItems(purchase.items, purchase.id);
+          const destinationIndex = parseInt(editValue) - 1;
+          const overCandidate = sortedBefore[destinationIndex];
+          if (overCandidate && overCandidate.id !== editingField.itemId) {
+            handleDragEnd(
+              {
+                active: { id: editingField.itemId },
+                over: { id: overCandidate.id },
+              },
+              purchase.items,
+              purchase.id
+            );
+          }
+        } catch {}
+      }
       setPurchase(prev => {
         if (!prev) return null;
         const updatedItems = prev.items.map(item =>
@@ -487,6 +532,84 @@ function PurchaseDetailPageContent() {
       setError(err instanceof Error ? err.message : 'Failed to update item');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleApplyBulkDescriptions = async (options: {
+    mode: 'prepend' | 'append' | 'replace';
+    value?: string;
+    replaceFrom?: string;
+    replaceTo?: string;
+  }) => {
+    if (!purchase) return;
+    const { mode, value, replaceFrom, replaceTo } = options;
+    if (!mode) {
+      setIsBulkModalOpen(false);
+      return;
+    }
+
+    try {
+      setIsBulkProcessing(true);
+      const updatePromises = purchase.items.map(async item => {
+        let next = item.description || '';
+        if (mode === 'replace' && replaceFrom) {
+          try {
+            next = next.split(replaceFrom).join(replaceTo ?? '');
+          } catch {}
+        } else if (mode === 'prepend' && value) {
+          next = `${value}${next}`;
+        } else if (mode === 'append' && value) {
+          next = `${next}${value}`;
+        }
+
+        if (next === item.description) return null;
+
+        const res = await fetch(
+          `/api/admin/purchases/${params.id}/items/${item.id}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: item.name,
+              description: next,
+              price: Number(item.price),
+              sortIndex: item.sortIndex,
+            }),
+          }
+        );
+        if (!res.ok) throw new Error('Failed to update item');
+        const updated = await res.json();
+        return updated;
+      });
+
+      const results = await Promise.all(updatePromises);
+      const updatedById = new Map(
+        results.filter(Boolean).map((it: any) => [it.id, it])
+      );
+
+      setPurchase(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.map(it => updatedById.get(it.id) || it),
+        };
+      });
+
+      addNotification({
+        type: 'success',
+        title: 'Готово',
+        message: 'Описания успешно обновлены',
+      });
+      setIsBulkModalOpen(false);
+    } catch (err) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка',
+        message:
+          err instanceof Error ? err.message : 'Не удалось обновить описания',
+      });
+    } finally {
+      setIsBulkProcessing(false);
     }
   };
 
@@ -547,6 +670,14 @@ function PurchaseDetailPageContent() {
               </div>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsBulkModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Edit3 className="h-4 w-4" />
+              </Button>
+
               <Button
                 variant="outline"
                 onClick={exportPurchase}
@@ -642,13 +773,22 @@ function PurchaseDetailPageContent() {
                     {/* Product Image */}
                     <div className="flex justify-center">
                       {item.product.images[0] ? (
-                        <Image
-                          src={item.product.images[0].url}
-                          alt={item.name}
-                          width={64}
-                          height={64}
-                          className="h-16 w-16 rounded object-cover"
-                        />
+                        <div
+                          className="h-16 w-16 cursor-pointer"
+                          onClick={() =>
+                            item.product.slug &&
+                            router.push(`/product/${item.product.slug}`)
+                          }
+                          title="Открыть страницу товара"
+                        >
+                          <Image
+                            src={item.product.images[0].url}
+                            alt={item.name}
+                            width={64}
+                            height={64}
+                            className="h-16 w-16 rounded object-cover"
+                          />
+                        </div>
                       ) : (
                         <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
                           <Text className="text-xs text-gray-500">
@@ -737,13 +877,29 @@ function PurchaseDetailPageContent() {
                       editingField?.field === 'description' ? (
                         <textarea
                           value={editValue}
-                          onChange={e => setEditValue(e.target.value)}
+                          onChange={e => {
+                            setEditValue(e.target.value);
+                            const el = e.currentTarget;
+                            el.style.height = 'auto';
+                            el.style.height = `${el.scrollHeight}px`;
+                          }}
+                          onFocus={e => {
+                            const el = e.currentTarget;
+                            el.style.height = 'auto';
+                            el.style.height = `${el.scrollHeight}px`;
+                          }}
+                          onInput={e => {
+                            const el = e.currentTarget;
+                            el.style.height = 'auto';
+                            el.style.height = `${el.scrollHeight}px`;
+                          }}
                           onBlur={saveFieldEdit}
                           onKeyDown={e => {
                             if (e.key === 'Escape') cancelFieldEdit();
                           }}
                           className="min-h-[2.5rem] w-full rounded-md border border-gray-200 p-2 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-                          rows={2}
+                          rows={1}
+                          style={{ overflow: 'hidden', resize: 'none' }}
                           placeholder="Описание товара"
                           aria-label="Описание товара"
                           autoFocus
@@ -801,9 +957,25 @@ function PurchaseDetailPageContent() {
             <label className="mb-2 block text-sm font-medium">Описание</label>
             <textarea
               value={editDescription}
-              onChange={e => setEditDescription(e.target.value)}
+              onChange={e => {
+                setEditDescription(e.target.value);
+                const el = e.currentTarget;
+                el.style.height = 'auto';
+                el.style.height = `${el.scrollHeight}px`;
+              }}
+              onFocus={e => {
+                const el = e.currentTarget;
+                el.style.height = 'auto';
+                el.style.height = `${el.scrollHeight}px`;
+              }}
+              onInput={e => {
+                const el = e.currentTarget;
+                el.style.height = 'auto';
+                el.style.height = `${el.scrollHeight}px`;
+              }}
               className="w-full rounded-md border border-gray-200 p-2"
-              rows={3}
+              rows={1}
+              style={{ overflow: 'hidden', resize: 'none' }}
               aria-label="Описание товара"
             />
           </div>
@@ -848,6 +1020,13 @@ function PurchaseDetailPageContent() {
         variant={confirmationModal.options.variant}
         isLoading={confirmationModal.isLoading}
       />
+      <BulkDescriptionEditModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onApply={handleApplyBulkDescriptions}
+        isProcessing={isBulkProcessing}
+      />
+      <ScrollArrows offsetBottomPx={28} showOnMobile />
     </div>
   );
 }

@@ -11,6 +11,11 @@ import { Text } from '@/components/ui/Text';
 import { useCatalogBackend } from '@/hooks/useCatalogBackend';
 import { useSearch } from '@/contexts/SearchContext';
 import CatalogPagination from '@/components/ui/CatalogPagination';
+import ScrollArrows from '@/components/ui/ScrollArrows';
+import {
+  loadPersistedCatalogFilters,
+  usePersistCatalogFilters,
+} from '@/hooks/usePersistedCatalogFilters';
 
 function CatalogPageContent() {
   const searchParams = useSearchParams();
@@ -48,14 +53,18 @@ function CatalogPageContent() {
     handleSortChange,
     handlePageChange,
     clearFilters,
-  } = useCatalogBackend();
+  } = useCatalogBackend({ skipInitialFetch: true });
 
   const pathname = usePathname();
 
   // Grid columns state for switcher (4 or 5)
   const [gridCols, setGridCols] = useState<4 | 5>(4);
+  // Enable persisting only after we attempt to restore
+  const [canPersist, setCanPersist] = useState(false);
+  // Ensure we restore saved filters before category sync/fetch
+  const [restored, setRestored] = useState(false);
 
-  // Fetch category information when category path changes
+  // Fetch category information when category path changes (after restore)
   useEffect(() => {
     const fetchCategory = async () => {
       console.log('🔍 Fetching category for path:', categoryPath);
@@ -83,7 +92,7 @@ function CatalogPageContent() {
           setParentChildren(data.parentChildren || []);
           setParentCategory(data.parentCategory || null);
           setIsParentCategory(data.isParentCategory || false);
-          // sync filters with category
+          // sync filters with category (after restore applied)
           handleFiltersChange({ categoryId: data.id });
         } else {
           setCategoryId('');
@@ -104,8 +113,21 @@ function CatalogPageContent() {
       }
     };
 
-    fetchCategory();
-  }, [categoryPath]);
+    if (restored) fetchCategory();
+  }, [categoryPath, restored]);
+
+  // Load saved filters for this specific catalog path (per-device persistence)
+  useEffect(() => {
+    if (!pathname) return;
+    const saved = loadPersistedCatalogFilters(pathname);
+    if (saved) {
+      // Do not set categoryId here; it's handled via category fetch above
+      handleFiltersChange(saved);
+    }
+    setCanPersist(true);
+    setRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Initialize search query from URL parameters
   useEffect(() => {
@@ -126,6 +148,18 @@ function CatalogPageContent() {
     filters.pageSize,
   ]);
 
+  // Persist filters whenever they change, scoped by current pathname
+  usePersistCatalogFilters(pathname, {
+    search: filters.search,
+    sortBy: filters.sortBy,
+    minPrice: filters.minPrice,
+    maxPrice: filters.maxPrice,
+    colors: filters.colors,
+    inStock: filters.inStock,
+    page: filters.page,
+    pageSize: filters.pageSize,
+  }, { enabled: canPersist });
+
   if (error) {
     return (
       <div className="bg-background min-h-screen">
@@ -140,7 +174,7 @@ function CatalogPageContent() {
 
   return (
     <div className="bg-background min-h-screen">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 pt-8 pb-12">
         {/* Header */}
         <div className="mb-6">
           {/* Breadcrumbs */}
@@ -223,6 +257,7 @@ function CatalogPageContent() {
           categoryId={categoryId || undefined}
         />
       </div>
+      <ScrollArrows offsetBottomPx={28} />
     </div>
   );
 }

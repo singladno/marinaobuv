@@ -52,11 +52,19 @@ export async function POST(
     // Generate order number
     const orderNumber = await generateOrderNumber();
 
-    // Calculate totals
-    const subtotal = purchase.items.reduce(
-      (sum: number, item: any) => sum + Number(item.price),
-      0
-    );
+    // Calculate box price using the same logic as general order creation
+    function getBoxPriceFromPair(pricePair: any, sizes: any): number {
+      const pairs = Array.isArray(sizes) ? sizes.length : 0;
+      return Number(pricePair) * (pairs > 0 ? pairs : 1);
+    }
+
+    const subtotal = purchase.items.reduce((sum: number, item: any) => {
+      const boxPrice = getBoxPriceFromPair(
+        item.product?.pricePair,
+        item.product?.sizes
+      );
+      return sum + boxPrice;
+    }, 0);
     const total = subtotal; // No additional fees for now
 
     // Generate item codes for all items
@@ -83,7 +91,10 @@ export async function POST(
             slug: item.product.slug,
             name: item.name,
             article: item.product.article,
-            priceBox: item.price,
+            priceBox: getBoxPriceFromPair(
+              item.product?.pricePair,
+              item.product?.sizes
+            ),
             qty: 1,
             itemCode: itemCodes[index],
           })),

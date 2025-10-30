@@ -166,26 +166,7 @@ export default function Header({ onSearch }: HeaderProps) {
 
           {/* Right side - Actions */}
           <div className="flex items-center gap-4">
-            {/* Mobile Admin Switcher - only show on mobile for admin users */}
-            {user?.role === 'ADMIN' && (
-              <div className="md:hidden">
-                <MobileAdminSwitcher />
-              </div>
-            )}
-
-            {/* Mobile Purchase Mode Icon - only show on mobile for admin users */}
-            {user?.role === 'ADMIN' && (
-              <div className="md:hidden">
-                <PurchaseModeIcon />
-              </div>
-            )}
-
-            {/* Mobile Gruzchik Switcher - only show on mobile for gruzchik users */}
-            {user?.role === 'GRUZCHIK' && (
-              <div className="md:hidden">
-                <MobileGruzchikSwitcher />
-              </div>
-            )}
+            {/* Switchers moved into profile dropdown */}
 
             {/* Purchase Mode Icon - only show for admin users */}
             {user?.role === 'ADMIN' && (

@@ -1,6 +1,3 @@
-import { AdminSwitcher } from '@/components/ui/AdminSwitcher';
-import Footer from '@/components/ui/Footer';
-import { GruzchikSwitcher } from '@/components/ui/GruzchikSwitcher';
 import Header from '@/components/ui/Header';
 import BottomNavigation from '@/components/ui/BottomNavigation';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
@@ -33,16 +30,11 @@ export default function MainLayout({
                     {children}
                   </div>
                 </main>
-                <div className="hidden md:block">
-                  <Footer />
-                </div>
                 {/* Bottom Navigation - visible on tablet and mobile */}
                 <div className="md:hidden">
                   <BottomNavigation />
                 </div>
-                {/* Portal Switchers for role-based access */}
-                <AdminSwitcher />
-                <GruzchikSwitcher />
+                {/* Scroll arrows are rendered per-page where needed */}
               </div>
             </SwitcherProvider>
           </ClientChatProvider>

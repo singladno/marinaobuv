@@ -95,7 +95,29 @@ export function useProductOperations({
 
   const updateProduct = React.useCallback(
     async (id: string, updates: ProductUpdateData) => {
-      // Apply optimistic update immediately
+      // Align behavior with orders: for certain fields, avoid optimistic UI
+      const nonOptimisticKeys = new Set([
+        'isActive',
+        'categoryId',
+        'gender',
+        'season',
+      ]);
+
+      const hasNonOptimisticKey = Object.keys(updates).some(key =>
+        nonOptimisticKeys.has(key)
+      );
+
+      if (hasNonOptimisticKey) {
+        // Process immediately via queue but without optimistic overlay
+        addOperation({
+          id,
+          type: 'update',
+          data: updates,
+        });
+        return;
+      }
+
+      // Default: apply optimistic update immediately
       actions.setOptimisticUpdate(id, updates);
 
       // Add to operation queue

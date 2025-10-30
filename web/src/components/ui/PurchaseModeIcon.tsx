@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ArrowRightIcon, StarIcon } from '@heroicons/react/24/outline';
 // Custom Purchase Mode Icon - colorful pinwheel/flower design
 
 import { Button } from '@/components/ui/Button';
@@ -85,35 +85,11 @@ export function PurchaseModeIcon() {
         }`}
         title="Режим закупки"
       >
-        {/* Custom Purchase Mode Icon - Colorful Pinwheel/Flower Design */}
-        <svg
-          className={`h-5 w-5 transition-all duration-300 ${
-            isPurchaseMode ? 'animate-pulse' : ''
-          }`}
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Green petals */}
-          <path
-            d="M12 2L14.5 8.5L21 6L15.5 12L21 18L14.5 15.5L12 22L9.5 15.5L3 18L8.5 12L3 6L9.5 8.5L12 2Z"
-            fill={isPurchaseMode ? '#FFFFFF' : '#10B981'}
-            opacity={isPurchaseMode ? '1' : '0.8'}
-          />
-          {/* Yellow petals */}
-          <path
-            d="M12 2L9.5 8.5L3 6L8.5 12L3 18L9.5 15.5L12 22L14.5 15.5L21 18L15.5 12L21 6L14.5 8.5L12 2Z"
-            fill={isPurchaseMode ? '#FFFFFF' : '#F59E0B'}
-            opacity={isPurchaseMode ? '1' : '0.8'}
-          />
-          {/* Center circle */}
-          <circle
-            cx="12"
-            cy="12"
-            r="2"
-            fill={isPurchaseMode ? '#FFFFFF' : '#6B7280'}
-          />
-        </svg>
+        {/* Use Heroicons outline Star to match header icons */}
+        <StarIcon
+          className={`h-6 w-6 ${isPurchaseMode ? 'animate-pulse' : ''}`}
+          strokeWidth={1.5}
+        />
 
         {/* Shine effect when active */}
         {isPurchaseMode && (
@@ -139,28 +115,8 @@ export function PurchaseModeIcon() {
             {/* Header Section */}
             <div className="text-center">
               <div className="mb-2 flex items-center justify-center gap-3">
-                {/* Custom Purchase Mode Icon */}
-                <svg
-                  className="h-8 w-8"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  {/* Green petals */}
-                  <path
-                    d="M12 2L14.5 8.5L21 6L15.5 12L21 18L14.5 15.5L12 22L9.5 15.5L3 18L8.5 12L3 6L9.5 8.5L12 2Z"
-                    fill="#10B981"
-                    opacity="0.8"
-                  />
-                  {/* Yellow petals */}
-                  <path
-                    d="M12 2L9.5 8.5L3 6L8.5 12L3 18L9.5 15.5L12 22L14.5 15.5L21 18L15.5 12L21 6L14.5 8.5L12 2Z"
-                    fill="#F59E0B"
-                    opacity="0.8"
-                  />
-                  {/* Center circle */}
-                  <circle cx="12" cy="12" r="2" fill="#6B7280" />
-                </svg>
+                {/* Same star icon in modal header */}
+                <StarIcon className="h-8 w-8" strokeWidth={1.5} />
                 <Text className="text-lg font-semibold">Режим закупки</Text>
               </div>
               <Switch checked={isPurchaseMode} onCheckedChange={handleToggle} />

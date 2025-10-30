@@ -1,16 +1,7 @@
 'use client';
 
-import { useParsingStatus } from '@/hooks/useParsingStatus';
-
-import {
-  ProductsIcon,
-  OrdersIcon,
-  UsersIcon,
-  ParsingIcon,
-  DraftsIcon,
-  PurchasesIcon,
-} from './AdminSidebarIcons';
 import { AdminSidebarLink } from './AdminSidebarLink';
+import { useAdminNavItems } from '@/hooks/useAdminNavItems';
 
 type AdminSidebarNavigationProps = {
   isCollapsed: boolean;
@@ -19,45 +10,20 @@ type AdminSidebarNavigationProps = {
 export function AdminSidebarNavigation({
   isCollapsed,
 }: AdminSidebarNavigationProps) {
-  const { isParsingActive } = useParsingStatus();
+  const items = useAdminNavItems();
 
   return (
     <nav>
-      <AdminSidebarLink
-        href="/admin/products"
-        label="Товары"
-        icon={<ProductsIcon />}
-        collapsed={isCollapsed}
-      />
-
-      <AdminSidebarLink
-        href="/admin/orders"
-        label="Заказы"
-        icon={<OrdersIcon />}
-        collapsed={isCollapsed}
-      />
-
-      <AdminSidebarLink
-        href="/admin/users"
-        label="Пользователи"
-        icon={<UsersIcon />}
-        collapsed={isCollapsed}
-      />
-
-      <AdminSidebarLink
-        href="/admin/parsing"
-        label="Парсинг"
-        icon={<ParsingIcon />}
-        collapsed={isCollapsed}
-        isParsingActive={isParsingActive}
-      />
-
-      <AdminSidebarLink
-        href="/admin/purchases"
-        label="Закупки"
-        icon={<PurchasesIcon />}
-        collapsed={isCollapsed}
-      />
+      {items.map(item => (
+        <AdminSidebarLink
+          key={item.href}
+          href={item.href}
+          label={item.label}
+          icon={item.icon}
+          collapsed={isCollapsed}
+          isParsingActive={item.isParsingActive}
+        />
+      ))}
     </nav>
   );
 }
