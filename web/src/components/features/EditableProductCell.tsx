@@ -9,7 +9,7 @@ interface EditableProductCellProps {
   value: string;
   onSave: (value: string) => void;
   isEditing: boolean;
-  onEdit: () => void;
+  onEdit?: () => void;
   onCancel?: () => void;
   isSaving: boolean;
   type?: 'text' | 'number' | 'select';
@@ -17,6 +17,7 @@ interface EditableProductCellProps {
   className?: string;
   options?: Array<{ value: string; label: string }>;
   disabled?: boolean;
+  status?: 'idle' | 'saving' | 'success' | 'error';
 }
 
 export function EditableProductCell({
@@ -31,6 +32,7 @@ export function EditableProductCell({
   className = '',
   options = [],
   disabled = false,
+  status,
 }: EditableProductCellProps) {
   const [editValue, setEditValue] = useState(value);
 
@@ -38,9 +40,10 @@ export function EditableProductCell({
     setEditValue(value);
   }, [value]);
 
-  const handleSave = () => {
-    if (editValue !== value) {
-      onSave(editValue);
+  const handleSave = (nextValue?: string) => {
+    const finalValue = nextValue ?? editValue;
+    if (finalValue !== value) {
+      onSave(finalValue);
     }
     if (onCancel) {
       onCancel();
@@ -61,7 +64,7 @@ export function EditableProductCell({
   if (!isEditing) {
     return (
       <div
-        className={`${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${className}`}
+        className={`${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} w-full ${className}`}
         onClick={disabled ? undefined : onEdit}
         data-editable="true"
       >
@@ -70,7 +73,8 @@ export function EditableProductCell({
     );
   }
 
-  const inputClassName = `w-full min-w-[200px] rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white ${className}`;
+  // Keep width stable while editing and let UI components control visual style
+  const inputClassName = `w-full min-w-0 text-sm ${className}`;
 
   if (type === 'select') {
     return (
@@ -81,8 +85,9 @@ export function EditableProductCell({
         onKeyDown={handleKeyDown}
         className={inputClassName}
         disabled={disabled}
-        isSaving={isSaving}
+        isSaving={isSaving || status === 'saving'}
         options={options}
+        status={status}
       />
     );
   }

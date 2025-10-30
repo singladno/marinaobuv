@@ -49,19 +49,21 @@ export function ImageThumbnail({
       ? 'border-2 border-red-500 dark:border-red-400'
       : 'border border-gray-200 dark:border-gray-700';
 
-  const badge = image.isPrimary ? (
-    <span className="absolute left-0 top-0 m-0.5 rounded bg-blue-500 px-1 text-[10px] text-white">
-      ★
-    </span>
-  ) : image.isFalseImage ? (
-    <span className="absolute left-0 top-0 m-0.5 rounded bg-red-500 px-1 text-[10px] text-white">
-      ✗
-    </span>
-  ) : image.color ? (
-    <span className="absolute bottom-0 right-0 m-0.5 rounded bg-black/60 px-1 text-[10px] text-white">
-      {image.color}
-    </span>
-  ) : null;
+  // Render overlays independently so primary star doesn't hide color badge
+  const badge = (
+    <>
+      {image.isFalseImage ? (
+        <span className="absolute left-0 top-0 m-0.5 rounded bg-red-500 px-1 text-[10px] text-white">✗</span>
+      ) : image.isPrimary ? (
+        <span className="absolute left-0 top-0 m-0.5 rounded bg-blue-500 px-1 text-[10px] text-white">★</span>
+      ) : null}
+      {image.color ? (
+        <span className="absolute bottom-0 right-0 m-0.5 rounded bg-black/60 px-1 text-[10px] text-white">
+          {image.color}
+        </span>
+      ) : null}
+    </>
+  );
 
   const handleImageError = () => {
     setImageError(true);

@@ -4,7 +4,6 @@ import React from 'react';
 
 interface ProductBulkOperationsProps {
   selectedCount: number;
-  onBulkDelete: () => Promise<void>;
   onBulkActivate: () => Promise<void>;
   onBulkDeactivate: () => Promise<void>;
   onClearSelection: () => void;
@@ -12,7 +11,6 @@ interface ProductBulkOperationsProps {
 
 export function ProductBulkOperations({
   selectedCount,
-  onBulkDelete,
   onBulkActivate,
   onBulkDeactivate,
   onClearSelection,
@@ -33,13 +31,6 @@ export function ProductBulkOperations({
           className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Деактивировать
-        </button>
-        <button
-          onClick={onBulkDelete}
-          disabled={selectedCount === 0}
-          className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Удалить
         </button>
       </div>
 

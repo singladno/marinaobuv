@@ -23,7 +23,6 @@ const columnHelper = createColumnHelper<ProductWithSelected>();
 
 export function createProductColumnDefinitions({
   onUpdateProduct,
-  onDeleteProduct,
   categories,
   onToggle,
   onSelectAll,
@@ -31,7 +30,6 @@ export function createProductColumnDefinitions({
   someSelected,
 }: {
   onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
-  onDeleteProduct: (id: string) => Promise<void>;
   categories: CategoryNode[];
   onToggle?: (id: string) => void;
   onSelectAll?: (selectAll: boolean) => void;
@@ -83,6 +81,7 @@ export function createProductColumnDefinitions({
     // Name column
     columnHelper.accessor('name', {
       header: 'Название',
+      meta: { width: '400px' },
       cell: ({ row }) => (
         <ProductNameCell
           product={row.original}
@@ -95,6 +94,7 @@ export function createProductColumnDefinitions({
     // Article column
     columnHelper.accessor('article', {
       header: 'Артикул',
+      meta: { width: '170px' },
       cell: ({ row }) => (
         <ProductArticleCell
           product={row.original}
@@ -107,13 +107,14 @@ export function createProductColumnDefinitions({
     // Description column
     columnHelper.accessor('description', {
       header: 'Описание',
+      meta: { width: '350px' },
       cell: ({ row }) => (
         <ProductDescriptionCell
           product={row.original}
           onUpdateProduct={onUpdateProduct}
         />
       ),
-      size: 300, // Wider column for description
+      size: 350, // Wider column for description
     }),
 
     // Category column
@@ -152,6 +153,7 @@ export function createProductColumnDefinitions({
     // Gender column
     columnHelper.accessor('gender', {
       header: 'Пол',
+      meta: { width: '160px' },
       cell: ({ row, getValue }) => (
         <ProductGenderCell
           product={row.original}
@@ -160,12 +162,13 @@ export function createProductColumnDefinitions({
           disabled={row.original.isActive}
         />
       ),
-      size: 200, // Twice as wide
+      size: 160,
     }),
 
     // Season column
     columnHelper.accessor('season', {
       header: 'Сезон',
+      meta: { width: '160px' },
       cell: ({ row, getValue }) => (
         <ProductSeasonCell
           product={row.original}
@@ -174,7 +177,7 @@ export function createProductColumnDefinitions({
           disabled={row.original.isActive}
         />
       ),
-      size: 200, // Twice as wide
+      size: 160,
     }),
 
     // Sizes column
@@ -233,11 +236,11 @@ export function createProductColumnDefinitions({
         <ProductActionsCell
           product={row.original}
           onUpdateProduct={onUpdateProduct}
-          onDeleteProduct={onDeleteProduct}
         />
       ),
       meta: {
         frozen: 'right',
+        width: 120,
       },
     }),
   ];

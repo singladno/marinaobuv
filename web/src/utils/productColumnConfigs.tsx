@@ -3,7 +3,7 @@ import type { ProductUpdateData } from '@/types/product';
 
 interface CreateProductColumnsOptions {
   onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
-  onDeleteProduct: (id: string) => Promise<void>;
+  onDeleteProduct?: (id: string) => Promise<void>;
   categories: Array<{ id: string; name: string; slug?: string; path?: string }>;
   onToggle?: (id: string) => void;
   onSelectAll?: (selectAll: boolean) => void;

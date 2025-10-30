@@ -13,6 +13,8 @@ type CategoryTreeNodeProps = {
   onToggle: (id: string) => void;
   level?: number;
   searchTerm?: string;
+  // When true, always render this node (and its subtree) expanded
+  forceExpandAll?: boolean;
 };
 
 export function CategoryTreeNode({
@@ -21,6 +23,7 @@ export function CategoryTreeNode({
   onToggle,
   level = 0,
   searchTerm = '',
+  forceExpandAll = false,
 }: CategoryTreeNodeProps) {
   const nodeRef = React.useRef<HTMLDivElement>(null);
   const hasChildren = !!node.children && node.children.length > 0;
@@ -80,13 +83,19 @@ export function CategoryTreeNode({
   }, [node.children, selectedIds]);
 
   const [expanded, setExpanded] = React.useState<boolean>(
-    // Only expand if in search mode, subtree matches, or in path to selected
-    !normalizedQuery || subtreeMatches || isInPathToSelected
+    forceExpandAll
+      ? true
+      : // Only expand if in search mode, subtree matches, or in path to selected
+        !normalizedQuery || subtreeMatches || isInPathToSelected
   );
   const checked = selectedIds.includes(node.id);
   const isParentOfSelected = isInPathToSelected && !checked;
 
   React.useEffect(() => {
+    if (forceExpandAll) {
+      setExpanded(true);
+      return;
+    }
     // Expand/collapse in response to search and selection changes
     if (normalizedQuery) {
       // When searching, expand if this node or any of its children match the search
@@ -96,7 +105,7 @@ export function CategoryTreeNode({
       // Only expand if this node is in the path to a selected category
       setExpanded(isInPathToSelected);
     }
-  }, [normalizedQuery, subtreeMatches, isInPathToSelected]);
+  }, [normalizedQuery, subtreeMatches, isInPathToSelected, forceExpandAll]);
 
   // Scroll to view when this item is selected
   React.useEffect(() => {
@@ -141,7 +150,7 @@ export function CategoryTreeNode({
       <div className={`flex items-center ${getIndentationClass(level)}`}>
         {hasChildren ? (
           <button
-            onClick={() => setExpanded(e => !e)}
+            onClick={() => (forceExpandAll ? undefined : setExpanded(e => !e))}
             className="mr-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded transition-colors duration-200 hover:bg-gray-100"
             aria-label={expanded ? 'Свернуть' : 'Развернуть'}
             title={expanded ? 'Свернуть' : 'Развернуть'}

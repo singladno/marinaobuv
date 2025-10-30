@@ -603,7 +603,7 @@ export function OrderItemChat({ item, onClose }: OrderItemChatProps) {
 
         {/* Messages */}
         <ScrollArea
-          className="flex-1 overflow-hidden p-4"
+          className="flex-1 p-4"
           // eslint-disable-next-line react/no-unknown-property
           style={{
             height: isKeyboardOpen

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Textarea } from '@/components/ui/Textarea';
 import { ProductUpdateData } from '@/types/product';
 
 interface ProductDescriptionCellProps {
@@ -16,20 +17,37 @@ export function ProductDescriptionCell({
   product,
   onUpdateProduct,
 }: ProductDescriptionCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  // Always show edit control
+  const [isEditing] = useState(true);
   const [value, setValue] = useState(product.description || '');
   const [isLoading, setIsLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Auto-resize textarea to fit content
+  const resize = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    resize();
+  }, []);
+
+  useEffect(() => {
+    resize();
+  }, [value]);
 
   const handleSave = async () => {
     if (value === product.description) {
-      setIsEditing(false);
       return;
     }
 
     setIsLoading(true);
     try {
       await onUpdateProduct(product.id, { description: value || null });
-      setIsEditing(false);
+      // stay in edit mode
     } catch (error) {
       console.error('Error updating description:', error);
       // Reset to original value on error
@@ -41,7 +59,6 @@ export function ProductDescriptionCell({
 
   const handleCancel = () => {
     setValue(product.description || '');
-    setIsEditing(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -53,41 +70,21 @@ export function ProductDescriptionCell({
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="min-w-[200px]">
-        <textarea
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={handleKeyDown}
-          disabled={isLoading}
-          className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-          rows={2}
-          placeholder="Описание товара..."
-          autoFocus
-        />
-        {isLoading && (
-          <div className="mt-1 text-xs text-gray-500">Сохранение...</div>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div
-      className="min-w-[200px] cursor-pointer rounded px-2 py-1 text-sm hover:bg-gray-50"
-      onClick={() => !product.isActive && setIsEditing(true)}
-      title={
-        product.isActive
-          ? 'Нельзя редактировать активный товар'
-          : 'Нажмите для редактирования'
-      }
-    >
-      {product.description ? (
-        <div className="text-gray-900">{product.description}</div>
-      ) : (
-        <div className="italic text-gray-400">Нет описания</div>
+    <div className="min-w-[200px]">
+      <Textarea
+        ref={textareaRef}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onBlur={() => handleSave()}
+        onKeyDown={handleKeyDown}
+        disabled={isLoading || product.isActive}
+        className="w-full"
+        rows={1}
+        placeholder="Описание товара..."
+      />
+      {isLoading && (
+        <div className="mt-1 text-xs text-gray-500">Сохранение...</div>
       )}
     </div>
   );

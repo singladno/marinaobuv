@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-import { EditableProductCell } from '@/components/features/EditableProductCell';
+import { StatusSelect } from '@/components/features/StatusSelect';
 import type { Product } from '@/types/product';
 
 interface ProductSeasonCellProps {
@@ -18,8 +18,8 @@ export function ProductSeasonCell({
   onUpdateProduct,
   disabled = false,
 }: ProductSeasonCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
   const getSeasonLabel = (season: string | null) => {
     switch (season) {
@@ -38,6 +38,7 @@ export function ProductSeasonCell({
 
   const handleSave = async (value: string) => {
     setIsSaving(true);
+    setStatus('saving');
     try {
       const seasonMap: Record<string, string | null> = {
         Весна: 'SPRING',
@@ -47,23 +48,21 @@ export function ProductSeasonCell({
         '-': null,
       };
       await onUpdateProduct(product.id, { season: seasonMap[value] || null });
-      setIsEditing(false);
+      // Keep editing visible
+      setStatus('success');
+      setTimeout(() => setStatus('idle'), 1500);
     } catch (error) {
       console.error('Error updating product season:', error);
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 2000);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <EditableProductCell
+    <StatusSelect
       value={getSeasonLabel(season)}
-      onSave={handleSave}
-      isEditing={isEditing}
-      onEdit={() => !disabled && setIsEditing(!isEditing)}
-      onCancel={() => setIsEditing(false)}
-      isSaving={isSaving}
-      type="select"
       options={[
         { value: 'Весна', label: 'Весна' },
         { value: 'Лето', label: 'Лето' },
@@ -71,7 +70,10 @@ export function ProductSeasonCell({
         { value: 'Зима', label: 'Зима' },
         { value: '-', label: '-' },
       ]}
+      onChange={val => handleSave(val)}
       disabled={disabled}
+      status={status}
+      aria-label="Сезон"
     />
   );
 }

@@ -1,7 +1,7 @@
 import { ProductBulkOperations } from '@/components/features/ProductBulkOperations';
 import { UnifiedDataTable } from '@/components/features/UnifiedDataTable';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
-import { useCategories } from '@/hooks/useCategories';
+import { useAllCategories } from '@/hooks/useAllCategories';
 import { useProductBulkOperations } from '@/hooks/useProductBulkOperations';
 import { useProductHandlers } from '@/hooks/useProductHandlers';
 import { useProducts } from '@/hooks/useProducts';
@@ -19,12 +19,12 @@ export function ProductsPageContent() {
     setFilters,
     reload,
     updateProduct,
-    deleteProduct,
     goToPage,
     changePageSize,
   } = useProducts();
 
-  const { categories } = useCategories();
+  // Use the full categories tree for admin to ensure complete selection
+  const { categories } = useAllCategories();
 
   const {
     selected,
@@ -33,26 +33,20 @@ export function ProductsPageContent() {
     someSelected,
     onToggle,
     onSelectAll,
-    onBulkDelete,
     onBulkActivate,
     onBulkDeactivate,
     clearSelection,
     confirmationModal,
-  } = useProductBulkOperations(products, updateProduct, deleteProduct);
+  } = useProductBulkOperations(products, updateProduct, async () => {});
 
   const {
     handleUpdateProduct,
-    handleDeleteProduct,
-    handleBulkDelete,
     handleBulkActivate,
     handleBulkDeactivate,
   } = useProductHandlers({
     updateProduct,
-    deleteProduct,
-    onBulkDelete: async () => {
-      const result = await onBulkDelete();
-      return result;
-    },
+    deleteProduct: async () => {},
+    onBulkDelete: async () => false,
     onBulkActivate,
     onBulkDeactivate,
     selectedCount,
@@ -60,7 +54,6 @@ export function ProductsPageContent() {
 
   const columns = createProductColumns({
     onUpdateProduct: handleUpdateProduct,
-    onDeleteProduct: handleDeleteProduct,
     categories,
     onToggle,
     onSelectAll,
@@ -78,7 +71,6 @@ export function ProductsPageContent() {
     <div className="space-y-4">
       <ProductBulkOperations
         selectedCount={selectedCount}
-        onBulkDelete={handleBulkDelete}
         onBulkActivate={handleBulkActivate}
         onBulkDeactivate={handleBulkDeactivate}
         onClearSelection={clearSelection}

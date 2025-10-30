@@ -75,7 +75,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id, ...updateData } = body;
+    const { id, ...rawUpdateData } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -85,20 +85,57 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Validate that at least one field is being updated
-    if (Object.keys(updateData).length === 0) {
+    if (Object.keys(rawUpdateData).length === 0) {
       return NextResponse.json(
         { error: 'No fields to update' },
         { status: 400 }
       );
     }
 
-    // Update the product with activeUpdatedAt
+    // Whitelist updatable scalar fields to avoid Prisma validation errors
+    const allowedScalarKeys: (keyof typeof rawUpdateData)[] = [
+      'slug',
+      'name',
+      'article',
+      'pricePair',
+      'currency',
+      'material',
+      'gender',
+      'season',
+      'description',
+      'availabilityCheckedAt',
+      'isActive',
+      'sizes',
+      'sourceMessageIds',
+      'analysisBatchId',
+      'colorBatchId',
+      'batchProcessingStatus',
+      'gptRequest',
+      'gptResponse',
+    ] as any;
+
+    const updateData: Record<string, unknown> = {};
+    for (const key of allowedScalarKeys) {
+      if (key in rawUpdateData) {
+        updateData[key as string] = (rawUpdateData as any)[key];
+      }
+    }
+
+    // Map relation IDs to relation updates if present
+    if ('categoryId' in rawUpdateData && rawUpdateData.categoryId) {
+      updateData.category = { connect: { id: rawUpdateData.categoryId } };
+    }
+    if ('providerId' in rawUpdateData && rawUpdateData.providerId) {
+      updateData.provider = { connect: { id: rawUpdateData.providerId } };
+    }
+
+    // Always bump activeUpdatedAt for any update
+    updateData.activeUpdatedAt = new Date();
+
+    // Update the product
     const updatedProduct = await prisma.product.update({
       where: { id },
-      data: {
-        ...updateData,
-        activeUpdatedAt: new Date(), // Update the activeUpdatedAt field
-      },
+      data: updateData,
       include: productInclude,
     });
 

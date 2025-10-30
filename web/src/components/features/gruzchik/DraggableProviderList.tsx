@@ -4,12 +4,11 @@ import React, { useState, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
-  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -64,26 +63,16 @@ function SortableProviderItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors',
+        'flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors cursor-grab touch-none select-none active:cursor-grabbing',
         isSelected
           ? 'border-blue-500 bg-blue-50 text-blue-700'
           : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50',
         isDragging && 'opacity-50 shadow-lg'
       )}
+      {...attributes}
+      {...listeners}
     >
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab touch-none rounded p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 active:cursor-grabbing"
-        title="Перетащите для изменения порядка"
-        onMouseDown={e => e.stopPropagation()}
-        onTouchStart={e => e.stopPropagation()}
-      >
-        <GripVertical className="h-4 w-4" />
-      </div>
-
-      {/* Provider content */}
+      <GripVertical className="h-4 w-4 text-gray-400" />
       <button
         onClick={onSelect}
         className="flex flex-1 items-center justify-between text-left"
@@ -105,14 +94,8 @@ export function DraggableProviderList({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor),
+    useSensor(TouchSensor)
   );
 
   // Force re-render when sortedProviderIds changes
@@ -180,16 +163,7 @@ export function DraggableProviderList({
               ))}
             </div>
           </SortableContext>
-          <DragOverlay>
-            {activeId ? (
-              <div className="flex items-center gap-3 rounded-lg border border-blue-500 bg-blue-50 px-3 py-2 shadow-lg">
-                <GripVertical className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-blue-700">
-                  {sortedProviders.find(p => p.id === activeId)?.name}
-                </span>
-              </div>
-            ) : null}
-          </DragOverlay>
+          {/* No DragOverlay to ensure original element moves during drag */}
         </DndContext>
       </div>
     </div>

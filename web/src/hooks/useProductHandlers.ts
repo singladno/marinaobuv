@@ -5,6 +5,7 @@ import { useCategoryLookupContext } from '@/contexts/CategoryLookupContext';
 import type { ProductUpdateData } from '@/types/product';
 
 interface UseProductHandlersParams {
+  // Single entry point that performs API update + optimistic updates
   updateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   onBulkDelete: () => Promise<boolean>;
@@ -27,40 +28,14 @@ export function useProductHandlers({
   const handleUpdateProduct = useCallback(
     async (id: string, data: ProductUpdateData) => {
       try {
-        const payload = { id, ...data };
-
-        // Call the API directly to get proper error handling
-        const response = await fetch('/api/admin/products', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to update product');
-        }
-
-        const result = await response.json();
-
-        // Update the product in the local state with the server response
-        // Filter out relationship fields that cannot be updated
-        const { category, images, _count, ...updateableFields } =
-          result.product;
-        await updateProduct(id, updateableFields);
+        await updateProduct(id, data);
 
         // Refresh categories if categoryId was updated
         if (data.categoryId) {
           await refreshCategories();
         }
 
-        addNotification({
-          type: 'success',
-          title: 'Товар обновлен',
-          message: 'Товар успешно обновлен.',
-        });
+        // Success is silent to avoid UI layout shifts
       } catch (error) {
         console.error('Error updating product:', error);
         addNotification({

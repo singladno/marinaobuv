@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-import { EditableProductCell } from '@/components/features/EditableProductCell';
+import { StatusSelect } from '@/components/features/StatusSelect';
 import type { Product } from '@/types/product';
 
 interface ProductGenderCellProps {
@@ -18,8 +18,8 @@ export function ProductGenderCell({
   onUpdateProduct,
   disabled = false,
 }: ProductGenderCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
   const getGenderLabel = (gender: string | null) => {
     switch (gender) {
@@ -34,6 +34,7 @@ export function ProductGenderCell({
 
   const handleSave = async (value: string) => {
     setIsSaving(true);
+    setStatus('saving');
     try {
       const genderMap: Record<string, string | null> = {
         Женский: 'FEMALE',
@@ -41,29 +42,30 @@ export function ProductGenderCell({
         '-': null,
       };
       await onUpdateProduct(product.id, { gender: genderMap[value] || null });
-      setIsEditing(false);
+      // Keep editing visible
+      setStatus('success');
+      setTimeout(() => setStatus('idle'), 1500);
     } catch (error) {
       console.error('Error updating product gender:', error);
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 2000);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <EditableProductCell
+    <StatusSelect
       value={getGenderLabel(gender)}
-      onSave={handleSave}
-      isEditing={isEditing}
-      onEdit={() => !disabled && setIsEditing(!isEditing)}
-      onCancel={() => setIsEditing(false)}
-      isSaving={isSaving}
-      type="select"
       options={[
         { value: 'Женский', label: 'Женский' },
         { value: 'Мужской', label: 'Мужской' },
         { value: '-', label: '-' },
       ]}
+      onChange={val => handleSave(val)}
       disabled={disabled}
+      status={status}
+      aria-label="Пол"
     />
   );
 }

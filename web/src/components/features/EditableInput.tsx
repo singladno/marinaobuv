@@ -1,4 +1,5 @@
 import React from 'react';
+import { Input } from '@/components/ui/Input';
 
 interface EditableInputProps {
   value: string;
@@ -24,17 +25,18 @@ export function EditableInput({
   isSaving,
 }: EditableInputProps) {
   return (
-    <input
+    <Input
       type={type}
       value={value}
-      onChange={e => onChange(e.target.value)}
-      onBlur={onSave}
+      onChange={e => onChange((e.target as HTMLInputElement).value)}
+      onBlur={() => onSave()}
       onKeyDown={onKeyDown}
       step={step}
       className={className}
-      autoFocus
+      // avoid autoFocus to prevent global focus/blur cascades
       disabled={disabled || isSaving}
       aria-label="Редактировать значение"
+      fullWidth
     />
   );
 }

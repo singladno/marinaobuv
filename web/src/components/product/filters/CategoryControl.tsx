@@ -22,6 +22,8 @@ type Props = {
   tree?: CategoryNode[]; // preferred: pass full tree
   label?: string;
   disabled?: boolean;
+  // When true, expand the entire tree (admin-only usage)
+  forceExpandAll?: boolean;
 };
 
 export default function CategoryControl({
@@ -31,6 +33,7 @@ export default function CategoryControl({
   tree,
   label = 'Категория',
   disabled = false,
+  forceExpandAll = false,
 }: Props) {
   const count = value.length;
   const [query, setQuery] = useState('');
@@ -106,6 +109,7 @@ export default function CategoryControl({
                 onToggle={toggle}
                 level={0}
                 searchTerm={query}
+                forceExpandAll={forceExpandAll}
               />
             ))
           : filtered.map(option => {

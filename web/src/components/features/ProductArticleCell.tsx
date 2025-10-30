@@ -16,14 +16,15 @@ export function ProductArticleCell({
   onUpdateProduct,
   disabled = false,
 }: ProductArticleCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  // Always show edit control
+  const [isEditing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async (value: string) => {
     setIsSaving(true);
     try {
       await onUpdateProduct(product.id, { article: value || null });
-      setIsEditing(false);
+      // Keep editing visible
     } catch (error) {
       console.error('Error updating product article:', error);
     } finally {
@@ -36,7 +37,6 @@ export function ProductArticleCell({
       value={product.article || ''}
       onSave={handleSave}
       isEditing={isEditing}
-      onEdit={() => !disabled && setIsEditing(!isEditing)}
       isSaving={isSaving}
       type="text"
       disabled={disabled}
