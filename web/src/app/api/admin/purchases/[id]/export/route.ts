@@ -73,7 +73,7 @@ export async function GET(
                 article: true,
                 images: {
                   orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
-                  select: { url: true, isPrimary: true, sort: true },
+                  select: { url: true, isPrimary: true, sort: true, color: true },
                 },
               },
             },
@@ -99,20 +99,28 @@ export async function GET(
 
     const rows = purchase.items.map(item => {
       const allImages = item.product.images || [];
-      const primaryImage = allImages.find(img => img.isPrimary) || allImages[0];
-      const selectedColor = (primaryImage?.color || '').toLowerCase();
+      // Use the explicitly selected color on the purchase item when available
+      const desiredColor = ((item as any).color || '').toLowerCase();
       let sameColorImages = allImages;
-      if (selectedColor) {
+      if (desiredColor) {
         sameColorImages = allImages.filter(
-          img => (img.color || '').toLowerCase() === selectedColor
+          img => (img.color || '').toLowerCase() === desiredColor
         );
       } else {
-        // Prefer images without color to avoid mixing color sets
-        const noColor = allImages.filter(img => !img.color);
-        if (noColor.length > 0) sameColorImages = noColor;
-      }
-      if (sameColorImages.length === 0 && primaryImage) {
-        sameColorImages = [primaryImage];
+        // Fallback to primary group: either primary image's color group, or no-color images
+        const primaryImage = allImages.find(img => img.isPrimary) || allImages[0];
+        const primaryColor = (primaryImage?.color || '').toLowerCase();
+        if (primaryColor) {
+          sameColorImages = allImages.filter(
+            img => (img.color || '').toLowerCase() === primaryColor
+          );
+        } else {
+          const noColor = allImages.filter(img => !img.color);
+          if (noColor.length > 0) sameColorImages = noColor;
+        }
+        if (sameColorImages.length === 0 && primaryImage) {
+          sameColorImages = [primaryImage];
+        }
       }
       const imageUrls = sameColorImages.map(img => img.url).filter(Boolean).join(',');
       const sizesValue = item.product.sizes ? formatSizes(item.product.sizes) : '';

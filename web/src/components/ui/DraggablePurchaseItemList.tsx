@@ -236,13 +236,18 @@ export function DraggablePurchaseItemList({
                   </div>
                 </div>
                 <div className="flex justify-center">
-                  {sortedItems.find(item => item.id === activeId)?.product
-                    .images[0] ? (
+                  {(() => {
+                    const activeItem = sortedItems.find(i => i.id === activeId);
+                    if (!activeItem) return null;
+                    const normalize = (s?: string | null) =>
+                      (s || '').trim().toLowerCase();
+                    const color = normalize(activeItem.color);
+                    const imgs = activeItem.product.images || [];
+                    const colorMatch = imgs.find(img => normalize(img.color) === color);
+                    const src = (colorMatch || imgs[0])?.url;
+                    return src ? (
                     <Image
-                      src={
-                        sortedItems.find(item => item.id === activeId)?.product
-                          .images[0].url || ''
-                      }
+                      src={src}
                       alt={
                         sortedItems.find(item => item.id === activeId)?.name ||
                         ''
@@ -251,11 +256,12 @@ export function DraggablePurchaseItemList({
                       height={64}
                       className="h-16 w-16 rounded object-cover"
                     />
-                  ) : (
+                    ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
                       <span className="text-xs text-gray-500">Нет фото</span>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
               <div className="min-w-0 flex-1">

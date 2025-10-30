@@ -38,6 +38,7 @@ interface PurchaseItem {
   price: number;
   oldPrice: number;
   sortIndex: number;
+  color?: string | null;
   product: {
     id: string;
     slug: string;
@@ -46,6 +47,7 @@ interface PurchaseItem {
     images: Array<{
       id: string;
       url: string;
+      color?: string | null;
       isPrimary: boolean;
       sort: number;
     }>;
@@ -772,30 +774,40 @@ function PurchaseDetailPageContent() {
 
                     {/* Product Image */}
                     <div className="flex justify-center">
-                      {item.product.images[0] ? (
-                        <div
-                          className="h-16 w-16 cursor-pointer"
-                          onClick={() =>
-                            item.product.slug &&
-                            router.push(`/product/${item.product.slug}`)
-                          }
-                          title="Открыть страницу товара"
-                        >
-                          <Image
-                            src={item.product.images[0].url}
-                            alt={item.name}
-                            width={64}
-                            height={64}
-                            className="h-16 w-16 rounded object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
-                          <Text className="text-xs text-gray-500">
-                            Нет фото
-                          </Text>
-                        </div>
-                      )}
+                      {(() => {
+                        const normalize = (s?: string | null) =>
+                          (s || '').trim().toLowerCase();
+                        const color = normalize(item.color);
+                        const imgs = item.product.images || [];
+                        const colorMatch = imgs.find(
+                          img => normalize(img.color) === color
+                        );
+                        const src = (colorMatch || imgs[0])?.url;
+                        return src ? (
+                          <div
+                            className="h-16 w-16 cursor-pointer"
+                            onClick={() =>
+                              item.product.slug &&
+                              router.push(`/product/${item.product.slug}`)
+                            }
+                            title="Открыть страницу товара"
+                          >
+                            <Image
+                              src={src}
+                              alt={item.name}
+                              width={64}
+                              height={64}
+                              className="h-16 w-16 rounded object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
+                            <Text className="text-xs text-gray-500">
+                              Нет фото
+                            </Text>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 

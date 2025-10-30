@@ -17,6 +17,7 @@ export interface PurchaseItem {
   price: number;
   oldPrice: number;
   sortIndex: number;
+  color?: string | null;
   product: {
     id: string;
     slug: string;
@@ -25,6 +26,7 @@ export interface PurchaseItem {
     images: Array<{
       id: string;
       url: string;
+      color?: string | null;
       isPrimary: boolean;
       sort: number;
     }>;

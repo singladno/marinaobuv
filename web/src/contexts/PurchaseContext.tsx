@@ -17,6 +17,7 @@ interface Purchase {
   items: Array<{
     id: string;
     productId: string;
+    color?: string | null;
     name: string;
     price: number;
     sortIndex: number;
@@ -34,8 +35,8 @@ interface PurchaseContextType {
   purchases: Purchase[];
   setPurchases: (purchases: Purchase[]) => void;
   selectedProductIds: Set<string>;
-  addProductToPurchase: (productId: string) => Promise<void>;
-  removeProductFromPurchase: (productId: string) => void;
+  addProductToPurchase: (productId: string, color?: string | null) => Promise<void>;
+  removeProductFromPurchase: (productId: string, color?: string | null) => void;
   refreshPurchases: () => Promise<void>;
   updateActivePurchaseItems: (items: any[]) => void;
   clearPurchaseState: () => void;
@@ -196,7 +197,7 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addProductToPurchase = async (productId: string) => {
+  const addProductToPurchase = async (productId: string, color?: string | null) => {
     if (!activePurchase || !user) {
       return;
     }
@@ -209,7 +210,7 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ productId }),
+          body: JSON.stringify({ productId, color: color ?? null }),
         }
       );
 
@@ -264,12 +265,12 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const removeProductFromPurchase = async (productId: string) => {
+  const removeProductFromPurchase = async (productId: string, color?: string | null) => {
     if (!activePurchase || !user) return;
 
     // Find the item to remove
-    const itemToRemove = activePurchase.items.find(
-      item => item.productId === productId
+    const itemToRemove = activePurchase.items.find(item =>
+      item.productId === productId && (color == null ? true : (item.color ?? null) === (color ?? null))
     );
     if (!itemToRemove) return;
 
@@ -293,7 +294,7 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
         if (!prev) return null;
         return {
           ...prev,
-          items: prev.items.filter(item => item.productId !== productId),
+          items: prev.items.filter(item => item.id !== itemToRemove.id),
           _count: {
             ...prev._count,
             items: prev._count.items - 1,
@@ -307,7 +308,7 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
           p.id === activePurchase.id
             ? {
                 ...p,
-                items: p.items.filter(item => item.productId !== productId),
+                items: p.items.filter(item => item.id !== itemToRemove.id),
                 _count: {
                   ...p._count,
                   items: p._count.items - 1,
@@ -317,8 +318,10 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
         )
       );
 
-      // Remove from selected products
+      // Remove from selected products if no items remain for product
       setSelectedProductIds(prev => {
+        const stillHasThisProduct = (activePurchase.items.filter(i => i.id !== itemToRemove.id)).some(i => i.productId === productId);
+        if (stillHasThisProduct) return prev;
         const newSet = new Set(prev);
         newSet.delete(productId);
         return newSet;

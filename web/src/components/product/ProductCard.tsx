@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, useRef } from 'react';
 
 import CartActionButton from '@/components/product/CartActionButton';
+import PurchaseIndexBadges from '@/components/features/PurchaseIndexBadges';
+import RemoveColorChooser from '@/components/features/RemoveColorChooser';
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
 import { ProductSourceModal } from '@/components/product/ProductSourceModal';
@@ -120,9 +122,20 @@ export default function ProductCard({
 
   // Purchase mode logic
   const isInPurchase = productId ? selectedProductIds.has(productId) : false;
-  const purchaseSortIndex = activePurchase?.items.find(
-    item => item.productId === productId
-  )?.sortIndex;
+  const productItems = useMemo(
+    () =>
+      (activePurchase?.items || []).filter(
+        item => item.productId === (productId || '')
+      ),
+    [activePurchase?.items, productId]
+  );
+  const addedColors = useMemo(
+    () => productItems.map(i => i.color).filter(Boolean) as string[],
+    [productItems]
+  );
+  const hasMultipleColorsInPurchase = productItems.length > 1;
+  const purchaseSortIndex = productItems[0]?.sortIndex;
+  const [showRemoveChooser, setShowRemoveChooser] = useState(false);
 
   // Debug logging for sort index
   useEffect(() => {
@@ -162,11 +175,18 @@ export default function ProductCard({
 
     try {
       if (isInPurchase) {
-        console.log('🗑️ Removing product from purchase:', productId);
-        await removeProductFromPurchase(productId);
+        // If multiple colors exist in purchase, show chooser
+        if (hasMultipleColorsInPurchase) {
+          setShowRemoveChooser(true);
+          return;
+        }
+        // Single item: remove that color
+        const onlyItem = productItems[0];
+        console.log('🗑️ Removing product from purchase:', productId, onlyItem?.color);
+        await removeProductFromPurchase(productId, onlyItem?.color ?? null);
       } else {
-        console.log('➕ Adding product to purchase:', productId);
-        await addProductToPurchase(productId);
+        console.log('➕ Adding product to purchase:', productId, selectedColor);
+        await addProductToPurchase(productId, selectedColor || null);
       }
     } catch (error) {
       console.error('❌ Purchase operation failed:', error);
@@ -351,32 +371,33 @@ export default function ProductCard({
         {/* Purchase Mode Indicators */}
         {isPurchaseMode && (
           <>
-            {/* Purchase Sort Index */}
-            {isInPurchase && purchaseSortIndex && (
-              <div className="absolute left-3 top-3 z-30">
-                {isEditingSortIndex ? (
-                  <input
-                    ref={sortIndexInputRef}
-                    type="text"
-                    value={editSortIndexValue}
-                    onChange={handleSortIndexChange}
-                    onKeyDown={handleSortIndexKeyDown}
-                    onBlur={handleSortIndexSubmit}
-                    className="h-6 w-8 rounded border border-purple-300 bg-white px-1 text-center text-xs font-bold text-purple-600 focus:border-purple-500 focus:outline-none"
-                    maxLength={3}
-                    aria-label="Порядковый номер в закупке"
-                    placeholder="№"
-                  />
-                ) : (
-                  <button
-                    onClick={handleSortIndexClick}
-                    className="inline-flex cursor-pointer items-center rounded-md bg-purple-600 px-2.5 py-0.5 text-xs font-bold text-white transition-colors hover:bg-purple-700"
-                    title="Нажмите для изменения порядка"
-                  >
-                    {purchaseSortIndex}
-                  </button>
-                )}
-              </div>
+            {/* Purchase Sort Index Badges (per color) */}
+            {isInPurchase && productItems.length > 0 && (
+              <PurchaseIndexBadges
+                items={productItems}
+                onSubmitIndex={async (itemId, newIndex) => {
+                  if (!activePurchase) return;
+                  // Update server for this item
+                  const response = await fetch(
+                    `/api/admin/purchases/${activePurchase.id}/items/${itemId}`,
+                    {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ sortIndex: newIndex }),
+                    }
+                  );
+                  if (!response.ok) return;
+                  const updatedItem = await response.json();
+                  const updatedItems = (activePurchase.items || []).map(i =>
+                    i.id === updatedItem.id ? updatedItem : i
+                  );
+                  // Locally re-sequence for visual consistency
+                  const recalculated = [...updatedItems].sort(
+                    (a, b) => a.sortIndex - b.sortIndex
+                  ).map((it, idx) => ({ ...it, sortIndex: idx + 1 }));
+                  updateActivePurchaseItems(recalculated);
+                }}
+              />
             )}
 
             {/* Purchase Mode Overlay */}
@@ -484,11 +505,24 @@ export default function ProductCard({
                 color={selectedColor || colorOptions[0]?.color || null}
               />
             </div>
-            <ColorSwitcher
-              options={colorOptions}
-              selectedColor={selectedColor || colorOptions[0]?.color || null}
-              onSelect={setSelectedColor}
-            />
+            <div className="relative z-30">
+              <ColorSwitcher
+                options={colorOptions}
+                selectedColor={selectedColor || colorOptions[0]?.color || null}
+                onSelect={setSelectedColor}
+                addedColors={isInPurchase ? addedColors : []}
+                showAddIndicators={isInPurchase}
+                onAddColor={async color => {
+                  if (!productId) return;
+                  setIsProcessing(true);
+                  try {
+                    await addProductToPurchase(productId, color);
+                  } finally {
+                    setIsProcessing(false);
+                  }
+                }}
+              />
+            </div>
           </div>
         </Link>
 
@@ -497,6 +531,26 @@ export default function ProductCard({
           <div className="px-5 pb-3 text-xs text-gray-500">
             Наличие проверено: {getRelativeTime(activeUpdatedAt)}
           </div>
+        )}
+        {isPurchaseMode && showRemoveChooser && productItems.length > 1 && (
+          <RemoveColorChooser
+            items={productItems}
+            onChoose={async itemId => {
+              setIsProcessing(true);
+              try {
+                // Find item and remove by id using existing API
+                const item = productItems.find(i => i.id === itemId);
+                if (!item || !activePurchase) return;
+                await fetch(`/api/admin/purchases/${activePurchase.id}/items/${item.id}`, { method: 'DELETE' });
+                // Update local state
+                updateActivePurchaseItems((activePurchase.items || []).filter(i => i.id !== item.id));
+              } finally {
+                setIsProcessing(false);
+                setShowRemoveChooser(false);
+              }
+            }}
+            onCancel={() => setShowRemoveChooser(false)}
+          />
         )}
       </div>
 

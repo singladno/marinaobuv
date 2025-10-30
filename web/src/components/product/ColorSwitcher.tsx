@@ -5,6 +5,9 @@ type Props = {
   selectedColor: string | null;
   onSelect: (color: string) => void;
   direction?: 'row' | 'col';
+  addedColors?: string[];
+  showAddIndicators?: boolean;
+  onAddColor?: (color: string) => void;
 };
 
 export default function ColorSwitcher({
@@ -12,6 +15,9 @@ export default function ColorSwitcher({
   selectedColor,
   onSelect,
   direction = 'row',
+  addedColors = [],
+  showAddIndicators = false,
+  onAddColor,
 }: Props) {
   if (!options || options.length <= 1) return null;
 
@@ -83,6 +89,9 @@ export default function ColorSwitcher({
         const isSelected =
           selectedColor?.toLowerCase() === opt.color.toLowerCase();
         const bg = resolveColor(opt.color);
+        const isAdded = addedColors.some(
+          c => c && c.toLowerCase() === opt.color.toLowerCase()
+        );
         return (
           <button
             key={opt.color}
@@ -106,6 +115,39 @@ export default function ColorSwitcher({
               // eslint-disable-next-line @next/next/no-css-tags
               style={{ backgroundColor: bg }}
             />
+            {showAddIndicators && !isAdded && onAddColor && (
+              <span
+                className="absolute -bottom-1 -right-1 inline-flex h-4 w-4 translate-x-0.5 translate-y-0.5 items-center justify-center rounded-full bg-white shadow ring-1 ring-muted"
+              >
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Добавить цвет ${opt.color}`}
+                  className="flex h-3.5 w-3.5 cursor-pointer items-center justify-center rounded-full bg-purple-600 text-white shadow-sm"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAddColor(opt.color);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onAddColor(opt.color);
+                    }
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-3 w-3"
+                  >
+                    <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+                  </svg>
+                </span>
+              </span>
+            )}
           </button>
         );
       })}

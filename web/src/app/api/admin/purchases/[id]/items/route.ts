@@ -15,7 +15,7 @@ export async function POST(
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const { productId } = await request.json();
+    const { productId, color } = await request.json();
 
     if (!productId) {
       return NextResponse.json(
@@ -42,17 +42,18 @@ export async function POST(
       );
     }
 
-    // Check if product is already in this purchase
+    // Check if exact product/color is already in this purchase
     const existingItem = await prisma.purchaseItem.findFirst({
       where: {
         purchaseId: id,
         productId,
+        color: color ?? null,
       },
     });
 
     if (existingItem) {
       return NextResponse.json(
-        { error: 'Product already in purchase' },
+        { error: 'Этот цвет товара уже в закупке' },
         { status: 400 }
       );
     }
@@ -96,6 +97,7 @@ export async function POST(
       data: {
         purchaseId: id,
         productId,
+        color: color ?? null,
         name: product.name,
         description: formattedDescription,
         price: product.pricePair,
