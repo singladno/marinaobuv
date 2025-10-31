@@ -54,7 +54,11 @@ function resolveColor(name?: string | null) {
   return colorMap[n] || '#D1D5DB';
 }
 
-export default function RemoveColorChooser({ items, onChoose, onCancel }: Props) {
+export default function RemoveColorChooser({
+  items,
+  onChoose,
+  onCancel,
+}: Props) {
   const unique = useMemo(() => {
     const seen = new Set<string>();
     return items.filter(i => {
@@ -67,9 +71,14 @@ export default function RemoveColorChooser({ items, onChoose, onCancel }: Props)
 
   return (
     <div className="absolute inset-0 z-40 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] transition-opacity" onClick={onCancel} />
+      <div
+        className="absolute inset-0 bg-black/30 backdrop-blur-[1px] transition-opacity"
+        onClick={onCancel}
+      />
       <div className="relative z-50 w-56 origin-center rounded-lg bg-white p-3 shadow-lg ring-1 ring-black/5 transition-transform">
-        <div className="mb-2 text-center text-sm font-medium text-gray-700">Какой цвет убрать из закупки?</div>
+        <div className="mb-2 text-center text-sm font-medium text-gray-700">
+          Какой цвет убрать из закупки?
+        </div>
         <div className="flex items-center justify-center gap-3">
           {unique.map(item => {
             const bg = resolveColor(item.color);
@@ -84,9 +93,7 @@ export default function RemoveColorChooser({ items, onChoose, onCancel }: Props)
                   onChoose(item.id);
                 }}
               >
-                <span
-                  className="hover:ring-foreground/10 inline-flex h-6 w-6 items-center justify-center rounded-full border transition-transform transition-shadow duration-150 hover:scale-105 hover:ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 border-muted"
-                >
+                <span className="hover:ring-foreground/10 border-muted inline-flex h-6 w-6 items-center justify-center rounded-full border transition-shadow transition-transform duration-150 hover:scale-105 hover:ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300">
                   <span
                     aria-hidden
                     className="block h-4 w-4 rounded-full"
@@ -94,7 +101,7 @@ export default function RemoveColorChooser({ items, onChoose, onCancel }: Props)
                   />
                 </span>
                 <span className="text-[10px] text-gray-500 transition-colors duration-150 group-hover:text-gray-700">
-                  {(item.color ?? 'Цвет')}
+                  {item.color ?? 'Цвет'}
                 </span>
               </button>
             );
@@ -113,5 +120,3 @@ export default function RemoveColorChooser({ items, onChoose, onCancel }: Props)
     </div>
   );
 }
-
-

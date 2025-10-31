@@ -1,6 +1,9 @@
 export type PaginationItem = number | 'ellipsis';
 
-export function getPaginationPages(current: number, totalPages: number): PaginationItem[] {
+export function getPaginationPages(
+  current: number,
+  totalPages: number
+): PaginationItem[] {
   const pages: PaginationItem[] = [];
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -16,5 +19,3 @@ export function getPaginationPages(current: number, totalPages: number): Paginat
   pages.push(totalPages);
   return pages;
 }
-
-

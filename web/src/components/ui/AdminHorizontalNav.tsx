@@ -21,7 +21,9 @@ export default function AdminHorizontalNav({
   const pathname = usePathname();
 
   const content = (
-    <div className={`no-scrollbar flex w-full gap-2 overflow-x-auto ${variant === 'standalone' ? 'px-3 py-2' : ''} ${className}`}>
+    <div
+      className={`no-scrollbar flex w-full gap-2 overflow-x-auto ${variant === 'standalone' ? 'px-3 py-2' : ''} ${className}`}
+    >
       {items.map(item => {
         const isActive = pathname === item.href;
         return (
@@ -35,9 +37,14 @@ export default function AdminHorizontalNav({
             }`}
           >
             <span className="[&>svg]:h-5 [&>svg]:w-5">{item.icon}</span>
-            {showLabels && <span className="whitespace-nowrap">{item.label}</span>}
+            {showLabels && (
+              <span className="whitespace-nowrap">{item.label}</span>
+            )}
             {item.label === 'Парсинг' && (
-              <ParsingIndicator isActive={Boolean(item.isParsingActive)} collapsed={false} />
+              <ParsingIndicator
+                isActive={Boolean(item.isParsingActive)}
+                collapsed={false}
+              />
             )}
           </Link>
         );
@@ -50,9 +57,8 @@ export default function AdminHorizontalNav({
   }
 
   return (
-    <nav className="md:hidden border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <nav className="border-b border-gray-200 bg-white md:hidden dark:border-gray-700 dark:bg-gray-900">
       {content}
     </nav>
   );
 }
-

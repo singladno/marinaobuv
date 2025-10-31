@@ -90,7 +90,8 @@ export default function PurchaseIndexBadges({ items, onSubmitIndex }: Props) {
                 value={value}
                 onChange={e => {
                   const v = e.target.value;
-                  if (v === '' || (/^\d+$/.test(v) && parseInt(v) > 0)) setValue(v);
+                  if (v === '' || (/^\d+$/.test(v) && parseInt(v) > 0))
+                    setValue(v);
                 }}
                 onBlur={async () => {
                   const num = parseInt(value);
@@ -135,5 +136,3 @@ export default function PurchaseIndexBadges({ items, onSubmitIndex }: Props) {
     </div>
   );
 }
-
-

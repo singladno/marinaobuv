@@ -16,7 +16,7 @@ type CatalogPaginationProps = {
   categoryId?: string;
   pageSizeOptions?: number[];
 };
- 
+
 export default function CatalogPagination({
   basePath,
   page,

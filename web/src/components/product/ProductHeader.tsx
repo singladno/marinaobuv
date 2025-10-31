@@ -35,8 +35,8 @@ export function ProductHeader({ name, article, gender, season, slug }: Props) {
           typeof error === 'object' &&
           error !== null &&
           'name' in error &&
-          // @ts-expect-error safeguarded above
-          (error.name === 'AbortError' || error.name === 'NotAllowedError');
+          (String((error as { name?: string }).name) === 'AbortError' ||
+            String((error as { name?: string }).name) === 'NotAllowedError');
         if (isAbort) return;
         console.error('Error sharing:', error);
       }

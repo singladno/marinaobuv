@@ -21,10 +21,14 @@ export function getCatalogFiltersStorageKey(pathname: string) {
   return `${STORAGE_PREFIX}${pathname}`;
 }
 
-export function loadPersistedCatalogFilters(pathname: string): Partial<PersistableCatalogFilters> | null {
+export function loadPersistedCatalogFilters(
+  pathname: string
+): Partial<PersistableCatalogFilters> | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(getCatalogFiltersStorageKey(pathname));
+    const raw = window.localStorage.getItem(
+      getCatalogFiltersStorageKey(pathname)
+    );
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistableCatalogFilters;
     if (!parsed || typeof parsed !== 'object') return null;
@@ -32,8 +36,10 @@ export function loadPersistedCatalogFilters(pathname: string): Partial<Persistab
     return {
       search: typeof parsed.search === 'string' ? parsed.search : '',
       sortBy: typeof parsed.sortBy === 'string' ? parsed.sortBy : 'newest',
-      minPrice: typeof parsed.minPrice === 'number' ? parsed.minPrice : undefined,
-      maxPrice: typeof parsed.maxPrice === 'number' ? parsed.maxPrice : undefined,
+      minPrice:
+        typeof parsed.minPrice === 'number' ? parsed.minPrice : undefined,
+      maxPrice:
+        typeof parsed.maxPrice === 'number' ? parsed.maxPrice : undefined,
       colors: Array.isArray(parsed.colors) ? parsed.colors : [],
       inStock: Boolean(parsed.inStock),
       page: Number.isFinite(parsed.page) ? parsed.page : 1,
@@ -78,7 +84,16 @@ export function usePersistCatalogFilters(
     } catch {
       // ignore quota or serialization errors
     }
-  }, [options?.enabled, pathname, filters.search, filters.sortBy, filters.minPrice, filters.maxPrice, filters.colors, filters.inStock, filters.page, filters.pageSize]);
+  }, [
+    options?.enabled,
+    pathname,
+    filters.search,
+    filters.sortBy,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.colors,
+    filters.inStock,
+    filters.page,
+    filters.pageSize,
+  ]);
 }
-
-

@@ -5,7 +5,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 
 function escapeCsvValue(value: unknown): string {
-  const stringValue = value === null || value === undefined ? '' : String(value);
+  const stringValue =
+    value === null || value === undefined ? '' : String(value);
   const needsQuotes = /[",\n;]/.test(stringValue);
   const escaped = stringValue.replace(/"/g, '""');
   return needsQuotes ? `"${escaped}"` : escaped;
@@ -17,12 +18,20 @@ function formatSizes(value: unknown): string {
     // Array of objects like [{size: '36', count: 1}]
     if (Array.isArray(value)) {
       if (value.length === 0) return '';
-      if (value.every(item => typeof item === 'object' && item && 'size' in (item as any))) {
+      if (
+        value.every(
+          item => typeof item === 'object' && item && 'size' in (item as any)
+        )
+      ) {
         return (value as Array<{ size: string; count?: number }>)
           .map(v => String(v.size))
           .join(',');
       }
-      if (value.every(item => typeof item === 'string' || typeof item === 'number')) {
+      if (
+        value.every(
+          item => typeof item === 'string' || typeof item === 'number'
+        )
+      ) {
         return (value as Array<string | number>).map(String).join(',');
       }
       return '';
@@ -73,7 +82,12 @@ export async function GET(
                 article: true,
                 images: {
                   orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
-                  select: { url: true, isPrimary: true, sort: true, color: true },
+                  select: {
+                    url: true,
+                    isPrimary: true,
+                    sort: true,
+                    color: true,
+                  },
                 },
               },
             },
@@ -84,7 +98,10 @@ export async function GET(
     });
 
     if (!purchase) {
-      return NextResponse.json({ error: 'Purchase not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Purchase not found' },
+        { status: 404 }
+      );
     }
 
     const header = [
@@ -108,22 +125,28 @@ export async function GET(
         );
       } else {
         // Fallback to primary group: either primary image's color group, or no-color images
-        const primaryImage = allImages.find(img => img.isPrimary) || allImages[0];
+        const primaryImage =
+          allImages.find(img => img.isPrimary) || allImages[0];
         const primaryColor = (primaryImage?.color || '').toLowerCase();
         if (primaryColor) {
           sameColorImages = allImages.filter(
             img => (img.color || '').toLowerCase() === primaryColor
           );
         } else {
-        const noColor = allImages.filter(img => !img.color);
-        if (noColor.length > 0) sameColorImages = noColor;
-      }
-      if (sameColorImages.length === 0 && primaryImage) {
-        sameColorImages = [primaryImage];
+          const noColor = allImages.filter(img => !img.color);
+          if (noColor.length > 0) sameColorImages = noColor;
+        }
+        if (sameColorImages.length === 0 && primaryImage) {
+          sameColorImages = [primaryImage];
         }
       }
-      const imageUrls = sameColorImages.map(img => img.url).filter(Boolean).join(',');
-      const sizesValue = item.product.sizes ? formatSizes(item.product.sizes) : '';
+      const imageUrls = sameColorImages
+        .map(img => img.url)
+        .filter(Boolean)
+        .join(',');
+      const sizesValue = item.product.sizes
+        ? formatSizes(item.product.sizes)
+        : '';
       return [
         escapeCsvValue(item.name),
         escapeCsvValue(item.product.article || ''),
@@ -140,9 +163,9 @@ export async function GET(
     const csvContent = ['\uFEFF' + titleRow, header, ...rows].join('\n');
 
     // Build RFC 5987 compliant Content-Disposition for non-ASCII filenames
-    const rawFilename = `purchase-export-${purchase.name}-${new Date()
-      .toISOString()
-      .split('T')[0]}.csv`;
+    const rawFilename = `purchase-export-${purchase.name}-${
+      new Date().toISOString().split('T')[0]
+    }.csv`;
     const asciiFallback = rawFilename.replace(/[^\x20-\x7E]/g, '_');
     const encodedUtf8 = encodeURIComponent(rawFilename);
 
@@ -163,5 +186,3 @@ export async function GET(
     );
   }
 }
-
-

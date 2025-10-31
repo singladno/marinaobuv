@@ -32,5 +32,3 @@ export function useAdminNavItems(): AdminNavItem[] {
     { href: '/admin/purchases', label: 'Закупки', icon: <PurchasesIcon /> },
   ];
 }
-
-

@@ -56,7 +56,11 @@ export default function BulkDescriptionEditModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Массовое редактирование описаний">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Массовое редактирование описаний"
+    >
       <div className="space-y-4 px-6 py-6">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Button
@@ -90,7 +94,9 @@ export default function BulkDescriptionEditModal({
 
         {mode === 'prepend' && (
           <div>
-            <label className="mb-1 block text-sm font-medium">Текст для добавления в начале</label>
+            <label className="mb-1 block text-sm font-medium">
+              Текст для добавления в начале
+            </label>
             <Input
               value={prependText}
               onChange={e => setPrependText(e.target.value)}
@@ -101,7 +107,9 @@ export default function BulkDescriptionEditModal({
 
         {mode === 'append' && (
           <div>
-            <label className="mb-1 block text-sm font-medium">Текст для добавления в конце</label>
+            <label className="mb-1 block text-sm font-medium">
+              Текст для добавления в конце
+            </label>
             <Input
               value={appendText}
               onChange={e => setAppendText(e.target.value)}
@@ -113,7 +121,9 @@ export default function BulkDescriptionEditModal({
         {mode === 'replace' && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium">Заменить — что найти</label>
+              <label className="mb-1 block text-sm font-medium">
+                Заменить — что найти
+              </label>
               <Input
                 value={replaceFrom}
                 onChange={e => setReplaceFrom(e.target.value)}
@@ -121,7 +131,9 @@ export default function BulkDescriptionEditModal({
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Заменить — на что</label>
+              <label className="mb-1 block text-sm font-medium">
+                Заменить — на что
+              </label>
               <Input
                 value={replaceTo}
                 onChange={e => setReplaceTo(e.target.value)}
@@ -132,7 +144,8 @@ export default function BulkDescriptionEditModal({
         )}
 
         <Text className="text-muted-foreground text-xs">
-          Выберите действие и заполните поля. Изменения применятся ко всем товарам закупки.
+          Выберите действие и заполните поля. Изменения применятся ко всем
+          товарам закупки.
         </Text>
 
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
@@ -156,5 +169,3 @@ export default function BulkDescriptionEditModal({
     </Modal>
   );
 }
-
-
