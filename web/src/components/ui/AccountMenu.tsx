@@ -16,6 +16,7 @@ export default function AccountMenu() {
     open,
     anchorRect,
     menuRef,
+    loading: logoutLoading,
     handleLogout,
     handleMouseEnter,
     handleMouseLeave,
@@ -72,7 +73,7 @@ export default function AccountMenu() {
           <ProfileMenuContent
             user={user}
             onLogout={handleLogout}
-            loading={loading}
+            loading={logoutLoading}
           />
         </div>
       )}

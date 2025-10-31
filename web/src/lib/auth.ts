@@ -252,22 +252,64 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = user.role;
         token.providerId = user.providerId;
+        // If user has an id and it's from credentials (not OAuth), use it directly
+        // For OAuth, user.id is the provider ID, not the database User ID, so we'll look it up
+        if (user.id && account?.provider !== 'google') {
+          token.sub = user.id;
+        }
+        // Ensure email is in token for OAuth users
+        if (user.email && !token.email) {
+          token.email = user.email;
+        }
       }
 
       // Always refresh role/providerId from DB so role changes apply without relogin
       try {
-        // Prefer lookup by stable subject (user id), fallback to email
-        const dbUser = token.sub
-          ? await prisma.user.findUnique({
-              where: { id: token.sub },
-              select: { id: true, role: true, providerId: true },
-            })
-          : token.email
-            ? await prisma.user.findUnique({
-                where: { email: token.email },
+        let dbUser = null;
+
+        // Strategy: Try multiple lookup methods
+        // 1. If we have email, prefer email lookup (works for OAuth users)
+        // 2. If email lookup fails, try token.sub (for credentials users)
+        // 3. If we have account info on initial OAuth sign-in, use Account table
+
+        // For OAuth users, NextAuth may have set token.sub to the provider ID.
+        // We'll override it once we find the correct user, but for now, prefer email lookup.
+        // First, try email lookup (most reliable for OAuth users)
+        if (token.email) {
+          dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
+            select: { id: true, role: true, providerId: true },
+          });
+        }
+
+        // If not found and we have token.sub, try looking up by ID (for credentials users)
+        if (!dbUser && token.sub) {
+          dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: { id: true, role: true, providerId: true },
+          });
+        }
+
+        // If still not found and we have account info (OAuth initial sign-in), look up via Account table
+        if (!dbUser && account?.providerAccountId && account?.provider) {
+          const accountRecord = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+            },
+            include: {
+              user: {
                 select: { id: true, role: true, providerId: true },
-              })
-            : null;
+              },
+            },
+          });
+
+          if (accountRecord?.user) {
+            dbUser = accountRecord.user;
+          }
+        }
 
         if (dbUser) {
           token.sub = dbUser.id;
