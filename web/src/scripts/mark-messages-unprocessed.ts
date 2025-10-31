@@ -25,9 +25,9 @@ async function markMessagesUnprocessed(options: {
   console.log('🔄 Marking messages as unprocessed...\n');
 
   try {
-    // Build where clause
+    // Build where clause to find ALL messages to reset
+    // Reset all messages of the specified types, regardless of processed status
     const whereClause: any = {
-      processed: true, // Only reset messages that are currently processed
       type: { in: messageType },
     };
 
@@ -46,10 +46,10 @@ async function markMessagesUnprocessed(options: {
       where: whereClause,
     });
 
-    console.log(`📊 Found ${totalCount} processed messages to reset`);
+    console.log(`📊 Found ${totalCount} messages to reset`);
 
     if (totalCount === 0) {
-      console.log('✅ No processed messages found to reset');
+      console.log('✅ No messages found to reset');
       return;
     }
 

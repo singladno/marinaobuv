@@ -4,6 +4,62 @@ import { ParsingCoordinator } from '../lib/services/parsing-coordinator';
 import { ParsingProgressService } from '../lib/services/parsing-progress-service';
 import { env } from '../lib/env';
 import { scriptPrisma as prisma } from '../lib/script-db';
+import fs from 'node:fs';
+import path from 'node:path';
+
+/**
+ * Setup file logging for Groq parsing
+ * Logs to web/logs/groq-parse.log (overwrites on each run)
+ */
+function setupFileLogging(): { logStream: fs.WriteStream; originalLog: typeof console.log; originalError: typeof console.error } {
+  const logsDir = path.join(process.cwd(), 'logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+
+  const logFile = path.join(logsDir, 'groq-parse.log');
+  const logStream = fs.createWriteStream(logFile, { flags: 'w' }); // 'w' flag overwrites the file
+
+  const timestamp = () => new Date().toISOString();
+
+  // Save original console methods
+  const originalLog = console.log;
+  const originalError = console.error;
+
+  // Override console.log
+  console.log = (...args: any[]) => {
+    const message = args.map(arg => 
+      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+    ).join(' ');
+    const logMessage = `[${timestamp()}] ${message}\n`;
+    logStream.write(logMessage);
+    originalLog(...args);
+  };
+
+  // Override console.error
+  console.error = (...args: any[]) => {
+    const message = args.map(arg => 
+      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+    ).join(' ');
+    const logMessage = `[${timestamp()}] ERROR: ${message}\n`;
+    logStream.write(logMessage);
+    originalError(...args);
+  };
+
+  console.log(`📝 Logging to: ${logFile}`);
+  console.log('🔄 Log file will be overwritten on each run');
+
+  return { logStream, originalLog, originalError };
+}
+
+/**
+ * Restore original console methods
+ */
+function restoreConsole(logStream: fs.WriteStream, originalLog: typeof console.log, originalError: typeof console.error) {
+  console.log = originalLog;
+  console.error = originalError;
+  logStream.end();
+}
 
 /**
  * Groq Sequential Processing Cron Job
@@ -12,21 +68,26 @@ import { scriptPrisma as prisma } from '../lib/script-db';
  * Continues processing in cycles until no more recent unprocessed messages remain
  */
 async function main() {
-  console.log('🚀 Starting Groq Sequential Processing Cron Job...');
+  // Setup file logging first
+  const { logStream, originalLog, originalError } = setupFileLogging();
 
+  // Declare variables outside try block so they're accessible in catch
   let progressService: ParsingProgressService | null = null;
   let isShuttingDown = false;
   let totalProcessed = 0;
   let totalProductsCreated = 0;
 
-  // Graceful shutdown handler
-  const gracefulShutdown = async (signal: string) => {
-    if (isShuttingDown) {
-      console.log('⚠️ Shutdown already in progress, forcing exit...');
-      process.exit(1);
-    }
+  try {
+    console.log('🚀 Starting Groq Sequential Processing Cron Job...');
 
-    isShuttingDown = true;
+    // Graceful shutdown handler
+    const gracefulShutdown = async (signal: string) => {
+      if (isShuttingDown) {
+        console.log('⚠️ Shutdown already in progress, forcing exit...');
+        process.exit(1);
+      }
+
+      isShuttingDown = true;
     console.log(`\n🛑 Received ${signal}, initiating graceful shutdown...`);
 
     // Set a timeout to force exit if graceful shutdown takes too long
@@ -58,18 +119,18 @@ async function main() {
       clearTimeout(shutdownTimeout);
       process.exit(1);
     }
-  };
+    };
 
-  // Register signal handlers
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-  process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
-  process.on('SIGUSR1', () => gracefulShutdown('SIGUSR1'));
-  process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
+    // Register signal handlers
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
+    process.on('SIGUSR1', () => gracefulShutdown('SIGUSR1'));
+    process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
 
-  // Handle uncaught exceptions
-  process.on('uncaughtException', async error => {
-    console.error('❌ Uncaught Exception:', error);
+    // Handle uncaught exceptions
+    process.on('uncaughtException', async error => {
+      console.error('❌ Uncaught Exception:', error);
     if (progressService) {
       try {
         await progressService.updateProgress({
@@ -82,12 +143,12 @@ async function main() {
         console.error('❌ Failed to update parsing status:', updateError);
       }
     }
-    process.exit(1);
-  });
+      process.exit(1);
+    });
 
-  // Handle unhandled promise rejections
-  process.on('unhandledRejection', async (reason, promise) => {
-    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', async (reason, promise) => {
+      console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
     if (progressService) {
       try {
         await progressService.updateProgress({
@@ -100,10 +161,9 @@ async function main() {
         console.error('❌ Failed to update parsing status:', updateError);
       }
     }
-    process.exit(1);
-  });
+      process.exit(1);
+    });
 
-  try {
     // Check if parsing can proceed
     const canProceed = await ParsingCoordinator.canStartParsing({
       type: 'cron',
@@ -316,6 +376,9 @@ async function main() {
     }
 
     throw error;
+  } finally {
+    // Restore console and close log stream
+    restoreConsole(logStream, originalLog, originalError);
   }
 }
 
@@ -323,6 +386,7 @@ async function main() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   main()
     .then(() => {
+      // Use original console methods since we're in the finally block
       console.log('✅ Groq Sequential Processing finished');
       process.exit(0);
     })

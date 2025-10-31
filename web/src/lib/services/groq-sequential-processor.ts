@@ -86,21 +86,11 @@ export class GroqSequentialProcessor {
             `🔄 Processing group ${group.groupId} with ${group.messageIds.length} messages`
           );
 
-          // Step 3: Validate group has image + text (after grouping, before processing)
-          const hasValidContent = await this.validateGroupContent(
-            group.messageIds
+          // Trust LLM - if it created a group, it's valid
+          // No manual validation - let LLM decide what constitutes a valid product
+          console.log(
+            `✅ Accepting LLM-created group ${group.groupId} (trusting LLM judgment)`
           );
-          if (!hasValidContent) {
-            console.log(
-              `❌ Group ${group.groupId} has no valid content (image + text), skipping but marking messages as processed`
-            );
-            // Mark messages as processed even if we skip the group
-            await this.prisma.whatsAppMessage.updateMany({
-              where: { id: { in: group.messageIds } },
-              data: { processed: true, aiGroupId: group.groupId },
-            });
-            continue;
-          }
 
           // Create inactive product
           const productResult =
@@ -169,34 +159,55 @@ export class GroqSequentialProcessor {
               throw new Error('Processing timeout exceeded');
             }
 
-            // Step 6: Validate results and activate if valid
-            const isValidProduct = await this.validateProductResults(
+            // Trust LLM - activate product without validation
+            // LLM has already validated the product structure
+            console.log(
+              `✅ Activating product ${productResult.productId} (trusting LLM analysis)...`
+            );
+            await this.batchProductService.activateProduct(
               productResult.productId
             );
-            if (isValidProduct) {
-              console.log(
-                `✅ Activating product ${productResult.productId}...`
-              );
-              await this.batchProductService.activateProduct(
-                productResult.productId
-              );
-            } else {
-              console.log(
-                `❌ Product ${productResult.productId} validation failed, deleting invalid product`
-              );
-              // Delete the invalid product and its associated data
-              await this.deleteInvalidProduct(productResult.productId);
-            }
           } catch (processingError) {
             console.error(
               `❌ Error processing product ${productResult.productId}:`,
-              processingError
+              processingError instanceof Error
+                ? processingError.message
+                : JSON.stringify(processingError)
             );
-            console.log(
-              `🗑️ Cleaning up failed product ${productResult.productId}...`
-            );
-            // Clean up the failed product
-            await this.deleteInvalidProduct(productResult.productId);
+            
+            // Handle different error types appropriately
+            const errorMessage =
+              processingError instanceof Error
+                ? processingError.message
+                : String(processingError);
+            
+            if (errorMessage.includes('No valid content for analysis')) {
+              console.log(
+                `⚠️ Group has no valid content - marking messages as unprocessed for future grouping`
+              );
+              // Reset messages so they can be regrouped
+              await this.prisma.whatsAppMessage.updateMany({
+                where: { id: { in: group.messageIds } },
+                data: {
+                  processed: false,
+                  draftProductId: null,
+                },
+              });
+              // Delete the invalid product
+              await this.deleteInvalidProduct(productResult.productId);
+            } else if (errorMessage.includes('Product deleted: missing required data')) {
+              console.log(
+                `⚠️ Product deleted due to missing price/sizes - messages already reset for reprocessing`
+              );
+              // Product was already deleted and messages reset in updateProductWithAnalysis
+              // No need to delete again, just log and continue
+            } else {
+              console.log(
+                `🗑️ Cleaning up failed product ${productResult.productId}...`
+              );
+              // Clean up the failed product
+              await this.deleteInvalidProduct(productResult.productId);
+            }
             throw processingError; // Re-throw to be caught by outer try-catch
           }
 
@@ -246,6 +257,7 @@ export class GroqSequentialProcessor {
       type: msg.type,
       createdAt: msg.createdAt,
       senderId: msg.providerId,
+      mediaUrl: msg.mediaUrl || null, // Include mediaUrl so LLM can identify image messages
     }));
 
     // Use existing grouping service but with Groq
@@ -273,6 +285,7 @@ export class GroqSequentialProcessor {
       type: msg.type,
       createdAt: msg.createdAt,
       senderId: msg.providerId,
+      mediaUrl: msg.mediaUrl || null, // Include mediaUrl so LLM can identify image messages
     }));
 
     // Use existing grouping service but with Groq
@@ -396,7 +409,11 @@ export class GroqSequentialProcessor {
   private async validateGroupContent(messageIds: string[]): Promise<boolean> {
     const messages = await this.prisma.whatsAppMessage.findMany({
       where: { id: { in: messageIds } },
-      select: { type: true, text: true, mediaUrl: true },
+      select: { 
+        type: true, 
+        text: true, 
+        mediaUrl: true,
+      },
     });
 
     console.log(
@@ -408,9 +425,22 @@ export class GroqSequentialProcessor {
       );
     });
 
-    const hasText = messages.some(
-      (msg: any) => msg.text && msg.text.trim().length > 0
-    );
+    // Check for text messages: textMessage, extendedTextMessage types are text messages
+    // extendedTextMessage is a text message type - if the type is extendedTextMessage, it IS text
+    // even if the text field is empty or minimal (the type itself indicates it's a text message)
+    const hasText = messages.some((msg: any) => {
+      // extendedTextMessage and textMessage are text message types by definition
+      // If type is extendedTextMessage, it's a text message regardless of text field content
+      if (msg.type === 'extendedTextMessage' || msg.type === 'textMessage') {
+        // For extendedTextMessage, the type itself indicates it's text, but we still check text exists
+        // Some extendedTextMessage may have text in rawPayload even if text field is empty
+        return msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
+      }
+      
+      // For other types, check if they have text content
+      return msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
+    });
+    
     const hasImage = messages.some(
       (msg: any) =>
         msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage')
@@ -419,22 +449,114 @@ export class GroqSequentialProcessor {
     console.log(`  ✅ Has text: ${hasText}`);
     console.log(`  ✅ Has image: ${hasImage}`);
 
-    // Basic content validation
+    // Basic content validation - only check for text and images
+    // Author validation is left to LLM (it's instructed to group only same-author messages)
     if (!hasText || !hasImage) {
       console.log(`  ❌ Invalid group: missing text or images`);
       return false;
     }
 
-    // CRITICAL: Validate sequence - only one type change allowed
-    const isValidSequence = this.validateSequenceTypeChanges(messages);
-    console.log(`  ✅ Valid sequence: ${isValidSequence}`);
-    console.log(`  ✅ Valid group: ${isValidSequence}`);
-
-    return isValidSequence;
+    console.log(`  ✅ Valid group: has text, has image`);
+    return true;
   }
 
   /**
-   * Validate sequence - only one type change allowed per group
+   * Recover image-only groups by finding nearby text messages
+   */
+  private async recoverImageOnlyGroup(imageMessageIds: string[]): Promise<string[]> {
+    // Get the image messages to find their timestamps and author
+    const imageMessages = await this.prisma.whatsAppMessage.findMany({
+      where: { id: { in: imageMessageIds } },
+      select: {
+        id: true,
+        createdAt: true,
+        from: true,
+        providerId: true,
+        chatId: true,
+        type: true,
+        mediaUrl: true,
+        text: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (imageMessages.length === 0) return imageMessageIds;
+
+    // Check if group is actually image-only
+    const hasAnyText = imageMessages.some(
+      (msg: any) =>
+        (msg.type === 'textMessage' || msg.type === 'extendedTextMessage') &&
+        msg.text
+    );
+    if (hasAnyText) return imageMessageIds; // Already has text, no recovery needed
+
+    // Get time range (first and last image timestamps)
+    const firstTimestamp = new Date(imageMessages[0].createdAt).getTime();
+    const lastTimestamp = new Date(
+      imageMessages[imageMessages.length - 1].createdAt
+    ).getTime();
+
+    // Get author (from first message)
+    const author = imageMessages[0].providerId || imageMessages[0].from;
+    if (!author) return imageMessageIds;
+
+    // Search for text messages within 120 seconds before first image or after last image
+    const searchWindowMs = 120 * 1000; // 120 seconds
+    const searchStart = new Date(firstTimestamp - searchWindowMs);
+    const searchEnd = new Date(lastTimestamp + searchWindowMs);
+
+    console.log(
+      `  🔍 Searching for text messages: ${searchStart.toISOString()} to ${searchEnd.toISOString()}`
+    );
+
+    // Find text messages from same author in the time window
+    const textMessages = await this.prisma.whatsAppMessage.findMany({
+      where: {
+        chatId: imageMessages[0].chatId,
+        id: { notIn: imageMessageIds }, // Don't include already grouped messages
+        processed: false, // Only unprocessed messages
+        type: { in: ['textMessage', 'extendedTextMessage'] },
+        text: { not: null },
+        OR: [
+          { providerId: author },
+          { from: author },
+        ],
+        createdAt: {
+          gte: searchStart,
+          lte: searchEnd,
+        },
+      },
+      select: { id: true, text: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+      take: 5, // Limit to 5 closest text messages
+    });
+
+    if (textMessages.length === 0) {
+      console.log(`  ❌ No text messages found for recovery`);
+      return imageMessageIds;
+    }
+
+    // Filter to messages that actually have text content
+    const validTextMessages = textMessages.filter(
+      (msg: any) => msg.text && msg.text.trim().length > 0
+    );
+
+    if (validTextMessages.length === 0) {
+      console.log(`  ❌ No valid text messages found for recovery`);
+      return imageMessageIds;
+    }
+
+    console.log(
+      `  ✅ Found ${validTextMessages.length} text messages for recovery`
+    );
+
+    // Return original image IDs + recovered text message IDs
+    return [...imageMessageIds, ...validTextMessages.map((m: any) => m.id)];
+  }
+
+  /**
+   * Validate sequence - relaxed to allow ITIIII patterns (2 changes) for same-author groups
+   * This allows valid product patterns: Image → Text → Images (e.g., ITIIII)
    */
   private validateSequenceTypeChanges(messages: any[]): boolean {
     if (messages.length < 2) return true;
@@ -446,9 +568,23 @@ export class GroqSequentialProcessor {
         new Date(b.createdAt || b.timestamp).getTime()
     );
 
+    // Check if all messages are from same author (relaxed rules for same author)
+    const senderIds = sortedMessages
+      .map(msg => msg.senderId || msg.from || msg.providerId)
+      .filter(id => id && id !== 'unknown');
+    const allSameAuthor = senderIds.length > 0 && new Set(senderIds).size === 1;
+
     // Create type sequence: 'T' for text, 'I' for image
+    // extendedTextMessage and textMessage are text message types - explicitly recognize them
     const types = sortedMessages.map(msg => {
-      const hasText = msg.text && msg.text.trim().length > 0;
+      // extendedTextMessage and textMessage are text message types
+      // For these types, we check if text field exists and has content
+      const isTextMessageType =
+        msg.type === 'textMessage' || msg.type === 'extendedTextMessage';
+      
+      // Check if message has text content
+      const hasText = msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
+      
       const hasImage =
         msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage');
 
@@ -470,9 +606,38 @@ export class GroqSequentialProcessor {
       `  🔍 Sequence types: ${types.join('')}, changes: ${typeChanges}`
     );
 
-    // Only allow 0 or 1 type change
-    const isValid = typeChanges <= 1;
-    console.log(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
+    // Check if this is a common valid pattern (IT* or TI* patterns)
+    // These are natural product sequences: Image → Text → Images or Text → Images → Text
+    // Patterns like ITIII, ITII, TIIIIT, IIIITI are all valid 2-change sequences
+    const sequenceStr = types.join('');
+    const isCommonValidPattern =
+      sequenceStr.startsWith('IT') || // Image → Text → Images (ITIII, ITII, etc.)
+      sequenceStr.startsWith('TI') || // Text → Images → Text (TIIIIT, etc.)
+      sequenceStr.includes('ITI') || // Contains Image → Text → Image anywhere
+      sequenceStr.includes('TIT') || // Contains Text → Image → Text anywhere
+      /^I+TI+$/.test(sequenceStr) || // Pattern: Images → Text → Images (IIIITI, IITII, etc.)
+      /^T+IT+$/.test(sequenceStr); // Pattern: Text → Images → Text
+
+    // Allow up to 2 type changes if:
+    // 1. All messages from same author, OR
+    // 2. It's a common valid pattern (ITIIII, TIIIT, etc.)
+    // This handles cases where author detection fails but pattern is clearly valid
+    const maxChanges =
+      allSameAuthor || isCommonValidPattern ? 2 : 1;
+    const isValid = typeChanges <= maxChanges;
+
+    if (isValid && typeChanges === 2) {
+      const reason = allSameAuthor
+        ? 'same-author group'
+        : isCommonValidPattern
+          ? 'common valid pattern (IT*/TI*)'
+          : '';
+      console.log(
+        `  ✅ Sequence validation: ${isValid} (allowed 2 changes for ${reason})`
+      );
+    } else {
+      console.log(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
+    }
 
     return isValid;
   }
@@ -501,15 +666,35 @@ export class GroqSequentialProcessor {
       .map((m: any) => m.mediaUrl!);
 
     if (!textContents || imageUrls.length === 0) {
-      throw new Error('No valid content for analysis');
+      const missingText = !textContents || textContents.trim().length === 0;
+      const missingImages = imageUrls.length === 0;
+      console.log(
+        `⚠️ Group has no valid content for analysis: missingText=${missingText}, missingImages=${missingImages}`
+      );
+      console.log(`  Messages in group: ${messages.length}`);
+      console.log(
+        `  Message types: ${messages.map((m: any) => m.type).join(', ')}`
+      );
+      
+      // LLM should have created valid groups - if we're here, it failed
+      // Reset messages so they can be regrouped properly by LLM
+      console.log(
+        `⚠️ LLM created invalid group (missing ${missingText ? 'text' : ''} ${missingImages ? 'images' : ''}) - resetting messages for regrouping`
+      );
+      await this.prisma.whatsAppMessage.updateMany({
+        where: { id: { in: messageIds } },
+        data: {
+          processed: false,
+          draftProductId: null,
+        },
+      });
+      
+      throw new Error(
+        `No valid content for analysis: ${missingText ? 'no text' : ''} ${missingImages ? 'no images' : ''}`
+      );
     }
 
-    console.log(`📤 Sending to Groq for analysis:`);
-    console.log(`  Text content: "${textContents.substring(0, 100)}..."`);
-    console.log(`  Image URLs: ${imageUrls.length} images`);
-    imageUrls.forEach((url: string, index: number) => {
-      console.log(`    Image ${index + 1}: ${url}`);
-    });
+    console.log(`📤 Analyzing product ${productId} with Groq (${imageUrls.length} images)`);
 
     try {
       // Add timeout to Groq API call
@@ -543,17 +728,8 @@ export class GroqSequentialProcessor {
         response.choices[0].message.content || '{}'
       );
 
-      console.log(`📥 Groq analysis response:`);
-      console.log(`  Raw response: ${response.choices[0].message.content}`);
-      console.log(`  Parsed result:`, JSON.stringify(analysisResult, null, 2));
-
-      // Validate analysis result
-      if (!this.validationService.validateAnalysisResult(analysisResult)) {
-        console.log(
-          `❌ Analysis validation failed for product ${productId}, skipping analysis update`
-        );
-        return; // Skip this analysis but continue processing
-      }
+      // Check if analysis has minimum required data (price and sizes)
+      // If missing, updateProductWithAnalysis will handle deletion and throw error
 
       // Prepare GPT debug data
       const gptRequest = JSON.stringify(
@@ -634,7 +810,6 @@ export class GroqSequentialProcessor {
         const imageUrl = message.mediaUrl!;
 
         try {
-          console.log(`📤 Uploading to S3: ${imageUrl}`);
 
           // Download image from original URL with retry mechanism
           const response = await withRetry(
@@ -687,8 +862,6 @@ export class GroqSequentialProcessor {
           const contentType =
             response.headers.get('content-type') || 'image/jpeg';
 
-          console.log(`Image size: ${imageBuffer.length} bytes`);
-          console.log(`Content type: ${contentType}`);
 
           // Generate S3 key with timestamp to avoid conflicts
           const ext = contentType.split('/')[1] || 'jpg';
@@ -727,9 +900,9 @@ export class GroqSequentialProcessor {
               sort: i,
               isPrimary: i === 0,
             });
-            console.log(`✅ Uploaded image ${i + 1} to S3: ${publicUrl}`);
+            // Image uploaded successfully
           } else {
-            console.log(`❌ Failed to upload image ${i + 1} to S3`);
+            console.error(`❌ Failed to upload image ${i + 1} to S3`);
           }
         } catch (error) {
           console.error(`❌ Error uploading image ${i + 1}:`, error);
@@ -814,34 +987,16 @@ export class GroqSequentialProcessor {
       const categoryTree = await getCategoryTree();
       const categoryTreeJson = JSON.stringify(categoryTree, null, 2);
 
-      console.log(
-        `🌳 Category tree for LLM (${categoryTree.length} root categories):`
-      );
-      console.log(categoryTreeJson.substring(0, 500) + '...');
-
       const analysisResults = [];
 
       // Process each image individually with Groq vision models
       for (let i = 0; i < imageUrls.length; i++) {
         const imageUrl = imageUrls[i];
         console.log(
-          `🎨 Analyzing image ${i + 1}/${imageUrls.length}: ${imageUrl}`
+          `🎨 Analyzing image ${i + 1}/${imageUrls.length} for product ${productId}`
         );
-        if (textContent) {
-          console.log(
-            `📝 Using text context: "${textContent.substring(0, 100)}..."`
-          );
-        }
 
         try {
-          // Debug: Log what we're sending to LLM
-          const promptText = IMAGE_ANALYSIS_USER_PROMPT(
-            imageUrl,
-            textContent,
-            categoryTreeJson
-          );
-          console.log(`📝 Prompt being sent to LLM (first 1000 chars):`);
-          console.log(promptText.substring(0, 1000) + '...');
 
           // Add timeout to Groq API call
           const groqPromise = (
@@ -886,14 +1041,6 @@ export class GroqSequentialProcessor {
           const analysisResult = JSON.parse(
             response.choices[0].message.content || '{}'
           );
-
-          console.log(`🔍 LLM Analysis Result for image ${i + 1}:`);
-          console.log(
-            `  Category ID: ${analysisResult.categoryId || 'NOT PROVIDED'}`
-          );
-          console.log(`  Name: ${analysisResult.name || 'null'}`);
-          console.log(`  Gender: ${analysisResult.gender || 'null'}`);
-          console.log(`  Season: ${analysisResult.season || 'null'}`);
 
           // Validate that categoryId is provided
           if (!analysisResult.categoryId) {
@@ -1026,31 +1173,21 @@ export class GroqSequentialProcessor {
       // Merge name if missing
       if (needsName && bestResult.name) {
         updateData.name = bestResult.name;
-        console.log(`🔄 Merging name from image analysis: ${bestResult.name}`);
       }
 
       // Merge description if missing
       if (needsDescription && bestResult.description) {
         updateData.description = bestResult.description;
-        console.log(
-          `🔄 Merging description from image analysis: ${bestResult.description}`
-        );
       }
 
       // Merge gender if missing
       if (needsGender && bestResult.gender) {
         updateData.gender = bestResult.gender;
-        console.log(
-          `🔄 Merging gender from image analysis: ${bestResult.gender}`
-        );
       }
 
       // Merge season if missing
       if (needsSeason && bestResult.season) {
         updateData.season = bestResult.season;
-        console.log(
-          `🔄 Merging season from image analysis: ${bestResult.season}`
-        );
       }
 
       // Update product if we have data to merge
@@ -1060,14 +1197,7 @@ export class GroqSequentialProcessor {
           data: updateData,
         });
 
-        console.log(
-          `✅ Merged name/description/gender/season from image analysis for product ${productId}:`,
-          updateData
-        );
-      } else {
-        console.log(
-          `⚠️ No name/description/gender/season data available in image analysis for product ${productId}`
-        );
+        // Merged name/description/gender/season from image analysis
       }
     } catch (error) {
       console.error(
