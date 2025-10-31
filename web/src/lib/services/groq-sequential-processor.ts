@@ -174,13 +174,13 @@ export class GroqSequentialProcessor {
                 ? processingError.message
                 : JSON.stringify(processingError)
             );
-            
+
             // Handle different error types appropriately
             const errorMessage =
               processingError instanceof Error
                 ? processingError.message
                 : String(processingError);
-            
+
             if (errorMessage.includes('No valid content for analysis')) {
               console.log(
                 `⚠️ Group has no valid content - marking messages as unprocessed for future grouping`
@@ -409,9 +409,9 @@ export class GroqSequentialProcessor {
   private async validateGroupContent(messageIds: string[]): Promise<boolean> {
     const messages = await this.prisma.whatsAppMessage.findMany({
       where: { id: { in: messageIds } },
-      select: { 
-        type: true, 
-        text: true, 
+      select: {
+        type: true,
+        text: true,
         mediaUrl: true,
       },
     });
@@ -436,11 +436,11 @@ export class GroqSequentialProcessor {
         // Some extendedTextMessage may have text in rawPayload even if text field is empty
         return msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
       }
-      
+
       // For other types, check if they have text content
       return msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
     });
-    
+
     const hasImage = messages.some(
       (msg: any) =>
         msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage')
@@ -581,10 +581,10 @@ export class GroqSequentialProcessor {
       // For these types, we check if text field exists and has content
       const isTextMessageType =
         msg.type === 'textMessage' || msg.type === 'extendedTextMessage';
-      
+
       // Check if message has text content
       const hasText = msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
-      
+
       const hasImage =
         msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage');
 
@@ -675,7 +675,7 @@ export class GroqSequentialProcessor {
       console.log(
         `  Message types: ${messages.map((m: any) => m.type).join(', ')}`
       );
-      
+
       // LLM should have created valid groups - if we're here, it failed
       // Reset messages so they can be regrouped properly by LLM
       console.log(
@@ -688,7 +688,7 @@ export class GroqSequentialProcessor {
           draftProductId: null,
         },
       });
-      
+
       throw new Error(
         `No valid content for analysis: ${missingText ? 'no text' : ''} ${missingImages ? 'no images' : ''}`
       );
@@ -861,7 +861,6 @@ export class GroqSequentialProcessor {
           const imageBuffer = Buffer.from(await response.arrayBuffer());
           const contentType =
             response.headers.get('content-type') || 'image/jpeg';
-
 
           // Generate S3 key with timestamp to avoid conflicts
           const ext = contentType.split('/')[1] || 'jpg';

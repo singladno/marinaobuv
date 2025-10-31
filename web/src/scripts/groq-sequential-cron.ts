@@ -28,7 +28,7 @@ function setupFileLogging(): { logStream: fs.WriteStream; originalLog: typeof co
 
   // Override console.log
   console.log = (...args: any[]) => {
-    const message = args.map(arg => 
+    const message = args.map(arg =>
       typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
     ).join(' ');
     const logMessage = `[${timestamp()}] ${message}\n`;
@@ -38,7 +38,7 @@ function setupFileLogging(): { logStream: fs.WriteStream; originalLog: typeof co
 
   // Override console.error
   console.error = (...args: any[]) => {
-    const message = args.map(arg => 
+    const message = args.map(arg =>
       typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
     ).join(' ');
     const logMessage = `[${timestamp()}] ERROR: ${message}\n`;
