@@ -1,11 +1,10 @@
-import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import ProductDetails from '@/components/product/ProductDetails';
 import ProductGalleryWithColors from '@/components/product/ProductGalleryWithColors';
+import { ProductBackButton } from '@/components/product/ProductBackButton';
 import ProductReviews from '@/components/product/ProductReviews';
-import { Button } from '@/components/ui/Button';
 import { prisma } from '@/lib/server/db';
 import { buildCategoryPath } from '@/lib/catalog-utils';
 
@@ -60,12 +59,7 @@ export default async function ProductPage({
       <div className="border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild className="gap-2">
-              <Link href="/">
-                <ArrowLeft className="h-4 w-4" />
-                Назад
-              </Link>
-            </Button>
+            <ProductBackButton />
             <nav className="text-muted-foreground text-sm">
               <Link
                 href="/"

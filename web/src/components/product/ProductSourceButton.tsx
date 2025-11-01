@@ -1,49 +1,59 @@
-import { Info } from 'lucide-react';
-import { useState } from 'react';
+'use client';
 
-import { useUser } from '@/contexts/NextAuthUserContext';
+import Image from 'next/image';
 
-import { ProductSourceModal } from './ProductSourceModal';
+import { Badge } from '@/components/ui/Badge';
 
 interface ProductSourceButtonProps {
-  productId: string;
-  productName: string;
+  userRole?: string;
+  productId?: string;
+  sourceMessageIds?: string[] | null;
+  source?: 'WA' | 'AG';
+  onSourceClick: () => void;
 }
 
 export function ProductSourceButton({
+  userRole,
   productId,
-  productName,
+  sourceMessageIds,
+  source,
+  onSourceClick,
 }: ProductSourceButtonProps) {
-  const { user } = useUser();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Only show for admin users
-  if (!user || user.role !== 'ADMIN') {
+  if (
+    userRole !== 'ADMIN' ||
+    !productId ||
+    !sourceMessageIds ||
+    sourceMessageIds.length === 0
+  ) {
     return null;
   }
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsModalOpen(true);
-  };
-
   return (
-    <>
-      <button
-        onClick={handleClick}
-        className="absolute bottom-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white hover:shadow-xl"
-        title="Просмотр источника сообщений"
-      >
-        <Info className="h-4 w-4 text-gray-700" />
-      </button>
-
-      <ProductSourceModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        productId={productId}
-        productName={productName}
-      />
-    </>
+    <button
+      type="button"
+      onClick={onSourceClick}
+      className="absolute left-2 top-2 z-20 transition-all duration-200 focus:outline-none"
+      title="Просмотр источника сообщений"
+    >
+      {source === 'WA' ? (
+        <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+          <Image
+            src="/images/whatsapp-icon.png"
+            alt="WhatsApp"
+            width={48}
+            height={48}
+            className="h-full w-full rounded"
+            unoptimized
+          />
+        </div>
+      ) : (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+        >
+          Источник
+        </Badge>
+      )}
+    </button>
   );
 }

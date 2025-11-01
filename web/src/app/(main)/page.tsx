@@ -87,7 +87,9 @@ export default function Home() {
                 </Badge>
               )}
             </div>
-            <GridColsSwitcher value={gridCols} onChange={setGridCols} />
+            <div className="hidden lg:block">
+              <GridColsSwitcher value={gridCols} onChange={setGridCols} />
+            </div>
           </div>
 
           {/* Products */}

@@ -34,11 +34,15 @@ export function SizeChip({
   return (
     <div
       ref={chipRef}
-      className={`group relative flex flex-shrink-0 flex-col items-center justify-center rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors ${
+      className={`group relative flex shrink flex-col items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium transition-all sm:px-2 sm:py-1 sm:text-xs ${
         isUpdating
           ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300'
           : 'bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:hover:bg-blue-900/50'
       }`}
+      style={{
+        minWidth: 0,
+        flexBasis: 'auto',
+      }}
       onMouseEnter={() => onMouseEnter(index)}
       onMouseLeave={onMouseLeave}
     >
@@ -52,13 +56,13 @@ export function SizeChip({
         // Normal state
         <>
           {/* Size input */}
-          <div className="flex w-8 justify-center">
+          <div className="flex min-w-0 justify-center">
             <input
               type="text"
               value={size.size || ''}
               onChange={e => onSizeChange(index, 'size', e.target.value)}
               onBlur={() => onSizeBlur(index)}
-              className="w-full bg-transparent text-center text-sm font-semibold outline-none"
+              className="w-5 bg-transparent text-center text-[11px] font-semibold outline-none sm:w-6 sm:text-xs"
               placeholder="?"
               aria-label={`Размер ${index + 1}`}
               disabled={disabled}
@@ -66,7 +70,7 @@ export function SizeChip({
           </div>
 
           {/* Quantity input */}
-          <div className="flex w-8 justify-center">
+          <div className="flex min-w-0 justify-center">
             <input
               type="number"
               value={size.quantity || 0}
@@ -74,7 +78,7 @@ export function SizeChip({
                 onSizeChange(index, 'quantity', parseInt(e.target.value) || 0)
               }
               onBlur={() => onSizeBlur(index)}
-              className="w-full bg-transparent text-center text-xs outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="w-5 bg-transparent text-center text-[9px] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-6 sm:text-[10px]"
               min="0"
               aria-label={`Количество ${index + 1}`}
               disabled={disabled}

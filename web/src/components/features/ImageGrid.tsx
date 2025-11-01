@@ -52,14 +52,14 @@ export function ImageGrid({
     <div
       className={
         singleRow
-          ? 'flex flex-nowrap gap-1 overflow-x-auto'
+          ? 'flex flex-nowrap gap-1 overflow-x-auto md:overflow-x-auto'
           : 'flex flex-wrap gap-1'
       }
     >
       {allImages.map((image, index) => (
         <div
           key={image.id}
-          className={`relative ${image.isActive === false ? 'opacity-50' : ''}`}
+          className={`relative flex-shrink-0 ${singleRow ? 'w-12 min-w-12' : ''} ${image.isActive === false ? 'opacity-50' : ''}`}
           ref={el => {
             imageRefs.current[image.id] = el;
           }}

@@ -23,6 +23,7 @@ interface UnifiedDataTableProps<TData, TValue = unknown> {
   className?: string;
   emptyMessage?: string;
   loadingMessage?: string;
+  renderMobileCard?: (item: TData) => React.ReactNode;
 }
 
 export function UnifiedDataTable<TData, TValue = unknown>({
@@ -37,6 +38,7 @@ export function UnifiedDataTable<TData, TValue = unknown>({
   className,
   emptyMessage,
   loadingMessage,
+  renderMobileCard,
 }: UnifiedDataTableProps<TData, TValue>) {
   return (
     <div className="space-y-6">
@@ -54,6 +56,7 @@ export function UnifiedDataTable<TData, TValue = unknown>({
         className={className}
         emptyMessage={emptyMessage}
         loadingMessage={loadingMessage}
+        renderMobileCard={renderMobileCard}
       />
     </div>
   );

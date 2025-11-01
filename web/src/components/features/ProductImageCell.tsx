@@ -47,7 +47,7 @@ export function ProductImageCell({ product }: ProductImageCellProps) {
       <ProductImageModal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
-        images={product.images}
+        images={product.images || []}
         productName={product.name}
       />
     </div>

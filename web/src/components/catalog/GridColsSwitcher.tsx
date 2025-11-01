@@ -18,7 +18,7 @@ export function GridColsSwitcher({
   className,
 }: GridColsSwitcherProps) {
   return (
-    <div className={cn('flex items-center rounded-md border', className)}>
+    <div className={cn('hidden lg:flex items-center rounded-md border', className)}>
       <Button
         variant={value === 4 ? 'primary' : 'ghost'}
         size="sm"

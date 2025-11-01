@@ -18,7 +18,7 @@ export function AddSizeButton({
   return (
     <button
       type="button"
-      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors sm:h-8 sm:w-8 ${
         isUpdating
           ? 'cursor-not-allowed bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
           : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'

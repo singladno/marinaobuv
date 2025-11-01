@@ -33,20 +33,20 @@ export default function AdminUsersPage() {
   } = useUsers();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">
             Пользователи
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 sm:text-base">
             Управление пользователями системы
           </p>
         </div>
         <Button
           onClick={() => setShowCreateForm(true)}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
         >
           Создать пользователя
         </Button>
@@ -61,7 +61,7 @@ export default function AdminUsersPage() {
       />
 
       {/* Users Table */}
-      <div className="overflow-visible rounded-lg bg-white shadow dark:bg-gray-800">
+      <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
         <UserTable
           users={users}
           loading={loading}

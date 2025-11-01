@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+
+/**
+ * Recursively get all descendant category IDs from a parent category
+ */
+async function getAllSubcategoryIds(categoryId: string): Promise<string[]> {
+  const children = await prisma.category.findMany({
+    where: { parentId: categoryId, isActive: true },
+    select: { id: true },
+  });
+
+  const childIds = children.map(child => child.id);
+  const allDescendantIds: string[] = [...childIds];
+
+  // Recursively get IDs from all nested subcategories
+  for (const childId of childIds) {
+    const nestedIds = await getAllSubcategoryIds(childId);
+    allDescendantIds.push(...nestedIds);
+  }
+
+  return allDescendantIds;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -43,31 +65,22 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Category filter - include products from subcategories
+    // Category filter - include products from subcategories (recursively)
     if (categoryId) {
-      // First, get the category and check if it has subcategories
+      // Check if category exists
       const category = await prisma.category.findUnique({
         where: { id: categoryId },
-        select: {
-          id: true,
-          children: {
-            select: { id: true },
-            where: { isActive: true },
-          },
-        },
+        select: { id: true },
       });
 
       if (category) {
-        // If category has subcategories, include products from all subcategories
-        if (category.children.length > 0) {
-          const subcategoryIds = category.children.map(child => child.id);
-          where.categoryId = {
-            in: [categoryId, ...subcategoryIds],
-          };
-        } else {
-          // If no subcategories, just use the category itself
-          where.categoryId = categoryId;
-        }
+        // Get all descendant category IDs recursively (including nested subcategories)
+        const allSubcategoryIds = await getAllSubcategoryIds(categoryId);
+
+        // Include products from the category itself and all its subcategories
+        where.categoryId = {
+          in: [categoryId, ...allSubcategoryIds],
+        };
       } else {
         // Fallback to direct category if not found
         where.categoryId = categoryId;

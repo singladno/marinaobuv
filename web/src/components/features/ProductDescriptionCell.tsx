@@ -27,17 +27,35 @@ export function ProductDescriptionCell({
   const resize = () => {
     const el = textareaRef.current;
     if (!el) return;
+    // Reset height to auto to get accurate scrollHeight
     el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
+    // Set height to scrollHeight, but ensure it's at least 1 line
+    const newHeight = Math.max(el.scrollHeight, el.offsetHeight || 40);
+    el.style.height = `${newHeight}px`;
+    // Remove max-height constraint on iPad/tablet
+    el.style.maxHeight = 'none';
+    el.style.overflow = 'hidden';
   };
 
   useEffect(() => {
     resize();
+    // Also resize after a short delay to handle async rendering
+    const timer = setTimeout(resize, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     resize();
   }, [value]);
+
+  // Resize on window resize (for iPad orientation changes)
+  useEffect(() => {
+    const handleResize = () => {
+      resize();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSave = async () => {
     if (value === product.description) {
@@ -75,11 +93,17 @@ export function ProductDescriptionCell({
       <Textarea
         ref={textareaRef}
         value={value}
-        onChange={e => setValue(e.target.value)}
+        onChange={e => {
+          setValue(e.target.value);
+          // Resize on change for immediate feedback
+          requestAnimationFrame(resize);
+        }}
         onBlur={() => handleSave()}
         onKeyDown={handleKeyDown}
+        onInput={resize}
         disabled={isLoading || product.isActive}
-        className="w-full"
+        className="w-full resize-none md:resize-none"
+        style={{ overflow: 'hidden', maxHeight: 'none' }}
         rows={1}
         placeholder="Описание товара..."
       />

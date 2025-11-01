@@ -79,7 +79,7 @@ export default function Header({ onSearch }: HeaderProps) {
       >
         {/* Top Utility Bar */}
         <div className="flex items-center justify-center py-1">
-          <div className="container mx-auto flex items-center justify-center px-4">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-center px-4 md:px-6 lg:px-8">
             {/* Center - Navigation Links as Buttons */}
             <nav className="hidden items-center gap-1 md:flex">
               <Button
@@ -126,7 +126,7 @@ export default function Header({ onSearch }: HeaderProps) {
         </div>
 
         {/* Main Header Bar */}
-        <div className="container relative mx-auto flex items-center gap-4 px-4 py-0 md:px-0">
+        <div className="relative mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-0 md:px-6 lg:px-8">
           {/* Left side - Logo - hidden on mobile/tablet */}
           <div className="hidden items-center md:flex">
             <Link href={site.links.home} className="hover:opacity-90">

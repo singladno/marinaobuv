@@ -176,6 +176,8 @@ export function AddressInput({
           // Base styles
           'bg-background w-full rounded-lg border px-3 py-2 text-sm shadow-none outline-none',
           'placeholder:text-muted',
+          // Padding for loader
+          isLoading && inputValue.length >= 3 && 'pr-10',
           // Focus styles
           'focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:ring-offset-0',
           // Error styles
@@ -188,8 +190,8 @@ export function AddressInput({
       />
 
       {/* Loading indicator */}
-      {isLoading && (
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+      {isLoading && inputValue.length >= 3 && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-purple-600" />
         </div>
       )}

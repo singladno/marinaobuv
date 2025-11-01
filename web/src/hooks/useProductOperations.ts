@@ -117,7 +117,7 @@ export function useProductOperations({
         return;
       }
 
-      // Default: apply optimistic update immediately
+      // Default: apply optimistic update immediately (includes sizes)
       actions.setOptimisticUpdate(id, updates);
 
       // Add to operation queue

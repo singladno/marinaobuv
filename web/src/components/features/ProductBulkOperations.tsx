@@ -15,26 +15,53 @@ export function ProductBulkOperations({
   onBulkDeactivate,
   onClearSelection,
 }: ProductBulkOperationsProps) {
+  // Hide on mobile if nothing is selected, always show on desktop
+  if (selectedCount === 0) {
+    return (
+      <div className="hidden md:flex md:flex-col md:gap-3 md:bg-blue-50 md:px-4 md:py-4 dark:md:bg-blue-900/20 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:px-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <button
+            disabled
+            className="w-full rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white opacity-50 cursor-not-allowed sm:w-auto"
+          >
+            Активировать
+          </button>
+          <button
+            disabled
+            className="w-full rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white opacity-50 cursor-not-allowed sm:w-auto"
+          >
+            Деактивировать
+          </button>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            Выберите товары для действий
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center justify-between bg-blue-50 px-6 py-4 dark:bg-blue-900/20">
-      <div className="flex items-center space-x-3">
+    <div className="flex flex-col gap-3 bg-blue-50 px-4 py-4 dark:bg-blue-900/20 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:px-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <button
           onClick={onBulkActivate}
           disabled={selectedCount === 0}
-          className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           Активировать
         </button>
         <button
           onClick={onBulkDeactivate}
           disabled={selectedCount === 0}
-          className="rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           Деактивировать
         </button>
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
           {selectedCount > 0
             ? `Выбрано товаров: ${selectedCount}`
@@ -43,7 +70,7 @@ export function ProductBulkOperations({
         {selectedCount > 0 && (
           <button
             onClick={onClearSelection}
-            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+            className="w-full text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 sm:w-auto sm:text-left"
           >
             Очистить выбор
           </button>

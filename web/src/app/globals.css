@@ -594,6 +594,15 @@ a:hover {
 /* Product gallery dynamic height */
 .product-gallery-main {
   height: var(--gallery-height);
+  max-width: 100%;
+}
+
+/* Constrain Swiper in product gallery */
+.product-gallery-main .swiper,
+.product-gallery-main .swiper-wrapper,
+.product-gallery-main .swiper-slide {
+  max-width: 100% !important;
+  width: 100% !important;
 }
 
 /* Table cell positioning */
@@ -656,4 +665,17 @@ a:hover {
   .group:hover .source-icon-hover-toggle {
     opacity: 1;
   }
+}
+
+/* Product gallery Swiper pagination styles */
+.product-swiper-pagination-bullet {
+  width: 8px !important;
+  height: 8px !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  opacity: 1 !important;
+  margin: 0 4px !important;
+}
+
+.product-swiper-pagination-bullet-active {
+  background: rgba(147, 51, 234, 0.8) !important;
 }

@@ -2,6 +2,7 @@ import type { ColumnDef, Table } from '@tanstack/react-table';
 import React from 'react';
 
 import { DataTable } from '@/components/ui/DataTable';
+import { DataTablePagination } from '@/components/ui/DataTablePagination';
 
 interface UnifiedTableContentProps<TData, TValue> {
   table?: Table<TData>;
@@ -20,6 +21,7 @@ interface UnifiedTableContentProps<TData, TValue> {
   className?: string;
   emptyMessage?: string;
   loadingMessage?: string;
+  renderMobileCard?: (item: TData) => React.ReactNode;
 }
 
 export function UnifiedTableContent<TData, TValue>({
@@ -34,6 +36,7 @@ export function UnifiedTableContent<TData, TValue>({
   className,
   emptyMessage,
   loadingMessage,
+  renderMobileCard,
 }: UnifiedTableContentProps<TData, TValue>) {
   const renderLoading = (message: string) => (
     <div className="flex items-center justify-center py-8">
@@ -67,6 +70,44 @@ export function UnifiedTableContent<TData, TValue>({
 
   if (!data || data.length === 0) {
     return renderEmpty(emptyMessage || 'Данные не найдены');
+  }
+
+  // Render mobile cards if renderMobileCard is provided
+  if (renderMobileCard) {
+    return (
+      <>
+        {/* Mobile Card View */}
+        <div className="block md:hidden">
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {data.map((item, index) => (
+              <React.Fragment key={(item as any).id || index}>
+                {renderMobileCard(item)}
+              </React.Fragment>
+            ))}
+          </div>
+          {pagination && onPageChange && onPageSizeChange && (
+            <DataTablePagination
+              pagination={pagination}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
+            />
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          <DataTable
+            table={table}
+            columns={columns}
+            data={data}
+            pagination={pagination}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+            className={className}
+          />
+        </div>
+      </>
+    );
   }
 
   return (

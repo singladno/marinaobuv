@@ -39,7 +39,7 @@ export function OptimisticSizesCell({
 
   return (
     <>
-      <div className="flex items-center gap-1.5 overflow-x-auto">
+      <div className="flex flex-nowrap items-center gap-1.5 min-w-0">
         {(localSizes || []).map((size, index) => {
           const isUpdatingThisSize = updatingSizes.has(size.id);
 
@@ -62,11 +62,13 @@ export function OptimisticSizesCell({
         })}
 
         {/* Add button */}
-        <AddSizeButton
-          isUpdating={isUpdating}
-          disabled={disabled}
-          onAddSize={handleAddSize}
-        />
+        <div className="flex-shrink-0">
+          <AddSizeButton
+            isUpdating={isUpdating}
+            disabled={disabled}
+            onAddSize={handleAddSize}
+          />
+        </div>
       </div>
 
       {/* Portal Delete Button */}

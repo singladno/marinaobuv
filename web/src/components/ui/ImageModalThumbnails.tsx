@@ -25,8 +25,9 @@ export function ImageModalThumbnails({
   if (images.length <= 1) return null;
 
   return (
-    <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-      {images.map((img, index) => {
+    <div className="relative left-0 flex w-full -translate-x-0 justify-center gap-2 overflow-x-auto px-4 py-2">
+      <div className="flex gap-2">
+        {images.map((img, index) => {
         const isSelected = selectedImages.has(img.id);
         const isCurrent = index === currentIndex;
         const isActive = img.isActive === true;
@@ -88,6 +89,7 @@ export function ImageModalThumbnails({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

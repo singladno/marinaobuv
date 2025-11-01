@@ -53,6 +53,7 @@ export interface ProductUpdateData {
   season?: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null;
   description?: string | null;
   isActive?: boolean;
+  sizes?: Array<{ size: string; count: number }>;
 }
 
 export interface ProductsResponse {

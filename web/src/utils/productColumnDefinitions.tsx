@@ -183,35 +183,47 @@ export function createProductColumnDefinitions({
     // Sizes column
     columnHelper.accessor('sizes', {
       header: 'Размеры',
-      cell: ({ getValue, row }) => (
-        <ProductSizesCell
-          sizes={getValue()}
-          disabled={row.original.isActive}
-          onChange={async sizes => {
-            try {
-              const response = await fetch(
-                `/api/admin/products/${row.original.id}/sizes`,
-                {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ sizes }),
-                }
-              );
+      cell: ({ getValue, row }) => {
+        const currentSizes = getValue() || [];
 
-              if (!response.ok) {
-                throw new Error('Failed to update sizes');
+        // Helper to compare sizes arrays
+        const sizesChanged = (
+          oldSizes: Array<{ size: string; count: number }>,
+          newSizes: Array<{ size: string; count: number }>
+        ): boolean => {
+          if (oldSizes.length !== newSizes.length) return true;
+          const oldMap = new Map(
+            oldSizes.map(s => [s.size, s.count])
+          );
+          const newMap = new Map(
+            newSizes.map(s => [s.size, s.count])
+          );
+          if (oldMap.size !== newMap.size) return true;
+          for (const [size, count] of oldMap) {
+            if (newMap.get(size) !== count) return true;
+          }
+          return false;
+        };
+
+        return (
+          <ProductSizesCell
+            sizes={currentSizes}
+            disabled={row.original.isActive}
+            onChange={async sizes => {
+              if (!sizesChanged(currentSizes, sizes)) {
+                return; // No changes, skip update
               }
 
-              // Reload the page to reflect changes
-              window.location.reload();
-            } catch (error) {
-              console.error('Error updating sizes:', error);
-            }
-          }}
-        />
-      ),
+              try {
+                await onUpdateProduct(row.original.id, { sizes });
+              } catch (error) {
+                console.error('Error updating sizes:', error);
+                throw error;
+              }
+            }}
+          />
+        );
+      },
     }),
 
     // Created date column

@@ -478,30 +478,32 @@ export default function OrderDetailsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col space-y-6 p-6">
+    <div className="flex h-full flex-col space-y-4 px-2 py-4 sm:space-y-6 sm:px-6 sm:py-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button onClick={() => router.back()} variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 sm:space-x-4">
+          <Button onClick={() => router.back()} variant="outline" size="sm" className="shrink-0">
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Назад</span>
           </Button>
-          <div className="flex items-center space-x-3">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Заказ {formatOrderNumber(order.orderNumber)}
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-3 min-w-0 flex-1 sm:space-x-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 sm:text-2xl truncate">
+                  Заказ {formatOrderNumber(order.orderNumber)}
+                </h1>
+                <StatusBadge status={order.status} />
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm mt-1">
                 {formatDate(order.createdAt)}
               </p>
             </div>
-            <StatusBadge status={order.status} />
           </div>
         </div>
       </div>
 
       {/* Order Info */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
         <Card>
           <CardHeader>
             <h3 className="text-sm font-medium text-gray-500">Клиент</h3>
@@ -544,123 +546,149 @@ export default function OrderDetailsPage() {
         </Card>
       </div>
 
-      {/* Order Items Table */}
+      {/* Order Items */}
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Товары в заказе</h2>
+          <h2 className="text-base font-semibold sm:text-lg">Товары в заказе</h2>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="h-full overflow-auto">
-            <table className="w-full border-collapse">
-              {/* Header */}
-              <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Код
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Изображение
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Название
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Артикул
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Кол-во
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Размеры
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Наличие
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Обратная связь
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Сообщения
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    За пару
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    За коробку
-                  </th>
-                  <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                    Сумма
-                  </th>
-                  <th className="sticky right-0 z-30 border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                    Действия
-                  </th>
-                </tr>
-              </thead>
-
-              {/* Body */}
-              <tbody className="bg-white dark:bg-gray-900">
-                {order.items.map(item => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                      {item.itemCode || '—'}
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                      {item.product.images[0] ? (
-                        <Image
-                          src={item.product.images[0].url}
-                          alt={item.product.images[0].alt || item.name}
-                          width={48}
-                          height={48}
-                          className="h-12 w-12 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700" />
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                      {item.name}
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
-                      {item.product.article || '—'}
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                      {item.qty}
-                    </td>
-                    <td className="border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                      {renderSizes(item.product.sizes)}
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                      {getAvailabilityBadge(item.isAvailable)}
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                      <div className="space-y-2">
-                        <FeedbackStatusIconsCompact
-                          feedbacks={item.feedbacks.map(feedback => ({
-                            type: feedback.feedbackType,
-                            createdAt: feedback.createdAt,
-                          }))}
-                          replacements={item.replacements}
-                          hasMessages={item.messages.length > 0}
-                        />
-                        {/* Show existing replacement proposals */}
-                        {item.replacements
-                          .filter(rep => rep.status === 'PENDING')
-                          .map(replacement => (
-                            <div
-                              key={replacement.id}
-                              className="rounded-lg border border-blue-200 bg-blue-50 p-2"
+          {/* Mobile Card View */}
+          <div className="block md:hidden">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {order.items.map(item => (
+                <div
+                  key={item.id}
+                  className="px-4 py-4 bg-white dark:bg-gray-800"
+                >
+                  <div className="space-y-4">
+                    {/* Item Header */}
+                    <div className="flex items-start gap-3">
+                      {/* Image */}
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
+                        {item.product.images[0] ? (
+                          <Image
+                            src={item.product.images[0].url}
+                            alt={item.product.images[0].alt || item.name}
+                            width={64}
+                            height={64}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-gray-400">
+                            <svg
+                              className="h-6 w-6"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <RefreshCw className="h-3 w-3 text-blue-600" />
-                                  <span className="text-xs font-medium text-blue-800">
-                                    Предложена замена
-                                  </span>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Item Info */}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                          {item.name}
+                        </h3>
+                        {item.itemCode && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            Код: {item.itemCode}
+                          </div>
+                        )}
+                        {item.product.article && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Артикул: {item.product.article}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          Количество
+                        </div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {item.qty} шт.
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          Наличие
+                        </div>
+                        <div>{getAvailabilityBadge(item.isAvailable)}</div>
+                      </div>
+                    </div>
+
+                    {/* Sizes */}
+                    <div>
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Размеры
+                      </div>
+                      {renderSizes(item.product.sizes)}
+                    </div>
+
+                    {/* Pricing */}
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                      <div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">За пару</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                          {formatPrice(item.product.pricePair)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">За коробку</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                          {formatPrice(item.priceBox)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">Сумма</div>
+                        <div className="text-sm font-bold text-gray-900 dark:text-white mt-1">
+                          {formatPrice(item.priceBox * item.qty)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Feedback and Messages */}
+                    <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                          Обратная связь
+                        </div>
+                        <div className="space-y-2">
+                          <FeedbackStatusIconsCompact
+                            feedbacks={item.feedbacks.map(feedback => ({
+                              type: feedback.feedbackType,
+                              createdAt: feedback.createdAt,
+                            }))}
+                            replacements={item.replacements}
+                            hasMessages={item.messages.length > 0}
+                          />
+                          {item.replacements
+                            .filter(rep => rep.status === 'PENDING')
+                            .map(replacement => (
+                              <div
+                                key={replacement.id}
+                                className="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-900/20"
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center space-x-2">
+                                    <RefreshCw className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                    <span className="text-xs font-medium text-blue-800 dark:text-blue-300">
+                                      Предложена замена
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex space-x-1">
+                                <div className="flex gap-2 mt-2">
                                   <Button
                                     onClick={() => {
                                       setSelectedItemForReplacement(item);
@@ -668,7 +696,7 @@ export default function OrderDetailsPage() {
                                     }}
                                     size="sm"
                                     variant="outline"
-                                    className="h-6 px-2 text-xs"
+                                    className="h-7 flex-1 text-xs"
                                   >
                                     Изменить
                                   </Button>
@@ -682,70 +710,264 @@ export default function OrderDetailsPage() {
                                     }}
                                     size="sm"
                                     variant="outline"
-                                    className="h-6 border-red-200 px-2 text-xs text-red-600 hover:bg-red-50"
+                                    className="h-7 flex-1 text-xs border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
                                   >
                                     Удалить
                                   </Button>
                                 </div>
+                                {replacement.adminComment && (
+                                  <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+                                    {replacement.adminComment}
+                                  </p>
+                                )}
                               </div>
-                              {replacement.adminComment && (
-                                <p className="mt-1 text-xs text-blue-700">
-                                  {replacement.adminComment}
-                                </p>
-                              )}
-                            </div>
-                          ))}
+                            ))}
+                        </div>
                       </div>
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                      <MessagePreviewCompact
-                        messages={item.messages.map(message => ({
-                          id: message.id,
-                          text: message.text,
-                          sender:
-                            message.user.role === 'ADMIN'
-                              ? 'admin'
-                              : message.user.role === 'GRUZCHIK'
-                                ? 'gruzchik'
-                                : 'client',
-                          senderName: message.user.name || undefined,
-                          isService: message.isService,
-                          createdAt: message.createdAt,
-                        }))}
-                        maxLength={50}
-                      />
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                      {formatPrice(item.product.pricePair)}
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                      {formatPrice(item.priceBox)}
-                    </td>
-                    <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                      {formatPrice(item.priceBox * item.qty)}
-                    </td>
-                    <td className="sticky right-0 z-20 border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
-                      <div className="flex items-center space-x-2">
-                        <ChatButtonWithIndicator
-                          itemId={item.id}
-                          onClick={() => setSelectedItemId(item.id)}
-                          unreadCount={getUnreadCount(item.id).unreadCount}
+                      <div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                          Сообщения
+                        </div>
+                        <MessagePreviewCompact
+                          messages={item.messages.map(message => ({
+                            id: message.id,
+                            text: message.text,
+                            sender:
+                              message.user.role === 'ADMIN'
+                                ? 'admin'
+                                : message.user.role === 'GRUZCHIK'
+                                  ? 'gruzchik'
+                                  : 'client',
+                            senderName: message.user.name || undefined,
+                            isService: message.isService,
+                            createdAt: message.createdAt,
+                          }))}
+                          maxLength={100}
                         />
-                        <Button
-                          onClick={() => handleReplacementProposal(item)}
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center space-x-1"
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                          <span className="text-xs">Замена</span>
-                        </Button>
                       </div>
-                    </td>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <ChatButtonWithIndicator
+                        itemId={item.id}
+                        onClick={() => setSelectedItemId(item.id)}
+                        unreadCount={getUnreadCount(item.id).unreadCount}
+                      />
+                      <Button
+                        onClick={() => handleReplacementProposal(item)}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 flex items-center justify-center gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        <span>Предложить замену</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <div className="h-full overflow-auto">
+              <table className="w-full border-collapse">
+                {/* Header */}
+                <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Код
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Изображение
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Название
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Артикул
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Кол-во
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Размеры
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Наличие
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Обратная связь
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Сообщения
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      За пару
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      За коробку
+                    </th>
+                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Сумма
+                    </th>
+                    <th className="sticky right-0 z-30 border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                      Действия
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+
+                {/* Body */}
+                <tbody className="bg-white dark:bg-gray-900">
+                  {order.items.map(item => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                        {item.itemCode || '—'}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                        {item.product.images[0] ? (
+                          <Image
+                            src={item.product.images[0].url}
+                            alt={item.product.images[0].alt || item.name}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700" />
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                        {item.name}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
+                        {item.product.article || '—'}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                        {item.qty}
+                      </td>
+                      <td className="border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                        {renderSizes(item.product.sizes)}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                        {getAvailabilityBadge(item.isAvailable)}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                        <div className="space-y-2">
+                          <FeedbackStatusIconsCompact
+                            feedbacks={item.feedbacks.map(feedback => ({
+                              type: feedback.feedbackType,
+                              createdAt: feedback.createdAt,
+                            }))}
+                            replacements={item.replacements}
+                            hasMessages={item.messages.length > 0}
+                          />
+                          {item.replacements
+                            .filter(rep => rep.status === 'PENDING')
+                            .map(replacement => (
+                              <div
+                                key={replacement.id}
+                                className="rounded-lg border border-blue-200 bg-blue-50 p-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    <RefreshCw className="h-3 w-3 text-blue-600" />
+                                    <span className="text-xs font-medium text-blue-800">
+                                      Предложена замена
+                                    </span>
+                                  </div>
+                                  <div className="flex space-x-1">
+                                    <Button
+                                      onClick={() => {
+                                        setSelectedItemForReplacement(item);
+                                        setReplacementModalOpen(true);
+                                      }}
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 px-2 text-xs"
+                                    >
+                                      Изменить
+                                    </Button>
+                                    <Button
+                                      onClick={() => {
+                                        if (
+                                          confirm('Удалить предложение о замене?')
+                                        ) {
+                                          handleReplacementDelete(replacement.id);
+                                        }
+                                      }}
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 border-red-200 px-2 text-xs text-red-600 hover:bg-red-50"
+                                    >
+                                      Удалить
+                                    </Button>
+                                  </div>
+                                </div>
+                                {replacement.adminComment && (
+                                  <p className="mt-1 text-xs text-blue-700">
+                                    {replacement.adminComment}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                        <MessagePreviewCompact
+                          messages={item.messages.map(message => ({
+                            id: message.id,
+                            text: message.text,
+                            sender:
+                              message.user.role === 'ADMIN'
+                                ? 'admin'
+                                : message.user.role === 'GRUZCHIK'
+                                  ? 'gruzchik'
+                                  : 'client',
+                            senderName: message.user.name || undefined,
+                            isService: message.isService,
+                            createdAt: message.createdAt,
+                          }))}
+                          maxLength={50}
+                        />
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                        {formatPrice(item.product.pricePair)}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                        {formatPrice(item.priceBox)}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                        {formatPrice(item.priceBox * item.qty)}
+                      </td>
+                      <td className="sticky right-0 z-20 border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
+                        <div className="flex items-center space-x-2">
+                          <ChatButtonWithIndicator
+                            itemId={item.id}
+                            onClick={() => setSelectedItemId(item.id)}
+                            unreadCount={getUnreadCount(item.id).unreadCount}
+                          />
+                          <Button
+                            onClick={() => handleReplacementProposal(item)}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center space-x-1"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            <span className="text-xs">Замена</span>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </CardContent>
       </Card>

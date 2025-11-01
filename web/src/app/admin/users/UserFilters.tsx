@@ -17,15 +17,15 @@ export function UserFilters({
   setRoleFilter,
 }: UserFiltersProps) {
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
       <SearchInput
         value={search}
         onChange={setSearch}
         placeholder="Поиск по имени или телефону..."
-        className="max-w-sm"
+        className="w-full sm:max-w-sm"
       />
       <Select value={roleFilter} onValueChange={setRoleFilter}>
-        <SelectTrigger className="w-48" aria-label="Фильтр по роли">
+        <SelectTrigger className="w-full sm:w-48" aria-label="Фильтр по роли">
           <SelectValue placeholder="Все роли" />
         </SelectTrigger>
         <SelectContent>

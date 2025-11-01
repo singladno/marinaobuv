@@ -48,9 +48,17 @@ export function ImageModalMainImage({
     setImageError(false);
   };
 
+  if (!currentImage || !currentImage.url) {
+    return (
+      <div className="flex min-h-[300px] items-center justify-center bg-gray-50 dark:bg-gray-800 sm:min-h-[400px]">
+        <p className="text-gray-500">Изображение недоступно</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-      <div className="relative flex items-center">
+    <div className="flex items-center justify-center bg-gray-50 dark:bg-gray-800 w-full h-full min-h-0 max-h-[60vh] md:max-h-[65vh] overflow-hidden">
+      <div className="relative flex items-center justify-center w-full h-full min-h-0 p-4">
         {imageError ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="mb-4 rounded-full bg-red-100 p-4">
@@ -97,7 +105,7 @@ export function ImageModalMainImage({
               alt={currentImage.alt || `Изображение ${currentIndex + 1}`}
               width={800}
               height={600}
-              className={`max-h-[70vh] max-w-full object-contain transition-opacity ${imageOpacity} ${
+              className={`max-h-full max-w-full h-auto w-auto object-contain transition-opacity ${imageOpacity} ${
                 selectedImages.has(currentImage.id)
                   ? 'ring-4 ring-blue-500'
                   : ''
@@ -105,6 +113,13 @@ export function ImageModalMainImage({
               onError={handleImageError}
               onLoad={handleImageLoad}
               priority={currentIndex === 0}
+              unoptimized
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                height: 'auto',
+                width: 'auto'
+              }}
             />
           </>
         )}
@@ -128,7 +143,7 @@ export function ImageModalMainImage({
         )}
         {/* Toggle button */}
         {onImageToggle && (
-          <div className="absolute -right-12 top-1/2 -translate-y-1/2">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 md:right-4">
             <button
               onClick={e => onImageToggle(currentImage.id, !isActive, e)}
               disabled={isUpdating === currentImage.id}

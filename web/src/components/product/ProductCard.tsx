@@ -338,6 +338,7 @@ export default function ProductCard({
   return (
     <>
       <div
+        data-product-id={productId}
         className={`bg-surface rounded-card-large shadow-card hover:shadow-card-hover group relative flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
           isPurchaseMode && (isInPurchase || isProcessing)
             ? 'bg-purple-50 ring-2 ring-purple-500'
@@ -426,7 +427,21 @@ export default function ProductCard({
                 }
           }
           className="block flex-1"
-          onClick={isPurchaseMode ? e => e.preventDefault() : undefined}
+          onClick={e => {
+            if (isPurchaseMode) {
+              e.preventDefault();
+              return;
+            }
+            // Store referrer and product ID for scroll-to-product feature
+            if (typeof window !== 'undefined' && productId) {
+              const referrer = window.location.href;
+              sessionStorage.setItem('productNavigation', JSON.stringify({
+                productId,
+                referrer,
+                timestamp: Date.now(),
+              }));
+            }
+          }}
         >
           {/* Image Container */}
           <div className="bg-muted group/image relative aspect-square w-full overflow-hidden">

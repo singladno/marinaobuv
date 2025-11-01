@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useTransition } from 'react';
 
 import type { Product } from '@/types/product';
 import { useConfirmationModal } from './useConfirmationModal';
@@ -31,6 +31,7 @@ export function useProductBulkOperations(
   onDeleteProduct: (id: string) => Promise<void>
 ): UseProductBulkOperationsReturn {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [isPending, startTransition] = useTransition();
   const confirmationModal = useConfirmationModal();
 
   const selectedCount = Object.values(selected).filter(Boolean).length;
@@ -38,11 +39,22 @@ export function useProductBulkOperations(
   const someSelected = selectedCount > 0 && selectedCount < products.length;
 
   const onToggle = useCallback((id: string) => {
-    setSelected(prev => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  }, []);
+    // Use requestAnimationFrame to defer the state update outside of the click handler
+    requestAnimationFrame(() => {
+      startTransition(() => {
+        setSelected(prev => {
+          const currentValue = prev[id] ?? false;
+          const newValue = !currentValue;
+          // Return previous state if no change (shouldn't happen, but optimization)
+          if (prev[id] === newValue) return prev;
+          return {
+            ...prev,
+            [id]: newValue,
+          };
+        });
+      });
+    });
+  }, [startTransition]);
 
   const onSelectAll = useCallback(
     (selectAll: boolean) => {

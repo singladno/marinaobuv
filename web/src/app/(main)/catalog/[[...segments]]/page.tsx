@@ -160,6 +160,60 @@ function CatalogPageContent() {
     pageSize: filters.pageSize,
   }, { enabled: canPersist });
 
+  // Scroll to product when returning from product page
+  useEffect(() => {
+    if (loading || !products.length) return;
+
+    try {
+      const navData = sessionStorage.getItem('productNavigation');
+      if (!navData) return;
+
+      const { productId, referrer } = JSON.parse(navData);
+      if (!productId || !referrer) return;
+
+      // Normalize referrer URL (handle both full URLs and relative paths)
+      let referrerPath: string;
+      try {
+        const referrerUrl = referrer.startsWith('http')
+          ? new URL(referrer)
+          : new URL(referrer, window.location.origin);
+        referrerPath = referrerUrl.pathname + referrerUrl.search;
+      } catch {
+        // If referrer is not a valid URL, try treating it as a path
+        referrerPath = referrer.split('?')[0] + (referrer.includes('?') ? '?' + referrer.split('?')[1] : '');
+      }
+
+      const currentUrl = new URL(window.location.href);
+      const currentPath = currentUrl.pathname + currentUrl.search;
+
+      // Only scroll if we're on a catalog page that matches the referrer
+      // Check both /catalog and /catalog/... paths
+      if ((currentPath === '/catalog' || currentPath.startsWith('/catalog/')) && referrerPath === currentPath) {
+        // Find the product element
+        const productElement = document.querySelector(
+          `[data-product-id="${productId}"]`
+        );
+
+        if (productElement) {
+          // Use setTimeout to ensure DOM is ready
+          setTimeout(() => {
+            productElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+            });
+          }, 100);
+
+          // Clear the navigation data after scrolling
+          sessionStorage.removeItem('productNavigation');
+        }
+      }
+    } catch (error) {
+      // Silently fail if sessionStorage data is invalid
+      console.error('Error scrolling to product:', error);
+      sessionStorage.removeItem('productNavigation');
+    }
+  }, [loading, products.length]);
+
   if (error) {
     return (
       <div className="bg-background min-h-screen">
@@ -232,7 +286,9 @@ function CatalogPageContent() {
               Найдено товаров: {pagination.total}
             </Text>
           </div>
-          <GridColsSwitcher value={gridCols} onChange={setGridCols} />
+          <div className="hidden lg:block">
+            <GridColsSwitcher value={gridCols} onChange={setGridCols} />
+          </div>
         </div>
 
         {/* Products */}

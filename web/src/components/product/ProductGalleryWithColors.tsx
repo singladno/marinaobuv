@@ -79,7 +79,7 @@ export default function ProductGalleryWithColors({
 
   return (
     <div className="flex gap-4">
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <ProductGalleryVertical
           images={filteredImages}
           productName={productName}
