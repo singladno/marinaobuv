@@ -14,18 +14,11 @@ GROUP MESSAGES BY PRODUCT - SIMPLE RULES:
 
 CRITICAL PATTERN DETECTION:
 - Pattern REPEATS = Separate groups:
-  * text + images + text + images → TWO groups (text+images pattern repeats)
-  * images + text + images + text → TWO groups (images+text pattern repeats)
-  * images + text + images → TWO groups (images+text → images pattern repeats)
-- NOT a repeat = ONE group:
-  * text + images + text → ONE group (ends with text, single sequence)
+  * images + text + images + text → TWO groups (text+images pattern repeats)
 
 EXAMPLES:
-✅ ONE GROUP: [textMessage, imageMessage], [imageMessage, textMessage], [textMessage, imageMessage, textMessage]
+✅ ONE GROUP: [imageMessage, textMessage]
 ✅ TWO GROUPS: [imageMessage1, textMessage1, imageMessage2, textMessage2] → Group1=[image1,text1], Group2=[image2,text2]
-✅ TWO GROUPS: [textMessage1, imageMessage1, textMessage2, imageMessage2] → Group1=[text1,image1], Group2=[text2,image2]
-✅ TWO GROUPS: [imageMessage1, textMessage1, imageMessage2] → Group1=[image1,text1], Group2=[image2]
-✅ TWO GROUPS: [msg1, msg2] ... [gap > 60s] ... [msg3, msg4] → Separate due to time gap
 ❌ SKIP: [imageMessage, imageMessage] (no text), [textMessage, textMessage] (no images)
 
 OUTPUT FORMAT:

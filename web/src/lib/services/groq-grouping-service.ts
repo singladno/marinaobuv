@@ -48,7 +48,7 @@ export class GroqGroupingService {
 
     try {
       console.log(
-        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Maverick 17B 16E)...`
+        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Scout 17B 16E)...`
       );
 
       // Prepare messages for grouping
@@ -56,7 +56,7 @@ export class GroqGroupingService {
 
       // Prepare the full request for debugging
       const fullRequest = {
-        model: 'meta-llama/llama-4-maverick-17b-16e-instruct',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: [
           {
             role: 'system',
@@ -97,7 +97,14 @@ export class GroqGroupingService {
       // Store the request and response for debugging
       await this.storeGroupingDebugInfo(messages, fullRequest, response);
 
-      return result.groups;
+      // Post-process groups: split if text is followed by image, then filter invalid groups
+      const processedGroups = this.postProcessGroups(result.groups, messages);
+
+      console.log(
+        `🔧 Post-processing: ${result.groups.length} → ${processedGroups.length} groups`
+      );
+
+      return processedGroups;
     } catch (error) {
       console.error('❌ Error grouping messages with Groq:', error);
       return [];
@@ -124,7 +131,7 @@ export class GroqGroupingService {
 
     try {
       console.log(
-        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Maverick 17B 16E)...`
+        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Scout 17B 16E)...`
       );
 
       // Prepare messages for grouping
@@ -132,7 +139,7 @@ export class GroqGroupingService {
 
       // Prepare the full request for debugging
       const fullRequest = {
-        model: 'meta-llama/llama-4-maverick-17b-16e-instruct',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: [
           {
             role: 'system',
@@ -178,6 +185,13 @@ export class GroqGroupingService {
         `✅ Accepting all ${result.groups.length} groups from LLM (no manual validation)`
       );
 
+      // Post-process groups: split if text is followed by image, then filter invalid groups
+      const processedGroups = this.postProcessGroups(result.groups, messages);
+
+      console.log(
+        `🔧 Post-processing: ${result.groups.length} → ${processedGroups.length} groups`
+      );
+
       // Prepare debug info
       const debugInfo: GroupingDebugInfo = {
         request: JSON.stringify(fullRequest, null, 2),
@@ -186,7 +200,7 @@ export class GroqGroupingService {
         messageIds: messages.map(m => m.id),
       };
 
-      return { groups: result.groups, debugInfo };
+      return { groups: processedGroups, debugInfo };
     } catch (error) {
       console.error('❌ Error grouping messages with Groq:', error);
       return {
@@ -414,6 +428,247 @@ export class GroqGroupingService {
 ---`;
       })
       .join('\n\n');
+  }
+
+  /**
+   * Post-process groups: split groups where text is followed by image, then filter invalid groups
+   */
+  private postProcessGroups(
+    groups: MessageGroup[],
+    allMessages: any[]
+  ): MessageGroup[] {
+    const messageMap = new Map(allMessages.map(m => [m.id, m]));
+    const splitGroups: MessageGroup[] = [];
+
+    for (const group of groups) {
+      const groupMessages = group.messageIds
+        .map(id => messageMap.get(id))
+        .filter(Boolean) as any[];
+
+      if (groupMessages.length === 0) continue;
+
+      // Sort messages by timestamp
+      const sortedMessages = [...groupMessages].sort(
+        (a, b) =>
+          new Date(a.createdAt || a.timestamp).getTime() -
+          new Date(b.createdAt || b.timestamp).getTime()
+      );
+
+      // Determine message types: 'T' for text, 'I' for image
+      const messageTypes = sortedMessages.map(msg => {
+        const isTextMessageType =
+          msg.type === 'textMessage' || msg.type === 'extendedTextMessage';
+        const hasText =
+          isTextMessageType ||
+          (msg.text &&
+            typeof msg.text === 'string' &&
+            msg.text.trim().length > 0);
+        const hasImage =
+          msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage');
+
+        if (hasText && hasImage) return 'B'; // Both
+        if (hasText) return 'T';
+        if (hasImage) return 'I';
+        return 'N'; // Neither
+      });
+
+      const sequenceStr = messageTypes.join('');
+      console.log(
+        `  🔍 Processing group ${group.groupId}: sequence=${sequenceStr}, messages=${sortedMessages.length}`
+      );
+
+      // Check if group has the pattern "images → text" (IT, IIT, IIIIIT, etc.)
+      // This means we should look for I (or B) followed by T (or B) somewhere in the sequence
+      // TI should NOT be split (no I before T)
+      let hasImageThenTextPattern = false;
+      for (let i = 0; i < messageTypes.length - 1; i++) {
+        if (
+          (messageTypes[i] === 'I' || messageTypes[i] === 'B') &&
+          (messageTypes[i + 1] === 'T' || messageTypes[i + 1] === 'B')
+        ) {
+          hasImageThenTextPattern = true;
+          break;
+        }
+      }
+
+      // Only split if group has the "images → text" pattern
+      if (!hasImageThenTextPattern) {
+        console.log(
+          `     - No "images → text" pattern found, keeping original group`
+        );
+        splitGroups.push(group);
+        continue;
+      }
+
+      console.log(
+        `     - Has "images → text" pattern, checking for split points`
+      );
+
+      // Find split points: where text is followed by image (T → I)
+      // Examples: IITI -> split after T, ITI -> split after T, IIIIITI -> split after T
+      const splitPoints: number[] = [];
+      for (let i = 0; i < messageTypes.length - 1; i++) {
+        const current = messageTypes[i];
+        const next = messageTypes[i + 1];
+
+        // Split if text is followed by image (T → I)
+        if ((current === 'T' || current === 'B') && next === 'I') {
+          splitPoints.push(i + 1); // Split after current message
+          console.log(
+            `     - Found split point at index ${i + 1} (${current} → ${next})`
+          );
+        }
+      }
+
+      // If no split points, keep original group
+      if (splitPoints.length === 0) {
+        console.log(`     - No split points found, keeping original group`);
+        splitGroups.push(group);
+        continue;
+      }
+
+      console.log(
+        `     - Splitting into ${splitPoints.length + 1} groups at positions: ${splitPoints.join(', ')}`
+      );
+
+      // Create new groups based on split points
+      let startIdx = 0;
+      let splitCount = 0;
+      for (const splitIdx of splitPoints) {
+        // Create group from startIdx to splitIdx (exclusive)
+        const newGroupMessageIds = sortedMessages
+          .slice(startIdx, splitIdx)
+          .map(m => m.id);
+
+        if (newGroupMessageIds.length > 0) {
+          const newGroupSequence = messageTypes
+            .slice(startIdx, splitIdx)
+            .join('');
+          splitGroups.push({
+            groupId: `${group.groupId}-split-${splitCount}`,
+            messageIds: newGroupMessageIds,
+            productContext: group.productContext,
+            confidence: group.confidence,
+          });
+          console.log(
+            `     - Created split group ${group.groupId}-split-${splitCount}: sequence=${newGroupSequence}, messages=${newGroupMessageIds.length}`
+          );
+          splitCount++;
+        }
+
+        startIdx = splitIdx;
+      }
+
+      // Add remaining messages after last split
+      if (startIdx < sortedMessages.length) {
+        const remainingMessageIds = sortedMessages
+          .slice(startIdx)
+          .map(m => m.id);
+
+        if (remainingMessageIds.length > 0) {
+          const remainingSequence = messageTypes.slice(startIdx).join('');
+          splitGroups.push({
+            groupId: `${group.groupId}-split-${splitCount}`,
+            messageIds: remainingMessageIds,
+            productContext: group.productContext,
+            confidence: group.confidence,
+          });
+          console.log(
+            `     - Created split group ${group.groupId}-split-${splitCount}: sequence=${remainingSequence}, messages=${remainingMessageIds.length}`
+          );
+        }
+      }
+    }
+
+    // Filter: only keep groups that have both text and images
+    const validGroups = splitGroups.filter(group => {
+      const groupMessages = group.messageIds
+        .map(id => messageMap.get(id))
+        .filter(Boolean) as any[];
+
+      if (groupMessages.length === 0) {
+        console.log(
+          `  🗑️ Filtering out group ${group.groupId}: no messages found`
+        );
+        return false;
+      }
+
+      // Sort messages by timestamp for logging
+      const sortedGroupMessages = [...groupMessages].sort(
+        (a, b) =>
+          new Date(a.createdAt || a.timestamp).getTime() -
+          new Date(b.createdAt || b.timestamp).getTime()
+      );
+
+      // Determine message types for logging
+      const messageTypes = sortedGroupMessages.map(msg => {
+        const isTextMessageType =
+          msg.type === 'textMessage' || msg.type === 'extendedTextMessage';
+        const hasText =
+          isTextMessageType ||
+          (msg.text &&
+            typeof msg.text === 'string' &&
+            msg.text.trim().length > 0);
+        const hasImage =
+          msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage');
+
+        if (hasText && hasImage) return 'B'; // Both
+        if (hasText) return 'T';
+        if (hasImage) return 'I';
+        return 'N'; // Neither
+      });
+
+      // Check for text messages
+      const textMessages = sortedGroupMessages.filter((msg: any) => {
+        const isTextMessageType =
+          msg.type === 'textMessage' || msg.type === 'extendedTextMessage';
+        const hasTextContent =
+          isTextMessageType ||
+          (msg.text &&
+            typeof msg.text === 'string' &&
+            msg.text.trim().length > 0);
+        return hasTextContent;
+      });
+
+      // Check for image messages
+      const imageMessages = sortedGroupMessages.filter(
+        (msg: any) =>
+          msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage')
+      );
+
+      const hasText = textMessages.length > 0;
+      const hasImage = imageMessages.length > 0;
+
+      // Valid group must have both text and images
+      const isValid = hasText && hasImage;
+
+      // Log detailed information
+      if (!isValid) {
+        console.log(`  🗑️ Filtering out group ${group.groupId}:`);
+        console.log(`     - Message count: ${sortedGroupMessages.length}`);
+        console.log(`     - Sequence: ${messageTypes.join('')}`);
+        console.log(
+          `     - Text messages: ${textMessages.length} (hasText=${hasText})`
+        );
+        console.log(
+          `     - Image messages: ${imageMessages.length} (hasImage=${hasImage})`
+        );
+        console.log(
+          `     - Message types: ${sortedGroupMessages.map(m => m.type).join(', ')}`
+        );
+        console.log(
+          `     - Message IDs: ${group.messageIds.slice(0, 5).join(', ')}${group.messageIds.length > 5 ? '...' : ''}`
+        );
+      } else {
+        console.log(
+          `  ✅ Keeping group ${group.groupId}: sequence=${messageTypes.join('')}, text=${textMessages.length}, images=${imageMessages.length}`
+        );
+      }
+
+      return isValid;
+    });
+
+    return validGroups;
   }
 
   /**
