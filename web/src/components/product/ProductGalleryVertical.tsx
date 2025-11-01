@@ -105,7 +105,7 @@ export default function ProductGalleryVertical({
           {!isActive && <UnavailableProductOverlay />}
         </div>
 
-        {/* Source indicator - WA icon or badge; always visible on mobile/tablet, hover on desktop (admin only) */}
+        {/* Source indicator - WA icon or badge; always visible on mobile/tablet/iPad, hover on desktop (admin only) */}
         {user?.role === 'ADMIN' &&
           productId &&
           sourceMessageIds &&
@@ -113,7 +113,7 @@ export default function ProductGalleryVertical({
             <button
               type="button"
               onClick={() => setIsSourceModalOpen(true)}
-              className="absolute left-2 top-2 z-20 opacity-100 transition-all duration-200 focus:outline-none md:opacity-0 md:group-hover:opacity-100"
+              className="source-icon-hover-toggle absolute left-2 top-2 z-20 transition-all duration-200 focus:outline-none"
               title="Просмотр источника сообщений"
             >
               {source === 'WA' ? (

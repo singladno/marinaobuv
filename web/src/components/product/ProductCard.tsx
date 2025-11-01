@@ -182,7 +182,11 @@ export default function ProductCard({
         }
         // Single item: remove that color
         const onlyItem = productItems[0];
-        console.log('🗑️ Removing product from purchase:', productId, onlyItem?.color);
+        console.log(
+          '🗑️ Removing product from purchase:',
+          productId,
+          onlyItem?.color
+        );
         await removeProductFromPurchase(productId, onlyItem?.color ?? null);
       } else {
         console.log('➕ Adding product to purchase:', productId, selectedColor);
@@ -392,9 +396,9 @@ export default function ProductCard({
                     i.id === updatedItem.id ? updatedItem : i
                   );
                   // Locally re-sequence for visual consistency
-                  const recalculated = [...updatedItems].sort(
-                    (a, b) => a.sortIndex - b.sortIndex
-                  ).map((it, idx) => ({ ...it, sortIndex: idx + 1 }));
+                  const recalculated = [...updatedItems]
+                    .sort((a, b) => a.sortIndex - b.sortIndex)
+                    .map((it, idx) => ({ ...it, sortIndex: idx + 1 }));
                   updateActivePurchaseItems(recalculated);
                 }}
               />
@@ -416,7 +420,7 @@ export default function ProductCard({
               : {
                   pathname: `/product/${slug}`,
                   query:
-                    (selectedColor || null)
+                    selectedColor || null
                       ? { color: selectedColor as string }
                       : undefined,
                 }
@@ -449,7 +453,7 @@ export default function ProductCard({
               </Badge>
             )}
 
-            {/* Source Chip - always visible on mobile/tablet, hover on desktop (admin only) - hidden in purchase mode */}
+            {/* Source Chip - always visible on mobile/tablet/iPad, hover on desktop (admin only) - hidden in purchase mode */}
             {user?.role === 'ADMIN' && productId && !isPurchaseMode && (
               <button
                 type="button"
@@ -458,7 +462,7 @@ export default function ProductCard({
                   e.stopPropagation();
                   setIsSourceModalOpen(true);
                 }}
-                className="absolute left-2 top-2 z-20 opacity-100 transition-all duration-200 focus:outline-none md:opacity-0 md:group-hover:opacity-100"
+                className="source-icon-hover-toggle absolute left-2 top-2 z-20 transition-all duration-200 focus:outline-none"
                 title="Просмотр источника сообщений"
               >
                 {source === 'WA' ? (
@@ -541,9 +545,14 @@ export default function ProductCard({
                 // Find item and remove by id using existing API
                 const item = productItems.find(i => i.id === itemId);
                 if (!item || !activePurchase) return;
-                await fetch(`/api/admin/purchases/${activePurchase.id}/items/${item.id}`, { method: 'DELETE' });
+                await fetch(
+                  `/api/admin/purchases/${activePurchase.id}/items/${item.id}`,
+                  { method: 'DELETE' }
+                );
                 // Update local state
-                updateActivePurchaseItems((activePurchase.items || []).filter(i => i.id !== item.id));
+                updateActivePurchaseItems(
+                  (activePurchase.items || []).filter(i => i.id !== item.id)
+                );
               } finally {
                 setIsProcessing(false);
                 setShowRemoveChooser(false);

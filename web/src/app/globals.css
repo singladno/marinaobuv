@@ -642,3 +642,18 @@ a:hover {
   isolation: auto !important;
   will-change: auto !important;
 }
+
+/* WhatsApp source icon: visible on touch devices, hidden on hover-capable devices (shown on hover) */
+.source-icon-hover-toggle {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .source-icon-hover-toggle {
+    opacity: 0;
+  }
+  
+  .group:hover .source-icon-hover-toggle {
+    opacity: 1;
+  }
+}
