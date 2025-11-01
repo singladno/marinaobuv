@@ -5,9 +5,11 @@ import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ScrollToProductBanner } from '@/components/ui/ScrollToProductBanner';
 import { Text } from '@/components/ui/Text';
 import { useInfiniteCatalog } from '@/hooks/useInfiniteCatalog';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useScrollToProduct } from '@/hooks/useScrollToProduct';
 import { useState } from 'react';
 
 export default function Home() {
@@ -34,18 +36,22 @@ export default function Home() {
   });
 
   const [gridCols, setGridCols] = useState<4 | 5>(4);
+  const { isSearching } = useScrollToProduct({
+    loading,
+    productsLength: products.length,
+    loadingMore,
+    hasNextPage,
+    loadMore,
+    targetPath: '/',
+  });
 
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <Text variant="h2" className="mb-4">
-            Ошибка загрузки каталога
-          </Text>
+          <Text variant="h2" className="mb-4">Ошибка загрузки каталога</Text>
           <Text className="text-muted-foreground mb-4">{error}</Text>
-          <Button onClick={() => window.location.reload()}>
-            Попробовать снова
-          </Button>
+          <Button onClick={() => window.location.reload()}>Попробовать снова</Button>
         </div>
       </div>
     );
@@ -53,6 +59,7 @@ export default function Home() {
 
   return (
     <div className="bg-background min-h-screen">
+      <ScrollToProductBanner isVisible={isSearching} />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
