@@ -46,4 +46,3 @@ export function ScrollToProductBanner({ isVisible }: ScrollToProductBannerProps)
     </div>
   );
 }
-

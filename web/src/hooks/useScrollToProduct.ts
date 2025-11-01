@@ -118,13 +118,13 @@ export function useScrollToProduct({
         } else {
           // Product not found in current products
           // Check if we've already checked this set of products
-          const hasAlreadyCheckedThisSet = 
+          const hasAlreadyCheckedThisSet =
             lastCheckedProductsLengthRef.current === productsLength;
-          
+
           if (!hasAlreadyCheckedThisSet) {
             // We have new products to check - mark them as checked
             lastCheckedProductsLengthRef.current = productsLength;
-            
+
             // Since we just checked and didn't find it, try loading more
             // Limit attempts to prevent infinite loops
             if (hasNextPage && maxScrollAttemptsRef.current < 20) {
@@ -177,4 +177,3 @@ export function useScrollToProduct({
 
   return { isSearching };
 }
-
