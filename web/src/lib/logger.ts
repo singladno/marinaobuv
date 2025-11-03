@@ -40,5 +40,3 @@ export const log = {
     console.error(`[${ts()}]`, title, data ?? '');
   },
 };
-
-

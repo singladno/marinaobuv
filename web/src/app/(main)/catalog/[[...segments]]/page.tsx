@@ -1,8 +1,8 @@
 'use client';
-
+ 
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useParams, usePathname } from 'next/navigation';
-
+ 
 import { ProductGrid } from '@/components/catalog/ProductGrid';
 import { log } from '@/lib/logger';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';

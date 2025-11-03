@@ -22,4 +22,3 @@ export function MenuThickIcon({ className = '' }: MenuThickIconProps) {
 
 export default MenuThickIcon;
 
-
