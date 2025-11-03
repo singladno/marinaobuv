@@ -9,11 +9,11 @@ import {
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
-  MagnifyingGlassIcon as MagnifyingGlassIconSolid,
   ShoppingCartIcon as ShoppingCartIconSolid,
   HeartIcon as HeartIconSolid,
   UserIcon as UserIconSolid,
 } from '@heroicons/react/24/solid';
+import MenuThickIcon from '@/components/ui/icons/MenuThickIcon';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -72,8 +72,8 @@ export function BottomNavigation({ className = '' }: BottomNavigationProps) {
     {
       name: 'Поиск',
       href: '/search',
-      icon: MagnifyingGlassIconSolid,
-      activeIcon: MagnifyingGlassIconSolid,
+      icon: MenuThickIcon,
+      activeIcon: MenuThickIcon,
       isActive: pathname.startsWith('/search'),
     },
     {
@@ -104,7 +104,7 @@ export function BottomNavigation({ className = '' }: BottomNavigationProps) {
   return (
     <>
       <div
-        className="fixed bottom-0 left-0 right-0 z-50"
+        className="fixed bottom-0 left-0 right-0 z-60"
         style={{ bottom: '-1px' }}
       >
         <nav className={`bg-white shadow-2xl ${className}`}>
@@ -113,6 +113,7 @@ export function BottomNavigation({ className = '' }: BottomNavigationProps) {
               const Icon = item.icon;
               const isBasket = item.name === 'Корзина';
               const isProfile = item.name === 'Профиль';
+              const isMenu = item.href === '/search';
 
               if (isProfile && item.onClick) {
                 return (
@@ -125,7 +126,7 @@ export function BottomNavigation({ className = '' }: BottomNavigationProps) {
                   >
                     <div className="relative">
                       <Icon
-                        className={`h-6 w-6 ${
+                        className={`${isMenu ? 'h-7 w-7' : 'h-6 w-6'} ${
                           item.isActive ? 'text-purple-600' : 'text-gray-300'
                         } transition-transform duration-300`}
                       />
@@ -147,7 +148,7 @@ export function BottomNavigation({ className = '' }: BottomNavigationProps) {
                     <div className="flex flex-col items-center justify-center">
                       <div className="relative">
                         <Icon
-                          className={`h-6 w-6 ${
+                          className={`${isMenu ? 'h-7 w-7' : 'h-6 w-6'} ${
                             item.isActive ? 'text-purple-600' : 'text-gray-300'
                           } ${
                             isBasket && isAnimating ? 'scale-110' : 'scale-100'

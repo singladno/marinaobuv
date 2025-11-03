@@ -164,8 +164,8 @@ export default function Header({ onSearch }: HeaderProps) {
             )}
           </div>
 
-          {/* Right side - Actions */}
-          <div className="flex items-center gap-4">
+          {/* Right side - Actions (hidden on mobile to avoid layout gap) */}
+          <div className="hidden items-center gap-4 md:flex">
             {/* Switchers moved into profile dropdown */}
 
             {/* Purchase Mode Icon - only show for admin users */}

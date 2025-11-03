@@ -700,7 +700,8 @@ export class GroqSequentialProcessor {
       // Add timeout to Groq API call
       const groqPromise = (await this.initializeGroq()).chat.completions.create(
         {
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model:
+            process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
           messages: [
             {
               role: 'system',
@@ -734,7 +735,7 @@ export class GroqSequentialProcessor {
       // Prepare GPT debug data
       const gptRequest = JSON.stringify(
         {
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
           messages: [
             {
               role: 'system',

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { log } from '@/lib/logger';
 
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -46,15 +47,30 @@ export default function ColorFilter({
 }: ColorFilterProps) {
   const [colors, setColors] = useState<ColorOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const inFlightKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchColors = async () => {
       try {
-        // Build URL with categoryId parameter if provided
-        const url = categoryId
-          ? `/api/colors?categoryId=${encodeURIComponent(categoryId)}`
-          : '/api/colors';
+        // If categoryId is an empty string, wait for the real value to avoid duplicate fetch
+        if (categoryId === '') {
+          log.info('⏳ Skipping colors fetch until categoryId is known');
+          return;
+        }
 
+        // Build URL with categoryId parameter if provided, undefined means global colors
+        const url =
+          categoryId === undefined
+            ? '/api/colors'
+            : `/api/colors?categoryId=${encodeURIComponent(categoryId)}`;
+
+        if (inFlightKeyRef.current === url) {
+          log.info('🛑 Skipping duplicate colors fetch', url);
+          return;
+        }
+        inFlightKeyRef.current = url;
+
+        log.group('🎨 Colors fetch START', url);
         const response = await fetch(url);
         const data = await response.json();
 
@@ -65,11 +81,14 @@ export default function ColorFilter({
             hex: COLOR_MAP[colorName.toLowerCase()] || '#808080',
           }));
           setColors(colorOptions);
+          log.info('🎨 Colors fetched', { count: colorOptions.length });
         }
+        log.groupEnd();
       } catch (error) {
-        console.error('Error fetching colors:', error);
+        log.error('Error fetching colors', error);
       } finally {
         setLoading(false);
+        inFlightKeyRef.current = null;
       }
     };
 

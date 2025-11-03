@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useParams, usePathname } from 'next/navigation';
 
 import { ProductGrid } from '@/components/catalog/ProductGrid';
+import { log } from '@/lib/logger';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
 import CategoryBreadcrumbs from '@/components/catalog/CategoryBreadcrumbs';
@@ -63,6 +64,27 @@ function CatalogPageContent() {
   const [canPersist, setCanPersist] = useState(false);
   // Ensure we restore saved filters before category sync/fetch
   const [restored, setRestored] = useState(false);
+  // Hold saved filters until category is known to avoid double fetch
+  const [savedFilters, setSavedFilters] = useState<any | null>(null);
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
+  const initialFetchDoneRef = useRef(false);
+  const initMergedRef = useRef(false);
+  const savedFiltersRef = useRef<any | null>(null);
+
+  // On mount: disable native scroll restoration to avoid browser jump fighting our own
+  useEffect(() => {
+    const prev = history.scrollRestoration;
+    try {
+      history.scrollRestoration = 'manual';
+      log.info('🧭 scrollRestoration set to manual');
+    } catch {}
+    return () => {
+      try {
+        history.scrollRestoration = prev;
+        log.info('🧭 scrollRestoration restored');
+      } catch {}
+    };
+  }, []);
 
   // Fetch category information when category path changes (after restore)
   useEffect(() => {
@@ -71,6 +93,13 @@ function CatalogPageContent() {
       if (!categoryPath) {
         setCategoryId('');
         setCategoryName('');
+        // If no category path, trigger initial fetch once using saved filters
+        if (restored && savedFiltersRef.current && !initialFetchDoneRef.current) {
+          initialFetchDoneRef.current = true;
+          setInitialFetchDone(true);
+          log.info('🚀 Initial catalog fetch (no category path)', { savedFilters: savedFiltersRef.current });
+          handleFiltersChange(savedFiltersRef.current);
+        }
         return;
       }
 
@@ -92,8 +121,13 @@ function CatalogPageContent() {
           setParentChildren(data.parentChildren || []);
           setParentCategory(data.parentCategory || null);
           setIsParentCategory(data.isParentCategory || false);
-          // sync filters with category (after restore applied)
-          handleFiltersChange({ categoryId: data.id });
+          // Perform single initial fetch combining saved filters + category id
+          if (restored && savedFiltersRef.current && !initialFetchDoneRef.current) {
+            initialFetchDoneRef.current = true;
+            setInitialFetchDone(true);
+            log.info('🚀 Initial catalog fetch (with category)', { categoryId: data.id, savedFilters: savedFiltersRef.current });
+            handleFiltersChange({ ...savedFiltersRef.current, categoryId: data.id });
+          }
         } else {
           setCategoryId('');
           setCategoryName('');
@@ -116,37 +150,31 @@ function CatalogPageContent() {
     if (restored) fetchCategory();
   }, [categoryPath, restored]);
 
-  // Load saved filters for this specific catalog path (per-device persistence)
+  // Load saved filters and merge with URL params ONLY ONCE before initial fetch
   useEffect(() => {
-    if (!pathname) return;
+    if (!pathname || initMergedRef.current) return;
+    initMergedRef.current = true;
     const saved = loadPersistedCatalogFilters(pathname);
-    if (saved) {
-      // Do not set categoryId here; it's handled via category fetch above
-      handleFiltersChange(saved);
-    }
+
+    const pageParam = parseInt(searchParams.get('page') || '1', 10);
+    const pageSizeParam = parseInt(searchParams.get('pageSize') || '20', 10);
+    const searchParam = searchParams.get('search');
+
+    const merged = {
+      ...(saved || {}),
+      page: pageParam,
+      pageSize: pageSizeParam,
+      ...(searchParam && { search: searchParam }),
+    };
+
+    log.info('📦 Restored filters (merged with URL)', merged);
+    if (searchParam) setSearchQuery(searchParam);
+    setSavedFilters(merged);
+    savedFiltersRef.current = merged;
     setCanPersist(true);
     setRestored(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
-  // Initialize search query from URL parameters
-  useEffect(() => {
-    const searchParam = searchParams.get('search');
-    if (searchParam) {
-      setSearchQuery(searchParam);
-    }
-    const pageParam = parseInt(searchParams.get('page') || '1', 10);
-    const pageSizeParam = parseInt(searchParams.get('pageSize') || '20', 10);
-    if (pageParam !== filters.page || pageSizeParam !== filters.pageSize) {
-      handleFiltersChange({ page: pageParam, pageSize: pageSizeParam });
-    }
-  }, [
-    searchParams,
-    setSearchQuery,
-    handleFiltersChange,
-    filters.page,
-    filters.pageSize,
-  ]);
+  }, [pathname, setSearchQuery]);
 
   // Persist filters whenever they change, scoped by current pathname
   usePersistCatalogFilters(pathname, {
@@ -160,15 +188,43 @@ function CatalogPageContent() {
     pageSize: filters.pageSize,
   }, { enabled: canPersist });
 
-  // Scroll to product when returning from product page
+  // React to URL page/pageSize changes after initial fetch
+  const prevSearchParamsRef = useRef<string>('');
   useEffect(() => {
+    // Skip during initial load
+    if (!restored || !initialFetchDone) {
+      // Store initial searchParams to compare later
+      prevSearchParamsRef.current = searchParams.toString();
+      return;
+    }
+    
+    const currentParams = searchParams.toString();
+    // Skip if params haven't actually changed (prevents duplicate calls)
+    if (currentParams === prevSearchParamsRef.current) return;
+    prevSearchParamsRef.current = currentParams;
+    
+    const pageParam = parseInt(searchParams.get('page') || String(filters.page), 10);
+    const pageSizeParam = parseInt(
+      searchParams.get('pageSize') || String(filters.pageSize),
+      10
+    );
+    if (pageParam !== filters.page || pageSizeParam !== filters.pageSize) {
+      handleFiltersChange({ page: pageParam, pageSize: pageSizeParam });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, restored, initialFetchDone, filters.page, filters.pageSize]);
+
+  // Scroll to product when returning from product page (guarded against double-invocation)
+  const hasScrolledRef = useRef(false);
+  useEffect(() => {
+    if (hasScrolledRef.current) return;
     if (loading || !products.length) return;
 
     try {
       const navData = sessionStorage.getItem('productNavigation');
       if (!navData) return;
 
-      const { productId, referrer } = JSON.parse(navData);
+      const { productId, referrer, timestamp } = JSON.parse(navData);
       if (!productId || !referrer) return;
 
       // Normalize referrer URL (handle both full URLs and relative paths)
@@ -179,7 +235,6 @@ function CatalogPageContent() {
           : new URL(referrer, window.location.origin);
         referrerPath = referrerUrl.pathname + referrerUrl.search;
       } catch {
-        // If referrer is not a valid URL, try treating it as a path
         referrerPath = referrer.split('?')[0] + (referrer.includes('?') ? '?' + referrer.split('?')[1] : '');
       }
 
@@ -187,32 +242,36 @@ function CatalogPageContent() {
       const currentPath = currentUrl.pathname + currentUrl.search;
 
       // Only scroll if we're on a catalog page that matches the referrer
-      // Check both /catalog and /catalog/... paths
       if ((currentPath === '/catalog' || currentPath.startsWith('/catalog/')) && referrerPath === currentPath) {
-        // Find the product element
         const productElement = document.querySelector(
           `[data-product-id="${productId}"]`
         );
 
         if (productElement) {
-          // Use setTimeout to ensure DOM is ready
-          setTimeout(() => {
+          // Prevent duplicate scrolls before scheduling
+          hasScrolledRef.current = true;
+          // Remove the flag immediately so a second render won't schedule again
+          sessionStorage.removeItem('productNavigation');
+
+          // Use requestAnimationFrame to ensure layout is settled, then smooth scroll once
+          requestAnimationFrame(() => {
             productElement.scrollIntoView({
               behavior: 'smooth',
               block: 'center',
             });
-          }, 100);
-
-          // Clear the navigation data after scrolling
-          sessionStorage.removeItem('productNavigation');
+          });
         }
       }
     } catch (error) {
-      // Silently fail if sessionStorage data is invalid
       console.error('Error scrolling to product:', error);
       sessionStorage.removeItem('productNavigation');
     }
   }, [loading, products.length]);
+
+  // Show a single skeleton while either category or products are loading
+  if (categoryLoading || (loading && products.length === 0)) {
+    return <CatalogPageFallback />;
+  }
 
   if (error) {
     return (

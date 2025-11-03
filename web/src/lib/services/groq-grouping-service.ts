@@ -25,11 +25,17 @@ export interface GroupingDebugInfo {
  */
 export class GroqGroupingService {
   private groq: Groq | null = null;
+  private textModel: string;
 
   constructor() {
     if (!process.env.GROQ_API_KEY) {
       throw new Error('GROQ_API_KEY is required');
     }
+    // Prefer grouping-specific override, then generic text model. Default to production Llama 3.1 8B
+    this.textModel =
+      process.env.GROQ_GROUPING_MODEL ||
+      process.env.GROQ_TEXT_MODEL ||
+      'llama-3.1-8b-instant';
   }
 
   private async initializeGroq(): Promise<Groq> {
@@ -48,7 +54,7 @@ export class GroqGroupingService {
 
     try {
       console.log(
-        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Scout 17B 16E)...`
+        `📊 Grouping ${messages.length} messages with Groq (model: ${this.textModel})...`
       );
 
       // Prepare messages for grouping
@@ -56,7 +62,7 @@ export class GroqGroupingService {
 
       // Prepare the full request for debugging
       const fullRequest = {
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: this.textModel,
         messages: [
           {
             role: 'system',
@@ -131,7 +137,7 @@ export class GroqGroupingService {
 
     try {
       console.log(
-        `📊 Grouping ${messages.length} messages with Groq (Llama-4 Scout 17B 16E)...`
+        `📊 Grouping ${messages.length} messages with Groq (model: ${this.textModel})...`
       );
 
       // Prepare messages for grouping
@@ -139,7 +145,7 @@ export class GroqGroupingService {
 
       // Prepare the full request for debugging
       const fullRequest = {
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: this.textModel,
         messages: [
           {
             role: 'system',

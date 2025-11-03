@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { log } from '@/lib/logger';
 
 import { useSearch } from '@/contexts/SearchContext';
 import { FilterOptions } from '@/types/filters';
@@ -61,14 +62,38 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
     pageSize: options?.initialFilters?.pageSize ?? 20,
   });
 
+  // De-duplication guards (avoid duplicate fetches under StrictMode or identical requests)
+  const inFlightKeyRef = useRef<string | null>(null);
+  const lastSuccessKeyRef = useRef<string | null>(null);
+
   // Fetch products from backend
+  function makeRequestKey(obj: CatalogFilters) {
+    const ordered: any = {};
+    Object.keys(obj)
+      .sort()
+      .forEach(k => {
+        const v: any = (obj as any)[k];
+        ordered[k] = Array.isArray(v) ? [...v].sort() : v;
+      });
+    return JSON.stringify(ordered);
+  }
+
   const fetchProducts = useCallback(
     async (newFilters?: Partial<CatalogFilters>) => {
+      const currentFilters = { ...filters, ...newFilters };
+      const requestKey = makeRequestKey(currentFilters);
+
+      // Skip if identical request is already in flight or just succeeded
+      if (inFlightKeyRef.current === requestKey || lastSuccessKeyRef.current === requestKey) {
+        log.info('🛑 Skipping duplicate catalog fetch', { currentFilters });
+        return;
+      }
+
+      inFlightKeyRef.current = requestKey;
       setLoading(true);
       setError(null);
 
       try {
-        const currentFilters = { ...filters, ...newFilters };
         const searchParams = new URLSearchParams();
 
         // Add all filter parameters
@@ -88,7 +113,10 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         searchParams.set('page', currentFilters.page.toString());
         searchParams.set('pageSize', currentFilters.pageSize.toString());
 
-        const response = await fetch(`/api/catalog?${searchParams.toString()}`);
+        const url = `/api/catalog?${searchParams.toString()}`;
+        log.group('📡 Catalog fetch START', url);
+        log.info('filters', currentFilters);
+        const response = await fetch(url);
 
         if (!response.ok) {
           throw new Error('Failed to fetch products');
@@ -98,11 +126,16 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         setProducts(data.products);
         setPagination(data.pagination);
         setFilters(currentFilters);
+        lastSuccessKeyRef.current = requestKey;
+        log.info('✅ Catalog fetch DONE', { count: data.products.length, pagination: data.pagination });
+        log.groupEnd();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
+        log.error('❌ Catalog fetch FAILED', err);
         setProducts([]);
       } finally {
         setLoading(false);
+        inFlightKeyRef.current = null;
       }
     },
     [filters]
