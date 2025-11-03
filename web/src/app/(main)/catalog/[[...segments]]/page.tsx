@@ -1,8 +1,8 @@
 'use client';
- 
+
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useParams, usePathname } from 'next/navigation';
- 
+
 import { ProductGrid } from '@/components/catalog/ProductGrid';
 import { log } from '@/lib/logger';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
@@ -197,12 +197,12 @@ function CatalogPageContent() {
       prevSearchParamsRef.current = searchParams.toString();
       return;
     }
-    
+
     const currentParams = searchParams.toString();
     // Skip if params haven't actually changed (prevents duplicate calls)
     if (currentParams === prevSearchParamsRef.current) return;
     prevSearchParamsRef.current = currentParams;
-    
+
     const pageParam = parseInt(searchParams.get('page') || String(filters.page), 10);
     const pageSizeParam = parseInt(
       searchParams.get('pageSize') || String(filters.pageSize),

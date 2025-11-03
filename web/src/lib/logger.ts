@@ -7,6 +7,7 @@ const getDebugFlag = () => {
   // Check env var
   return process.env.NEXT_PUBLIC_DEBUG_LOGS === '1';
 };
+
 const DEBUG = getDebugFlag();
 
 function ts() {
