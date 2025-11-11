@@ -1,6 +1,9 @@
 import { prisma } from '../db-node';
-import { generateArticleNumber } from './product-creation-mappers';
-import { createSlug } from './product-creation-mappers';
+import {
+  generateArticleNumber,
+  createSlug,
+  mapSeason,
+} from './product-creation-mappers';
 import { AnalysisValidationService } from './analysis-validation-service';
 import { DeduplicationService } from './deduplication-service';
 import { normalizeColorToRussian } from '@/lib/utils/color-normalization';
@@ -10,6 +13,7 @@ import {
 } from '../provider-utils';
 import { getCategoryTree, type CategoryNode } from '../catalog-categories';
 import { getGroqConfig } from '../groq-proxy-config';
+import { getTokenLogger } from '../utils/groq-token-logger';
 import Groq from 'groq-sdk';
 
 export interface CreateInactiveProductParams {
@@ -209,6 +213,24 @@ export class SimpleProductService {
     // Text analysis doesn't provide categoryId, so we keep the temporary category for now
     const productName = analysisResult.name || 'Untitled Product';
 
+    // Normalize season value - handle invalid values like "SPRING/SUMMER"
+    let normalizedSeason: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null = null;
+    if (analysisResult.season) {
+      try {
+        // mapSeason handles values like "SPRING/SUMMER" by checking if string includes season name
+        normalizedSeason = mapSeason(analysisResult.season);
+        console.log(
+          `✅ Normalized season "${analysisResult.season}" → "${normalizedSeason}" for product ${product.id}`
+        );
+      } catch (error) {
+        console.warn(
+          `⚠️ Failed to normalize season "${analysisResult.season}" for product ${product.id}, setting to null:`,
+          error
+        );
+        normalizedSeason = null;
+      }
+    }
+
     // Update product with analysis results (category will be set later from image analysis)
     await prisma.product.update({
       where: { id: product.id },
@@ -218,7 +240,7 @@ export class SimpleProductService {
         material: analysisResult.material || '',
         pricePair: analysisResult.price || 0,
         gender: analysisResult.gender || null,
-        season: analysisResult.season || null,
+        season: normalizedSeason,
         sizes: analysisResult.sizes || [],
         // categoryId will be set by updateProductWithImageAnalysis from image analysis results
         batchProcessingStatus: 'analysis_complete',
@@ -428,10 +450,23 @@ export class SimpleProductService {
         productGender = result.gender;
       }
       if (result.season && !productSeason) {
-        productSeason = result.season;
+        // Normalize season value - handle invalid values like "SPRING/SUMMER"
+        try {
+          productSeason = mapSeason(result.season);
+          console.log(
+            `✅ Normalized season from image analysis "${result.season}" → "${productSeason}"`
+          );
+        } catch (error) {
+          console.warn(
+            `⚠️ Failed to normalize season "${result.season}" from image analysis, keeping existing:`,
+            error
+          );
+        }
       }
       if (result.material && !productMaterial) {
-        productMaterial = result.material;
+        // Ensure material is concise (1-2 words max)
+        const materialWords = result.material.trim().split(/\s+/);
+        productMaterial = materialWords.slice(0, 2).join(' '); // Take only first 1-2 words
       }
       // Category is already validated and set above
 
@@ -627,7 +662,10 @@ export class SimpleProductService {
 
       // Use LLM to determine the best matching category
       const groqConfig = await getGroqConfig();
-      const groq = new Groq({ apiKey: groqConfig.apiKey });
+      const groq = new Groq({
+        apiKey: groqConfig.apiKey,
+        baseURL: groqConfig.baseURL, // Use proxy baseURL
+      });
 
       const categoryOptions = validCategories.map(cat => ({
         id: cat.id,
@@ -672,6 +710,19 @@ Return JSON:
         temperature: 0.1,
       });
 
+      // Log token usage
+      if (response.usage) {
+        getTokenLogger().log(
+          'category-classification',
+          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          response.usage,
+          {
+            categoryPromptLength: categoryPrompt.length,
+            validCategoriesCount: validCategories.length,
+          }
+        );
+      }
+
       const result = JSON.parse(response.choices[0].message.content || '{}');
       const selectedCategoryId = result.categoryId;
 
@@ -681,13 +732,27 @@ Return JSON:
       );
 
       if (isValid && selectedCategoryId) {
-        const selectedCategory = validCategories.find(
-          cat => cat.id === selectedCategoryId
-        );
-        console.log(
-          `✅ LLM selected category: ${selectedCategory?.name} (${selectedCategoryId})`
-        );
-        return selectedCategoryId;
+        // Double-check that it's actually a leaf category (no children)
+        const category = await prisma.category.findUnique({
+          where: { id: selectedCategoryId, isActive: true },
+          include: { children: { where: { isActive: true } } },
+        });
+
+        if (category && category.children.length === 0) {
+          const selectedCategory = validCategories.find(
+            cat => cat.id === selectedCategoryId
+          );
+          console.log(
+            `✅ LLM selected leaf category: ${selectedCategory?.name} (${selectedCategoryId})`
+          );
+          return selectedCategoryId;
+        } else {
+          console.warn(
+            `⚠️ LLM selected category ${selectedCategoryId} is not a leaf category (has ${category?.children.length || 0} children), rejecting`
+          );
+          // Fallback: use first valid category as last resort
+          return validCategories[0]?.id || null;
+        }
       } else {
         console.log(
           `⚠️ LLM returned invalid category ID: ${selectedCategoryId}, will use first valid category`

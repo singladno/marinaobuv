@@ -69,3 +69,41 @@ export async function getAllCategories() {
     orderBy: { sort: 'asc' },
   });
 }
+
+/**
+ * Get only leaf categories (categories without children) from the tree
+ * This is useful for reducing token usage in category analysis
+ */
+export function getLeafCategories(categories: CategoryNode[]): Array<{
+  id: string;
+  name: string;
+  slug: string;
+  path: string;
+}> {
+  const leafCategories: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    path: string;
+  }> = [];
+
+  const traverse = (nodes: CategoryNode[]) => {
+    for (const node of nodes) {
+      if (node.children.length === 0) {
+        // This is a leaf category
+        leafCategories.push({
+          id: node.id,
+          name: node.name,
+          slug: node.slug,
+          path: node.path,
+        });
+      } else {
+        // Has children, traverse deeper
+        traverse(node.children);
+      }
+    }
+  };
+
+  traverse(categories);
+  return leafCategories;
+}

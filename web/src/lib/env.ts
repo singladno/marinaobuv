@@ -99,9 +99,9 @@ const schema = z
       .string()
       .optional()
       .transform(val => {
-        if (!val) return 100;
+        if (!val) return 40; // Reduced from 100 to 40 to stay under 8K tokens
         const parsed = parseInt(val, 10);
-        if (isNaN(parsed) || parsed < 10) return 100;
+        if (isNaN(parsed) || parsed < 10) return 40;
         return parsed;
       }),
 
@@ -154,6 +154,11 @@ const schema = z
     WEBHOOK_NOTIFICATIONS_ENABLED: z.string().optional(),
     WEBHOOK_NOTIFICATION_NUMBERS: z.string().optional(),
     WEBHOOK_NOTIFICATION_MESSAGE: z.string().optional(),
+
+    // Telegram Notifications (fallback when WhatsApp is not authorized)
+    TELEGRAM_BOT_TOKEN: z.string().optional(),
+    TELEGRAM_CHAT_IDS: z.string().optional(),
+    TELEGRAM_NOTIFICATIONS_ENABLED: z.string().optional(),
   })
   .refine(
     data => isBuildContext || data.YC_IAM_TOKEN || data.YC_API_KEY,
@@ -235,6 +240,11 @@ const raw = {
   WEBHOOK_NOTIFICATIONS_ENABLED: process.env.WEBHOOK_NOTIFICATIONS_ENABLED,
   WEBHOOK_NOTIFICATION_NUMBERS: process.env.WEBHOOK_NOTIFICATION_NUMBERS,
   WEBHOOK_NOTIFICATION_MESSAGE: process.env.WEBHOOK_NOTIFICATION_MESSAGE,
+
+  // Telegram Notifications
+  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+  TELEGRAM_CHAT_IDS: process.env.TELEGRAM_CHAT_IDS,
+  TELEGRAM_NOTIFICATIONS_ENABLED: process.env.TELEGRAM_NOTIFICATIONS_ENABLED,
 };
 
 const parsed = schema.safeParse(raw);

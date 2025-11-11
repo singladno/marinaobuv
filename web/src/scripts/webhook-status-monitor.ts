@@ -8,6 +8,7 @@
 import './load-env';
 import { env } from '../lib/env';
 import { prisma } from '../lib/db-node';
+import { getTelegramNotifier } from '../lib/utils/telegram-notifier';
 
 interface WebhookStatus {
   isConnected: boolean;
@@ -17,7 +18,6 @@ interface WebhookStatus {
 }
 
 interface NotificationConfig {
-  phoneNumbers: string[];
   message: string;
   enabled: boolean;
 }
@@ -37,13 +37,8 @@ export class WebhookStatusMonitor {
     this.token = env.GREEN_API_TOKEN;
     this.baseUrl = env.GREEN_API_BASE_URL || 'https://api.green-api.com';
 
-    // Parse notification phone numbers from environment
-    const notificationNumbers = env.WEBHOOK_NOTIFICATION_NUMBERS || '';
+    // Telegram notification configuration
     this.notificationConfig = {
-      phoneNumbers: notificationNumbers
-        .split(',')
-        .map((num: string) => num.trim())
-        .filter(Boolean),
       message:
         env.WEBHOOK_NOTIFICATION_MESSAGE ||
         '⚠️ Webhook Alert: Green API instance is disconnected. Please check the connection.',
@@ -166,62 +161,30 @@ export class WebhookStatusMonitor {
   }
 
   /**
-   * Send WhatsApp notification to configured numbers
+   * Send notification via Telegram
    */
   async sendNotification(message: string): Promise<void> {
-    if (
-      !this.notificationConfig.enabled ||
-      this.notificationConfig.phoneNumbers.length === 0
-    ) {
-      console.log('📵 Notifications disabled or no phone numbers configured');
+    if (!this.notificationConfig.enabled) {
+      console.log('📵 Notifications disabled');
       return;
     }
 
-    console.log(
-      `📱 Sending notifications to ${this.notificationConfig.phoneNumbers.length} numbers...`
-    );
+    const telegramNotifier = getTelegramNotifier();
 
-    for (const phoneNumber of this.notificationConfig.phoneNumbers) {
-      try {
-        await this.sendWhatsAppMessage(phoneNumber, message);
-        console.log(`✅ Notification sent to ${phoneNumber}`);
-      } catch (error) {
-        console.error(
-          `❌ Failed to send notification to ${phoneNumber}:`,
-          error
-        );
-      }
-    }
-  }
-
-  /**
-   * Send WhatsApp message using Green API
-   */
-  private async sendWhatsAppMessage(
-    phoneNumber: string,
-    message: string
-  ): Promise<void> {
-    const response = await fetch(
-      `${this.baseUrl}/waInstance${this.instanceId}/sendMessage/${this.token}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chatId: phoneNumber,
-          message: message,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Failed to send message: ${JSON.stringify(errorData)}`);
+    if (!telegramNotifier.isConfigured()) {
+      console.error(
+        '❌ Telegram notifications not configured. Please set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS environment variables.'
+      );
+      return;
     }
 
-    const result = await response.json();
-    console.log(`📤 Message sent to ${phoneNumber}:`, result);
+    try {
+      await telegramNotifier.sendMessage(message);
+      console.log('✅ Telegram notification sent successfully');
+    } catch (error) {
+      console.error('❌ Failed to send Telegram notification:', error);
+      throw error;
+    }
   }
 
   /**
@@ -254,9 +217,16 @@ export class WebhookStatusMonitor {
   async monitor(): Promise<void> {
     console.log('🚀 Starting Webhook Status Monitor...');
     console.log(`📱 Notifications enabled: ${this.notificationConfig.enabled}`);
-    console.log(
-      `📞 Notification numbers: ${this.notificationConfig.phoneNumbers.join(', ')}`
-    );
+
+    const telegramNotifier = getTelegramNotifier();
+    if (telegramNotifier.isConfigured()) {
+      console.log('✅ Telegram notifications configured');
+    } else {
+      console.log('⚠️ Telegram notifications not configured');
+      console.log(
+        '   Please set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS environment variables'
+      );
+    }
 
     const status = await this.checkInstanceStatus();
 
@@ -267,7 +237,7 @@ export class WebhookStatusMonitor {
       console.log('🚨 Webhook is not working properly!');
       console.log(`❌ Error: ${status.errorMessage}`);
 
-      // Send notification if enabled
+      // Send Telegram notification if enabled
       if (this.notificationConfig.enabled) {
         const notificationMessage = `${this.notificationConfig.message}\n\nDetails: ${status.errorMessage}\nTime: ${status.lastCheck.toISOString()}`;
         await this.sendNotification(notificationMessage);

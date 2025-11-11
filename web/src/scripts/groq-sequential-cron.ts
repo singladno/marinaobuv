@@ -4,6 +4,7 @@ import { ParsingCoordinator } from '../lib/services/parsing-coordinator';
 import { ParsingProgressService } from '../lib/services/parsing-progress-service';
 import { env } from '../lib/env';
 import { scriptPrisma as prisma } from '../lib/script-db';
+import { initializeTokenLogger, closeTokenLogger } from '../lib/utils/groq-token-logger';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -79,6 +80,10 @@ async function main() {
 
   try {
     console.log('🚀 Starting Groq Sequential Processing Cron Job...');
+
+    // Initialize token usage logger
+    initializeTokenLogger();
+    console.log('📊 Token usage logging initialized');
 
     // Graceful shutdown handler
     const gracefulShutdown = async (signal: string) => {
@@ -377,6 +382,9 @@ async function main() {
 
     throw error;
   } finally {
+    // Close token logger and print summary
+    closeTokenLogger();
+    
     // Restore console and close log stream
     restoreConsole(logStream, originalLog, originalError);
   }

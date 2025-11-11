@@ -4,7 +4,16 @@
 export function mapSeason(
   aiSeason: string
 ): 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' {
-  const season = aiSeason.toUpperCase();
+  if (!aiSeason || typeof aiSeason !== 'string') {
+    return 'AUTUMN'; // Default fallback
+  }
+
+  const season = aiSeason.toUpperCase().trim();
+
+  // Handle exact matches first (most specific)
+  if (season === 'SPRING' || season === 'SUMMER' || season === 'AUTUMN' || season === 'WINTER') {
+    return season as 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER';
+  }
 
   // Handle common variations
   if (
@@ -14,6 +23,9 @@ export function mapSeason(
   ) {
     return 'AUTUMN'; // Demi-season is typically autumn/fall
   }
+
+  // Handle combined seasons like "SPRING/SUMMER" - pick the first one found
+  // Check in order: SPRING, SUMMER, AUTUMN, WINTER
   if (season.includes('SPRING') || season.includes('ВЕСНА')) {
     return 'SPRING';
   }

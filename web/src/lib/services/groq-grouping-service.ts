@@ -1,6 +1,8 @@
 import Groq from 'groq-sdk';
 import { prisma } from '../db-node';
 import { getGroqConfig } from '../groq-proxy-config';
+import { getTokenLogger } from '../utils/groq-token-logger';
+import { env } from '../env';
 import {
   GROUPING_SYSTEM_PROMPT,
   GROUPING_USER_PROMPT,
@@ -47,16 +49,56 @@ export class GroqGroupingService {
   }
 
   /**
-   * Group messages using Groq
+   * Group messages using Groq with batching to stay under 8K tokens
    */
   async groupMessages(messages: any[]): Promise<MessageGroup[]> {
     if (messages.length === 0) return [];
 
-    try {
-      console.log(
-        `📊 Grouping ${messages.length} messages with Groq (model: ${this.textModel})...`
-      );
+    // Use PROCESSING_BATCH_SIZE for consistency, but cap at 40 for Groq token limits
+    const maxPerCall = Math.min(env.PROCESSING_BATCH_SIZE || 40, 40);
+    
+    // If messages fit in one batch, process directly
+    if (messages.length <= maxPerCall) {
+      return await this.groupMessagesBatch(messages);
+    }
 
+    // Otherwise, split into batches
+    console.log(
+      `📊 Grouping ${messages.length} messages in batches of ${maxPerCall} with Groq...`
+    );
+
+    const allGroups: MessageGroup[] = [];
+    
+    // Sort messages by timestamp to maintain chronological order
+    const sortedMessages = [...messages].sort(
+      (a, b) =>
+        new Date(a.createdAt || a.timestamp).getTime() -
+        new Date(b.createdAt || b.timestamp).getTime()
+    );
+
+    // Process in batches
+    for (let i = 0; i < sortedMessages.length; i += maxPerCall) {
+      const batch = sortedMessages.slice(i, i + maxPerCall);
+      console.log(
+        `📦 Processing batch ${Math.floor(i / maxPerCall) + 1}/${Math.ceil(sortedMessages.length / maxPerCall)} (${batch.length} messages)`
+      );
+      
+      const batchGroups = await this.groupMessagesBatch(batch);
+      allGroups.push(...batchGroups);
+    }
+
+    console.log(
+      `✅ Total: ${allGroups.length} groups from ${messages.length} messages across ${Math.ceil(sortedMessages.length / maxPerCall)} batches`
+    );
+
+    return allGroups;
+  }
+
+  /**
+   * Group a single batch of messages (max maxPerCall messages)
+   */
+  private async groupMessagesBatch(messages: any[]): Promise<MessageGroup[]> {
+    try {
       // Prepare messages for grouping
       const messagesText = this.prepareMessagesForGrouping(messages);
 
@@ -81,6 +123,19 @@ export class GroqGroupingService {
         await this.initializeGroq()
       ).chat.completions.create(fullRequest as any);
 
+      // Log token usage
+      if (response.usage) {
+        getTokenLogger().log(
+          'message-grouping',
+          this.textModel,
+          response.usage,
+          {
+            messageCount: messages.length,
+            messageTextLength: messagesText.length,
+          }
+        );
+      }
+
       const result = JSON.parse(response.choices[0].message.content || '{}');
 
       if (!result.groups || !Array.isArray(result.groups)) {
@@ -89,26 +144,17 @@ export class GroqGroupingService {
       }
 
       console.log(
-        `✅ Groq grouped messages into ${result.groups.length} groups`
-      );
-      console.log(
-        `📊 From ${messages.length} messages ${result.groups.length} groups detected`
+        `✅ Groq grouped ${messages.length} messages into ${result.groups.length} groups`
       );
 
-      // Trust LLM - all groups are valid
-      console.log(
-        `✅ Accepting all ${result.groups.length} groups from LLM (no manual validation)`
-      );
-
-      // Store the request and response for debugging
-      await this.storeGroupingDebugInfo(messages, fullRequest, response);
+      // Store the request and response for debugging (only for first batch to avoid spam)
+      const maxPerCall = Math.min(env.PROCESSING_BATCH_SIZE || 40, 40);
+      if (messages.length <= maxPerCall) {
+        await this.storeGroupingDebugInfo(messages, fullRequest, response);
+      }
 
       // Post-process groups: split if text is followed by image, then filter invalid groups
-      const processedGroups = this.postProcessGroups(result.groups, messages);
-
-      console.log(
-        `🔧 Post-processing: ${result.groups.length} → ${processedGroups.length} groups`
-      );
+      const processedGroups = await this.postProcessGroups(result.groups, messages);
 
       return processedGroups;
     } catch (error) {
@@ -135,13 +181,18 @@ export class GroqGroupingService {
         },
       };
 
+    // Use PROCESSING_BATCH_SIZE for consistency, but cap at 40 for Groq token limits
+    const maxPerCall = Math.min(env.PROCESSING_BATCH_SIZE || 40, 40);
+    // For debug version, process first batch only (to get debug info)
+    const batch = messages.slice(0, maxPerCall);
+
     try {
       console.log(
         `📊 Grouping ${messages.length} messages with Groq (model: ${this.textModel})...`
       );
 
-      // Prepare messages for grouping
-      const messagesText = this.prepareMessagesForGrouping(messages);
+      // Prepare messages for grouping (first batch only for debug)
+      const messagesText = this.prepareMessagesForGrouping(batch);
 
       // Prepare the full request for debugging
       const fullRequest = {
@@ -164,6 +215,19 @@ export class GroqGroupingService {
         await this.initializeGroq()
       ).chat.completions.create(fullRequest as any);
 
+      // Log token usage
+      if (response.usage) {
+        getTokenLogger().log(
+          'message-grouping-debug',
+          this.textModel,
+          response.usage,
+          {
+            messageCount: batch.length,
+            messageTextLength: messagesText.length,
+          }
+        );
+      }
+
       const result = JSON.parse(response.choices[0].message.content || '{}');
 
       if (!result.groups || !Array.isArray(result.groups)) {
@@ -173,26 +237,18 @@ export class GroqGroupingService {
           debugInfo: {
             request: JSON.stringify(fullRequest, null, 2),
             response: JSON.stringify(response, null, 2),
-            messageCount: messages.length,
-            messageIds: messages.map(m => m.id),
+            messageCount: batch.length,
+            messageIds: batch.map(m => m.id),
           },
         };
       }
 
       console.log(
-        `✅ Groq grouped messages into ${result.groups.length} groups`
-      );
-      console.log(
-        `📊 From ${messages.length} messages ${result.groups.length} groups detected`
-      );
-
-      // Trust LLM - all groups are valid
-      console.log(
-        `✅ Accepting all ${result.groups.length} groups from LLM (no manual validation)`
+        `✅ Groq grouped ${batch.length} messages into ${result.groups.length} groups`
       );
 
       // Post-process groups: split if text is followed by image, then filter invalid groups
-      const processedGroups = this.postProcessGroups(result.groups, messages);
+      const processedGroups = await this.postProcessGroups(result.groups, batch);
 
       console.log(
         `🔧 Post-processing: ${result.groups.length} → ${processedGroups.length} groups`
@@ -202,11 +258,19 @@ export class GroqGroupingService {
       const debugInfo: GroupingDebugInfo = {
         request: JSON.stringify(fullRequest, null, 2),
         response: JSON.stringify(response, null, 2),
-        messageCount: messages.length,
-        messageIds: messages.map(m => m.id),
+        messageCount: batch.length,
+        messageIds: batch.map(m => m.id),
       };
 
-      return { groups: processedGroups, debugInfo };
+      // If there are more messages, process them too (but without debug info)
+      let allGroups = processedGroups;
+      if (messages.length > maxPerCall) {
+        const remainingMessages = messages.slice(maxPerCall);
+        const remainingGroups = await this.groupMessages(remainingMessages);
+        allGroups = [...processedGroups, ...remainingGroups];
+      }
+
+      return { groups: allGroups, debugInfo };
     } catch (error) {
       console.error('❌ Error grouping messages with Groq:', error);
       return {
@@ -408,7 +472,9 @@ export class GroqGroupingService {
 
         const sender = msg.senderId || msg.from || 'unknown';
         const type = msg.type || 'unknown';
-        const text = msg.text || '';
+        const fullText = msg.text || '';
+        // Truncate text to first 200 characters to reduce token usage
+        const text = fullText.length > 200 ? fullText.substring(0, 200) + '...' : fullText;
         const mediaUrl = msg.mediaUrl || '';
 
         // Determine if this is a text message or image message for clarity
@@ -427,10 +493,10 @@ export class GroqGroupingService {
 - Timestamp (ISO): ${isoTimestamp}
 - Time (Local): ${localTime}${timeGapSeconds}
 - Type: ${messageTypeLabel} (${type})
-- Has Text: ${isTextMessage && text ? 'YES' : 'NO'}
+- Has Text: ${isTextMessage && fullText ? 'YES' : 'NO'}
 - Has Image: ${isImageMessage && mediaUrl ? 'YES' : 'NO'}
 - Text Content: ${text || '(empty)'}
-- Media URL: ${mediaUrl || '(none)'}
+- Media URL: ${mediaUrl ? 'YES' : 'NO'}
 ---`;
       })
       .join('\n\n');
@@ -439,10 +505,10 @@ export class GroqGroupingService {
   /**
    * Post-process groups: split groups where text is followed by image, then filter invalid groups
    */
-  private postProcessGroups(
+  private async postProcessGroups(
     groups: MessageGroup[],
     allMessages: any[]
-  ): MessageGroup[] {
+  ): Promise<MessageGroup[]> {
     const messageMap = new Map(allMessages.map(m => [m.id, m]));
     const splitGroups: MessageGroup[] = [];
 
@@ -587,7 +653,8 @@ export class GroqGroupingService {
     }
 
     // Filter: only keep groups that have both text and images
-    const validGroups = splitGroups.filter(group => {
+    const validGroups: MessageGroup[] = [];
+    for (const group of splitGroups) {
       const groupMessages = group.messageIds
         .map(id => messageMap.get(id))
         .filter(Boolean) as any[];
@@ -596,7 +663,7 @@ export class GroqGroupingService {
         console.log(
           `  🗑️ Filtering out group ${group.groupId}: no messages found`
         );
-        return false;
+        continue;
       }
 
       // Sort messages by timestamp for logging
@@ -642,8 +709,38 @@ export class GroqGroupingService {
           msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage')
       );
 
-      const hasText = textMessages.length > 0;
-      const hasImage = imageMessages.length > 0;
+      let hasText = textMessages.length > 0;
+      let hasImage = imageMessages.length > 0;
+
+      // If group has images but no text, try to find nearby text messages
+      if (hasImage && !hasText && sortedGroupMessages.length > 0) {
+        const recoveredGroup = await this.recoverTextForImageGroup(
+          sortedGroupMessages,
+          messageMap
+        );
+        if (recoveredGroup) {
+          // Update the group with recovered messages
+          group.messageIds = recoveredGroup.messageIds;
+          const recoveredTextMessages = recoveredGroup.messageIds
+            .map(id => messageMap.get(id))
+            .filter(Boolean)
+            .filter((msg: any) => {
+              const isTextMessageType =
+                msg.type === 'textMessage' || msg.type === 'extendedTextMessage';
+              return (
+                isTextMessageType ||
+                (msg.text &&
+                  typeof msg.text === 'string' &&
+                  msg.text.trim().length > 0)
+              );
+            });
+          console.log(
+            `  🔄 Recovered ${recoveredTextMessages.length} text messages for image-only group ${group.groupId}`
+          );
+          // Re-check validity after recovery
+          hasText = recoveredTextMessages.length > 0;
+        }
+      }
 
       // Valid group must have both text and images
       const isValid = hasText && hasImage;
@@ -669,12 +766,93 @@ export class GroqGroupingService {
         console.log(
           `  ✅ Keeping group ${group.groupId}: sequence=${messageTypes.join('')}, text=${textMessages.length}, images=${imageMessages.length}`
         );
+        validGroups.push(group);
       }
-
-      return isValid;
-    });
+    }
 
     return validGroups;
+  }
+
+  /**
+   * Recover text messages for image-only groups by finding nearby text messages
+   */
+  private async recoverTextForImageGroup(
+    imageMessages: any[],
+    messageMap: Map<string, any>
+  ): Promise<{ messageIds: string[] } | null> {
+    if (imageMessages.length === 0) return null;
+
+    // Get time range (first and last image timestamps)
+    const firstTimestamp = new Date(
+      imageMessages[0].createdAt || imageMessages[0].timestamp
+    ).getTime();
+    const lastTimestamp = new Date(
+      imageMessages[imageMessages.length - 1].createdAt ||
+        imageMessages[imageMessages.length - 1].timestamp
+    ).getTime();
+
+    // Get author and chat from first message
+    const author = imageMessages[0].from || imageMessages[0].senderId;
+    const chatId = imageMessages[0].chatId;
+    if (!author || !chatId) return null;
+
+    // Search for text messages within 120 seconds before first image or after last image
+    const searchWindowMs = 120 * 1000; // 120 seconds
+    const searchStart = new Date(firstTimestamp - searchWindowMs);
+    const searchEnd = new Date(lastTimestamp + searchWindowMs);
+
+    // Get all message IDs already in this group
+    const existingMessageIds = imageMessages.map((m: any) => m.id);
+
+    // Find text messages from same author in the time window
+    const textMessages = await prisma.whatsAppMessage.findMany({
+      where: {
+        chatId: chatId,
+        id: { notIn: existingMessageIds }, // Don't include already grouped messages
+        processed: false, // Only unprocessed messages
+        type: { in: ['textMessage', 'extendedTextMessage'] },
+        text: { not: null },
+        from: author,
+        createdAt: {
+          gte: searchStart,
+          lte: searchEnd,
+        },
+      },
+      select: { id: true, text: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+      take: 3, // Limit to 3 closest text messages
+    });
+
+    if (textMessages.length === 0) {
+      return null;
+    }
+
+    // Filter to messages that actually have text content
+    const validTextMessages = textMessages.filter(
+      (msg: any) => msg.text && msg.text.trim().length > 0
+    );
+
+    if (validTextMessages.length === 0) {
+      return null;
+    }
+
+    // Add recovered text messages to message map
+    for (const msg of validTextMessages) {
+      const fullMessage = await prisma.whatsAppMessage.findUnique({
+        where: { id: msg.id },
+      });
+      if (fullMessage) {
+        messageMap.set(msg.id, fullMessage);
+      }
+    }
+
+    // Return original image IDs + recovered text message IDs
+    return {
+      messageIds: [
+        ...existingMessageIds,
+        ...validTextMessages.map((m: any) => m.id),
+      ],
+    };
   }
 
   /**

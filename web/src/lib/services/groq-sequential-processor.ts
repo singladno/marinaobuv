@@ -1,14 +1,16 @@
 import Groq from 'groq-sdk';
 import { PrismaClient } from '@prisma/client';
 import { GroqGroupingService } from './groq-grouping-service';
+import { RuleBasedGroupingService } from './rule-based-grouping-service';
 import { SimpleProductService } from './simple-product-service';
 import { AnalysisValidationService } from './analysis-validation-service';
 import { FixedColorMappingService } from './fixed-color-mapping-service';
 import { ParsingProgressService } from './parsing-progress-service';
-import { getCategoryTree } from '../catalog-categories';
+import { getCategoryTree, getLeafCategories } from '../catalog-categories';
 import { getGroqConfig } from '../groq-proxy-config';
 import { uploadImage, getObjectKey, getPublicUrl } from '../storage';
 import { withRetry } from '../../utils/retry';
+import { getTokenLogger } from '../utils/groq-token-logger';
 import {
   TEXT_ANALYSIS_SYSTEM_PROMPT,
   TEXT_ANALYSIS_USER_PROMPT,
@@ -17,11 +19,16 @@ import {
   IMAGE_ANALYSIS_SYSTEM_PROMPT,
   IMAGE_ANALYSIS_USER_PROMPT,
 } from '../prompts/image-analysis-prompts';
+import {
+  CATEGORY_ANALYSIS_SYSTEM_PROMPT,
+  CATEGORY_ANALYSIS_USER_PROMPT,
+} from '../prompts/category-analysis-prompts';
 
 export class GroqSequentialProcessor {
   private groq: Groq | null = null;
   private prisma: PrismaClient;
   private groupingService: GroqGroupingService;
+  private ruleBasedGroupingService: RuleBasedGroupingService;
   private batchProductService: SimpleProductService;
   private validationService: AnalysisValidationService;
   private colorMappingService: FixedColorMappingService;
@@ -34,6 +41,7 @@ export class GroqSequentialProcessor {
     this.prisma = prismaClient;
     this.progressService = progressService;
     this.groupingService = new GroqGroupingService();
+    this.ruleBasedGroupingService = new RuleBasedGroupingService();
     this.batchProductService = new SimpleProductService();
     this.validationService = new AnalysisValidationService();
     this.colorMappingService = new FixedColorMappingService();
@@ -60,11 +68,30 @@ export class GroqSequentialProcessor {
     );
 
     try {
-      // Step 1: Group messages using Groq
-      console.log('📊 Step 1: Grouping messages...');
-      const groupingResult = await this.groupMessagesWithGroqDebug(messageIds);
+      // Step 1: Group messages using rule-based logic (no LLM needed)
+      console.log('📊 Step 1: Grouping messages using rule-based logic...');
+      const groupingResult = await this.groupMessagesWithRules(messageIds);
       const groups = groupingResult.groups;
-      const debugInfo = groupingResult.debugInfo;
+      const debugInfo = null; // No debug info for rule-based grouping
+
+      // Mark skipped messages (in the middle) as processed to avoid mixing with next batch
+      if (groupingResult.skippedMessageIds.length > 0) {
+        console.log(
+          `📝 Marking ${groupingResult.skippedMessageIds.length} skipped messages (in middle) as processed`
+        );
+        await this.prisma.whatsAppMessage.updateMany({
+          where: { id: { in: groupingResult.skippedMessageIds } },
+          data: { processed: true },
+        });
+      }
+
+      // Leave ungrouped messages at the end unprocessed (they'll be picked up in next batch)
+      if (groupingResult.ungroupedEndMessageIds.length > 0) {
+        console.log(
+          `📝 Leaving ${groupingResult.ungroupedEndMessageIds.length} ungrouped messages at end unprocessed (will process in next batch)`
+        );
+        // These messages remain unprocessed (processed: false) - no action needed
+      }
 
       if (groups.length === 0) {
         console.log('❌ No valid message groups found');
@@ -208,7 +235,12 @@ export class GroqSequentialProcessor {
               // Clean up the failed product
               await this.deleteInvalidProduct(productResult.productId);
             }
-            throw processingError; // Re-throw to be caught by outer try-catch
+            // Don't re-throw - continue processing remaining groups
+            // The error is already logged, and we want to process all groups in the batch
+            console.log(
+              `⚠️ Skipping product ${productResult.productId} due to error, continuing with next group...`
+            );
+            continue; // Continue to next group instead of throwing
           }
 
           processedProducts.push(productResult.productId);
@@ -240,15 +272,29 @@ export class GroqSequentialProcessor {
   }
 
   /**
-   * Group messages using Groq
+   * Group messages using rule-based logic (no LLM)
    */
-  private async groupMessagesWithGroq(messageIds: string[]): Promise<any[]> {
+  private async groupMessagesWithRules(
+    messageIds: string[]
+  ): Promise<{
+    groups: any[];
+    groupedMessageIds: string[];
+    skippedMessageIds: string[];
+    ungroupedEndMessageIds: string[];
+  }> {
     const messages = await this.prisma.whatsAppMessage.findMany({
       where: { id: { in: messageIds } },
       orderBy: { createdAt: 'asc' },
     });
 
-    if (messages.length === 0) return [];
+    if (messages.length === 0) {
+      return {
+        groups: [],
+        groupedMessageIds: [],
+        skippedMessageIds: [],
+        ungroupedEndMessageIds: [],
+      };
+    }
 
     // Prepare messages for grouping
     const messagesForGrouping = messages.map((msg: any) => ({
@@ -256,12 +302,27 @@ export class GroqSequentialProcessor {
       text: msg.text,
       type: msg.type,
       createdAt: msg.createdAt,
+      from: msg.from,
       senderId: msg.providerId,
-      mediaUrl: msg.mediaUrl || null, // Include mediaUrl so LLM can identify image messages
+      mediaUrl: msg.mediaUrl || null,
+      chatId: msg.chatId,
+      timestamp: msg.createdAt,
     }));
 
-    // Use existing grouping service but with Groq
-    return await this.groupingService.groupMessages(messagesForGrouping);
+    // Use rule-based grouping service (no LLM) with tracking
+    const result =
+      await this.ruleBasedGroupingService.groupMessagesWithTracking(
+        messagesForGrouping
+      );
+
+    console.log(
+      `✅ Rule-based grouping: ${messages.length} messages → ${result.groups.length} groups`
+    );
+    console.log(
+      `   - Grouped: ${result.groupedMessageIds.length}, Skipped (middle): ${result.skippedMessageIds.length}, Ungrouped (end): ${result.ungroupedEndMessageIds.length}`
+    );
+
+    return result;
   }
 
   /**
@@ -709,11 +770,12 @@ export class GroqSequentialProcessor {
             },
             {
               role: 'user',
-              content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls),
+              content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls.length),
             },
           ],
           response_format: { type: 'json_object' },
           temperature: 0.5,
+          max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
         }
       );
 
@@ -724,6 +786,21 @@ export class GroqSequentialProcessor {
       );
 
       const response = await Promise.race([groqPromise, timeoutPromise]);
+
+      // Log token usage
+      if (response.usage) {
+        getTokenLogger().log(
+          'text-analysis',
+          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          response.usage,
+          {
+            productId,
+            messageCount: messageIds.length,
+            imageCount: imageUrls.length,
+            textLength: textContents.length,
+          }
+        );
+      }
 
       const analysisResult = JSON.parse(
         response.choices[0].message.content || '{}'
@@ -743,7 +820,7 @@ export class GroqSequentialProcessor {
             },
             {
               role: 'user',
-              content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls),
+              content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls.length),
             },
           ],
           response_format: { type: 'json_object' },
@@ -983,13 +1060,9 @@ export class GroqSequentialProcessor {
     }
 
     try {
-      // Get category tree for category selection
-      const categoryTree = await getCategoryTree();
-      const categoryTreeJson = JSON.stringify(categoryTree, null, 2);
-
       const analysisResults = [];
 
-      // Process each image individually with Groq vision models
+      // Process each image individually with Groq vision models (without category tree)
       for (let i = 0; i < imageUrls.length; i++) {
         const imageUrl = imageUrls[i];
         console.log(
@@ -997,7 +1070,6 @@ export class GroqSequentialProcessor {
         );
 
         try {
-
           // Add timeout to Groq API call
           const groqPromise = (
             await this.initializeGroq()
@@ -1013,11 +1085,7 @@ export class GroqSequentialProcessor {
                 content: [
                   {
                     type: 'text',
-                    text: IMAGE_ANALYSIS_USER_PROMPT(
-                      imageUrl,
-                      textContent,
-                      categoryTreeJson
-                    ),
+                    text: IMAGE_ANALYSIS_USER_PROMPT(imageUrl, textContent),
                   },
                   {
                     type: 'image_url',
@@ -1028,6 +1096,7 @@ export class GroqSequentialProcessor {
             ],
             response_format: { type: 'json_object' },
             temperature: 0.1,
+            max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
           });
 
           // Add timeout to Groq API call
@@ -1038,23 +1107,24 @@ export class GroqSequentialProcessor {
 
           const response = await Promise.race([groqPromise, timeoutPromise]);
 
+          // Log token usage
+          if (response.usage) {
+            getTokenLogger().log(
+              'image-analysis',
+              'meta-llama/llama-4-maverick-17b-128e-instruct',
+              response.usage,
+              {
+                productId,
+                imageIndex: i + 1,
+                totalImages: imageUrls.length,
+                hasTextContent: !!textContent,
+              }
+            );
+          }
+
           const analysisResult = JSON.parse(
             response.choices[0].message.content || '{}'
           );
-
-          // Validate that categoryId is provided
-          if (!analysisResult.categoryId) {
-            console.log(
-              `⚠️ WARNING: LLM did not provide categoryId for image ${i + 1}`
-            );
-            console.log(
-              `   This will cause the product to use default "Обувь" category`
-            );
-          } else {
-            console.log(
-              `✅ LLM provided categoryId: ${analysisResult.categoryId}`
-            );
-          }
 
           // Add the image URL to the result for mapping
           analysisResult.imageUrl = imageUrl;
@@ -1063,10 +1133,138 @@ export class GroqSequentialProcessor {
           console.log(
             `✅ Image ${i + 1} analyzed: ${analysisResult.name || 'No name'} - Color: ${analysisResult.color || 'null'}`
           );
-        } catch (imageError) {
-          console.error(`❌ Error analyzing image ${i + 1}:`, imageError);
-          // Continue with other images
+        } catch (imageError: any) {
+          const errorMessage =
+            imageError instanceof Error
+              ? imageError.message
+              : JSON.stringify(imageError);
+          const is404Error =
+            errorMessage.includes('404') ||
+            errorMessage.includes('failed to retrieve media') ||
+            (imageError?.error?.error?.message?.includes('404') &&
+              imageError?.error?.error?.message?.includes('retrieve media'));
+
+          console.error(
+            `❌ Error analyzing image ${i + 1}:`,
+            errorMessage
+          );
+          // Continue with next image even if this one fails
         }
+      }
+
+      // Perform category analysis based on all image analysis results
+      let selectedCategoryId: string | null = null;
+      if (analysisResults.length > 0) {
+        try {
+          console.log(
+            `📂 Analyzing category for product ${productId} based on ${analysisResults.length} images`
+          );
+          
+            const categoryTree = await getCategoryTree();
+            // Use only leaf categories to reduce token usage (we only need to select from final categories anyway)
+            const leafCategories = getLeafCategories(categoryTree);
+            const categoryTreeJson = JSON.stringify(leafCategories, null, 2);
+
+          const categoryPromise = (
+            await this.initializeGroq()
+          ).chat.completions.create({
+            model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+            messages: [
+              {
+                role: 'system',
+                content: CATEGORY_ANALYSIS_SYSTEM_PROMPT,
+              },
+              {
+                role: 'user',
+                content: CATEGORY_ANALYSIS_USER_PROMPT(
+                  analysisResults,
+                  categoryTreeJson,
+                  textContent
+                ),
+              },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1,
+            max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
+          });
+
+          const categoryTimeoutPromise = new Promise<never>(
+            (_, reject) =>
+              setTimeout(() => reject(new Error('Groq API timeout')), 120000)
+          );
+
+          const categoryResponse = await Promise.race([
+            categoryPromise,
+            categoryTimeoutPromise,
+          ]);
+
+          // Log token usage
+          if (categoryResponse.usage) {
+            getTokenLogger().log(
+              'category-analysis',
+              'meta-llama/llama-4-maverick-17b-128e-instruct',
+              categoryResponse.usage,
+              {
+                productId,
+                imageCount: analysisResults.length,
+                categoryTreeSize: categoryTreeJson.length,
+              }
+            );
+          }
+
+          const categoryResult = JSON.parse(
+            categoryResponse.choices[0].message.content || '{}'
+          );
+
+          if (categoryResult.categoryId) {
+            // Validate that the returned categoryId is actually in the leaf categories list
+            const isValidLeafCategory = leafCategories.some(
+              cat => cat.id === categoryResult.categoryId
+            );
+
+            if (isValidLeafCategory) {
+              // Double-check that it's actually a leaf category (no children)
+              const category = await this.prisma.category.findUnique({
+                where: { id: categoryResult.categoryId, isActive: true },
+                include: { children: { where: { isActive: true } } },
+              });
+
+              if (category && category.children.length === 0) {
+                selectedCategoryId = categoryResult.categoryId;
+                console.log(
+                  `✅ Category selected: ${category.name} (${categoryResult.categoryId}) - confidence: ${categoryResult.confidence || 'N/A'}`
+                );
+              } else {
+                console.warn(
+                  `⚠️ Category ${categoryResult.categoryId} is not a leaf category (has ${category?.children.length || 0} children), rejecting`
+                );
+                // Don't set selectedCategoryId - will fall back to determineCategoryFromName
+              }
+            } else {
+              console.warn(
+                `⚠️ Category ID ${categoryResult.categoryId} from AI is not in the leaf categories list, rejecting`
+              );
+              // Don't set selectedCategoryId - will fall back to determineCategoryFromName
+            }
+          } else {
+            console.log(
+              `⚠️ Category analysis did not return categoryId, will use default`
+            );
+          }
+        } catch (categoryError) {
+          console.error(
+            `❌ Error in category analysis for product ${productId}:`,
+            categoryError
+          );
+          // Continue without category - will use default
+        }
+      }
+
+      // Add categoryId to all analysis results for compatibility
+      if (selectedCategoryId) {
+        analysisResults.forEach((result) => {
+          result.categoryId = selectedCategoryId;
+        });
       }
 
       // Extract proper color mappings from analysis results
@@ -1207,4 +1405,5 @@ export class GroqSequentialProcessor {
       // Don't throw error - this is not critical
     }
   }
+
 }

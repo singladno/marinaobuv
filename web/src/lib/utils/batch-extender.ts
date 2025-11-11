@@ -25,7 +25,7 @@ export async function extendBatchWithConsecutiveMessages(
     };
   }
 
-  // Get the messages with their sender and timestamp info
+  // Get the messages with their sender, timestamp, and chat info
   const messages = await prisma.whatsAppMessage.findMany({
     where: {
       id: { in: originalMessageIds },
@@ -34,6 +34,7 @@ export async function extendBatchWithConsecutiveMessages(
       id: true,
       from: true,
       createdAt: true,
+      chatId: true, // Include chatId to ensure we only extend within same chat
     },
     orderBy: { createdAt: 'asc' },
   });
@@ -51,14 +52,17 @@ export async function extendBatchWithConsecutiveMessages(
   const lastMessage = messages[messages.length - 1];
   const lastMessageTime = lastMessage.createdAt;
   const lastMessageSender = lastMessage.from;
+  const lastMessageChatId = lastMessage.chatId;
 
   // Look for consecutive messages from the same sender after our batch
   // IMPORTANT: Only include messages that are NOT already processed
+  // Also ensure they're from the same chat/group to avoid mixing different conversations
   const consecutiveMessages = await prisma.whatsAppMessage.findMany({
     where: {
       processed: false, // CRITICAL: Only unprocessed messages
       type: { in: ['textMessage', 'imageMessage', 'extendedTextMessage'] },
       from: lastMessageSender,
+      ...(lastMessageChatId && { chatId: lastMessageChatId }), // Same chat/group
       createdAt: {
         gt: lastMessageTime, // Messages after our batch
       },
@@ -156,6 +160,8 @@ export async function fetchExtendedBatch(
   }
 
   // Fetch messages with offset to prevent overlap
+  // IMPORTANT: Order by 'asc' (oldest first) to process messages chronologically
+  // This ensures we process messages in the order they were sent
   const initialMessages = await prisma.whatsAppMessage.findMany({
     where: {
       processed: false,
@@ -165,7 +171,7 @@ export async function fetchExtendedBatch(
         gte: cutoffTime, // Only messages from the last N hours
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: 'asc' }, // Process oldest messages first
     skip: offset,
     take: batchSize,
   });
@@ -182,14 +188,21 @@ export async function fetchExtendedBatch(
 
   const initialMessageIds = initialMessages.map(m => m.id);
 
-  // For offset-based batching, we can skip the complex consecutive message extension
-  // since we're processing in order and won't have overlaps
+  // Extend batch with consecutive messages from the same sender
+  // This ensures we don't split message sequences across batches
+  const extendedResult = await extendBatchWithConsecutiveMessages(
+    initialMessageIds,
+    batchSize
+  );
+
+  // Calculate next offset: original batch size (not extended size) to prevent overlap
+  // The extended messages will be processed in this batch, so next batch starts after original batch
   const nextOffset = offset + initialMessages.length;
 
   return {
-    messageIds: initialMessageIds,
-    totalCount: initialMessages.length,
-    extendedCount: 0,
+    messageIds: extendedResult.messageIds,
+    totalCount: extendedResult.totalCount,
+    extendedCount: extendedResult.extendedCount,
     originalBatchSize: batchSize,
     nextOffset,
   };

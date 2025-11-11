@@ -53,6 +53,7 @@ export const getGroqConfig = async () => {
   }
 
   console.log('🔄 Using Groq proxy server');
+  // Groq SDK appends /openai/v1 automatically, so baseURL should be just the proxy server
   const baseURL = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}${PROXY_CONFIG.path}`;
 
   return {
