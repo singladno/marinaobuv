@@ -37,17 +37,17 @@ class GroqTokenLogger {
     // Create a timestamped log file for each run
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     this.logFile = path.join(logsDir, `groq-token-usage-${timestamp}.json`);
-    
+
     // Also create a latest.json for easy access
     const latestFile = path.join(logsDir, 'groq-token-usage-latest.json');
-    
+
     // Initialize log file with empty array
     fs.writeFileSync(this.logFile, '[]');
     fs.writeFileSync(latestFile, '[]');
-    
+
     // Open write stream for appending
     this.logStream = fs.createWriteStream(this.logFile, { flags: 'a' });
-    
+
     console.log(`📊 Token usage logging to: ${this.logFile}`);
     console.log(`📊 Latest token usage also saved to: ${latestFile}`);
   }
@@ -102,7 +102,7 @@ class GroqTokenLogger {
     try {
       const logsDir = path.join(process.cwd(), 'logs');
       const latestFile = path.join(logsDir, 'groq-token-usage-latest.json');
-      
+
       // Write complete array to latest file
       fs.writeFileSync(latestFile, JSON.stringify(this.logs, null, 2));
     } catch (error) {
@@ -189,7 +189,7 @@ class GroqTokenLogger {
    */
   printSummary(): void {
     const summary = this.getSummary();
-    
+
     console.log('\n📊 ===== GROQ TOKEN USAGE SUMMARY =====');
     console.log(`Total API Calls: ${summary.totalCalls}`);
     console.log(`Total Input Tokens: ${summary.totalInputTokens.toLocaleString()}`);
@@ -198,7 +198,7 @@ class GroqTokenLogger {
     console.log(`\nAverage Input Tokens: ${summary.averageInputTokens.toLocaleString()}`);
     console.log(`Average Output Tokens: ${summary.averageOutputTokens.toLocaleString()}`);
     console.log(`Average Input:Output Ratio: ${summary.averageRatio}:1`);
-    
+
     console.log('\n📊 By Operation:');
     Object.keys(summary.byOperation).forEach((op) => {
       const stats = summary.byOperation[op];
@@ -208,7 +208,7 @@ class GroqTokenLogger {
       console.log(`    Avg Output: ${stats.avgOutput.toLocaleString()} tokens`);
       console.log(`    Avg Ratio: ${stats.avgRatio}:1`);
     });
-    
+
     console.log('\n📊 Groq Requirements Check:');
     console.log(`  ✅ Average Input < 8K: ${summary.averageInputTokens < 8000 ? '✅ PASS' : '❌ FAIL'} (${summary.averageInputTokens} tokens)`);
     console.log(`  ✅ Input:Output Ratio ~4:1: ${summary.averageRatio >= 3.5 && summary.averageRatio <= 4.5 ? '✅ PASS' : '⚠️  CHECK'} (${summary.averageRatio}:1)`);
@@ -258,5 +258,3 @@ export function closeTokenLogger(): void {
     loggerInstance = null;
   }
 }
-
-

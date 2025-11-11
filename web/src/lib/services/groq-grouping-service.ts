@@ -56,7 +56,7 @@ export class GroqGroupingService {
 
     // Use PROCESSING_BATCH_SIZE for consistency, but cap at 40 for Groq token limits
     const maxPerCall = Math.min(env.PROCESSING_BATCH_SIZE || 40, 40);
-    
+
     // If messages fit in one batch, process directly
     if (messages.length <= maxPerCall) {
       return await this.groupMessagesBatch(messages);
@@ -68,7 +68,7 @@ export class GroqGroupingService {
     );
 
     const allGroups: MessageGroup[] = [];
-    
+
     // Sort messages by timestamp to maintain chronological order
     const sortedMessages = [...messages].sort(
       (a, b) =>
@@ -82,7 +82,7 @@ export class GroqGroupingService {
       console.log(
         `📦 Processing batch ${Math.floor(i / maxPerCall) + 1}/${Math.ceil(sortedMessages.length / maxPerCall)} (${batch.length} messages)`
       );
-      
+
       const batchGroups = await this.groupMessagesBatch(batch);
       allGroups.push(...batchGroups);
     }
@@ -710,7 +710,7 @@ export class GroqGroupingService {
       );
 
       let hasText = textMessages.length > 0;
-      let hasImage = imageMessages.length > 0;
+      const hasImage = imageMessages.length > 0;
 
       // If group has images but no text, try to find nearby text messages
       if (hasImage && !hasText && sortedGroupMessages.length > 0) {

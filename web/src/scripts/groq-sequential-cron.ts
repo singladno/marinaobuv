@@ -384,7 +384,7 @@ async function main() {
   } finally {
     // Close token logger and print summary
     closeTokenLogger();
-    
+
     // Restore console and close log stream
     restoreConsole(logStream, originalLog, originalError);
   }

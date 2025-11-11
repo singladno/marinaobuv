@@ -7,7 +7,7 @@
 
 import './load-env';
 import { env } from '../lib/env';
-import { formatPhoneForWhatsApp } from '../lib/utils/whatsapp-phone-extractor';
+import { normalizePhoneToE164 } from '../lib/server/sms';
 
 async function checkInstanceStatus() {
   const instanceId = env.GREEN_API_INSTANCE_ID;
@@ -49,9 +49,13 @@ async function sendTestMessage(phoneNumber: string, message: string) {
 
   console.log('\n🧪 Testing WhatsApp notification...');
   console.log(`📱 Phone number (E164): ${phoneNumber}`);
-  
-  // Convert to WhatsApp JID format
-  const chatId = formatPhoneForWhatsApp(phoneNumber);
+
+  // Convert to WhatsApp JID format (E164 format is compatible)
+  const normalizedPhone = normalizePhoneToE164(phoneNumber);
+  if (!normalizedPhone) {
+    throw new Error(`Invalid phone number: ${phoneNumber}`);
+  }
+  const chatId = normalizedPhone.replace('+', '') + '@c.us';
   console.log(`📱 ChatId (WhatsApp JID): ${chatId}`);
   console.log(`💬 Message: ${message}`);
 
@@ -95,21 +99,21 @@ async function sendTestMessage(phoneNumber: string, message: string) {
 
     console.log('✅ Message sent successfully!');
     console.log('📥 Response:', JSON.stringify(result, null, 2));
-    
+
     if (result.idMessage) {
       console.log(`\n✅ Message ID: ${result.idMessage}`);
-      
+
       // Check message status after a short delay
       console.log('\n⏳ Waiting 2 seconds, then checking message status...');
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       try {
         const statusResponse = await fetch(
           `${baseUrl}/waInstance${instanceId}/checkWhatsapp/${token}`
         );
         const statusData = await statusResponse.json();
         console.log('📊 WhatsApp connection status:', JSON.stringify(statusData, null, 2));
-        
+
         // Try to get message status
         try {
           const messageStatusResponse = await fetch(
@@ -125,7 +129,7 @@ async function sendTestMessage(phoneNumber: string, message: string) {
       } catch (e) {
         console.log('ℹ️  Could not check connection status');
       }
-      
+
       console.log('\n📱 Check your WhatsApp to see if the message was delivered.');
       console.log('⚠️  Note: If instance is not authorized, message will NOT be delivered even if API returns success.');
     }
@@ -154,4 +158,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 
 export { sendTestMessage };
-

@@ -125,8 +125,8 @@ export class GroqSequentialProcessor {
               messageIds: group.messageIds,
               productContext: group.productContext,
               confidence: group.confidence,
-              gptRequest: debugInfo?.request || null,
-              gptResponse: debugInfo?.response || null,
+              gptRequest: undefined, // No debug info for rule-based grouping
+              gptResponse: undefined, // No debug info for rule-based grouping
             });
 
           // Skip processing if this is a dummy product ID (already processed)
@@ -1159,8 +1159,8 @@ export class GroqSequentialProcessor {
           console.log(
             `📂 Analyzing category for product ${productId} based on ${analysisResults.length} images`
           );
-          
-            const categoryTree = await getCategoryTree();
+
+          const categoryTree = await getCategoryTree();
             // Use only leaf categories to reduce token usage (we only need to select from final categories anyway)
             const leafCategories = getLeafCategories(categoryTree);
             const categoryTreeJson = JSON.stringify(leafCategories, null, 2);
