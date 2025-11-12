@@ -11,6 +11,7 @@ import { getGroqConfig } from '../groq-proxy-config';
 import { uploadImage, getObjectKey, getPublicUrl } from '../storage';
 import { withRetry } from '../../utils/retry';
 import { getTokenLogger } from '../utils/groq-token-logger';
+import { groqChatCompletion } from './groq-api-wrapper';
 import {
   TEXT_ANALYSIS_SYSTEM_PROMPT,
   TEXT_ANALYSIS_USER_PROMPT,
@@ -222,7 +223,9 @@ export class GroqSequentialProcessor {
               });
               // Delete the invalid product
               await this.deleteInvalidProduct(productResult.productId);
-            } else if (errorMessage.includes('Product deleted: missing required data')) {
+            } else if (
+              errorMessage.includes('Product deleted: missing required data')
+            ) {
               console.log(
                 `⚠️ Product deleted due to missing price/sizes - messages already reset for reprocessing`
               );
@@ -274,9 +277,7 @@ export class GroqSequentialProcessor {
   /**
    * Group messages using rule-based logic (no LLM)
    */
-  private async groupMessagesWithRules(
-    messageIds: string[]
-  ): Promise<{
+  private async groupMessagesWithRules(messageIds: string[]): Promise<{
     groups: any[];
     groupedMessageIds: string[];
     skippedMessageIds: string[];
@@ -495,11 +496,15 @@ export class GroqSequentialProcessor {
       if (msg.type === 'extendedTextMessage' || msg.type === 'textMessage') {
         // For extendedTextMessage, the type itself indicates it's text, but we still check text exists
         // Some extendedTextMessage may have text in rawPayload even if text field is empty
-        return msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
+        return (
+          msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0
+        );
       }
 
       // For other types, check if they have text content
-      return msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
+      return (
+        msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0
+      );
     });
 
     const hasImage = messages.some(
@@ -524,7 +529,9 @@ export class GroqSequentialProcessor {
   /**
    * Recover image-only groups by finding nearby text messages
    */
-  private async recoverImageOnlyGroup(imageMessageIds: string[]): Promise<string[]> {
+  private async recoverImageOnlyGroup(
+    imageMessageIds: string[]
+  ): Promise<string[]> {
     // Get the image messages to find their timestamps and author
     const imageMessages = await this.prisma.whatsAppMessage.findMany({
       where: { id: { in: imageMessageIds } },
@@ -578,10 +585,7 @@ export class GroqSequentialProcessor {
         processed: false, // Only unprocessed messages
         type: { in: ['textMessage', 'extendedTextMessage'] },
         text: { not: null },
-        OR: [
-          { providerId: author },
-          { from: author },
-        ],
+        OR: [{ providerId: author }, { from: author }],
         createdAt: {
           gte: searchStart,
           lte: searchEnd,
@@ -644,7 +648,8 @@ export class GroqSequentialProcessor {
         msg.type === 'textMessage' || msg.type === 'extendedTextMessage';
 
       // Check if message has text content
-      const hasText = msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
+      const hasText =
+        msg.text && typeof msg.text === 'string' && msg.text.trim().length > 0;
 
       const hasImage =
         msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage');
@@ -683,8 +688,7 @@ export class GroqSequentialProcessor {
     // 1. All messages from same author, OR
     // 2. It's a common valid pattern (ITIIII, TIIIT, etc.)
     // This handles cases where author detection fails but pattern is clearly valid
-    const maxChanges =
-      allSameAuthor || isCommonValidPattern ? 2 : 1;
+    const maxChanges = allSameAuthor || isCommonValidPattern ? 2 : 1;
     const isValid = typeChanges <= maxChanges;
 
     if (isValid && typeChanges === 2) {
@@ -755,14 +759,17 @@ export class GroqSequentialProcessor {
       );
     }
 
-    console.log(`📤 Analyzing product ${productId} with Groq (${imageUrls.length} images)`);
+    console.log(
+      `📤 Analyzing product ${productId} with Groq (${imageUrls.length} images)`
+    );
 
     try {
-      // Add timeout to Groq API call
-      const groqPromise = (await this.initializeGroq()).chat.completions.create(
+      // Use Groq API wrapper with retry and circuit breaker
+      const groq = await this.initializeGroq();
+      const response = await groqChatCompletion(
+        groq,
         {
-          model:
-            process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
           messages: [
             {
               role: 'system',
@@ -770,25 +777,27 @@ export class GroqSequentialProcessor {
             },
             {
               role: 'user',
-              content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls.length),
+              content: TEXT_ANALYSIS_USER_PROMPT(
+                textContents,
+                imageUrls.length
+              ),
             },
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.5,
-          max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
+          temperature: 0.3, // Lower temperature for more consistent JSON generation
+          max_tokens: 3000, // Increased to prevent truncation and ensure complete JSON
+        },
+        `text-analysis-${productId}`,
+        {
+          maxRetries: 5,
+          baseDelayMs: 2000, // Start with 2s for 503 errors
+          maxDelayMs: 60000, // Max 60s delay
+          timeoutMs: 120000, // 2 minute timeout
         }
       );
 
-      // Add timeout to Groq API call
-      const timeoutPromise = new Promise<never>(
-        (_, reject) =>
-          setTimeout(() => reject(new Error('Groq API timeout')), 120000) // 2 minute timeout
-      );
-
-      const response = await Promise.race([groqPromise, timeoutPromise]);
-
-      // Log token usage
-      if (response.usage) {
+      // Log token usage (response is ChatCompletion, not Stream)
+      if ('usage' in response && response.usage) {
         getTokenLogger().log(
           'text-analysis',
           process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
@@ -800,6 +809,11 @@ export class GroqSequentialProcessor {
             textLength: textContents.length,
           }
         );
+      }
+
+      // Type guard: ensure it's ChatCompletion, not Stream
+      if (!('choices' in response)) {
+        throw new Error('Unexpected response type from Groq API');
       }
 
       const analysisResult = JSON.parse(
@@ -820,7 +834,10 @@ export class GroqSequentialProcessor {
             },
             {
               role: 'user',
-              content: TEXT_ANALYSIS_USER_PROMPT(textContents, imageUrls.length),
+              content: TEXT_ANALYSIS_USER_PROMPT(
+                textContents,
+                imageUrls.length
+              ),
             },
           ],
           response_format: { type: 'json_object' },
@@ -833,7 +850,7 @@ export class GroqSequentialProcessor {
       const gptResponse = JSON.stringify(
         {
           choices: response.choices,
-          usage: response.usage,
+          usage: 'usage' in response ? response.usage : undefined,
           model: response.model,
           id: response.id,
           created: response.created,
@@ -888,7 +905,6 @@ export class GroqSequentialProcessor {
         const imageUrl = message.mediaUrl!;
 
         try {
-
           // Download image from original URL with retry mechanism
           const response = await withRetry(
             async () => {
@@ -1070,45 +1086,46 @@ export class GroqSequentialProcessor {
         );
 
         try {
-          // Add timeout to Groq API call
-          const groqPromise = (
-            await this.initializeGroq()
-          ).chat.completions.create({
-            model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
-            messages: [
-              {
-                role: 'system',
-                content: IMAGE_ANALYSIS_SYSTEM_PROMPT,
-              },
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: IMAGE_ANALYSIS_USER_PROMPT(imageUrl, textContent),
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: { url: imageUrl },
-                  },
-                ],
-              },
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.1,
-            max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
-          });
-
-          // Add timeout to Groq API call
-          const timeoutPromise = new Promise<never>(
-            (_, reject) =>
-              setTimeout(() => reject(new Error('Groq API timeout')), 120000) // 2 minute timeout
+          // Use Groq API wrapper with retry and circuit breaker for 503 errors
+          const groq = await this.initializeGroq();
+          const response = await groqChatCompletion(
+            groq,
+            {
+              model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+              messages: [
+                {
+                  role: 'system',
+                  content: IMAGE_ANALYSIS_SYSTEM_PROMPT,
+                },
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      type: 'text',
+                      text: IMAGE_ANALYSIS_USER_PROMPT(imageUrl, textContent),
+                    },
+                    {
+                      type: 'image_url',
+                      image_url: { url: imageUrl },
+                    },
+                  ],
+                },
+              ],
+              response_format: { type: 'json_object' },
+              temperature: 0.1,
+              max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
+            },
+            `image-analysis-${productId}-${i}`,
+            {
+              maxRetries: 5,
+              baseDelayMs: 2000, // Start with 2s for 503 "over capacity" errors
+              maxDelayMs: 60000, // Max 60s delay (as Groq suggests exponential backoff)
+              timeoutMs: 120000, // 2 minute timeout
+            }
           );
 
-          const response = await Promise.race([groqPromise, timeoutPromise]);
-
-          // Log token usage
-          if (response.usage) {
+          // Log token usage (response is ChatCompletion, not Stream)
+          if ('usage' in response && response.usage) {
             getTokenLogger().log(
               'image-analysis',
               'meta-llama/llama-4-maverick-17b-128e-instruct',
@@ -1120,6 +1137,11 @@ export class GroqSequentialProcessor {
                 hasTextContent: !!textContent,
               }
             );
+          }
+
+          // Type guard: ensure it's ChatCompletion, not Stream
+          if (!('choices' in response)) {
+            throw new Error('Unexpected response type from Groq API');
           }
 
           const analysisResult = JSON.parse(
@@ -1144,10 +1166,19 @@ export class GroqSequentialProcessor {
             (imageError?.error?.error?.message?.includes('404') &&
               imageError?.error?.error?.message?.includes('retrieve media'));
 
-          console.error(
-            `❌ Error analyzing image ${i + 1}:`,
-            errorMessage
-          );
+          // Check if it's a 503 "over capacity" error that exhausted retries
+          const is503Error =
+            errorMessage.includes('503') ||
+            errorMessage.includes('over capacity') ||
+            imageError?.error?.error?.message?.includes('over capacity');
+
+          if (is503Error) {
+            console.error(
+              `❌ Error analyzing image ${i + 1}: Groq API over capacity (503) - all retries exhausted. Will skip this image.`
+            );
+          } else {
+            console.error(`❌ Error analyzing image ${i + 1}:`, errorMessage);
+          }
           // Continue with next image even if this one fails
         }
       }
@@ -1161,45 +1192,45 @@ export class GroqSequentialProcessor {
           );
 
           const categoryTree = await getCategoryTree();
-            // Use only leaf categories to reduce token usage (we only need to select from final categories anyway)
-            const leafCategories = getLeafCategories(categoryTree);
-            const categoryTreeJson = JSON.stringify(leafCategories, null, 2);
+          // Use only leaf categories to reduce token usage (we only need to select from final categories anyway)
+          const leafCategories = getLeafCategories(categoryTree);
+          const categoryTreeJson = JSON.stringify(leafCategories, null, 2);
 
-          const categoryPromise = (
-            await this.initializeGroq()
-          ).chat.completions.create({
-            model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
-            messages: [
-              {
-                role: 'system',
-                content: CATEGORY_ANALYSIS_SYSTEM_PROMPT,
-              },
-              {
-                role: 'user',
-                content: CATEGORY_ANALYSIS_USER_PROMPT(
-                  analysisResults,
-                  categoryTreeJson,
-                  textContent
-                ),
-              },
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.1,
-            max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
-          });
-
-          const categoryTimeoutPromise = new Promise<never>(
-            (_, reject) =>
-              setTimeout(() => reject(new Error('Groq API timeout')), 120000)
+          // Use Groq API wrapper with retry and circuit breaker
+          const groq = await this.initializeGroq();
+          const categoryResponse = await groqChatCompletion(
+            groq,
+            {
+              model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+              messages: [
+                {
+                  role: 'system',
+                  content: CATEGORY_ANALYSIS_SYSTEM_PROMPT,
+                },
+                {
+                  role: 'user',
+                  content: CATEGORY_ANALYSIS_USER_PROMPT(
+                    analysisResults,
+                    categoryTreeJson,
+                    textContent
+                  ),
+                },
+              ],
+              response_format: { type: 'json_object' },
+              temperature: 0.1,
+              max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
+            },
+            `category-analysis-${productId}`,
+            {
+              maxRetries: 5,
+              baseDelayMs: 2000,
+              maxDelayMs: 60000,
+              timeoutMs: 120000,
+            }
           );
 
-          const categoryResponse = await Promise.race([
-            categoryPromise,
-            categoryTimeoutPromise,
-          ]);
-
-          // Log token usage
-          if (categoryResponse.usage) {
+          // Log token usage (response is ChatCompletion, not Stream)
+          if ('usage' in categoryResponse && categoryResponse.usage) {
             getTokenLogger().log(
               'category-analysis',
               'meta-llama/llama-4-maverick-17b-128e-instruct',
@@ -1210,6 +1241,11 @@ export class GroqSequentialProcessor {
                 categoryTreeSize: categoryTreeJson.length,
               }
             );
+          }
+
+          // Type guard: ensure it's ChatCompletion, not Stream
+          if (!('choices' in categoryResponse)) {
+            throw new Error('Unexpected response type from Groq API');
           }
 
           const categoryResult = JSON.parse(
@@ -1262,7 +1298,7 @@ export class GroqSequentialProcessor {
 
       // Add categoryId to all analysis results for compatibility
       if (selectedCategoryId) {
-        analysisResults.forEach((result) => {
+        analysisResults.forEach(result => {
           result.categoryId = selectedCategoryId;
         });
       }
@@ -1405,5 +1441,4 @@ export class GroqSequentialProcessor {
       // Don't throw error - this is not critical
     }
   }
-
 }
