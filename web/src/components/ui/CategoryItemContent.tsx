@@ -11,6 +11,7 @@ type CategoryItemContentProps = {
   isHighlighted: boolean;
   level: number;
   onSelect: () => void;
+  hasChildren?: boolean;
 };
 
 export function CategoryItemContent({
@@ -20,7 +21,10 @@ export function CategoryItemContent({
   isHighlighted,
   level,
   onSelect,
+  hasChildren = false,
 }: CategoryItemContentProps) {
+  const isSelectable = !hasChildren;
+  
   return (
     <div
       className={`group flex-1 rounded-lg transition-all duration-200 ${getIndentationClass(
@@ -32,13 +36,18 @@ export function CategoryItemContent({
             ? 'bg-blue-50 text-blue-700'
             : isHighlighted
               ? 'border border-amber-200 bg-amber-50 text-amber-700'
-              : 'hover:bg-gray-50 hover:text-gray-900'
+              : isSelectable
+                ? 'hover:bg-gray-50 hover:text-gray-900'
+                : 'opacity-60'
       }`}
     >
       <button
         onClick={onSelect}
-        className="w-full cursor-pointer rounded-md px-1 py-2.5 text-left transition-all duration-200 disabled:cursor-default"
-        disabled={isSelected}
+        className={`w-full rounded-md px-1 py-2.5 text-left transition-all duration-200 ${
+          isSelectable ? 'cursor-pointer' : 'cursor-not-allowed'
+        } disabled:cursor-default`}
+        disabled={isSelected || !isSelectable}
+        title={!isSelectable ? 'Выберите конечную категорию (без подкатегорий)' : undefined}
       >
         <div className="flex items-center">
           {isSelected && (

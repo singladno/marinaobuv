@@ -5,6 +5,7 @@ import { log } from '@/lib/logger';
 
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { getColorHex } from '@/utils/colorMapping';
 
 import FilterPill from './FilterPill';
 
@@ -19,26 +20,6 @@ interface ColorFilterProps {
   onChange: (colors: string[]) => void;
   categoryId?: string;
 }
-
-// Color mapping from Russian names to hex values
-const COLOR_MAP: Record<string, string> = {
-  белый: '#FFFFFF',
-  черный: '#000000',
-  красный: '#FF0000',
-  синий: '#0000FF',
-  зеленый: '#008000',
-  желтый: '#FFFF00',
-  оранжевый: '#FFA500',
-  розовый: '#FFC0CB',
-  фиолетовый: '#800080',
-  коричневый: '#A52A2A',
-  серый: '#808080',
-  бежевый: '#F5F5DC',
-  голубой: '#87CEEB',
-  бордовый: '#800020',
-  магнета: '#FF00FF',
-  фуксия: '#FF00FF',
-};
 
 export default function ColorFilter({
   value,
@@ -78,7 +59,7 @@ export default function ColorFilter({
           const colorOptions = data.colors.map((colorName: string) => ({
             name: colorName,
             value: colorName,
-            hex: COLOR_MAP[colorName.toLowerCase()] || '#808080',
+            hex: getColorHex(colorName),
           }));
           setColors(colorOptions);
           log.info('🎨 Colors fetched', { count: colorOptions.length });

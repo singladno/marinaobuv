@@ -1,6 +1,8 @@
 'use client';
 import { useMemo, useRef, useState, useEffect } from 'react';
 
+import { getColorHex } from '@/utils/colorMapping';
+
 type PurchaseItem = {
   id: string;
   sortIndex: number;
@@ -11,51 +13,6 @@ type Props = {
   items: PurchaseItem[];
   onSubmitIndex: (itemId: string, newIndex: number) => Promise<void>;
 };
-
-const colorMap: Record<string, string> = {
-  black: '#000000',
-  white: '#FFFFFF',
-  gray: '#9CA3AF',
-  grey: '#9CA3AF',
-  red: '#EF4444',
-  blue: '#3B82F6',
-  green: '#10B981',
-  yellow: '#F59E0B',
-  orange: '#F97316',
-  brown: '#92400E',
-  beige: '#D2B48C',
-  pink: '#EC4899',
-  purple: '#8B5CF6',
-  violet: '#8B5CF6',
-  navy: '#1E3A8A',
-  tan: '#D2B48C',
-  чёрный: '#000000',
-  черный: '#000000',
-  белый: '#FFFFFF',
-  серый: '#9CA3AF',
-  красный: '#EF4444',
-  синий: '#3B82F6',
-  голубой: '#60A5FA',
-  зелёный: '#10B981',
-  зеленый: '#10B981',
-  жёлтый: '#F59E0B',
-  желтый: '#F59E0B',
-  оранжевый: '#F97316',
-  коричневый: '#92400E',
-  бежевый: '#D2B48C',
-  розовый: '#EC4899',
-  фиолетовый: '#8B5CF6',
-  бордовый: '#7F1D1D',
-  хаки: '#8A9A5B',
-  небесный: '#60A5FA',
-  молочный: '#F8FAFC',
-};
-
-function resolveColor(name?: string | null) {
-  if (!name) return '#8B5CF6'; // default purple for single-color case
-  const n = name.trim().toLowerCase().replace(/[_]/g, ' ').replace(/\s+/g, ' ');
-  return colorMap[n] || '#D1D5DB';
-}
 
 export default function PurchaseIndexBadges({ items, onSubmitIndex }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -79,7 +36,7 @@ export default function PurchaseIndexBadges({ items, onSubmitIndex }: Props) {
   return (
     <div className="absolute left-3 top-3 z-30 flex gap-1">
       {sorted.map(item => {
-        const bg = resolveColor(item.color);
+        const bg = item.color ? getColorHex(item.color) : '#8B5CF6';
         const isEditing = editingId === item.id;
         return (
           <div key={item.id} className="relative">

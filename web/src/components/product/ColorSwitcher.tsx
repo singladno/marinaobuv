@@ -1,3 +1,5 @@
+import { getColorHex } from '@/utils/colorMapping';
+
 type ColorOption = { color: string; imageUrl: string };
 
 type Props = {
@@ -21,66 +23,6 @@ export default function ColorSwitcher({
 }: Props) {
   if (!options || options.length <= 1) return null;
 
-  // Normalize color names for robust matching
-  const normalizeColor = (name: string) =>
-    name
-      .trim()
-      .toLowerCase()
-      .replace(/[_]/g, ' ')
-      .replace(/[\s-]+/g, ' ');
-  const colorMap: Record<string, string> = {
-    black: '#000000',
-    white: '#FFFFFF',
-    gray: '#9CA3AF',
-    grey: '#9CA3AF',
-    red: '#EF4444',
-    blue: '#3B82F6',
-    green: '#10B981',
-    yellow: '#F59E0B',
-    orange: '#F97316',
-    brown: '#92400E',
-    // make beige darker and more saturated
-    beige: '#D2B48C',
-    pink: '#EC4899',
-    purple: '#8B5CF6',
-    violet: '#8B5CF6',
-    navy: '#1E3A8A',
-    tan: '#D2B48C',
-    чёрный: '#000000',
-    черный: '#000000',
-    белый: '#FFFFFF',
-    серый: '#9CA3AF',
-    красный: '#EF4444',
-    синий: '#3B82F6',
-    голубой: '#60A5FA',
-    зелёный: '#10B981',
-    зеленый: '#10B981',
-    жёлтый: '#F59E0B',
-    желтый: '#F59E0B',
-    оранжевый: '#F97316',
-    коричневый: '#92400E',
-    бежевый: '#D2B48C',
-    розовый: '#EC4899',
-    фиолетовый: '#8B5CF6',
-    бордовый: '#7F1D1D',
-    хаки: '#8A9A5B',
-    небесный: '#60A5FA',
-    молочный: '#F8FAFC',
-  };
-
-  const resolveColor = (name: string) => {
-    if (!name) return '#D1D5DB';
-    const n = normalizeColor(name);
-    // direct map
-    if (n in colorMap) return colorMap[n as keyof typeof colorMap];
-    // heuristics to bring back blue variants
-    if (n.includes('navy') || n.includes('blue') || n.includes('син'))
-      return '#3B82F6';
-    if (n.includes('голуб')) return '#60A5FA';
-    if (n.includes('темно син') || n.includes('тёмно син')) return '#1E3A8A';
-    return '#D1D5DB';
-  };
-
   const dirClass = direction === 'col' ? 'flex-col' : 'flex-row flex-wrap';
 
   return (
@@ -88,7 +30,7 @@ export default function ColorSwitcher({
       {options.map(opt => {
         const isSelected =
           selectedColor?.toLowerCase() === opt.color.toLowerCase();
-        const bg = resolveColor(opt.color);
+        const bg = getColorHex(opt.color);
         const isAdded = addedColors.some(
           c => c && c.toLowerCase() === opt.color.toLowerCase()
         );

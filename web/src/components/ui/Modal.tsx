@@ -6,7 +6,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen';
   className?: string;
   zIndex?: string;
   headerContent?: React.ReactNode;
@@ -55,25 +55,31 @@ export function Modal({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
+    fullscreen: 'max-w-full h-full',
   };
 
+  const isFullscreen = size === 'fullscreen';
+
   const modalContent = (
-    <div className={`fixed inset-0 ${zIndex} grid place-items-center p-4`}>
+    <div className={`fixed inset-0 ${zIndex} ${isFullscreen ? '' : 'grid place-items-center p-4'}`}>
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 cursor-pointer bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      {!isFullscreen && (
+        <div
+          className="absolute inset-0 cursor-pointer bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Modal */}
       <div
-        className={`relative w-full ${sizeClasses[size]} ${className}`}
+        className={`relative ${isFullscreen ? 'w-full h-full' : `w-full ${sizeClasses[size]}`} ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        onClick={e => e.stopPropagation()}
       >
-        <div className="rounded-card-large bg-card shadow-modal flex max-h-[80vh] flex-col overflow-hidden">
+        <div className={`${isFullscreen ? 'h-full' : 'rounded-card-large max-h-[80vh]'} bg-card shadow-modal flex flex-col overflow-hidden`}>
           {/* Header */}
           <div className="bg-card flex-shrink-0 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
             <div className="flex items-center justify-between">

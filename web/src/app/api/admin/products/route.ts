@@ -4,6 +4,8 @@ import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getProductById, getProducts } from './product-service';
 import { productInclude } from './product-includes';
+import { slugify } from '@/utils/slugify';
+import { generateArticleNumber } from '@/lib/services/product-creation-mappers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -42,26 +44,155 @@ export async function POST(req: NextRequest) {
       return auth.error;
     }
 
-    const { id } = await req.json();
+    const body = await req.json();
+    const {
+      name,
+      categoryId,
+      pricePair,
+      material,
+      gender,
+      season,
+      description,
+      sizes,
+      currency = 'RUB',
+      isActive = true,
+    } = body;
 
-    if (!id) {
+    // Validate required fields
+    if (!name || !name.trim()) {
       return NextResponse.json(
-        { error: 'Требуется ID товара' },
+        { error: 'Название товара обязательно' },
         { status: 400 }
       );
     }
 
-    const product = await getProductById(id);
-
-    if (!product) {
-      return NextResponse.json({ error: 'Товар не найден' }, { status: 404 });
+    if (!categoryId) {
+      return NextResponse.json(
+        { error: 'Категория обязательна' },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ product });
+    if (pricePair === undefined || pricePair === null) {
+      return NextResponse.json(
+        { error: 'Цена обязательна' },
+        { status: 400 }
+      );
+    }
+
+    if (!material || !material.trim()) {
+      return NextResponse.json(
+        { error: 'Материал обязателен' },
+        { status: 400 }
+      );
+    }
+
+    if (!gender) {
+      return NextResponse.json(
+        { error: 'Пол обязателен' },
+        { status: 400 }
+      );
+    }
+
+    if (!season) {
+      return NextResponse.json(
+        { error: 'Сезон обязателен' },
+        { status: 400 }
+      );
+    }
+
+    if (!description || !description.trim()) {
+      return NextResponse.json(
+        { error: 'Описание обязательно' },
+        { status: 400 }
+      );
+    }
+
+    if (!sizes || !Array.isArray(sizes) || sizes.length === 0) {
+      return NextResponse.json(
+        { error: 'Укажите хотя бы один размер' },
+        { status: 400 }
+      );
+    }
+
+    // Verify category exists
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+    });
+
+    if (!category) {
+      return NextResponse.json(
+        { error: 'Категория не найдена' },
+        { status: 400 }
+      );
+    }
+
+    // Generate unique slug
+    let baseSlug = slugify(name);
+    
+    // If slug is empty (e.g., only special characters), use a fallback
+    if (!baseSlug) {
+      baseSlug = 'product';
+    }
+    
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Ensure slug uniqueness
+    while (true) {
+      const existing = await prisma.product.findUnique({
+        where: { slug },
+      });
+      if (!existing) break;
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+      
+      // Safety check to prevent infinite loop
+      if (counter > 1000) {
+        // Fallback to timestamp-based slug
+        slug = `${baseSlug}-${Date.now()}`;
+        break;
+      }
+    }
+
+    // Generate article number
+    const article = generateArticleNumber();
+
+    // Create product
+    const product = await prisma.product.create({
+      data: {
+        name: name.trim(),
+        slug,
+        article,
+        categoryId,
+        pricePair: parseFloat(pricePair),
+        currency,
+        material: material.trim(),
+        gender: gender,
+        season: season,
+        description: description.trim(),
+        sizes: sizes,
+        isActive,
+        source: 'AG', // Admin-created products
+        activeUpdatedAt: new Date(),
+      },
+      include: productInclude,
+    });
+
+    return NextResponse.json({ product }, { status: 201 });
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error('Error creating product:', error);
+    
+    // Handle Prisma unique constraint errors
+    if ((error as any).code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Товар с таким slug уже существует' },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to fetch product' },
+      { error: 'Не удалось создать товар' },
       { status: 500 }
     );
   }

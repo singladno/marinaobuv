@@ -1148,8 +1148,9 @@ export class GroqSequentialProcessor {
             response.choices[0].message.content || '{}'
           );
 
-          // Add the image URL to the result for mapping
+          // Add the image URL and original index to the result for mapping
           analysisResult.imageUrl = imageUrl;
+          analysisResult.originalImageIndex = i; // Store original index for proper mapping
           analysisResults.push(analysisResult);
 
           console.log(
@@ -1180,6 +1181,7 @@ export class GroqSequentialProcessor {
             console.error(`❌ Error analyzing image ${i + 1}:`, errorMessage);
           }
           // Continue with next image even if this one fails
+          // Note: We don't add a result for failed images, so the index mapping will be preserved
         }
       }
 

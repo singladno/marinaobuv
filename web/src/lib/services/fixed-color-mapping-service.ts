@@ -5,6 +5,7 @@ export interface ImageColorMapping {
   imageUrl: string;
   color: string | null;
   imageId?: string;
+  originalImageIndex?: number; // Original index in the message order (matches product image sort field)
 }
 
 export class FixedColorMappingService {
@@ -51,22 +52,50 @@ export class FixedColorMappingService {
     );
 
     console.log(`📸 Found ${sortedImages.length} product images to update`);
+    console.log(
+      `📸 Product image sort values:`,
+      sortedImages.map((img: any, idx: number) => `image[${idx}]: sort=${img.sort}`).join(', ')
+    );
 
-    // Convert Map to array for index-based access
+    // Create a map from originalImageIndex to color for reliable matching
+    const indexToColorMap = new Map<number, string | null>();
+    if (Array.isArray(imageColorMappings)) {
+      imageColorMappings.forEach(mapping => {
+        if (mapping.originalImageIndex !== undefined) {
+          indexToColorMap.set(mapping.originalImageIndex, mapping.color);
+        }
+      });
+      console.log(
+        `🎯 Created index-to-color map with ${indexToColorMap.size} entries:`,
+        Array.from(indexToColorMap.entries()).map(([idx, color]) => `[${idx}]=${color}`).join(', ')
+      );
+    }
+
+    // Convert Map to array for index-based access (fallback)
     const colorEntries = Array.from(urlToColorMap.entries());
 
     for (let i = 0; i < sortedImages.length; i++) {
       const image = sortedImages[i];
       let detectedColor: string | null = null;
 
-      // Strategy 1: Try to match by exact URL
-      if (urlToColorMap.has(image.url)) {
+      // Strategy 1: Match by originalImageIndex (most reliable - matches product image sort field)
+      // Product images are created with sort: i where i is the index in message order
+      // This matches the originalImageIndex stored in analysis results
+      if (indexToColorMap.has(image.sort)) {
+        detectedColor = indexToColorMap.get(image.sort) || null;
+        console.log(
+          `  🎯 Index-based match (sort: ${image.sort}) for image ${i + 1}: ${detectedColor}`
+        );
+      }
+
+      // Strategy 2: Try to match by exact URL
+      if (!detectedColor && urlToColorMap.has(image.url)) {
         detectedColor = urlToColorMap.get(image.url) || null;
         console.log(
           `  🔗 Exact URL match for image ${i + 1}: ${detectedColor}`
         );
-      } else {
-        // Strategy 2: Try to find by partial URL matching
+      } else if (!detectedColor) {
+        // Strategy 3: Try to find by partial URL matching
         for (const [originalUrl, color] of urlToColorMap.entries()) {
           if (this.isUrlMatch(image.url, originalUrl)) {
             detectedColor = color;
@@ -78,15 +107,16 @@ export class FixedColorMappingService {
         }
       }
 
-      // Strategy 3: Index-based fallback (assumes images are in same order)
-      if (!detectedColor && i < colorEntries.length) {
+      // Strategy 4: Index-based fallback (only if no index mapping available)
+      // This assumes images are in same order, but is less reliable
+      if (!detectedColor && indexToColorMap.size === 0 && i < colorEntries.length) {
         detectedColor = colorEntries[i][1];
         console.log(
-          `  📋 Index-based mapping for image ${i + 1}: ${detectedColor}`
+          `  📋 Index-based fallback mapping for image ${i + 1}: ${detectedColor}`
         );
       }
 
-      // Strategy 4: Use first available color as last resort
+      // Strategy 5: Use first available color as last resort
       if (!detectedColor && colorEntries.length > 0) {
         detectedColor = colorEntries[0][1];
         console.log(`  🎯 Fallback color for image ${i + 1}: ${detectedColor}`);
@@ -173,6 +203,7 @@ export class FixedColorMappingService {
 
   /**
    * Extract colors from analysis results with proper URL mapping
+   * Preserves original image index for reliable matching with product images
    */
   extractColorMappingsFromAnalysis(
     analysisResults: any[]
@@ -180,18 +211,31 @@ export class FixedColorMappingService {
     const mappings: ImageColorMapping[] = [];
 
     for (const result of analysisResults) {
-      if (result.imageUrl && result.color) {
+      if (result.imageUrl && result.color !== undefined) {
         // Take the single color for this image
         const primaryColor = result.color;
 
         mappings.push({
           imageUrl: result.imageUrl,
           color: primaryColor,
+          originalImageIndex: result.originalImageIndex, // Preserve original index for matching
         });
 
         console.log(
-          `🎨 Mapped image ${result.imageUrl} to color: ${primaryColor}`
+          `🎨 Mapped image ${result.originalImageIndex !== undefined ? `[index ${result.originalImageIndex}] ` : ''}${result.imageUrl} to color: ${primaryColor}`
         );
+      } else {
+        // Even if color is null, preserve the mapping with original index
+        if (result.imageUrl && result.originalImageIndex !== undefined) {
+          mappings.push({
+            imageUrl: result.imageUrl,
+            color: null,
+            originalImageIndex: result.originalImageIndex,
+          });
+          console.log(
+            `🎨 Mapped image [index ${result.originalImageIndex}] ${result.imageUrl} to color: null (no color detected)`
+          );
+        }
       }
     }
 

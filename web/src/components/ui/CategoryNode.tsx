@@ -85,7 +85,10 @@ export function CategoryNode({
   };
 
   const handleSelect = () => {
-    onSelect(category.id);
+    // Only allow selecting leaf nodes (categories without children)
+    if (!hasChildren) {
+      onSelect(category.id);
+    }
   };
 
   return (
@@ -120,6 +123,7 @@ export function CategoryNode({
           isHighlighted={isHighlighted}
           level={level}
           onSelect={handleSelect}
+          hasChildren={hasChildren}
         />
       </div>
       {hasChildren && category.children && (

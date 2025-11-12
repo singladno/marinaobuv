@@ -83,7 +83,7 @@
     "server:system:status": "ssh -l ubuntu 130.193.56.134 'echo \"=== System Status ===\" && echo \"CPU: $(top -bn1 | grep \"Cpu(s)\" | awk \"{print $2}\" | awk -F\"%\" \"{print $1}\")\" && echo \"Memory: $(free -h | awk \"/^Mem:/ {print $3 \"/\" $2}\")\" && echo \"Disk: $(df -h / | awk \"NR==2 {print $3 \"/\" $2 \\\" (\\\" $5 \\\")\\\"}\")\"'",
     "messages:reset": "cd web && npx tsx src/scripts/mark-messages-unprocessed.ts",
     "server:cron-parser:kill": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && pm2 stop groq-sequential && pm2 delete groq-sequential && cd web && export $(grep -v \"^#\" .env | xargs) && npx tsx src/scripts/kill-parser-and-update-status.ts'",
-    "server:cron-parser-logs": "ssh -l ubuntu 130.193.56.134 'tail -n 200 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
+    "server:cron-parser:logs": "ssh -l ubuntu 130.193.56.134 'tail -n 200 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
     "webhook:monitor:logs": "ssh -l ubuntu 130.193.56.134 'echo \"=== Webhook Monitor Logs (last 50 lines) ===\" && tail -n 50 /var/www/marinaobuv/web/logs/webhook-monitor.log'",
     "webhook:monitor:logs:live": "ssh -l ubuntu 130.193.56.134 'echo \"=== Live Webhook Monitor Logs ===\" && tail -f /var/www/marinaobuv/web/logs/webhook-monitor.log'",
     "webhook:monitor:logs:history": "ssh -l ubuntu 130.193.56.134 'echo \"=== Webhook Monitor History (last 100 lines) ===\" && tail -n 100 /var/www/marinaobuv/web/logs/webhook-monitor.log'"

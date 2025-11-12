@@ -13,6 +13,7 @@ export async function POST(
       productId: id,
       url: data.url,
       alt: data.alt ?? null,
+      color: data.color ?? null,
       sort: data.sort ?? 0,
       isPrimary: !!data.isPrimary,
     },
