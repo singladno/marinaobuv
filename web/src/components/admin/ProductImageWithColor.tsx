@@ -33,6 +33,7 @@ export function ProductImageWithColor({
             : 'border-gray-200 dark:border-gray-700'
         } dark:bg-gray-800`}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={image.preview}
           alt={`Preview ${image.color || 'image'}`}
@@ -76,4 +77,3 @@ export function ProductImageWithColor({
     </div>
   );
 }
-

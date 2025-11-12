@@ -21,7 +21,7 @@ export const COLOR_MAP: Record<string, string> = {
   коричневый: '#92400E',
   серый: '#9CA3AF',
   бежевый: '#D2B48C',
-  
+
   // Blue variations - Russian
   голубой: '#60A5FA',
   'темно-синий': '#1E3A8A',
@@ -29,7 +29,7 @@ export const COLOR_MAP: Record<string, string> = {
   'светло-синий': '#93C5FD',
   бирюзовый: '#14B8A6',
   'сине-зеленый': '#14B8A6',
-  
+
   // Red variations - Russian
   'темно-красный': '#DC2626',
   'тёмно-красный': '#DC2626',
@@ -37,7 +37,7 @@ export const COLOR_MAP: Record<string, string> = {
   малиновый: '#E11D48',
   бордовый: '#7F1D1D',
   алый: '#EF4444',
-  
+
   // Green variations - Russian
   'темно-зеленый': '#059669',
   'темно зеленый': '#059669',
@@ -48,34 +48,34 @@ export const COLOR_MAP: Record<string, string> = {
   оливковый: '#84CC16',
   изумрудный: '#10B981',
   'лесной зеленый': '#047857',
-  
+
   // Yellow variations - Russian
   золотой: '#F59E0B',
   золотистый: '#F59E0B',
   лимонный: '#FCD34D',
   горчичный: '#D97706',
   янтарный: '#F59E0B',
-  
+
   // Purple variations - Russian
   лавандовый: '#A78BFA',
   сливовый: '#7C3AED',
   пурпурный: '#C026D3',
-  
+
   // Pink variations - Russian
   коралловый: '#FB7185',
   лососевый: '#FDA4AF',
   персиковый: '#FED7AA',
-  
+
   // Brown variations - Russian
   'темно-коричневый': '#78350F',
   'тёмно-коричневый': '#78350F',
   'светло-коричневый': '#D97706',
-  
+
   // Beige/Cream variations - Russian
   кремовый: '#FEF3C7',
   'слоновая кость': '#FFFBEB',
   молочный: '#F8FAFC',
-  
+
   // Other colors - Russian
   хаки: '#8A9A5B',
   небесный: '#60A5FA',
@@ -95,12 +95,12 @@ export const COLOR_MAP: Record<string, string> = {
   'черно белый': '#000000',
   'черный/белый': '#000000',
   'черный белый': '#000000',
-  
+
   // Patterns and combinations
   'black, leopard': '#000000',
   'black/leopard': '#000000',
   multicolor: '#9333EA',
-  
+
   // English variants (for compatibility)
   black: '#000000',
   white: '#FFFFFF',
@@ -149,7 +149,7 @@ export const COLOR_MAP: Record<string, string> = {
  */
 function normalizeColorName(colorName: string | null | undefined): string {
   if (!colorName) return '';
-  
+
   return colorName
     .trim()
     .toLowerCase()
@@ -165,14 +165,14 @@ function normalizeColorName(colorName: string | null | undefined): string {
  */
 export function getColorHex(colorName: string | null | undefined): string {
   if (!colorName) return '#D1D5DB'; // Default gray
-  
+
   const normalized = normalizeColorName(colorName);
-  
+
   // Direct lookup
   if (normalized in COLOR_MAP) {
     return COLOR_MAP[normalized];
   }
-  
+
   // Try to find partial matches for compound colors
   // e.g., "темно-синий" might be stored as "темно синий"
   const variations = [
@@ -180,13 +180,13 @@ export function getColorHex(colorName: string | null | undefined): string {
     normalized.replace(/\s+/g, '-'),
     normalized.replace(/-/g, ' '),
   ];
-  
+
   for (const variant of variations) {
     if (variant in COLOR_MAP) {
       return COLOR_MAP[variant];
     }
   }
-  
+
   // Heuristic matching for common patterns
   if (normalized.includes('темно') || normalized.includes('тёмно') || normalized.includes('dark')) {
     if (normalized.includes('син') || normalized.includes('blue')) return '#1E3A8A';
@@ -195,22 +195,22 @@ export function getColorHex(colorName: string | null | undefined): string {
     if (normalized.includes('коричнев') || normalized.includes('brown')) return '#78350F';
     if (normalized.includes('сер') || normalized.includes('gray') || normalized.includes('grey')) return '#4B5563';
   }
-  
+
   if (normalized.includes('светло') || normalized.includes('light')) {
     if (normalized.includes('син') || normalized.includes('blue')) return '#93C5FD';
     if (normalized.includes('красн') || normalized.includes('red')) return '#F87171';
     if (normalized.includes('зелен') || normalized.includes('green')) return '#34D399';
     if (normalized.includes('коричнев') || normalized.includes('brown')) return '#D97706';
   }
-  
+
   if (normalized.includes('голуб') || normalized.includes('sky') || normalized.includes('небесн')) {
     return '#60A5FA';
   }
-  
+
   if (normalized.includes('бирюз') || normalized.includes('turquoise')) {
     return '#14B8A6';
   }
-  
+
   // Handle black/white combinations
   if (normalized.includes('черн') && normalized.includes('бел')) {
     return '#000000';
@@ -218,12 +218,12 @@ export function getColorHex(colorName: string | null | undefined): string {
   if (normalized.includes('black') && normalized.includes('white')) {
     return '#000000';
   }
-  
+
   // Handle multicolor variations
   if (normalized.includes('многоцветн') || normalized.includes('разноцветн') || normalized.includes('multicolor')) {
     return '#9333EA';
   }
-  
+
   // Default fallback
   return '#D1D5DB';
 }
@@ -236,4 +236,3 @@ export function hasColorMapping(colorName: string | null | undefined): boolean {
   const normalized = normalizeColorName(colorName);
   return normalized in COLOR_MAP;
 }
-

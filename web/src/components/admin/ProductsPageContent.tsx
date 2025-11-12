@@ -21,7 +21,7 @@ type ProductWithSelected = Product & { selected?: boolean };
 
 export function ProductsPageContent() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  
+
   const {
     products,
     loading,
@@ -36,7 +36,7 @@ export function ProductsPageContent() {
 
   // Use the full categories tree for admin to ensure complete selection
   const { categories } = useAllCategories();
-  
+
   const { createProduct, isLoading: isCreating } = useCreateProduct();
   const { uploadImages } = useUploadProductImages();
 
@@ -85,10 +85,10 @@ export function ProductsPageContent() {
     try {
       // Extract images from data
       const { images, ...productData } = data;
-      
+
       // Create product first
       const product = await createProduct(productData);
-      
+
       // Upload images if any
       if (images && images.length > 0) {
         try {
@@ -99,7 +99,7 @@ export function ProductsPageContent() {
           // Product is already created
         }
       }
-      
+
       // Reload products list to show the new product
       reload();
     } catch (error) {

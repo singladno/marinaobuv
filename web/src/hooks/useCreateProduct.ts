@@ -20,7 +20,7 @@ export function useCreateProduct(): UseCreateProductReturn {
     try {
       // Exclude images from product creation - they'll be uploaded separately
       const { images, ...productData } = data;
-      
+
       const response = await fetch('/api/admin/products', {
         method: 'POST',
         headers: {
@@ -52,4 +52,3 @@ export function useCreateProduct(): UseCreateProductReturn {
     error,
   };
 }
-

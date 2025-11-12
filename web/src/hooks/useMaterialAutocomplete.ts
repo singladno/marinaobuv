@@ -126,4 +126,3 @@ export function useMaterialAutocomplete(value: string) {
     closeDropdown,
   };
 }
-

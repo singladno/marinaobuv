@@ -24,7 +24,7 @@ export function CategoryItemContent({
   hasChildren = false,
 }: CategoryItemContentProps) {
   const isSelectable = !hasChildren;
-  
+
   return (
     <div
       className={`group flex-1 rounded-lg transition-all duration-200 ${getIndentationClass(

@@ -57,12 +57,12 @@ export function ProductImageUpload({
       URL.revokeObjectURL(imageToRemove.preview);
     }
     const updatedImages = images.filter(img => img.id !== id);
-    
+
     // If we removed the primary image and there are other images, make the first one primary
     if (imageToRemove?.isPrimary && updatedImages.length > 0) {
       updatedImages[0].isPrimary = true;
     }
-    
+
     onImagesChange(updatedImages);
   };
 
@@ -114,4 +114,3 @@ export function ProductImageUpload({
     </div>
   );
 }
-

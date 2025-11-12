@@ -129,12 +129,12 @@ export async function POST(req: NextRequest) {
 
     // Generate unique slug
     let baseSlug = slugify(name);
-    
+
     // If slug is empty (e.g., only special characters), use a fallback
     if (!baseSlug) {
       baseSlug = 'product';
     }
-    
+
     let slug = baseSlug;
     let counter = 1;
 
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
       if (!existing) break;
       slug = `${baseSlug}-${counter}`;
       counter++;
-      
+
       // Safety check to prevent infinite loop
       if (counter > 1000) {
         // Fallback to timestamp-based slug
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ product }, { status: 201 });
   } catch (error) {
     console.error('Error creating product:', error);
-    
+
     // Handle Prisma unique constraint errors
     if ((error as any).code === 'P2002') {
       return NextResponse.json(

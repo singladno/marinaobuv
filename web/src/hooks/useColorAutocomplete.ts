@@ -126,4 +126,3 @@ export function useColorAutocomplete(value: string) {
     closeDropdown,
   };
 }
-
