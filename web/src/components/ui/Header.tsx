@@ -23,6 +23,7 @@ import AdvancedSlidingMenu from '@/components/ui/AdvancedSlidingMenu';
 import { MobileAdminSwitcher } from '@/components/ui/MobileAdminSwitcher';
 import { MobileGruzchikSwitcher } from '@/components/ui/MobileGruzchikSwitcher';
 import { PurchaseModeIcon } from '@/components/ui/PurchaseModeIcon';
+import { OldVersionLink } from '@/components/ui/OldVersionLink';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -78,10 +79,15 @@ export default function Header({ onSearch }: HeaderProps) {
         }`}
       >
         {/* Top Utility Bar */}
-        <div className="flex items-center justify-center py-1">
-          <div className="mx-auto flex w-full max-w-7xl items-center justify-center px-4 md:px-6 lg:px-8">
+        <div className="flex items-center justify-center py-1.5">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-center md:justify-between px-3 sm:px-4 md:px-6 lg:px-8">
+            {/* Old Version Link - Centered on mobile/tablet, left on desktop */}
+            <div className="flex items-center flex-shrink-0 md:flex-shrink-0">
+              <OldVersionLink variant="header" />
+            </div>
+
             {/* Center - Navigation Links as Buttons */}
-            <nav className="hidden items-center gap-1 md:flex">
+            <nav className="hidden items-center gap-1 md:flex md:flex-1 md:justify-center">
               <Button
                 variant="ghost"
                 size="sm"
