@@ -37,6 +37,9 @@ export default async function ProductPage({
       sourceMessageIds: true,
       isActive: true,
       images: {
+        where: {
+          isActive: true,
+        },
         orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
       },
       source: true,

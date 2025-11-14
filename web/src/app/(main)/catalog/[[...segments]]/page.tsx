@@ -359,6 +359,10 @@ function CatalogPageContent() {
             hasNextPage={false}
             error={error}
             showEndMessage={false}
+            onProductUpdated={() => {
+              // Refresh the catalog by re-fetching with current filters
+              handleFiltersChange({});
+            }}
           />
         </div>
 

@@ -51,6 +51,7 @@ export function useSizeOperations({
   const [isUpdating, setIsUpdating] = useState(false);
   const [updatingSizes, setUpdatingSizes] = useState<Set<string>>(new Set());
   const [lastApiCallTime, setLastApiCallTime] = useState<number>(0);
+  const sizeChangeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Sync local state with props
   React.useEffect(() => {
@@ -129,13 +130,34 @@ export function useSizeOperations({
     (index: number, field: 'size' | 'quantity', value: string | number) => {
       if (disabled) return;
       // Update local state immediately for responsive UI
+      let updatedSizes: DraftSize[];
       setLocalSizes(prev => {
         const updated = [...prev];
         updated[index] = { ...updated[index], [field]: value };
+        updatedSizes = updated;
         return updated;
       });
+      
+      // Debounce onChange calls to avoid excessive updates
+      // Clear previous timeout
+      if (sizeChangeTimeoutRef.current) {
+        clearTimeout(sizeChangeTimeoutRef.current);
+      }
+      
+      // Immediately call onChange to update formData (remember the value)
+      // This ensures changes are saved even if user clicks save without blurring
+      // Use a small debounce to batch rapid changes
+      sizeChangeTimeoutRef.current = setTimeout(() => {
+        if (updatedSizes) {
+          const sortedSizes = sortSizesAscending(updatedSizes);
+          // Don't await - let it run in background to avoid blocking UI
+          onChange(sortedSizes).catch(err => {
+            console.error('Error updating sizes:', err);
+          });
+        }
+      }, 150); // Small debounce to batch rapid changes
     },
-    [disabled]
+    [disabled, onChange]
   );
 
   const handleSizeBlur = useCallback(
@@ -143,6 +165,12 @@ export function useSizeOperations({
       if (disabled) return;
       const size = localSizes[index];
       if (!size) return;
+
+      // Clear any pending debounced onChange calls
+      if (sizeChangeTimeoutRef.current) {
+        clearTimeout(sizeChangeTimeoutRef.current);
+        sizeChangeTimeoutRef.current = null;
+      }
 
       // Sort sizes after editing to maintain ascending order
       const sortedSizes = sortSizesAscending(localSizes);

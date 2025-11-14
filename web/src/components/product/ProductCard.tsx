@@ -1,5 +1,5 @@
 'use client';
-import { Heart } from 'lucide-react';
+import { Heart, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -10,11 +10,14 @@ import RemoveColorChooser from '@/components/features/RemoveColorChooser';
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
 import { ProductSourceModal } from '@/components/product/ProductSourceModal';
+import { EditProductModal } from '@/components/admin/EditProductModal';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useUser } from '@/contexts/NextAuthUserContext';
 import { usePurchase } from '@/contexts/PurchaseContext';
+import { useCategories } from '@/contexts/CategoriesContext';
+import { cn } from '@/lib/utils';
 import { rub } from '@/lib/format';
 
 // Function to get relative time in Russian
@@ -69,6 +72,8 @@ type Props = {
   productId?: string; // Add productId for source button
   activeUpdatedAt?: string; // Add activeUpdatedAt for availability display
   source?: 'WA' | 'AG'; // Product source: WA (WhatsApp) or AG (aggregator)
+  isActive?: boolean; // Product active status
+  onProductUpdated?: () => void; // Callback when product is updated
 };
 
 export default function ProductCard({
@@ -83,15 +88,26 @@ export default function ProductCard({
   productId,
   activeUpdatedAt,
   source,
+  isActive = true,
+  onProductUpdated,
 }: Props) {
   const { user } = useUser();
+  const { categories } = useCategories();
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isTogglingActive, setIsTogglingActive] = useState(false);
+  const [optimisticIsActive, setOptimisticIsActive] = useState(isActive);
   const [isEditingSortIndex, setIsEditingSortIndex] = useState(false);
   const [editSortIndexValue, setEditSortIndexValue] = useState('');
   const sortIndexInputRef = useRef<HTMLInputElement>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
+
+  // Sync optimistic state with prop when it changes externally
+  useEffect(() => {
+    setOptimisticIsActive(isActive);
+  }, [isActive]);
   const {
     isPurchaseMode,
     activePurchase,
@@ -335,6 +351,44 @@ export default function ProductCard({
     }
   }, [isEditingSortIndex]);
 
+  const handleToggleActive = async (checked: boolean) => {
+    if (!productId || isTogglingActive) return;
+
+    // Optimistic update - update UI immediately
+    const previousValue = optimisticIsActive;
+    setOptimisticIsActive(checked);
+    setIsTogglingActive(true);
+
+    try {
+      const response = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: productId,
+          isActive: checked,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update product');
+      }
+
+      // Success - optimistic update was correct, no need to refetch
+      // The prop will update on next page load/navigation
+    } catch (error) {
+      console.error('Error toggling product active status:', error);
+      // Revert optimistic update on error
+      setOptimisticIsActive(previousValue);
+    } finally {
+      setIsTogglingActive(false);
+    }
+  };
+
+  const isAdmin = user?.role === 'ADMIN';
+  const isInactive = !optimisticIsActive;
+
   return (
     <>
       <div
@@ -343,7 +397,7 @@ export default function ProductCard({
           isPurchaseMode && (isInPurchase || isProcessing)
             ? 'bg-purple-50 ring-2 ring-purple-500'
             : ''
-        }`}
+        } ${isAdmin && isInactive ? 'opacity-60 grayscale' : ''}`}
       >
         {/* Processing Loader Overlay */}
         {isProcessing && (
@@ -435,11 +489,14 @@ export default function ProductCard({
             // Store referrer and product ID for scroll-to-product feature
             if (typeof window !== 'undefined' && productId) {
               const referrer = window.location.href;
-              sessionStorage.setItem('productNavigation', JSON.stringify({
-                productId,
-                referrer,
-                timestamp: Date.now(),
-              }));
+              sessionStorage.setItem(
+                'productNavigation',
+                JSON.stringify({
+                  productId,
+                  referrer,
+                  timestamp: Date.now(),
+                })
+              );
             }
           }}
         >
@@ -468,38 +525,57 @@ export default function ProductCard({
               </Badge>
             )}
 
-            {/* Source Chip - always visible on mobile/tablet/iPad, hover on desktop (admin only) - hidden in purchase mode */}
-            {user?.role === 'ADMIN' && productId && !isPurchaseMode && (
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsSourceModalOpen(true);
-                }}
-                className="source-icon-hover-toggle absolute left-2 top-2 z-20 transition-all duration-200 focus:outline-none"
-                title="Просмотр источника сообщений"
-              >
-                {source === 'WA' ? (
-                  <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
-                    <Image
-                      src="/images/whatsapp-icon.png"
-                      alt="WhatsApp"
-                      width={36}
-                      height={36}
-                      className="h-full w-full rounded"
-                      unoptimized
-                    />
-                  </div>
-                ) : (
-                  <Badge
-                    variant="secondary"
-                    className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+            {/* Admin Controls - always visible on mobile/tablet/iPad, hover on desktop (admin only) - hidden in purchase mode */}
+            {isAdmin && productId && !isPurchaseMode && (
+              <>
+                {/* Source Button - left side */}
+                {source && (
+                  <button
+                    type="button"
+                    onClick={e => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsSourceModalOpen(true);
+                    }}
+                    className="source-icon-hover-toggle absolute left-2 top-2 z-20 cursor-pointer transition-all duration-200 focus:outline-none"
+                    title="Просмотр источника сообщений"
                   >
-                    Источник
-                  </Badge>
+                    {source === 'WA' ? (
+                      <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                        <Image
+                          src="/images/whatsapp-icon.png"
+                          alt="WhatsApp"
+                          width={36}
+                          height={36}
+                          className="h-full w-full rounded"
+                          unoptimized
+                        />
+                      </div>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                      >
+                        Источник
+                      </Badge>
+                    )}
+                  </button>
                 )}
-              </button>
+
+                {/* Edit Button - right side, below heart icon, horizontally aligned with like icon */}
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsEditModalOpen(true);
+                  }}
+                  className="source-icon-hover-toggle absolute right-3 top-12 z-20 inline-flex cursor-pointer items-center justify-center text-white transition-all duration-200 hover:scale-110 focus:outline-none"
+                  title="Редактировать товар"
+                >
+                  <Pencil className="h-5 w-5 text-white" />
+                </button>
+              </>
             )}
 
             {/* Hover Overlay */}
@@ -551,6 +627,66 @@ export default function ProductCard({
             Наличие проверено: {getRelativeTime(activeUpdatedAt)}
           </div>
         )}
+
+        {/* Active/Inactive Power Button - TV style, bottom right of card - aligned with cart button */}
+        {isAdmin && productId && !isPurchaseMode && (
+          <div className="source-icon-hover-toggle absolute bottom-3 right-5 z-20">
+            {isTogglingActive ? (
+              <div className="flex h-7 w-7 items-center justify-center">
+                <div className="h-3 w-3 animate-spin rounded-full border-2 border-purple-600 border-t-transparent"></div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleToggleActive(!optimisticIsActive);
+                }}
+                disabled={isTogglingActive}
+                className={cn(
+                  'group relative flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50',
+                  // TV button 3D effect with inset shadow
+                  optimisticIsActive
+                    ? 'border border-purple-400/30 bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_4px_8px_rgba(147,51,234,0.4)]'
+                    : 'border border-gray-300/50 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-500 shadow-[inset_0_2px_4px_rgba(255,255,255,0.5),0_2px_4px_rgba(0,0,0,0.1)] dark:border-gray-600/50 dark:from-gray-700 dark:to-gray-800 dark:text-gray-400'
+                )}
+                title={
+                  optimisticIsActive
+                    ? 'Деактивировать товар'
+                    : 'Активировать товар'
+                }
+              >
+                {/* Power symbol - TV style */}
+                <svg
+                  className={cn(
+                    'h-3.5 w-3.5 transition-all duration-200',
+                    optimisticIsActive ? 'drop-shadow-sm' : ''
+                  )}
+                  viewBox="0 0 512 512"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M312.264,51.852v46.714c76.614,23.931,132.22,95.441,132.22,179.94  c0,104.097-84.387,188.484-188.484,188.484l-22.505,22.505L256,512c128.955,0,233.495-104.539,233.495-233.495  C489.495,168.95,414.037,77.034,312.264,51.852z"
+                    fill="currentColor"
+                  />
+                  <g>
+                    <path
+                      d="M67.516,278.505c0-84.499,55.605-156.009,132.22-179.94V51.852   C97.963,77.034,22.505,168.95,22.505,278.505C22.505,407.461,127.045,512,256,512v-45.011   C151.903,466.989,67.516,382.602,67.516,278.505z"
+                      fill="currentColor"
+                    />
+                    <rect
+                      x="233.495"
+                      width="45.011"
+                      height="278.505"
+                      fill="currentColor"
+                    />
+                  </g>
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
         {isPurchaseMode && showRemoveChooser && productItems.length > 1 && (
           <RemoveColorChooser
             items={productItems}
@@ -579,12 +715,27 @@ export default function ProductCard({
       </div>
 
       {/* Source Modal - rendered outside card to avoid clipping (admin only) */}
-      {user?.role === 'ADMIN' && productId && (
+      {isAdmin && productId && (
         <ProductSourceModal
           isOpen={isSourceModalOpen}
           onClose={() => setIsSourceModalOpen(false)}
           productId={productId}
           productName={name}
+        />
+      )}
+
+      {/* Edit Modal - rendered outside card to avoid clipping (admin only) */}
+      {/* Only render when modal is actually open to prevent unnecessary data fetching */}
+      {isAdmin && productId && isEditModalOpen && (
+        <EditProductModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          productId={productId}
+          categories={categories}
+          onProductUpdated={() => {
+            onProductUpdated?.();
+            setIsEditModalOpen(false);
+          }}
         />
       )}
     </>

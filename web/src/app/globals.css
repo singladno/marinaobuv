@@ -370,6 +370,27 @@
 }
 
 @layer utilities {
+  /* Tablet mobile view - force mobile layout for tablets (up to 1279px) */
+  .tablet-mobile-view {
+    display: block;
+  }
+
+  @media (min-width: 1280px) {
+    .tablet-mobile-view {
+      display: none;
+    }
+  }
+
+  .tablet-desktop-view {
+    display: none;
+  }
+
+  @media (min-width: 1280px) {
+    .tablet-desktop-view {
+      display: block;
+    }
+  }
+
   /* Consistent shadow utilities */
   .shadow-card {
     @apply shadow-sm;

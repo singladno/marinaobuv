@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
@@ -38,9 +38,22 @@ export function MaterialAutocomplete({
     handleSelect,
     resetHighlight,
     closeDropdown,
+    resetInitialState,
   } = useMaterialAutocomplete(value);
+  const hasFocusedRef = useRef(false);
+  const hasInteractedRef = useRef(false);
+
+  // Reset state when value changes from external source (e.g., modal opens with data)
+  // Only reset if user hasn't interacted yet
+  useEffect(() => {
+    if (!hasInteractedRef.current) {
+      hasFocusedRef.current = false;
+      resetInitialState();
+    }
+  }, [value, resetInitialState]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    hasInteractedRef.current = true;
     onChange(e.target.value);
     if (onClearError) {
       onClearError();
@@ -81,7 +94,15 @@ export function MaterialAutocomplete({
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDownWithEnter}
-          onFocus={handleInputFocus}
+          onFocus={e => {
+            hasInteractedRef.current = true;
+            if (!hasFocusedRef.current) {
+              hasFocusedRef.current = true;
+              // Don't open on first focus (when modal opens)
+              return;
+            }
+            handleInputFocus();
+          }}
           onBlur={handleInputBlur}
           placeholder="Введите материал..."
           disabled={disabled}

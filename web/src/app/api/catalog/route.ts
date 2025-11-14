@@ -50,9 +50,14 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {
-      isActive: true,
       batchProcessingStatus: 'completed',
     };
+
+    // Only show active products for non-admin users
+    // Admin users can see both active and inactive products
+    if (auth.user?.role !== 'ADMIN') {
+      where.isActive = true;
+    }
 
     // Search functionality - case insensitive for Cyrillic and Latin characters
     if (search) {
@@ -164,6 +169,9 @@ export async function GET(request: NextRequest) {
             },
           },
           images: {
+            where: {
+              isActive: true,
+            },
             orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
             select: {
               url: true,
@@ -194,6 +202,7 @@ export async function GET(request: NextRequest) {
         ...product,
         primaryImageUrl,
         colorOptions,
+        isActive: product.isActive ?? true,
       };
     });
 

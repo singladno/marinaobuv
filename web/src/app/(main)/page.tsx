@@ -26,6 +26,7 @@ export default function Home() {
     clearFilters,
     loadMore,
     retryLoadMore,
+    fetchProducts,
   } = useInfiniteCatalog();
 
   // Set up infinite scroll
@@ -110,6 +111,7 @@ export default function Home() {
             onLoadMore={loadMore}
             onRetry={retryLoadMore}
             loadMoreRef={setLoadMoreRef}
+            onProductUpdated={() => fetchProducts()}
           />
         </div>
       </div>

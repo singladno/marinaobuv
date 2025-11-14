@@ -16,6 +16,9 @@ export async function GET(
       },
       include: {
         images: {
+          where: {
+            isActive: true,
+          },
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
         },
         category: true,

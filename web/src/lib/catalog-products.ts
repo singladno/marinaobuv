@@ -71,6 +71,9 @@ export async function listProductsByCategoryId(
       include: {
         category: true,
         images: {
+          where: {
+            isActive: true,
+          },
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
         },
       },

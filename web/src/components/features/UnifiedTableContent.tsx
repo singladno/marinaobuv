@@ -76,8 +76,8 @@ export function UnifiedTableContent<TData, TValue>({
   if (renderMobileCard) {
     return (
       <>
-        {/* Mobile Card View */}
-        <div className="block md:hidden">
+        {/* Mobile Card View - shows on mobile and tablets (up to 1279px) */}
+        <div className="tablet-mobile-view">
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {data.map((item, index) => (
               <React.Fragment key={(item as any).id || index}>
@@ -94,8 +94,8 @@ export function UnifiedTableContent<TData, TValue>({
           )}
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block">
+        {/* Desktop Table View - shows only on screens 1280px and wider */}
+        <div className="tablet-desktop-view">
           <DataTable
             table={table}
             columns={columns}

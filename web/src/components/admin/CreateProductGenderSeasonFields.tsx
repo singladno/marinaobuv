@@ -1,6 +1,12 @@
 'use client';
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select';
 import { Text } from '@/components/ui/Text';
 
 import type { CreateProductData } from './CreateProductModal';
@@ -35,13 +41,20 @@ export function CreateProductGenderSeasonFields({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="space-y-2">
-        <Text variant="body" className="font-medium text-gray-900 dark:text-white">
+        <Text
+          variant="body"
+          className="font-medium text-gray-900 dark:text-white"
+        >
           Пол <span className="text-red-500">*</span>
         </Text>
         <Select
+          key={`gender-${formData.gender || 'empty'}`}
           value={formData.gender || ''}
           onValueChange={value => {
-            onFieldChange('gender', value ? (value as 'FEMALE' | 'MALE') : null);
+            onFieldChange(
+              'gender',
+              value ? (value as 'FEMALE' | 'MALE') : null
+            );
             onClearError('gender');
           }}
           disabled={isSubmitting}
@@ -65,15 +78,21 @@ export function CreateProductGenderSeasonFields({
       </div>
 
       <div className="space-y-2">
-        <Text variant="body" className="font-medium text-gray-900 dark:text-white">
+        <Text
+          variant="body"
+          className="font-medium text-gray-900 dark:text-white"
+        >
           Сезон <span className="text-red-500">*</span>
         </Text>
         <Select
+          key={`season-${formData.season || 'empty'}`}
           value={formData.season || ''}
           onValueChange={value => {
             onFieldChange(
               'season',
-              value ? (value as 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER') : null
+              value
+                ? (value as 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER')
+                : null
             );
             onClearError('season');
           }}

@@ -3,10 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useUser } from '@/contexts/NextAuthUserContext';
 
 export function MobileAdminSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useUser();
+
+  // Only show for admin users
+  if (user?.role !== 'ADMIN') return null;
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);

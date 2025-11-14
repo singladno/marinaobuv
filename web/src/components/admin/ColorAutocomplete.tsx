@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
@@ -11,6 +11,7 @@ import { ColorSuggestionsList } from './ColorSuggestionsList';
 interface ColorAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   onClearError?: () => void;
   disabled?: boolean;
   error?: string;
@@ -20,6 +21,7 @@ interface ColorAutocompleteProps {
 export function ColorAutocomplete({
   value,
   onChange,
+  onBlur,
   onClearError,
   disabled = false,
   error,
@@ -38,9 +40,22 @@ export function ColorAutocomplete({
     handleSelect,
     resetHighlight,
     closeDropdown,
+    resetInitialState,
   } = useColorAutocomplete(value);
+  const hasFocusedRef = useRef(false);
+  const hasInteractedRef = useRef(false);
+
+  // Reset state when value changes from external source (e.g., modal opens with data)
+  // Only reset if user hasn't interacted yet
+  useEffect(() => {
+    if (!hasInteractedRef.current) {
+      hasFocusedRef.current = false;
+      resetInitialState();
+    }
+  }, [value, resetInitialState]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    hasInteractedRef.current = true;
     onChange(e.target.value);
     if (onClearError) {
       onClearError();
@@ -52,6 +67,10 @@ export function ColorAutocomplete({
     handleSelect(color, onChange);
     // Blur the input to prevent dropdown from reopening
     inputRef.current?.blur();
+    // Trigger onBlur callback when selecting a suggestion
+    if (onBlur) {
+      setTimeout(() => onBlur(), 100);
+    }
   };
 
   const handleKeyDownWithEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -68,6 +87,10 @@ export function ColorAutocomplete({
     setTimeout(() => {
       if (!listRef.current?.contains(document.activeElement)) {
         closeDropdown();
+        // Trigger onBlur callback after dropdown is closed
+        if (onBlur) {
+          onBlur();
+        }
       }
     }, 200);
   };
@@ -81,7 +104,15 @@ export function ColorAutocomplete({
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDownWithEnter}
-          onFocus={handleInputFocus}
+          onFocus={e => {
+            hasInteractedRef.current = true;
+            if (!hasFocusedRef.current) {
+              hasFocusedRef.current = true;
+              // Don't open on first focus (when modal opens)
+              return;
+            }
+            handleInputFocus();
+          }}
           onBlur={handleInputBlur}
           placeholder="Например: Черный"
           disabled={disabled}

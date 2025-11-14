@@ -286,7 +286,8 @@ export function useInfiniteCatalog(
       'Last:',
       lastSearchQuery.current
     );
-    if (searchQuery !== lastSearchQuery.current) {
+    // Only trigger if search query actually changed and we're initialized
+    if (searchQuery !== lastSearchQuery.current && hasInitialized.current) {
       console.log(
         '🔍 useEffect (searchQuery): Search query changed from',
         lastSearchQuery.current,
@@ -294,9 +295,12 @@ export function useInfiniteCatalog(
         searchQuery
       );
       lastSearchQuery.current = searchQuery;
-      const newFilters = { ...filters, search: searchQuery, page: 1 };
+      const newFilters = { ...currentFiltersRef.current, search: searchQuery, page: 1 };
       setFilters(newFilters);
       fetchProducts(newFilters, false);
+    } else if (searchQuery !== lastSearchQuery.current) {
+      // Update the ref even if not initialized yet
+      lastSearchQuery.current = searchQuery;
     }
   }, [searchQuery]);
 
@@ -332,36 +336,18 @@ export function useInfiniteCatalog(
 
   // Load initial data only once
   useEffect(() => {
-    console.log(
-      '🚀 useEffect (initial load): Checking initialization status. hasInitialized:',
-      hasInitialized.current,
-      'allProducts.length:',
-      allProducts.length,
-      'loading:',
-      loading,
-      'waitForCategory:',
-      waitForCategory,
-      'initialCategoryId:',
-      initialCategoryId
-    );
-
     // Skip initialization entirely if we're on a category page (waitForCategory = true)
     if (waitForCategory) {
-      console.log(
-        '⏳ useEffect (initial load): On category page, skipping initialization - category effect will handle it.'
-      );
       return;
     }
 
-    if (!hasInitialized.current && allProducts.length === 0 && !loading) {
-      console.log(
-        '✅ useEffect (initial load): Initializing catalog (main page) with categoryId:',
-        initialCategoryId
-      );
+    // Only initialize once - use refs to check state without causing re-renders
+    if (!hasInitialized.current && !requestInProgress.current) {
       hasInitialized.current = true;
       fetchProducts();
     }
-  }, [allProducts.length, loading, initialCategoryId, waitForCategory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   return {
     // State

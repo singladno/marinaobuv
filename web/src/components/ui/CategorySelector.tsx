@@ -82,11 +82,11 @@ export function CategorySelector({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-80 overflow-hidden rounded-xl border-0 bg-white p-0 shadow-xl"
+        className="w-80 rounded-xl border-0 bg-white p-0 shadow-xl"
         align="start"
         sideOffset={4}
       >
-        <div className="flex flex-col">
+        <div className="flex max-h-[400px] flex-col overflow-hidden">
           <CategorySelectorSearch
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
@@ -94,7 +94,7 @@ export function CategorySelector({
 
           {selectedCategory && <CategorySelectorClear onClear={handleClear} />}
 
-          <div className="max-h-80 overflow-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {filteredCategories.length === 0 ? (
               <CategorySelectorEmpty searchTerm={searchTerm} />
             ) : (

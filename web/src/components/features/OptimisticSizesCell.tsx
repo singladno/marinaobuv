@@ -5,9 +5,7 @@ import React from 'react';
 import { useSizesManagement } from '@/hooks/useSizesManagement';
 import type { DraftSize } from '@/types/admin';
 
-import { AddSizeButton } from './AddSizeButton';
-import { PortalDeleteButton } from './PortalDeleteButton';
-import { SizeChip } from './SizeChip';
+import { SizeSelectorTable } from './SizeSelectorTable';
 
 interface OptimisticSizesCellProps {
   sizes: DraftSize[];
@@ -24,61 +22,22 @@ export function OptimisticSizesCell({
     localSizes,
     isUpdating,
     updatingSizes,
-    hoveredIndex,
-    deleteButtonPosition,
-    chipRefs,
     handleAddSize,
     handleDeleteSize,
     handleSizeChange,
     handleSizeBlur,
-    handleMouseEnter,
-    handleMouseLeave,
-    handleDeleteButtonMouseEnter,
-    handleDeleteButtonMouseLeave,
   } = useSizesManagement({ sizes, onChange, disabled });
 
   return (
-    <>
-      <div className="flex flex-nowrap items-center gap-1.5 min-w-0">
-        {(localSizes || []).map((size, index) => {
-          const isUpdatingThisSize = updatingSizes.has(size.id);
-
-          return (
-            <SizeChip
-              key={size.id || `size-${index}`}
-              size={size}
-              index={index}
-              isUpdating={isUpdatingThisSize}
-              disabled={disabled}
-              onSizeChange={handleSizeChange}
-              onSizeBlur={handleSizeBlur}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
-              chipRef={el => {
-                chipRefs.current[index] = el;
-              }}
-            />
-          );
-        })}
-
-        {/* Add button */}
-        <div className="flex-shrink-0">
-          <AddSizeButton
-            isUpdating={isUpdating}
-            disabled={disabled}
-            onAddSize={handleAddSize}
-          />
-        </div>
-      </div>
-
-      {/* Portal Delete Button */}
-      <PortalDeleteButton
-        isVisible={hoveredIndex !== null}
-        position={deleteButtonPosition}
-        onDelete={() => hoveredIndex !== null && handleDeleteSize(hoveredIndex)}
-        onMouseEnter={handleDeleteButtonMouseEnter}
-        onMouseLeave={handleDeleteButtonMouseLeave}
-      />
-    </>
+    <SizeSelectorTable
+      sizes={localSizes || []}
+      isUpdating={isUpdating}
+      updatingSizes={updatingSizes}
+      disabled={disabled}
+      onSizeChange={handleSizeChange}
+      onSizeBlur={handleSizeBlur}
+      onDeleteSize={handleDeleteSize}
+      onAddSize={handleAddSize}
+    />
   );
 }

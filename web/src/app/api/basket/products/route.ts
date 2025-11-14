@@ -34,6 +34,9 @@ export async function POST(request: NextRequest) {
           },
         },
         images: {
+          where: {
+            isActive: true,
+          },
           orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
           select: {
             url: true,

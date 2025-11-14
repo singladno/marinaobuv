@@ -252,6 +252,12 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // Debug: Log sizes if present
+    if ('sizes' in rawUpdateData) {
+      console.log('[PATCH /api/admin/products] Updating sizes:', JSON.stringify(rawUpdateData.sizes));
+      console.log('[PATCH /api/admin/products] Sizes type:', typeof rawUpdateData.sizes, Array.isArray(rawUpdateData.sizes));
+    }
+
     // Map relation IDs to relation updates if present
     if ('categoryId' in rawUpdateData && rawUpdateData.categoryId) {
       updateData.category = { connect: { id: rawUpdateData.categoryId } };
@@ -262,6 +268,12 @@ export async function PATCH(req: NextRequest) {
 
     // Always bump activeUpdatedAt for any update
     updateData.activeUpdatedAt = new Date();
+
+    // Debug: Log final updateData
+    if ('sizes' in updateData) {
+      console.log('[PATCH /api/admin/products] Final updateData.sizes:', JSON.stringify(updateData.sizes));
+      console.log('[PATCH /api/admin/products] updateData keys:', Object.keys(updateData));
+    }
 
     // Update the product
     const updatedProduct = await prisma.product.update({

@@ -55,14 +55,14 @@ export function ProductMobileCard({
       <div className="border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-800">
         <div className="space-y-4">
           {/* Header with checkbox and toggle */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <ProductSelectionCheckbox
                 id={product.id}
                 selected={selected}
                 onToggle={onToggle}
               />
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 mr-6">
                 <ProductNameCell
                   product={product}
                   onUpdateProduct={onUpdateProduct}

@@ -15,6 +15,7 @@ interface Product {
   colorOptions?: Array<{ color: string; imageUrl: string }>;
   activeUpdatedAt?: string;
   source?: 'WA' | 'AG';
+  isActive?: boolean;
 }
 
 interface ProductGridProps {
@@ -28,6 +29,7 @@ interface ProductGridProps {
   onRetry?: () => void;
   loadMoreRef?: (node: HTMLDivElement | null) => void;
   showEndMessage?: boolean;
+  onProductUpdated?: () => void;
 }
 
 export const ProductGrid = memo(function ProductGrid({
@@ -41,6 +43,7 @@ export const ProductGrid = memo(function ProductGrid({
   onRetry,
   loadMoreRef,
   showEndMessage = true,
+  onProductUpdated,
 }: ProductGridProps) {
   if (loading) {
     return <ProductGridSkeleton gridCols={gridCols} />;
@@ -86,6 +89,8 @@ export const ProductGrid = memo(function ProductGrid({
             productId={product.id}
             activeUpdatedAt={product.activeUpdatedAt}
             source={product.source}
+            isActive={product.isActive}
+            onProductUpdated={onProductUpdated}
           />
         ))}
       </div>

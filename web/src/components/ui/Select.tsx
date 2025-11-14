@@ -48,9 +48,11 @@ const SelectContext = React.createContext<{
   registerItem?: (value: string, text: string) => void;
   disabled?: boolean;
   preferredPlacement?: 'auto' | 'top' | 'bottom';
+  isMounted?: boolean;
 }>({
   isOpen: false,
   setIsOpen: () => {},
+  isMounted: false,
 });
 
 export function Select({
@@ -64,7 +66,16 @@ export function Select({
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedText, setSelectedText] = React.useState<string>('');
   const [items, setItems] = React.useState<Map<string, string>>(new Map());
+  const [isMounted, setIsMounted] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+
+  // Prevent opening on initial mount
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const registerItem = React.useCallback(
     (itemValue: string, itemText: string) => {
@@ -73,10 +84,16 @@ export function Select({
     []
   );
 
-  // Set initial selected text when value changes
+  // Set initial selected text when value changes or items are registered
   React.useEffect(() => {
     if (value && items.has(value)) {
       setSelectedText(items.get(value) || '');
+    } else if (value && !items.has(value)) {
+      // Clear selected text if value doesn't match any registered item
+      setSelectedText('');
+    } else if (!value) {
+      // Clear selected text if no value
+      setSelectedText('');
     }
   }, [value, items]);
 
@@ -93,6 +110,7 @@ export function Select({
         registerItem,
         disabled,
         preferredPlacement: placement,
+        isMounted,
       }}
     >
       <div className={cn('relative', className)}>{children}</div>
@@ -104,7 +122,7 @@ export const SelectTrigger = React.forwardRef<
   HTMLButtonElement,
   SelectTriggerProps
 >(({ children, className, 'aria-label': ariaLabel, ...props }, ref) => {
-  const { isOpen, setIsOpen, triggerRef, disabled } =
+  const { isOpen, setIsOpen, triggerRef, disabled, isMounted } =
     React.useContext(SelectContext);
 
   // Combine the forwarded ref with our internal ref
@@ -137,7 +155,11 @@ export const SelectTrigger = React.forwardRef<
         'dark:focus:border-purple-400 dark:focus:ring-purple-800',
         className
       )}
-      onClick={() => !disabled && setIsOpen(!isOpen)}
+      onClick={() => {
+        if (!disabled && isMounted) {
+          setIsOpen(!isOpen);
+        }
+      }}
       aria-label={ariaLabel}
       aria-expanded={isOpen ? 'true' : 'false'}
       disabled={disabled}

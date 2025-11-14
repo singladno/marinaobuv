@@ -23,6 +23,7 @@ export function CreateProductOptionalFields({
   onFieldChange,
   onClearError,
 }: CreateProductOptionalFieldsProps) {
+
   return (
     <>
       {/* Material - Required */}
@@ -86,8 +87,9 @@ export function CreateProductOptionalFields({
         <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-600">
           <ProductSizesCell
             sizes={formData.sizes || []}
-            onChange={sizes => {
-              onFieldChange('sizes', sizes);
+            onChange={async sizes => {
+              // Ensure onChange completes before continuing
+              await onFieldChange('sizes', sizes);
               onClearError('sizes');
             }}
             disabled={isSubmitting}

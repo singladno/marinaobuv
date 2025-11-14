@@ -170,55 +170,65 @@ export default function Header({ onSearch }: HeaderProps) {
             )}
           </div>
 
-          {/* Right side - Actions (hidden on mobile to avoid layout gap) */}
-          <div className="hidden items-center gap-4 md:flex">
-            {/* Switchers moved into profile dropdown */}
-
-            {/* Purchase Mode Icon - only show for admin users */}
+          {/* Right side - Actions */}
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Mobile Admin Switcher - only on mobile/tablet */}
             {user?.role === 'ADMIN' && (
-              <div className="hidden md:block">
-                <PurchaseModeIcon />
+              <div className="md:hidden">
+                <MobileAdminSwitcher />
               </div>
             )}
 
-            {/* Theme Toggle - hidden on mobile */}
-            <div className="hidden md:block">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="!text-white hover:bg-white/10"
-              >
-                {theme === 'light' ? (
-                  <MoonIcon className="h-5 w-5 text-white" />
-                ) : (
-                  <SunIcon className="h-5 w-5 text-white" />
-                )}
-              </Button>
-            </div>
+            {/* Desktop Actions (hidden on mobile to avoid layout gap) */}
+            <div className="hidden items-center gap-4 md:flex">
+              {/* Switchers moved into profile dropdown */}
 
-            {/* Favorites - hidden on mobile/tablet */}
-            <div className="hidden md:block">
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild
-                className="!text-white hover:bg-white/10"
-              >
-                <Link href="/favorites" aria-label="Избранное">
-                  <HeartIcon className="h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
+              {/* Purchase Mode Icon - only show for admin users */}
+              {user?.role === 'ADMIN' && (
+                <div className="hidden md:block">
+                  <PurchaseModeIcon />
+                </div>
+              )}
 
-            {/* Account - hidden on mobile/tablet */}
-            <div className="hidden md:block">
-              <AccountMenu />
-            </div>
+              {/* Theme Toggle - hidden on mobile */}
+              <div className="hidden md:block">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="!text-white hover:bg-white/10"
+                >
+                  {theme === 'light' ? (
+                    <MoonIcon className="h-5 w-5 text-white" />
+                  ) : (
+                    <SunIcon className="h-5 w-5 text-white" />
+                  )}
+                </Button>
+              </div>
 
-            {/* Cart - hidden on mobile/tablet */}
-            <div className="hidden md:block">
-              <TopRightActions />
+              {/* Favorites - hidden on mobile/tablet */}
+              <div className="hidden md:block">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  asChild
+                  className="!text-white hover:bg-white/10"
+                >
+                  <Link href="/favorites" aria-label="Избранное">
+                    <HeartIcon className="h-5 w-5" />
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Account - hidden on mobile/tablet */}
+              <div className="hidden md:block">
+                <AccountMenu />
+              </div>
+
+              {/* Cart - hidden on mobile/tablet */}
+              <div className="hidden md:block">
+                <TopRightActions />
+              </div>
             </div>
           </div>
         </div>
