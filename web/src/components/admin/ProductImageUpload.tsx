@@ -180,7 +180,7 @@ export function ProductImageUpload({
         if (img.id === imageId) {
           // If moving to a new color group and this was primary, clear primary
           // If the new color group doesn't have a primary, make this one primary
-          const shouldBePrimary = oldColor !== newColor && !hasPrimaryInNewGroup && newColor;
+          const shouldBePrimary = oldColor !== newColor && !hasPrimaryInNewGroup && !!newColor;
           return {
             ...img,
             color,

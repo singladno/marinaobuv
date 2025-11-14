@@ -137,13 +137,13 @@ export function useSizeOperations({
         updatedSizes = updated;
         return updated;
       });
-      
+
       // Debounce onChange calls to avoid excessive updates
       // Clear previous timeout
       if (sizeChangeTimeoutRef.current) {
         clearTimeout(sizeChangeTimeoutRef.current);
       }
-      
+
       // Immediately call onChange to update formData (remember the value)
       // This ensures changes are saved even if user clicks save without blurring
       // Use a small debounce to batch rapid changes
