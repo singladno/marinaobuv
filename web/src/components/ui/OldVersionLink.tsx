@@ -24,11 +24,12 @@ export function OldVersionLink({
         variant="ghost"
         size="sm"
         onClick={handleClick}
-        className={`h-7 rounded-md border border-white/30 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 px-2.5 text-xs font-semibold !text-white shadow-md transition-all duration-200 hover:scale-105 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 hover:shadow-lg active:scale-100 ${className}`}
+        className={`flex h-auto min-h-[2rem] flex-col items-center justify-center rounded-md border border-white/30 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 px-2 text-xs font-semibold !text-white shadow-md transition-all duration-200 hover:scale-105 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 hover:shadow-lg active:scale-100 md:h-7 md:flex-row md:px-2.5 ${className}`}
         aria-label="Перейти на старую версию сайта"
       >
-        <span>Старая версия</span>
-        <ArrowTopRightOnSquareIcon className="ml-1.5 h-3.5 w-3.5 flex-shrink-0" />
+        <span className="leading-tight md:leading-normal">Старая</span>
+        <span className="leading-tight md:leading-normal md:ml-1">версия</span>
+        <ArrowTopRightOnSquareIcon className="hidden h-3.5 w-3.5 flex-shrink-0 md:ml-1.5 md:inline" />
       </Button>
     );
   }

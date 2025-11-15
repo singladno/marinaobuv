@@ -166,7 +166,7 @@ export function EditProductModal({
     >
       <div className="flex h-full flex-col overflow-hidden">
         {loadingProduct ? (
-          <div className="flex flex-1 items-center justify-center">
+          <div className="flex h-[calc(100vh-80px)] items-center justify-center">
             <div className="flex flex-col items-center gap-2">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-600 border-t-transparent"></div>
               <span className="text-sm text-gray-600">Загрузка товара...</span>

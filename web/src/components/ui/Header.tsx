@@ -79,15 +79,15 @@ export default function Header({ onSearch }: HeaderProps) {
         }`}
       >
         {/* Top Utility Bar */}
-        <div className="flex items-center justify-center py-1.5">
-          <div className="mx-auto flex w-full max-w-7xl items-center justify-center md:justify-between px-3 sm:px-4 md:px-6 lg:px-8">
-            {/* Old Version Link - Centered on mobile/tablet, left on desktop */}
-            <div className="flex items-center flex-shrink-0 md:flex-shrink-0">
+        <div className="relative flex items-center justify-center py-1.5">
+          <div className="relative mx-auto flex w-full max-w-7xl items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8">
+            {/* Old Version Link - Only visible on desktop in top bar */}
+            <div className="absolute left-3 hidden items-center md:flex md:left-6 lg:left-8">
               <OldVersionLink variant="header" />
             </div>
 
-            {/* Center - Navigation Links as Buttons */}
-            <nav className="hidden items-center gap-1 md:flex md:flex-1 md:justify-center">
+            {/* Center - Navigation Links as Buttons - Centered relative to search bar */}
+            <nav className="hidden items-center gap-1 md:flex">
               <Button
                 variant="ghost"
                 size="sm"
@@ -142,6 +142,11 @@ export default function Header({ onSearch }: HeaderProps) {
             </Link>
           </div>
 
+          {/* Old Version Link - Only visible on mobile/tablet, positioned on left */}
+          <div className="flex items-center md:hidden">
+            <OldVersionLink variant="header" />
+          </div>
+
           {/* Hamburger Menu - Desktop only */}
           <div className="hidden md:block">
             <HamburgerMenu
@@ -158,7 +163,7 @@ export default function Header({ onSearch }: HeaderProps) {
                 <h1 className="text-2xl font-bold text-white">Профиль</h1>
               </div>
             ) : (
-              <div className="w-full">
+              <div className="w-full md:pl-0">
                 <SearchWithHistory
                   value={searchQuery}
                   onChange={handleSearch}

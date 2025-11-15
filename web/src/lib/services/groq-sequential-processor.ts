@@ -784,8 +784,8 @@ export class GroqSequentialProcessor {
             },
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.3, // Lower temperature for more consistent JSON generation
-          max_tokens: 3000, // Increased to prevent truncation and ensure complete JSON
+          temperature: 0.2, // Lower temperature for more consistent and accurate price parsing
+          max_tokens: 2500, // Set to maintain ~4:1 input:output ratio (6074 input → ~1500 output target, with buffer for safety)
         },
         `text-analysis-${productId}`,
         {
@@ -871,6 +871,40 @@ export class GroqSequentialProcessor {
       console.log(`✅ Product ${productId} analyzed successfully`);
     } catch (error) {
       console.error(`❌ Error analyzing product ${productId}:`, error);
+
+      // Log detailed error information for JSON validation failures
+      if (
+        error instanceof Error &&
+        (error.message.includes('json_validate_failed') ||
+          error.message.includes('Failed to validate JSON'))
+      ) {
+        console.error(
+          `🔍 JSON Validation Error Details for product ${productId}:`
+        );
+        console.error(`   Error message: ${error.message}`);
+
+        // Try to extract failed_generation from error if available
+        const errorObj = error as any;
+        if (errorObj.error?.error?.failed_generation) {
+          console.error(
+            `   Failed generation: ${errorObj.error.error.failed_generation.substring(0, 500)}`
+          );
+        } else if (errorObj.error?.failed_generation) {
+          console.error(
+            `   Failed generation: ${errorObj.error.failed_generation.substring(0, 500)}`
+          );
+        } else {
+          console.error(
+            `   ⚠️ No failed_generation field in error - cannot see what model returned`
+          );
+        }
+
+        // Log input context for debugging
+        console.error(
+          `   Input context: ${messageIds.length} messages, ${imageUrls.length} images, text length: ${textContents.length}`
+        );
+      }
+
       throw error;
     }
   }

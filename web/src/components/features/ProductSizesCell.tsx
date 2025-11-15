@@ -17,13 +17,17 @@ export function ProductSizesCell({
   onChange,
   disabled = false,
 }: ProductSizesCellProps) {
-  // Convert to DraftSize[] format
-  const draftSizes: DraftSize[] = (sizes || []).map((sizeObj, index) => ({
-    id: `size-${index}`, // Generate temporary ID
-    size: sizeObj.size,
-    quantity: sizeObj.count,
-    isActive: true,
-  }));
+  // Convert to DraftSize[] format - memoize to prevent unnecessary re-renders
+  const draftSizes: DraftSize[] = React.useMemo(
+    () =>
+      (sizes || []).map((sizeObj, index) => ({
+        id: `size-${index}`, // Generate temporary ID
+        size: sizeObj.size,
+        quantity: sizeObj.count,
+        isActive: true,
+      })),
+    [sizes]
+  );
 
   const handleChange = React.useCallback(
     async (nextDraftSizes: DraftSize[]) => {
@@ -36,7 +40,8 @@ export function ProductSizesCell({
           count: draftSize.quantity,
         }));
 
-      await onChange(nextSizes);
+      // Defer the onChange call to avoid updating state during render
+      await Promise.resolve().then(() => onChange(nextSizes));
     },
     [onChange]
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState, useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useUser } from '@/contexts/NextAuthUserContext';
+import { useCategories } from '@/contexts/CategoriesContext';
+import { EditProductModal } from '@/components/admin/EditProductModal';
 import { ProductSourceModal } from './ProductSourceModal';
 import { UnavailableProductOverlay } from './UnavailableProductOverlay';
 
@@ -39,9 +41,12 @@ export default function ProductGalleryVertical({
   source,
 }: ProductGalleryProps) {
   const { user } = useUser();
+  const { categories } = useCategories();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const swiperRef = useRef<SwiperType | null>(null);
+  const isAdmin = user?.role === 'ADMIN';
   const safeImages =
     images?.length > 0
       ? images
@@ -143,38 +148,50 @@ export default function ProductGalleryVertical({
           {/* Unavailable overlay */}
           {!isActive && <UnavailableProductOverlay />}
 
-          {/* Source indicator */}
-          {user?.role === 'ADMIN' &&
-            productId &&
-            sourceMessageIds &&
-            sourceMessageIds.length > 0 && (
+          {/* Admin controls - Source and Edit icons */}
+          {isAdmin && productId && (
+            <div className="absolute left-2 top-2 z-20 flex gap-2">
+              {/* Source indicator */}
+              {sourceMessageIds && sourceMessageIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsSourceModalOpen(true)}
+                  className="source-icon-hover-toggle transition-all duration-200 focus:outline-none"
+                  title="Просмотр источника сообщений"
+                >
+                  {source === 'WA' ? (
+                    <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                      <Image
+                        src="/images/whatsapp-icon.png"
+                        alt="WhatsApp"
+                        width={48}
+                        height={48}
+                        className="h-full w-full rounded"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (
+                    <Badge
+                      variant="secondary"
+                      className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                    >
+                      Источник
+                    </Badge>
+                  )}
+                </button>
+              )}
+
+              {/* Edit button */}
               <button
                 type="button"
-                onClick={() => setIsSourceModalOpen(true)}
-                className="source-icon-hover-toggle absolute left-2 top-2 z-20 transition-all duration-200 focus:outline-none"
-                title="Просмотр источника сообщений"
+                onClick={() => setIsEditModalOpen(true)}
+                className="source-icon-hover-toggle inline-flex cursor-pointer items-center justify-center text-white transition-all duration-200 hover:scale-110 focus:outline-none"
+                title="Редактировать товар"
               >
-                {source === 'WA' ? (
-                  <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
-                    <Image
-                      src="/images/whatsapp-icon.png"
-                      alt="WhatsApp"
-                      width={48}
-                      height={48}
-                      className="h-full w-full rounded"
-                      unoptimized
-                    />
-                  </div>
-                ) : (
-                  <Badge
-                    variant="secondary"
-                    className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
-                  >
-                    Источник
-                  </Badge>
-                )}
+                <Pencil className="h-5 w-5 text-white" />
               </button>
-            )}
+            </div>
+          )}
 
           {/* Navigation buttons - hidden on mobile only, visible on iPad */}
           {safeImages.length > 1 && (
@@ -246,37 +263,50 @@ export default function ProductGalleryVertical({
           {!isActive && <UnavailableProductOverlay />}
         </div>
 
-        {user?.role === 'ADMIN' &&
-          productId &&
-          sourceMessageIds &&
-          sourceMessageIds.length > 0 && (
+        {/* Admin controls - Source and Edit icons */}
+        {isAdmin && productId && (
+          <div className="absolute left-2 top-2 z-20 flex gap-2">
+            {/* Source indicator */}
+            {sourceMessageIds && sourceMessageIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsSourceModalOpen(true)}
+                className="source-icon-hover-toggle transition-all duration-200 focus:outline-none"
+                title="Просмотр источника сообщений"
+              >
+                {source === 'WA' ? (
+                  <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                    <Image
+                      src="/images/whatsapp-icon.png"
+                      alt="WhatsApp"
+                      width={48}
+                      height={48}
+                      className="h-full w-full rounded"
+                      unoptimized
+                    />
+                  </div>
+                ) : (
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                  >
+                    Источник
+                  </Badge>
+                )}
+              </button>
+            )}
+
+            {/* Edit button */}
             <button
               type="button"
-              onClick={() => setIsSourceModalOpen(true)}
-              className="source-icon-hover-toggle absolute left-2 top-2 z-20 transition-all duration-200 focus:outline-none"
-              title="Просмотр источника сообщений"
+              onClick={() => setIsEditModalOpen(true)}
+              className="source-icon-hover-toggle inline-flex cursor-pointer items-center justify-center text-white transition-all duration-200 hover:scale-110 focus:outline-none"
+              title="Редактировать товар"
             >
-              {source === 'WA' ? (
-                <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
-                  <Image
-                    src="/images/whatsapp-icon.png"
-                    alt="WhatsApp"
-                    width={48}
-                    height={48}
-                    className="h-full w-full rounded"
-                    unoptimized
-                  />
-                </div>
-              ) : (
-                <Badge
-                  variant="secondary"
-                  className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
-                >
-                  Источник
-                </Badge>
-              )}
+              <Pencil className="h-5 w-5 text-white" />
             </button>
-          )}
+          </div>
+        )}
 
         {safeImages.length > 1 && (
           <>
@@ -310,13 +340,28 @@ export default function ProductGalleryVertical({
     <>
       <MobileSwiper />
       <DesktopLayout />
-      {user?.role === 'ADMIN' && productId && (
-        <ProductSourceModal
-          isOpen={isSourceModalOpen}
-          onClose={() => setIsSourceModalOpen(false)}
-          productId={productId}
-          productName={productName}
-        />
+      {isAdmin && productId && (
+        <>
+          <ProductSourceModal
+            isOpen={isSourceModalOpen}
+            onClose={() => setIsSourceModalOpen(false)}
+            productId={productId}
+            productName={productName}
+          />
+          {isEditModalOpen && (
+            <EditProductModal
+              isOpen={isEditModalOpen}
+              onClose={() => setIsEditModalOpen(false)}
+              productId={productId}
+              categories={categories}
+              onProductUpdated={() => {
+                setIsEditModalOpen(false);
+                // Reload the page to show updated product data
+                window.location.reload();
+              }}
+            />
+          )}
+        </>
       )}
     </>
   );

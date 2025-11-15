@@ -52,10 +52,11 @@ export function useSizeOperations({
   const [updatingSizes, setUpdatingSizes] = useState<Set<string>>(new Set());
   const [lastApiCallTime, setLastApiCallTime] = useState<number>(0);
   const sizeChangeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isEditingRef = React.useRef<boolean>(false);
 
-  // Sync local state with props
+  // Sync local state with props (only when not actively editing)
   React.useEffect(() => {
-    if (sizes && sizes.length > 0) {
+    if (sizes && sizes.length > 0 && !isEditingRef.current) {
       // Transform database sizes to component format
       const sizesWithIds = sizes.map((size, index) =>
         parseSizeData(size, index)
@@ -75,15 +76,14 @@ export function useSizeOperations({
       isActive: true,
     };
     const updatedSizes = [...(localSizes || []), newSize];
-    // Sort the updated sizes to maintain ascending order
-    const sortedSizes = sortSizesAscending(updatedSizes);
-    setLocalSizes(sortedSizes);
+    // Do NOT sort - preserve order, just add to the end
+    setLocalSizes(updatedSizes);
 
     // Track the new size as being updated
     setUpdatingSizes(prev => new Set(prev).add(newSize.id));
     setIsUpdating(true);
     try {
-      await onChange(sortedSizes);
+      await onChange(updatedSizes);
       setLastApiCallTime(Date.now());
     } finally {
       setIsUpdating(false);
@@ -103,15 +103,14 @@ export function useSizeOperations({
       if (!sizeToDelete) return;
 
       const updatedSizes = (localSizes || []).filter((_, i) => i !== index);
-      // Sort the remaining sizes to maintain ascending order
-      const sortedSizes = sortSizesAscending(updatedSizes);
-      setLocalSizes(sortedSizes);
+      // Do NOT sort - preserve order after deletion
+      setLocalSizes(updatedSizes);
 
       // Track the deleted size as being updated
       setUpdatingSizes(prev => new Set(prev).add(sizeToDelete.id));
       setIsUpdating(true);
       try {
-        await onChange(sortedSizes.length > 0 ? sortedSizes : []);
+        await onChange(updatedSizes.length > 0 ? updatedSizes : []);
         setLastApiCallTime(Date.now());
       } finally {
         setIsUpdating(false);
@@ -129,11 +128,17 @@ export function useSizeOperations({
   const handleSizeChange = useCallback(
     (index: number, field: 'size' | 'quantity', value: string | number) => {
       if (disabled) return;
+      // Mark that we're actively editing to prevent sorting from props sync
+      isEditingRef.current = true;
+
       // Update local state immediately for responsive UI
       let updatedSizes: DraftSize[];
       setLocalSizes(prev => {
         const updated = [...prev];
-        updated[index] = { ...updated[index], [field]: value };
+        // Find the size by index and update it
+        if (updated[index]) {
+          updated[index] = { ...updated[index], [field]: value };
+        }
         updatedSizes = updated;
         return updated;
       });
@@ -144,15 +149,16 @@ export function useSizeOperations({
         clearTimeout(sizeChangeTimeoutRef.current);
       }
 
-      // Immediately call onChange to update formData (remember the value)
-      // This ensures changes are saved even if user clicks save without blurring
-      // Use a small debounce to batch rapid changes
+      // Defer onChange call to avoid updating state during render
+      // Use queueMicrotask to ensure it runs after the current render cycle
       sizeChangeTimeoutRef.current = setTimeout(() => {
         if (updatedSizes) {
-          const sortedSizes = sortSizesAscending(updatedSizes);
-          // Don't await - let it run in background to avoid blocking UI
-          onChange(sortedSizes).catch(err => {
-            console.error('Error updating sizes:', err);
+          // Don't sort during editing - only sort on blur to avoid index confusion
+          // Use queueMicrotask to ensure onChange runs after render
+          queueMicrotask(() => {
+            onChange(updatedSizes).catch(err => {
+              console.error('Error updating sizes:', err);
+            });
           });
         }
       }, 150); // Small debounce to batch rapid changes
@@ -172,26 +178,42 @@ export function useSizeOperations({
         sizeChangeTimeoutRef.current = null;
       }
 
-      // Sort sizes after editing to maintain ascending order
-      const sortedSizes = sortSizesAscending(localSizes);
-      setLocalSizes(sortedSizes);
+      // Get current state - do NOT sort during editing, preserve order
+      setLocalSizes(currentSizes => {
+        // Track this specific size as being updated
+        setUpdatingSizes(prev => new Set(prev).add(size.id));
+        setIsUpdating(true);
 
-      // Track this specific size as being updated
-      setUpdatingSizes(prev => new Set(prev).add(size.id));
-      setIsUpdating(true);
-
-      try {
-        await onChange(sortedSizes);
-        setLastApiCallTime(Date.now());
-      } finally {
-        setIsUpdating(false);
-        // Remove this size from updating set
-        setUpdatingSizes(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(size.id);
-          return newSet;
+        // Update without sorting - preserve the order as user edited it
+        queueMicrotask(() => {
+          onChange([...currentSizes])
+            .then(() => {
+              setLastApiCallTime(Date.now());
+              // Allow props sync after update completes
+              setTimeout(() => {
+                isEditingRef.current = false;
+              }, 100);
+            })
+            .catch(err => {
+              console.error('Error updating sizes:', err);
+              // Allow props sync even on error
+              setTimeout(() => {
+                isEditingRef.current = false;
+              }, 100);
+            })
+            .finally(() => {
+              setIsUpdating(false);
+              // Remove this size from updating set
+              setUpdatingSizes(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(size.id);
+                return newSet;
+              });
+            });
         });
-      }
+
+        return currentSizes;
+      });
     },
     [disabled, localSizes, onChange]
   );
