@@ -98,11 +98,20 @@ export function useInfiniteCatalog(
   const lastCategoryId = useRef(initialCategoryId);
   const requestInProgress = useRef(false);
   const currentFiltersRef = useRef(filters);
+  const isOptimisticUpdateRef = useRef(false);
+  const loadingMoreRef = useRef(false);
+  const lastRequestKeyRef = useRef<string | null>(null);
+  const inFlightRequestKeyRef = useRef<string | null>(null);
 
   // Update filters ref whenever filters change
   useEffect(() => {
     currentFiltersRef.current = filters;
   }, [filters]);
+
+  // Update loadingMore ref whenever loadingMore state changes
+  useEffect(() => {
+    loadingMoreRef.current = loadingMore;
+  }, [loadingMore]);
   const hasNextPage = useMemo(() => {
     const hasMore = pagination.page < pagination.totalPages;
     return hasMore;
@@ -116,15 +125,42 @@ export function useInfiniteCatalog(
   // Fetch products from backend
   const fetchProducts = useCallback(
     async (newFilters?: Partial<CatalogFilters>, append = false) => {
-      console.log(
-        '🔄 fetchProducts called. append:',
-        append,
-        'newFilters:',
-        newFilters
-      );
+      // Skip fetch if we're in the middle of an optimistic update
+      if (isOptimisticUpdateRef.current) {
+        return;
+      }
 
-      // Prevent multiple simultaneous requests only for non-append requests
-      if (requestInProgress.current && !append) {
+      // Get current filters from state at the time of call
+      const currentFilters = currentFiltersRef.current;
+      const updatedFilters = { ...currentFilters, ...newFilters };
+
+      // Create a unique request key for deduplication
+      const requestKey = JSON.stringify({
+        page: updatedFilters.page,
+        pageSize: updatedFilters.pageSize,
+        search: updatedFilters.search,
+        categoryId: updatedFilters.categoryId,
+        sortBy: updatedFilters.sortBy,
+        minPrice: updatedFilters.minPrice,
+        maxPrice: updatedFilters.maxPrice,
+        colors: updatedFilters.colors.sort(),
+        inStock: updatedFilters.inStock,
+        append,
+      });
+
+      // Prevent duplicate requests - check if same request is in flight or just completed
+      if (
+        inFlightRequestKeyRef.current === requestKey ||
+        lastRequestKeyRef.current === requestKey
+      ) {
+        console.log('🚫 fetchProducts: Duplicate request detected, skipping.', {
+          requestKey,
+        });
+        return;
+      }
+
+      // Prevent multiple simultaneous requests
+      if (requestInProgress.current) {
         console.log('🚫 fetchProducts: Request already in progress, skipping.');
         return;
       }
@@ -132,11 +168,22 @@ export function useInfiniteCatalog(
       const isInitialLoad = !append;
       if (isInitialLoad) {
         requestInProgress.current = true;
+        inFlightRequestKeyRef.current = requestKey;
         setLoading(true);
         console.log(
           '⏳ fetchProducts: Setting loading to true for initial load.'
         );
       } else {
+        // For append requests, also check if we're already loading more (use ref to avoid stale closure)
+        if (loadingMoreRef.current) {
+          console.log(
+            '🚫 fetchProducts: Already loading more, skipping append request.'
+          );
+          return;
+        }
+        requestInProgress.current = true;
+        inFlightRequestKeyRef.current = requestKey;
+        loadingMoreRef.current = true;
         setLoadingMore(true);
         console.log(
           '⏳ fetchProducts: Setting loadingMore to true for append.'
@@ -145,74 +192,79 @@ export function useInfiniteCatalog(
       setError(null);
 
       try {
-        // Get current filters from state at the time of call
-        setFilters(currentFilters => {
-          const updatedFilters = { ...currentFilters, ...newFilters };
-          const searchParams = new URLSearchParams();
+        // Update filters state
+        setFilters(updatedFilters);
 
-          // Add all filter parameters
-          if (updatedFilters.search)
-            searchParams.set('search', updatedFilters.search);
-          if (updatedFilters.categoryId)
-            searchParams.set('categoryId', updatedFilters.categoryId);
-          if (updatedFilters.sortBy)
-            searchParams.set('sortBy', updatedFilters.sortBy);
-          if (updatedFilters.minPrice !== undefined)
-            searchParams.set('minPrice', updatedFilters.minPrice.toString());
-          if (updatedFilters.maxPrice !== undefined)
-            searchParams.set('maxPrice', updatedFilters.maxPrice.toString());
-          if (updatedFilters.colors.length > 0)
-            searchParams.set('colors', updatedFilters.colors.join(','));
-          if (updatedFilters.inStock) searchParams.set('inStock', 'true');
-          searchParams.set('page', updatedFilters.page.toString());
-          searchParams.set('pageSize', updatedFilters.pageSize.toString());
+        const searchParams = new URLSearchParams();
 
-          const url = `/api/catalog?${searchParams.toString()}`;
-          console.log('📡 fetchProducts: Making API call to:', url);
+        // Add all filter parameters
+        if (updatedFilters.search)
+          searchParams.set('search', updatedFilters.search);
+        if (updatedFilters.categoryId)
+          searchParams.set('categoryId', updatedFilters.categoryId);
+        if (updatedFilters.sortBy)
+          searchParams.set('sortBy', updatedFilters.sortBy);
+        if (updatedFilters.minPrice !== undefined)
+          searchParams.set('minPrice', updatedFilters.minPrice.toString());
+        if (updatedFilters.maxPrice !== undefined)
+          searchParams.set('maxPrice', updatedFilters.maxPrice.toString());
+        if (updatedFilters.colors.length > 0)
+          searchParams.set('colors', updatedFilters.colors.join(','));
+        if (updatedFilters.inStock) searchParams.set('inStock', 'true');
+        searchParams.set('page', updatedFilters.page.toString());
+        searchParams.set('pageSize', updatedFilters.pageSize.toString());
 
-          // Make the request
-          fetch(url)
-            .then(response => {
-              if (!response.ok) {
-                throw new Error('Failed to fetch products');
-              }
-              return response.json();
-            })
-            .then(data => {
+        const url = `/api/catalog?${searchParams.toString()}`;
+        console.log('📡 fetchProducts: Making API call to:', url);
+
+        // Make the request
+        fetch(url)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to fetch products');
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log(
+              '✅ fetchProducts: API call successful. Products received:',
+              data.products.length
+            );
+            if (append) {
+              // Append new products to existing ones
+              setAllProducts(prev => [...prev, ...data.products]);
+            } else {
+              // Replace all products (new search/filter)
+              setAllProducts(data.products);
+            }
+
+            setPagination(data.pagination);
+            // Mark this request as successfully completed
+            lastRequestKeyRef.current = requestKey;
+          })
+          .catch(err => {
+            setError(err instanceof Error ? err.message : 'Unknown error');
+            if (!append) {
+              setAllProducts([]);
+            }
+          })
+          .finally(() => {
+            console.log('🏁 fetchProducts: Finally block executed.');
+            setLoading(false);
+            setLoadingMore(false);
+            loadingMoreRef.current = false;
+            requestInProgress.current = false;
+            inFlightRequestKeyRef.current = null;
+            if (isInitialLoad) {
               console.log(
-                '✅ fetchProducts: API call successful. Products received:',
-                data.products.length
+                '🔓 fetchProducts: Resetting requestInProgress for initial load.'
               );
-              if (append) {
-                // Append new products to existing ones
-                setAllProducts(prev => [...prev, ...data.products]);
-              } else {
-                // Replace all products (new search/filter)
-                setAllProducts(data.products);
-              }
-
-              setPagination(data.pagination);
-            })
-            .catch(err => {
-              setError(err instanceof Error ? err.message : 'Unknown error');
-              if (!append) {
-                setAllProducts([]);
-              }
-            })
-            .finally(() => {
-              console.log('🏁 fetchProducts: Finally block executed.');
-              setLoading(false);
-              setLoadingMore(false);
-              if (isInitialLoad) {
-                requestInProgress.current = false;
-                console.log(
-                  '🔓 fetchProducts: Resetting requestInProgress for initial load.'
-                );
-              }
-            });
-
-          return updatedFilters;
-        });
+            } else {
+              console.log(
+                '🔓 fetchProducts: Resetting requestInProgress for append.'
+              );
+            }
+          });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
         if (!append) {
@@ -220,9 +272,9 @@ export function useInfiniteCatalog(
         }
         setLoading(false);
         setLoadingMore(false);
-        if (isInitialLoad) {
-          requestInProgress.current = false;
-        }
+        loadingMoreRef.current = false;
+        requestInProgress.current = false;
+        inFlightRequestKeyRef.current = null;
       }
     },
     [] // Remove dependencies to prevent cascade re-renders
@@ -230,11 +282,28 @@ export function useInfiniteCatalog(
 
   // Load more products (for infinite scroll)
   const loadMore = useCallback(() => {
-    if (hasNextPage && !loadingMore && !loading) {
+    // Prevent duplicate calls - check both state and refs
+    if (
+      hasNextPage &&
+      !loadingMoreRef.current &&
+      !loading &&
+      !requestInProgress.current
+    ) {
       const nextPage = pagination.page + 1;
       fetchProducts({ page: nextPage }, true);
+    } else {
+      console.log(
+        '🚫 loadMore: Skipping - hasNextPage:',
+        hasNextPage,
+        'loadingMore:',
+        loadingMoreRef.current,
+        'loading:',
+        loading,
+        'requestInProgress:',
+        requestInProgress.current
+      );
     }
-  }, [hasNextPage, loadingMore, loading, pagination.page]);
+  }, [hasNextPage, loading, pagination.page, fetchProducts]);
 
   // Retry loading more products
   const retryLoadMore = useCallback(() => {
@@ -295,7 +364,11 @@ export function useInfiniteCatalog(
         searchQuery
       );
       lastSearchQuery.current = searchQuery;
-      const newFilters = { ...currentFiltersRef.current, search: searchQuery, page: 1 };
+      const newFilters = {
+        ...currentFiltersRef.current,
+        search: searchQuery,
+        page: 1,
+      };
       setFilters(newFilters);
       fetchProducts(newFilters, false);
     } else if (searchQuery !== lastSearchQuery.current) {
@@ -349,6 +422,70 @@ export function useInfiniteCatalog(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
 
+  // Update a single product optimistically (without refetching)
+  // Preserves scroll position aggressively to prevent any scrolling
+  const updateProduct = useCallback(
+    (productId: string, updatedData: Partial<any>) => {
+      // Mark that we're doing an optimistic update to prevent any fetches
+      isOptimisticUpdateRef.current = true;
+
+      // Aggressively preserve scroll position
+      const scrollY = window.scrollY;
+      const scrollX = window.scrollX;
+      const scrollElement = document.documentElement || document.body;
+      const savedScrollTop = scrollElement.scrollTop;
+
+      setAllProducts(prevProducts => {
+        // Only update if the product exists and data actually changed
+        const productIndex = prevProducts.findIndex(p => p.id === productId);
+        if (productIndex === -1) {
+          isOptimisticUpdateRef.current = false;
+          return prevProducts;
+        }
+
+        const currentProduct = prevProducts[productIndex];
+        const updatedProduct = { ...currentProduct, ...updatedData };
+
+        // If nothing changed, return same array reference to prevent re-render
+        if (JSON.stringify(currentProduct) === JSON.stringify(updatedProduct)) {
+          isOptimisticUpdateRef.current = false;
+          return prevProducts;
+        }
+
+        // Create new array with only the updated product changed
+        const updated = [...prevProducts];
+        updated[productIndex] = updatedProduct;
+
+        // Restore scroll position immediately and multiple times to ensure it sticks
+        const restoreScroll = () => {
+          window.scrollTo(scrollX, scrollY);
+          if (scrollElement) {
+            scrollElement.scrollTop = savedScrollTop;
+          }
+        };
+
+        // Restore immediately
+        restoreScroll();
+
+        // Restore after React updates (multiple attempts to ensure it sticks)
+        requestAnimationFrame(() => {
+          restoreScroll();
+          setTimeout(() => {
+            restoreScroll();
+          }, 0);
+          setTimeout(() => {
+            restoreScroll();
+            // Clear the flag after all updates are done
+            isOptimisticUpdateRef.current = false;
+          }, 50);
+        });
+
+        return updated;
+      });
+    },
+    []
+  );
+
   return {
     // State
     products: allProducts,
@@ -369,5 +506,6 @@ export function useInfiniteCatalog(
     loadMore,
     retryLoadMore,
     fetchProducts,
+    updateProduct,
   };
 }

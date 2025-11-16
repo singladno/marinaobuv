@@ -27,6 +27,7 @@ export default function Home() {
     loadMore,
     retryLoadMore,
     fetchProducts,
+    updateProduct: updateProductOptimistic,
   } = useInfiniteCatalog();
 
   // Set up infinite scroll
@@ -50,9 +51,13 @@ export default function Home() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <Text variant="h2" className="mb-4">Ошибка загрузки каталога</Text>
+          <Text variant="h2" className="mb-4">
+            Ошибка загрузки каталога
+          </Text>
           <Text className="text-muted-foreground mb-4">{error}</Text>
-          <Button onClick={() => window.location.reload()}>Попробовать снова</Button>
+          <Button onClick={() => window.location.reload()}>
+            Попробовать снова
+          </Button>
         </div>
       </div>
     );
@@ -111,7 +116,49 @@ export default function Home() {
             onLoadMore={loadMore}
             onRetry={retryLoadMore}
             loadMoreRef={setLoadMoreRef}
-            onProductUpdated={() => fetchProducts()}
+            onProductUpdated={updatedProduct => {
+              // Update the product optimistically without refetching
+              if (updatedProduct) {
+                // Map API product to catalog format
+                // Find primary image (isPrimary: true) or first image sorted by isPrimary desc, sort asc
+                const sortedImages =
+                  updatedProduct.images
+                    ?.filter((img: any) => img.isActive !== false)
+                    .sort((a: any, b: any) => {
+                      // Primary images first
+                      if (a.isPrimary && !b.isPrimary) return -1;
+                      if (!a.isPrimary && b.isPrimary) return 1;
+                      // Then by sort order
+                      return (a.sort || 0) - (b.sort || 0);
+                    }) || [];
+
+                const primaryImageUrl = sortedImages[0]?.url || null;
+
+                // Deduplicate colorOptions by color (same as API does)
+                const seen = new Set<string>();
+                const colorOptions =
+                  updatedProduct.images
+                    ?.filter((img: any) => img.color)
+                    .filter((img: any) => {
+                      const key = (img.color || '').toLowerCase();
+                      if (seen.has(key)) return false;
+                      seen.add(key);
+                      return true;
+                    })
+                    .map((img: any) => ({
+                      color: img.color,
+                      imageUrl: img.url,
+                    })) || [];
+
+                const catalogProduct = {
+                  ...updatedProduct,
+                  primaryImageUrl,
+                  colorOptions,
+                };
+
+                updateProductOptimistic(updatedProduct.id, catalogProduct);
+              }
+            }}
           />
         </div>
       </div>

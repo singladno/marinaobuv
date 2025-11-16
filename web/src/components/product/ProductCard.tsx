@@ -2,7 +2,7 @@
 import { Heart, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, memo } from 'react';
 
 import CartActionButton from '@/components/product/CartActionButton';
 import PurchaseIndexBadges from '@/components/features/PurchaseIndexBadges';
@@ -73,10 +73,10 @@ type Props = {
   activeUpdatedAt?: string; // Add activeUpdatedAt for availability display
   source?: 'WA' | 'AG'; // Product source: WA (WhatsApp) or AG (aggregator)
   isActive?: boolean; // Product active status
-  onProductUpdated?: () => void; // Callback when product is updated
+  onProductUpdated?: (updatedProduct?: any) => void; // Callback when product is updated
 };
 
-export default function ProductCard({
+function ProductCard({
   slug,
   name,
   pricePair,
@@ -732,8 +732,9 @@ export default function ProductCard({
           onClose={() => setIsEditModalOpen(false)}
           productId={productId}
           categories={categories}
-          onProductUpdated={() => {
-            onProductUpdated?.();
+          onProductUpdated={(updatedProduct) => {
+            // Pass through to parent without any side effects
+            onProductUpdated?.(updatedProduct);
             setIsEditModalOpen(false);
           }}
         />
@@ -741,3 +742,5 @@ export default function ProductCard({
     </>
   );
 }
+
+export default memo(ProductCard);

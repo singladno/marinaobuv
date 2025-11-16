@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { rub } from '@/lib/format';
+import { sortSizesAscending } from '@/utils/sizeSort';
 
 type Props = {
   pricePair: number;
@@ -21,6 +22,7 @@ export function ProductPricing({
   onQuantityChange,
 }: Props) {
   // Merge duplicate sizes to avoid duplicate React keys and show summed counts
+  // Then sort them in ascending order
   const mergedSizes = useMemo(() => {
     const sizeToCount = new Map<string, number>();
     for (const sizeObj of sizes) {
@@ -28,10 +30,11 @@ export function ProductPricing({
       const current = sizeToCount.get(sizeKey) ?? 0;
       sizeToCount.set(sizeKey, current + Number(sizeObj.count || 0));
     }
-    return Array.from(sizeToCount.entries()).map(([size, count]) => ({
+    const merged = Array.from(sizeToCount.entries()).map(([size, count]) => ({
       size,
       count,
     }));
+    return sortSizesAscending(merged);
   }, [sizes]);
 
   // Calculate total available stock across all merged sizes

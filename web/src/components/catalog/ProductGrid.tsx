@@ -29,7 +29,7 @@ interface ProductGridProps {
   onRetry?: () => void;
   loadMoreRef?: (node: HTMLDivElement | null) => void;
   showEndMessage?: boolean;
-  onProductUpdated?: () => void;
+  onProductUpdated?: (updatedProduct?: any) => void;
 }
 
 export const ProductGrid = memo(function ProductGrid({
@@ -113,19 +113,7 @@ export const ProductGrid = memo(function ProductGrid({
                 Попробовать снова
               </button>
             </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <button
-                onClick={onLoadMore}
-                className="rounded-lg bg-purple-600 px-6 py-2 text-white transition-colors hover:bg-purple-700"
-              >
-                Загрузить еще
-              </button>
-              <p className="text-xs text-gray-500">
-                Или прокрутите вниз для автоматической загрузки
-              </p>
-            </div>
-          )}
+          ) : null}
         </div>
       )}
 

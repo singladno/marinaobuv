@@ -65,6 +65,7 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
   // De-duplication guards (avoid duplicate fetches under StrictMode or identical requests)
   const inFlightKeyRef = useRef<string | null>(null);
   const lastSuccessKeyRef = useRef<string | null>(null);
+  const isOptimisticUpdateRef = useRef(false);
 
   // Fetch products from backend
   function makeRequestKey(obj: CatalogFilters) {
@@ -80,11 +81,20 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
 
   const fetchProducts = useCallback(
     async (newFilters?: Partial<CatalogFilters>) => {
+      // Skip fetch if we're in the middle of an optimistic update
+      if (isOptimisticUpdateRef.current) {
+        log.info('🛑 Skipping fetch during optimistic update');
+        return;
+      }
+
       const currentFilters = { ...filters, ...newFilters };
       const requestKey = makeRequestKey(currentFilters);
 
       // Skip if identical request is already in flight or just succeeded
-      if (inFlightKeyRef.current === requestKey || lastSuccessKeyRef.current === requestKey) {
+      if (
+        inFlightKeyRef.current === requestKey ||
+        lastSuccessKeyRef.current === requestKey
+      ) {
         log.info('🛑 Skipping duplicate catalog fetch', { currentFilters });
         return;
       }
@@ -127,7 +137,10 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         setPagination(data.pagination);
         setFilters(currentFilters);
         lastSuccessKeyRef.current = requestKey;
-        log.info('✅ Catalog fetch DONE', { count: data.products.length, pagination: data.pagination });
+        log.info('✅ Catalog fetch DONE', {
+          count: data.products.length,
+          pagination: data.pagination,
+        });
         log.groupEnd();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -231,6 +244,70 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Update a single product optimistically (without refetching)
+  // Preserves scroll position aggressively to prevent any scrolling
+  const updateProduct = useCallback(
+    (productId: string, updatedData: Partial<any>) => {
+      // Mark that we're doing an optimistic update to prevent any fetches
+      isOptimisticUpdateRef.current = true;
+
+      // Aggressively preserve scroll position
+      const scrollY = window.scrollY;
+      const scrollX = window.scrollX;
+      const scrollElement = document.documentElement || document.body;
+      const savedScrollTop = scrollElement.scrollTop;
+
+      setProducts(prevProducts => {
+        // Only update if the product exists and data actually changed
+        const productIndex = prevProducts.findIndex(p => p.id === productId);
+        if (productIndex === -1) {
+          isOptimisticUpdateRef.current = false;
+          return prevProducts;
+        }
+
+        const currentProduct = prevProducts[productIndex];
+        const updatedProduct = { ...currentProduct, ...updatedData };
+
+        // If nothing changed, return same array reference to prevent re-render
+        if (JSON.stringify(currentProduct) === JSON.stringify(updatedProduct)) {
+          isOptimisticUpdateRef.current = false;
+          return prevProducts;
+        }
+
+        // Create new array with only the updated product changed
+        const updated = [...prevProducts];
+        updated[productIndex] = updatedProduct;
+
+        // Restore scroll position immediately and multiple times to ensure it sticks
+        const restoreScroll = () => {
+          window.scrollTo(scrollX, scrollY);
+          if (scrollElement) {
+            scrollElement.scrollTop = savedScrollTop;
+          }
+        };
+
+        // Restore immediately
+        restoreScroll();
+
+        // Restore after React updates (multiple attempts to ensure it sticks)
+        requestAnimationFrame(() => {
+          restoreScroll();
+          setTimeout(() => {
+            restoreScroll();
+          }, 0);
+          setTimeout(() => {
+            restoreScroll();
+            // Clear the flag after all updates are done
+            isOptimisticUpdateRef.current = false;
+          }, 50);
+        });
+
+        return updated;
+      });
+    },
+    []
+  );
+
   return {
     // State
     products,
@@ -246,5 +323,6 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
     handlePageChange,
     clearFilters,
     fetchProducts,
+    updateProduct,
   };
 }

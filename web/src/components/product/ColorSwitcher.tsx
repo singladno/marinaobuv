@@ -27,16 +27,18 @@ export default function ColorSwitcher({
 
   return (
     <div className={`flex ${dirClass} items-center gap-3`}>
-      {options.map(opt => {
+      {options.map((opt, index) => {
         const isSelected =
           selectedColor?.toLowerCase() === opt.color.toLowerCase();
         const bg = getColorHex(opt.color);
         const isAdded = addedColors.some(
           c => c && c.toLowerCase() === opt.color.toLowerCase()
         );
+        // Use index in key to handle duplicate colors (shouldn't happen but prevents React errors)
+        const uniqueKey = `${opt.color}-${index}-${opt.imageUrl || ''}`;
         return (
           <button
-            key={opt.color}
+            key={uniqueKey}
             type="button"
             onClick={e => {
               e.preventDefault();

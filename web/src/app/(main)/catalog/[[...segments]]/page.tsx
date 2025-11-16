@@ -54,6 +54,7 @@ function CatalogPageContent() {
     handleSortChange,
     handlePageChange,
     clearFilters,
+    updateProduct: updateProductOptimistic,
   } = useCatalogBackend({ skipInitialFetch: true });
 
   const pathname = usePathname();
@@ -94,10 +95,16 @@ function CatalogPageContent() {
         setCategoryId('');
         setCategoryName('');
         // If no category path, trigger initial fetch once using saved filters
-        if (restored && savedFiltersRef.current && !initialFetchDoneRef.current) {
+        if (
+          restored &&
+          savedFiltersRef.current &&
+          !initialFetchDoneRef.current
+        ) {
           initialFetchDoneRef.current = true;
           setInitialFetchDone(true);
-          log.info('🚀 Initial catalog fetch (no category path)', { savedFilters: savedFiltersRef.current });
+          log.info('🚀 Initial catalog fetch (no category path)', {
+            savedFilters: savedFiltersRef.current,
+          });
           handleFiltersChange(savedFiltersRef.current);
         }
         return;
@@ -122,11 +129,21 @@ function CatalogPageContent() {
           setParentCategory(data.parentCategory || null);
           setIsParentCategory(data.isParentCategory || false);
           // Perform single initial fetch combining saved filters + category id
-          if (restored && savedFiltersRef.current && !initialFetchDoneRef.current) {
+          if (
+            restored &&
+            savedFiltersRef.current &&
+            !initialFetchDoneRef.current
+          ) {
             initialFetchDoneRef.current = true;
             setInitialFetchDone(true);
-            log.info('🚀 Initial catalog fetch (with category)', { categoryId: data.id, savedFilters: savedFiltersRef.current });
-            handleFiltersChange({ ...savedFiltersRef.current, categoryId: data.id });
+            log.info('🚀 Initial catalog fetch (with category)', {
+              categoryId: data.id,
+              savedFilters: savedFiltersRef.current,
+            });
+            handleFiltersChange({
+              ...savedFiltersRef.current,
+              categoryId: data.id,
+            });
           }
         } else {
           setCategoryId('');
@@ -177,16 +194,20 @@ function CatalogPageContent() {
   }, [pathname, setSearchQuery]);
 
   // Persist filters whenever they change, scoped by current pathname
-  usePersistCatalogFilters(pathname, {
-    search: filters.search,
-    sortBy: filters.sortBy,
-    minPrice: filters.minPrice,
-    maxPrice: filters.maxPrice,
-    colors: filters.colors,
-    inStock: filters.inStock,
-    page: filters.page,
-    pageSize: filters.pageSize,
-  }, { enabled: canPersist });
+  usePersistCatalogFilters(
+    pathname,
+    {
+      search: filters.search,
+      sortBy: filters.sortBy,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      colors: filters.colors,
+      inStock: filters.inStock,
+      page: filters.page,
+      pageSize: filters.pageSize,
+    },
+    { enabled: canPersist }
+  );
 
   // React to URL page/pageSize changes after initial fetch
   const prevSearchParamsRef = useRef<string>('');
@@ -203,7 +224,10 @@ function CatalogPageContent() {
     if (currentParams === prevSearchParamsRef.current) return;
     prevSearchParamsRef.current = currentParams;
 
-    const pageParam = parseInt(searchParams.get('page') || String(filters.page), 10);
+    const pageParam = parseInt(
+      searchParams.get('page') || String(filters.page),
+      10
+    );
     const pageSizeParam = parseInt(
       searchParams.get('pageSize') || String(filters.pageSize),
       10
@@ -212,61 +236,13 @@ function CatalogPageContent() {
       handleFiltersChange({ page: pageParam, pageSize: pageSizeParam });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, restored, initialFetchDone, filters.page, filters.pageSize]);
-
-  // Scroll to product when returning from product page (guarded against double-invocation)
-  const hasScrolledRef = useRef(false);
-  useEffect(() => {
-    if (hasScrolledRef.current) return;
-    if (loading || !products.length) return;
-
-    try {
-      const navData = sessionStorage.getItem('productNavigation');
-      if (!navData) return;
-
-      const { productId, referrer, timestamp } = JSON.parse(navData);
-      if (!productId || !referrer) return;
-
-      // Normalize referrer URL (handle both full URLs and relative paths)
-      let referrerPath: string;
-      try {
-        const referrerUrl = referrer.startsWith('http')
-          ? new URL(referrer)
-          : new URL(referrer, window.location.origin);
-        referrerPath = referrerUrl.pathname + referrerUrl.search;
-      } catch {
-        referrerPath = referrer.split('?')[0] + (referrer.includes('?') ? '?' + referrer.split('?')[1] : '');
-      }
-
-      const currentUrl = new URL(window.location.href);
-      const currentPath = currentUrl.pathname + currentUrl.search;
-
-      // Only scroll if we're on a catalog page that matches the referrer
-      if ((currentPath === '/catalog' || currentPath.startsWith('/catalog/')) && referrerPath === currentPath) {
-        const productElement = document.querySelector(
-          `[data-product-id="${productId}"]`
-        );
-
-        if (productElement) {
-          // Prevent duplicate scrolls before scheduling
-          hasScrolledRef.current = true;
-          // Remove the flag immediately so a second render won't schedule again
-          sessionStorage.removeItem('productNavigation');
-
-          // Use requestAnimationFrame to ensure layout is settled, then smooth scroll once
-          requestAnimationFrame(() => {
-            productElement.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-            });
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error scrolling to product:', error);
-      sessionStorage.removeItem('productNavigation');
-    }
-  }, [loading, products.length]);
+  }, [
+    searchParams,
+    restored,
+    initialFetchDone,
+    filters.page,
+    filters.pageSize,
+  ]);
 
   // Show a single skeleton while either category or products are loading
   if (categoryLoading || (loading && products.length === 0)) {
@@ -287,7 +263,7 @@ function CatalogPageContent() {
 
   return (
     <div className="bg-background min-h-screen">
-      <div className="container mx-auto px-4 pt-8 pb-12">
+      <div className="container mx-auto px-4 pb-12 pt-8">
         {/* Header */}
         <div className="mb-6">
           {/* Breadcrumbs */}
@@ -359,9 +335,48 @@ function CatalogPageContent() {
             hasNextPage={false}
             error={error}
             showEndMessage={false}
-            onProductUpdated={() => {
-              // Refresh the catalog by re-fetching with current filters
-              handleFiltersChange({});
+            onProductUpdated={updatedProduct => {
+              // Update the product optimistically without refetching
+              if (updatedProduct) {
+                // Map API product to catalog format
+                // Find primary image (isPrimary: true) or first image sorted by isPrimary desc, sort asc
+                const sortedImages =
+                  updatedProduct.images
+                    ?.filter((img: any) => img.isActive !== false)
+                    .sort((a: any, b: any) => {
+                      // Primary images first
+                      if (a.isPrimary && !b.isPrimary) return -1;
+                      if (!a.isPrimary && b.isPrimary) return 1;
+                      // Then by sort order
+                      return (a.sort || 0) - (b.sort || 0);
+                    }) || [];
+
+                const primaryImageUrl = sortedImages[0]?.url || null;
+
+                // Deduplicate colorOptions by color (same as API does)
+                const seen = new Set<string>();
+                const colorOptions =
+                  updatedProduct.images
+                    ?.filter((img: any) => img.color)
+                    .filter((img: any) => {
+                      const key = (img.color || '').toLowerCase();
+                      if (seen.has(key)) return false;
+                      seen.add(key);
+                      return true;
+                    })
+                    .map((img: any) => ({
+                      color: img.color,
+                      imageUrl: img.url,
+                    })) || [];
+
+                const catalogProduct = {
+                  ...updatedProduct,
+                  primaryImageUrl,
+                  colorOptions,
+                };
+
+                updateProductOptimistic(updatedProduct.id, catalogProduct);
+              }
             }}
           />
         </div>

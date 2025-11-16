@@ -14,14 +14,48 @@ export async function PATCH(
   }
 
   const { imageId } = await params;
-  const { isActive } = await request.json();
+  const updateData = await request.json();
 
   try {
-    await prisma.productImage.update({
+    // Only allow updating specific fields
+    const allowedFields: any = {};
+    if ('isActive' in updateData) {
+      allowedFields.isActive = updateData.isActive;
+    }
+    if ('isPrimary' in updateData) {
+      allowedFields.isPrimary = updateData.isPrimary;
+    }
+    if ('sort' in updateData) {
+      allowedFields.sort = updateData.sort;
+    }
+    if ('color' in updateData) {
+      allowedFields.color = updateData.color;
+    }
+
+    // If isPrimary is being set to true, unset it for all other images of the same product
+    if (allowedFields.isPrimary === true) {
+      const image = await prisma.productImage.findUnique({
+        where: { id: imageId },
+        select: { productId: true },
+      });
+
+      if (image) {
+        // Unset isPrimary for all other images of this product
+        await prisma.productImage.updateMany({
+          where: {
+            productId: image.productId,
+            id: { not: imageId },
+          },
+          data: { isPrimary: false },
+        });
+      }
+    }
+
+    const updated = await prisma.productImage.update({
       where: { id: imageId },
-      data: { isActive },
+      data: allowedFields,
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ image: updated });
   } catch (error) {
     console.error('Failed to update product image', error);
     return NextResponse.json(
