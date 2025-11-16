@@ -103,8 +103,20 @@ export class WebhookStatusMonitor {
       const settingsData = await settingsResponse.json();
       console.log('⚙️ Webhook settings:', settingsData);
 
-      // Check if webhook is properly configured
-      const webhookUrl = settingsData.incomingWebhook;
+      // Check if incoming webhook is enabled (first check - most important)
+      if (settingsData.incomingWebhook !== 'yes') {
+        console.log('⚠️ Incoming webhook is not enabled');
+        return {
+          isConnected: false,
+          lastCheck: new Date(),
+          errorMessage:
+            'Incoming webhook is not enabled - messages will not be received',
+          instanceStatus,
+        };
+      }
+
+      // Check if webhook URL is properly configured
+      const webhookUrl = settingsData.webhookUrl;
       const expectedWebhookUrl =
         'https://www.marina-obuv.ru/api/webhooks/green-api';
 
@@ -113,31 +125,7 @@ export class WebhookStatusMonitor {
         return {
           isConnected: false,
           lastCheck: new Date(),
-          errorMessage: `Webhook URL mismatch. Expected: ${expectedWebhookUrl}, Got: ${webhookUrl}`,
-          instanceStatus,
-        };
-      }
-
-      // Check if incoming webhook is enabled
-      if (!settingsData.incomingWebhookEnabled) {
-        console.log('⚠️ Incoming webhook is disabled');
-        return {
-          isConnected: false,
-          lastCheck: new Date(),
-          errorMessage:
-            'Incoming webhook is disabled - messages will not be received',
-          instanceStatus,
-        };
-      }
-
-      // Check if basic incoming webhook is enabled
-      if (settingsData.incomingWebhook !== 'yes') {
-        console.log('⚠️ Incoming webhook is not enabled');
-        return {
-          isConnected: false,
-          lastCheck: new Date(),
-          errorMessage:
-            'Incoming webhook is not enabled - messages will not be received',
+          errorMessage: `Webhook URL mismatch. Expected: ${expectedWebhookUrl}, Got: ${webhookUrl || 'not set'}`,
           instanceStatus,
         };
       }
