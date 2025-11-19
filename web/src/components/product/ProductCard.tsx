@@ -71,7 +71,7 @@ type Props = {
   colorOptions?: Array<{ color: string; imageUrl: string }>;
   productId?: string; // Add productId for source button
   activeUpdatedAt?: string; // Add activeUpdatedAt for availability display
-  source?: 'WA' | 'AG'; // Product source: WA (WhatsApp) or AG (aggregator)
+  source?: 'WA' | 'AG' | 'MANUAL'; // Product source: WA (WhatsApp), AG (aggregator), or MANUAL (manually created)
   isActive?: boolean; // Product active status
   onProductUpdated?: (updatedProduct?: any) => void; // Callback when product is updated
 };

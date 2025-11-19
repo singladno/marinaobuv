@@ -28,7 +28,7 @@ interface ProductGalleryProps {
   productId?: string;
   sourceMessageIds?: string[] | null;
   isActive: boolean;
-  source?: 'WA' | 'AG';
+  source?: 'WA' | 'AG' | 'MANUAL';
 }
 
 export default function ProductGalleryVertical({

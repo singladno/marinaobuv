@@ -12,6 +12,7 @@ interface ColorAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onBlur?: () => void;
+  onSelect?: (value: string) => void;
   onClearError?: () => void;
   disabled?: boolean;
   error?: string;
@@ -22,6 +23,7 @@ export function ColorAutocomplete({
   value,
   onChange,
   onBlur,
+  onSelect,
   onClearError,
   disabled = false,
   error,
@@ -64,17 +66,35 @@ export function ColorAutocomplete({
   };
 
   const handleSelectColor = (color: string) => {
-    handleSelect(color, onChange);
+    // Update the input value immediately with the full selected color
+    onChange(color);
+
+    // If onSelect callback is provided, call it with the full selected value
+    // This ensures the full value is committed (for immediate updates like color changes)
+    if (onSelect) {
+      onSelect(color);
+    }
+
+    // Use handleSelect to properly close dropdown and reset state
+    // Pass a no-op callback since we already called onChange above
+    handleSelect(color, () => {});
+
     // Blur the input to prevent dropdown from reopening
     inputRef.current?.blur();
-    // Trigger onBlur callback when selecting a suggestion
-    if (onBlur) {
+
+    // Trigger onBlur callback when selecting a suggestion (only if onSelect wasn't provided)
+    if (!onSelect && onBlur) {
       setTimeout(() => onBlur(), 100);
     }
   };
 
   const handleKeyDownWithEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && isOpen && highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+    if (
+      e.key === 'Enter' &&
+      isOpen &&
+      highlightedIndex >= 0 &&
+      highlightedIndex < suggestions.length
+    ) {
       e.preventDefault();
       handleSelectColor(suggestions[highlightedIndex]);
       return;
@@ -122,7 +142,7 @@ export function ColorAutocomplete({
           autoComplete="off"
         />
         {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+          <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-purple-600" />
           </div>
         )}

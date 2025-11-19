@@ -28,6 +28,8 @@ export function createProductColumnDefinitions({
   onSelectAll,
   allSelected,
   someSelected,
+  onEdit,
+  onEditImages,
 }: {
   onUpdateProduct: (id: string, data: ProductUpdateData) => Promise<void>;
   categories: CategoryNode[];
@@ -35,6 +37,8 @@ export function createProductColumnDefinitions({
   onSelectAll?: (selectAll: boolean) => void;
   allSelected?: boolean;
   someSelected?: boolean;
+  onEdit?: (productId: string) => void;
+  onEditImages?: (productId: string) => void;
 }) {
   return [
     // Selection column
@@ -75,7 +79,12 @@ export function createProductColumnDefinitions({
     columnHelper.accessor('images', {
       id: 'images',
       header: 'Изображения',
-      cell: ({ row }) => <ProductImagesCell product={row.original} />,
+      cell: ({ row }) => (
+        <ProductImagesCell
+          product={row.original}
+          onEditImages={onEditImages}
+        />
+      ),
     }),
 
     // Name column
@@ -248,11 +257,12 @@ export function createProductColumnDefinitions({
         <ProductActionsCell
           product={row.original}
           onUpdateProduct={onUpdateProduct}
+          onEdit={onEdit}
         />
       ),
       meta: {
         frozen: 'right',
-        width: 120,
+        width: 180,
       },
     }),
   ];

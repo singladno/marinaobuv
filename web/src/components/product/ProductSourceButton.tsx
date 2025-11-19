@@ -8,7 +8,7 @@ interface ProductSourceButtonProps {
   userRole?: string;
   productId?: string;
   sourceMessageIds?: string[] | null;
-  source?: 'WA' | 'AG';
+  source?: 'WA' | 'AG' | 'MANUAL';
   onSourceClick: () => void;
 }
 

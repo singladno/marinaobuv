@@ -18,8 +18,10 @@ export function ProductSizesCell({
   onChange,
   disabled = false,
 }: ProductSizesCellProps) {
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [shouldRenderEditor, setShouldRenderEditor] = React.useState(false);
+  const hasSizes = sizes && sizes.length > 0;
+  // Auto-open editor when there are no sizes (create mode)
+  const [isEditing, setIsEditing] = React.useState(!hasSizes);
+  const [shouldRenderEditor, setShouldRenderEditor] = React.useState(!hasSizes);
   const editPanelRef = React.useRef<HTMLDivElement | null>(null);
 
   const draftSizes: DraftSize[] = React.useMemo(

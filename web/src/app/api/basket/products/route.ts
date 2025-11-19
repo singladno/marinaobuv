@@ -24,7 +24,10 @@ export async function POST(request: NextRequest) {
           in: slugs,
         },
         isActive: true,
-        batchProcessingStatus: 'completed',
+        OR: [
+          { batchProcessingStatus: 'completed' }, // Parsed products
+          { source: 'MANUAL' }, // Manually created products
+        ],
       },
       include: {
         category: {

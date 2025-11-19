@@ -30,7 +30,7 @@ export interface Product {
   images: ProductImage[];
   sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
   sourceMessageIds: string[] | null; // Array of WhatsApp message IDs that created this product
-  source: 'WA' | 'AG'; // Source of the product: WA (WhatsApp) or AG (aggregator)
+  source: 'WA' | 'AG' | 'MANUAL'; // Source of the product: WA (WhatsApp), AG (aggregator), or MANUAL (manually created)
   gptRequest: string | null; // GPT request for debugging
   gptResponse: string | null; // GPT response for debugging
 }

@@ -133,18 +133,30 @@ export function ProductImageColorGroup({
               {!isDeleted && (
                 <div className="space-y-1">
                   <ColorAutocomplete
-                    value={editingColors.get(image.id) ?? image.color}
+                    key={`${image.id}-${image.color || ''}`}
+                    value={editingColors.get(image.id) ?? image.color ?? ''}
                     onChange={newColor => {
                       // Update temporary value for display (doesn't trigger regrouping)
                       setEditingColors(prev =>
                         new Map(prev).set(image.id, newColor)
                       );
                     }}
+                    onSelect={selectedColor => {
+                      // Immediately commit when selecting from dropdown
+                      setEditingColors(prev => {
+                        const newMap = new Map(prev);
+                        newMap.delete(image.id);
+                        return newMap;
+                      });
+                      if (selectedColor !== image.color) {
+                        onColorChange(image.id, selectedColor);
+                      }
+                    }}
                     onBlur={() => {
                       // Commit the color change on blur (triggers regrouping)
                       const finalColor =
-                        editingColors.get(image.id) ?? image.color;
-                      if (finalColor !== image.color) {
+                        editingColors.get(image.id) ?? image.color ?? '';
+                      if (finalColor !== (image.color || '')) {
                         onColorChange(image.id, finalColor);
                       }
                       // Clear the temporary value
@@ -155,7 +167,7 @@ export function ProductImageColorGroup({
                       });
                     }}
                     disabled={disabled}
-                    error={!image.color.trim() ? 'Цвет обязателен' : undefined}
+                    error={!image.color?.trim() ? 'Цвет обязателен' : undefined}
                     required
                   />
                 </div>

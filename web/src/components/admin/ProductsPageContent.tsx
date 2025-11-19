@@ -16,11 +16,17 @@ import type { Product } from '@/types/product';
 
 import { ProductMobileCard } from './ProductMobileCard';
 import { CreateProductModal, type CreateProductData } from './CreateProductModal';
+import { EditProductModal } from './EditProductModal';
+import { EditProductImagesModal } from './EditProductImagesModal';
 
 type ProductWithSelected = Product & { selected?: boolean };
 
 export function ProductsPageContent() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [isEditImagesModalOpen, setIsEditImagesModalOpen] = useState(false);
+  const [editingImagesProductId, setEditingImagesProductId] = useState<string | null>(null);
 
   const {
     products,
@@ -66,6 +72,31 @@ export function ProductsPageContent() {
     selectedCount,
   });
 
+  const handleEditProduct = (productId: string) => {
+    setEditingProductId(productId);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditModalClose = () => {
+    setIsEditModalOpen(false);
+    setEditingProductId(null);
+  };
+
+  const handleProductUpdated = (updatedProduct: Product) => {
+    // Reload products list to show updated product
+    reload();
+  };
+
+  const handleEditImages = (productId: string) => {
+    setEditingImagesProductId(productId);
+    setIsEditImagesModalOpen(true);
+  };
+
+  const handleEditImagesModalClose = () => {
+    setIsEditImagesModalOpen(false);
+    setEditingImagesProductId(null);
+  };
+
   const columns = createProductColumns({
     onUpdateProduct: handleUpdateProduct,
     categories,
@@ -73,6 +104,8 @@ export function ProductsPageContent() {
     onSelectAll,
     allSelected,
     someSelected,
+    onEdit: handleEditProduct,
+    onEditImages: handleEditImages,
   });
 
   // Map products with selected state
@@ -156,6 +189,8 @@ export function ProductsPageContent() {
               categories={categories}
               selected={selected[product.id] || false}
               onToggle={onToggle || (() => {})}
+              onEdit={handleEditProduct}
+              onEditImages={handleEditImages}
             />
           )}
         />
@@ -179,6 +214,21 @@ export function ProductsPageContent() {
         onCreate={handleCreateProduct}
         categories={categories}
         isLoading={isCreating}
+      />
+
+      <EditProductModal
+        isOpen={isEditModalOpen}
+        onClose={handleEditModalClose}
+        productId={editingProductId}
+        categories={categories}
+        onProductUpdated={handleProductUpdated}
+      />
+
+      <EditProductImagesModal
+        isOpen={isEditImagesModalOpen}
+        onClose={handleEditImagesModalClose}
+        productId={editingImagesProductId}
+        onProductUpdated={handleProductUpdated}
       />
     </div>
   );

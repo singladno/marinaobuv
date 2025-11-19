@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Pencil, Hand } from 'lucide-react';
 
 import { ProductSourceModal } from '@/components/product/ProductSourceModal';
 import { useUser } from '@/contexts/NextAuthUserContext';
@@ -11,11 +11,13 @@ import type { Product } from '@/types/product';
 interface ProductActionsCellProps {
   product: Product;
   onUpdateProduct: (id: string, data: Record<string, unknown>) => Promise<void>;
+  onEdit?: (productId: string) => void;
 }
 
 export function ProductActionsCell({
   product,
   onUpdateProduct,
+  onEdit,
 }: ProductActionsCellProps) {
   const { user } = useUser();
   const [isToggling, setIsToggling] = useState(false);
@@ -35,31 +37,65 @@ export function ProductActionsCell({
 
   return (
     <>
-      <div className="flex w-full items-center justify-between">
-        {/* Source button - only show for admin users if there are source messages */}
-        {user?.role === 'ADMIN' &&
-          product.sourceMessageIds &&
-          product.sourceMessageIds.length > 0 && (
-            <button
-              onClick={() => setIsSourceModalOpen(true)}
-              className="group shrink-0 cursor-pointer rounded focus:outline-none"
-              title={`Просмотреть ${product.sourceMessageIds.length} источник${product.sourceMessageIds.length === 1 ? '' : product.sourceMessageIds.length < 5 ? 'а' : 'ов'}`}
-              aria-label="Просмотреть источник"
-            >
-              {product.source === 'WA' ? (
-                <Image
-                  src="/images/whatsapp-icon.png"
-                  alt="WhatsApp"
-                  width={36}
-                  height={36}
-                  className="h-8 w-8 rounded transition-transform duration-200 group-hover:scale-110"
-                  unoptimized
-                />
-              ) : (
-                <MessageSquare className="h-4 w-4" />
+      <div className="flex w-full items-center justify-center gap-2">
+        {/* Edit button - hidden on mobile/tablet/iPad (fields are inline editable), only show on desktop (>=1280px) */}
+        {onEdit && (
+          <button
+            onClick={() => onEdit(product.id)}
+            className="hidden xl:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-gray-600 transition-colors hover:border-purple-400 hover:bg-purple-50 hover:text-purple-700 dark:border-gray-600 dark:text-gray-400 dark:hover:border-purple-500 dark:hover:bg-purple-900/20 dark:hover:text-purple-300 cursor-pointer"
+            title="Редактировать товар"
+            aria-label="Редактировать товар"
+          >
+            <Pencil className="h-4 w-4 flex-shrink-0" />
+          </button>
+        )}
+
+        {/* Source button - show for admin users */}
+        {user?.role === 'ADMIN' && (
+          <>
+            {product.source === 'MANUAL' && (
+              <div
+                className="shrink-0 rounded tablet-desktop-view"
+                title="Создан вручную"
+                aria-label="Создан вручную"
+              >
+                <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
+              </div>
+            )}
+            {product.sourceMessageIds &&
+              product.sourceMessageIds.length > 0 && (
+                <button
+                  onClick={() => setIsSourceModalOpen(true)}
+                  className="group shrink-0 cursor-pointer rounded focus:outline-none"
+                  title={`Просмотреть ${product.sourceMessageIds.length} источник${product.sourceMessageIds.length === 1 ? '' : product.sourceMessageIds.length < 5 ? 'а' : 'ов'}`}
+                  aria-label="Просмотреть источник"
+                >
+                  {product.source === 'WA' ? (
+                    <Image
+                      src="/images/whatsapp-icon.png"
+                      alt="WhatsApp"
+                      width={36}
+                      height={36}
+                      className="h-8 w-8 rounded transition-transform duration-200 group-hover:scale-110"
+                      unoptimized
+                    />
+                  ) : (
+                    <MessageSquare className="h-4 w-4" />
+                  )}
+                </button>
               )}
-            </button>
-          )}
+            {/* Show MANUAL icon in iPad view */}
+            {product.source === 'MANUAL' && (
+              <div
+                className="shrink-0 rounded tablet-mobile-view"
+                title="Создан вручную"
+                aria-label="Создан вручную"
+              >
+                <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
+              </div>
+            )}
+          </>
+        )}
 
         {/* Toggle switch for activation */}
         <button

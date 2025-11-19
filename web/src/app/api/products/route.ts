@@ -7,7 +7,10 @@ export async function GET() {
     const products = await prisma.product.findMany({
       where: {
         isActive: true, // Only show active products
-        batchProcessingStatus: 'completed', // Only show fully processed products
+        OR: [
+          { batchProcessingStatus: 'completed' }, // Parsed products
+          { source: 'MANUAL' }, // Manually created products
+        ],
       },
       take: 50, // Show more products
       orderBy: { createdAt: 'desc' },

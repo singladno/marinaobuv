@@ -49,8 +49,18 @@ export async function GET(request: NextRequest) {
     const auth = await requireAuth(request);
 
     // Build where clause
+    // Include products that are either:
+    // 1. Completed batch processing (parsed from WhatsApp)
+    // 2. Manually created (source: 'MANUAL')
     const where: any = {
-      batchProcessingStatus: 'completed',
+      AND: [
+        {
+          OR: [
+            { batchProcessingStatus: 'completed' },
+            { source: 'MANUAL' },
+          ],
+        },
+      ],
     };
 
     // Only show active products for non-admin users
@@ -62,12 +72,14 @@ export async function GET(request: NextRequest) {
     // Search functionality - case insensitive for Cyrillic and Latin characters
     if (search) {
       const searchLower = search.toLowerCase();
-      where.OR = [
-        { name: { contains: searchLower, mode: 'insensitive' } },
-        { article: { contains: searchLower, mode: 'insensitive' } },
-        { slug: { contains: searchLower, mode: 'insensitive' } },
-        { description: { contains: searchLower, mode: 'insensitive' } },
-      ];
+      where.AND.push({
+        OR: [
+          { name: { contains: searchLower, mode: 'insensitive' } },
+          { article: { contains: searchLower, mode: 'insensitive' } },
+          { slug: { contains: searchLower, mode: 'insensitive' } },
+          { description: { contains: searchLower, mode: 'insensitive' } },
+        ],
+      });
     }
 
     // Category filter - include products from subcategories (recursively)

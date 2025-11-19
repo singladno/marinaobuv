@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Hand } from 'lucide-react';
 
 import { ProductImagesCell } from '@/components/features/ProductImagesCell';
 import { ProductNameCell } from '@/components/features/ProductNameCell';
@@ -25,6 +25,8 @@ interface ProductMobileCardProps {
   categories: CategoryNode[];
   selected: boolean;
   onToggle: (id: string) => void;
+  onEdit?: (productId: string) => void;
+  onEditImages?: (productId: string) => void;
 }
 
 export function ProductMobileCard({
@@ -33,6 +35,8 @@ export function ProductMobileCard({
   categories,
   selected,
   onToggle,
+  onEdit,
+  onEditImages,
 }: ProductMobileCardProps) {
   const { user } = useUser();
   const [isToggling, setIsToggling] = React.useState(false);
@@ -71,6 +75,8 @@ export function ProductMobileCard({
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {/* Edit button removed on iPad - fields are inline editable */}
+
               {/* WhatsApp/Source button */}
               {user?.role === 'ADMIN' &&
                 product.sourceMessageIds &&
@@ -95,6 +101,16 @@ export function ProductMobileCard({
                     )}
                   </button>
                 )}
+              {/* MANUAL source icon */}
+              {user?.role === 'ADMIN' && product.source === 'MANUAL' && (
+                <div
+                  className="shrink-0 rounded"
+                  title="Создан вручную"
+                  aria-label="Создан вручную"
+                >
+                  <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
+                </div>
+              )}
 
               {/* Toggle switch */}
               <button
@@ -119,7 +135,7 @@ export function ProductMobileCard({
             <div className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
               Изображения
             </div>
-            <ProductImagesCell product={product} />
+            <ProductImagesCell product={product} onEditImages={onEditImages} />
           </div>
 
           {/* Product Details Grid */}

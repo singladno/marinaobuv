@@ -15,7 +15,7 @@ type Props = {
   productId?: string;
   sourceMessageIds?: string[] | null;
   isActive: boolean;
-  source?: 'WA' | 'AG';
+  source?: 'WA' | 'AG' | 'MANUAL';
   initialSelectedColor?: string | null;
 };
 

@@ -38,6 +38,14 @@ export function CreateProductGenderSeasonFields({
   onFieldChange,
   onClearError,
 }: CreateProductGenderSeasonFieldsProps) {
+  const selectedGenderLabel = formData.gender
+    ? GENDER_OPTIONS.find(opt => opt.value === formData.gender)?.label
+    : undefined;
+
+  const selectedSeasonLabel = formData.season
+    ? SEASON_OPTIONS.find(opt => opt.value === formData.season)?.label
+    : undefined;
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="space-y-2">
@@ -60,7 +68,9 @@ export function CreateProductGenderSeasonFields({
           disabled={isSubmitting}
         >
           <SelectTrigger className={errors.gender ? 'border-red-500' : ''}>
-            <SelectValue placeholder="Выберите пол" />
+            <SelectValue placeholder="Выберите пол">
+              {selectedGenderLabel}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {GENDER_OPTIONS.map(option => (
@@ -99,7 +109,9 @@ export function CreateProductGenderSeasonFields({
           disabled={isSubmitting}
         >
           <SelectTrigger className={errors.season ? 'border-red-500' : ''}>
-            <SelectValue placeholder="Выберите сезон" />
+            <SelectValue placeholder="Выберите сезон">
+              {selectedSeasonLabel}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {SEASON_OPTIONS.map(option => (

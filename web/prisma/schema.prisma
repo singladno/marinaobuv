@@ -579,4 +579,5 @@ enum ReplacementStatus {
 enum ProductSource {
   WA
   AG
+  MANUAL
 }

@@ -20,9 +20,26 @@ export function ProductSizesSummary({
 }: ProductSizesSummaryProps) {
   if (!sizes || sizes.length === 0) {
     return (
-      <span className="text-xs text-gray-400 whitespace-nowrap">
-        Размеры не указаны
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-400 whitespace-nowrap">
+          Размеры не указаны
+        </span>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onToggleEdit}
+            aria-expanded={isEditing}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition-colors hover:border-purple-300 hover:text-purple-700 dark:border-gray-700 dark:text-gray-200 dark:hover:text-purple-300 cursor-pointer"
+            title={isEditing ? 'Скрыть' : 'Добавить размеры'}
+          >
+            {isEditing ? (
+              <XMarkIcon className="h-4 w-4" />
+            ) : (
+              <PencilSquareIcon className="h-4 w-4" />
+            )}
+          </button>
+        )}
+      </div>
     );
   }
 
@@ -31,9 +48,9 @@ export function ProductSizesSummary({
 
   return (
     <div className="flex flex-nowrap items-center gap-1 overflow-hidden">
-      {visible.map(item => (
+      {visible.map((item, index) => (
         <span
-          key={`${item.size}-${item.count}`}
+          key={`${item.size}-${item.count}-${index}`}
           className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-100"
         >
           {item.size}

@@ -9,6 +9,8 @@ interface CreateProductColumnsOptions {
   onSelectAll?: (selectAll: boolean) => void;
   allSelected?: boolean;
   someSelected?: boolean;
+  onEdit?: (productId: string) => void;
+  onEditImages?: (productId: string) => void;
 }
 
 export function createProductColumns(options: CreateProductColumnsOptions) {

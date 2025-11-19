@@ -30,11 +30,17 @@ export async function PATCH(
       );
     }
 
-    // Validate sizes structure
+    // Validate sizes structure - size can be text (e.g., "35/36"), count must be a number
     for (const size of sizes) {
-      if (!size.size || typeof size.count !== 'number') {
+      if (!size.size || typeof size.size !== 'string' || size.size.trim() === '') {
         return NextResponse.json(
-          { error: 'Each size must have a size string and count number' },
+          { error: 'Каждый размер должен иметь текстовое значение размера (например: "36" или "35/36")' },
+          { status: 400 }
+        );
+      }
+      if (typeof size.count !== 'number' || size.count < 0) {
+        return NextResponse.json(
+          { error: 'Каждый размер должен иметь количество (число >= 0)' },
           { status: 400 }
         );
       }

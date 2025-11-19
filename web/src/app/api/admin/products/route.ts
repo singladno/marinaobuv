@@ -115,6 +115,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate sizes structure - size can be text (e.g., "35/36"), count must be a number
+    for (const size of sizes) {
+      if (!size.size || typeof size.size !== 'string' || size.size.trim() === '') {
+        return NextResponse.json(
+          { error: 'Каждый размер должен иметь текстовое значение размера (например: "36" или "35/36")' },
+          { status: 400 }
+        );
+      }
+      if (typeof size.count !== 'number' || size.count < 0) {
+        return NextResponse.json(
+          { error: 'Каждый размер должен иметь количество (число >= 0)' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Verify category exists
     const category = await prisma.category.findUnique({
       where: { id: categoryId },
@@ -173,7 +189,7 @@ export async function POST(req: NextRequest) {
         description: description.trim(),
         sizes: sizes,
         isActive,
-        source: 'AG', // Admin-created products
+        source: 'MANUAL', // Manually created products from admin panel
         activeUpdatedAt: new Date(),
       },
       include: productInclude,

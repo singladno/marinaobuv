@@ -14,7 +14,7 @@ interface Product {
   } | null;
   colorOptions?: Array<{ color: string; imageUrl: string }>;
   activeUpdatedAt?: string;
-  source?: 'WA' | 'AG';
+  source?: 'WA' | 'AG' | 'MANUAL';
   isActive?: boolean;
 }
 
