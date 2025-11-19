@@ -45,8 +45,8 @@ export function CategoryTreeItem({
   return (
     <div>
       <div
-        className={`flex items-center gap-2 rounded-lg px-1 py-1 cursor-pointer ${
-          isSelected ? 'bg-violet-50' : ''
+        className={`flex items-center gap-2 rounded-lg px-1 py-1 cursor-pointer transition-colors duration-150 ${
+          isSelected ? 'bg-violet-50' : 'hover:bg-gray-50 active:bg-gray-100'
         }`}
         onClick={() => onSelect(node.id)}
       >

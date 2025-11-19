@@ -279,9 +279,9 @@ function CatalogPageContent() {
 
           {/* Title - show "Каталог" at root, category name otherwise */}
           {!categoryPath && !filters.search && (
-            <Text variant="h1" as="h1" className="mb-2 text-3xl font-bold">
+          <Text variant="h1" as="h1" className="mb-2 text-3xl font-bold">
               Каталог
-            </Text>
+          </Text>
           )}
 
           {filters.search && (

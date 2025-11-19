@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Switch } from '@/components/ui/Switch';
 import { Label } from '@/components/ui/Label';
+import { Loader } from '@/components/ui/Loader';
 import type { FlatAdminCategory } from '@/types/category';
 
 type Props = {
@@ -93,7 +94,15 @@ export function CategoryDetailsPanel({
     optimisticIsActive !== null ? optimisticIsActive : category.isActive;
 
   return (
-    <Card>
+    <Card className={isToggling ? 'relative' : ''}>
+      {isToggling && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/30">
+          <div className="flex items-center gap-2 rounded-lg bg-white/95 backdrop-blur-sm px-4 py-2 shadow-lg">
+            <Loader size="sm" className="[&>div]:border-t-purple-600 dark:[&>div]:border-t-purple-400" />
+            <span className="text-sm text-gray-700">Обновление...</span>
+          </div>
+        </div>
+      )}
       <CardHeader className="flex flex-col gap-2 p-6 pb-3">
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-lg font-semibold text-gray-900">{category.name}</p>
@@ -170,11 +179,21 @@ export function CategoryDetailsPanel({
                 Черновики сохраняются, но не попадают в каталог.
               </p>
             </div>
-            <Switch
-              checked={isActive}
-              onCheckedChange={handleToggleActive}
-              disabled={isToggling}
-            />
+            <div className="relative inline-flex h-6 w-11">
+              <Switch
+                checked={isActive}
+                onCheckedChange={handleToggleActive}
+                disabled={isToggling}
+                className={isToggling ? 'opacity-50' : ''}
+              />
+              {isToggling && (
+                <div className={`absolute top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none ${
+                  isActive ? 'right-0.5' : 'left-0.5'
+                }`} style={{ width: '20px', height: '20px' }}>
+                  <Loader size="sm" className="[&>div]:border-t-purple-600 dark:[&>div]:border-t-purple-400 [&>div]:border-gray-200 dark:[&>div]:border-gray-600" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

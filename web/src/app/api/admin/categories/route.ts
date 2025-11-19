@@ -193,15 +193,15 @@ export async function POST(request: NextRequest) {
 
     if (parentId) {
       // Creating a subcategory
-      const parent = await prisma.category.findUnique({
-        where: { id: parentId },
-      });
-      if (!parent) {
-        return NextResponse.json(
-          { ok: false, error: 'Родительская категория не найдена' },
-          { status: 404 }
-        );
-      }
+    const parent = await prisma.category.findUnique({
+      where: { id: parentId },
+    });
+    if (!parent) {
+      return NextResponse.json(
+        { ok: false, error: 'Родительская категория не найдена' },
+        { status: 404 }
+      );
+    }
       path = `${parent.path}/${segment}`;
       const slugBase = sanitizeSlug(parent.slug, slugInput, name);
       slug = await ensureUniqueSlug(slugBase);

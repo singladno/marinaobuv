@@ -58,13 +58,13 @@ const ensureUniqueSlug = async (base: string, excludeId?: string) => {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(request, 'ADMIN');
   if (auth.error) return auth.error;
 
   try {
-    const categoryId = params.id;
+    const { id: categoryId } = await params;
     const body = await request.json();
     const {
       name,
