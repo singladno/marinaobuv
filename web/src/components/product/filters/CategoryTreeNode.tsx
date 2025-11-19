@@ -15,6 +15,7 @@ type CategoryTreeNodeProps = {
   searchTerm?: string;
   // When true, always render this node (and its subtree) expanded
   forceExpandAll?: boolean;
+  selectLeavesOnly?: boolean;
 };
 
 export function CategoryTreeNode({
@@ -24,10 +25,12 @@ export function CategoryTreeNode({
   level = 0,
   searchTerm = '',
   forceExpandAll = false,
+  selectLeavesOnly = false,
 }: CategoryTreeNodeProps) {
   const nodeRef = React.useRef<HTMLDivElement>(null);
   const hasChildren = !!node.children && node.children.length > 0;
   const normalizedQuery = searchTerm.trim().toLowerCase();
+  const canSelectNode = !selectLeavesOnly || !hasChildren;
 
   // Check if current node matches the search
   const currentNodeMatches = React.useMemo(() => {
@@ -100,12 +103,24 @@ export function CategoryTreeNode({
     if (normalizedQuery) {
       // When searching, expand if this node or any of its children match the search
       // This ensures parent categories are expanded to show matching subcategories
-      setExpanded(subtreeMatches || isInPathToSelected);
+      setExpanded(
+        (!currentNodeMatches && subtreeMatches) ||
+          isInPathToSelected ||
+          checked
+      );
     } else {
-      // Only expand if this node is in the path to a selected category
-      setExpanded(isInPathToSelected);
+      // When not searching keep parent nodes with selected descendants expanded,
+      // but also keep the currently selected node open to access its children
+      setExpanded(isInPathToSelected || checked);
     }
-  }, [normalizedQuery, subtreeMatches, isInPathToSelected, forceExpandAll]);
+  }, [
+    normalizedQuery,
+    subtreeMatches,
+    isInPathToSelected,
+    forceExpandAll,
+    checked,
+    currentNodeMatches,
+  ]);
 
   // Scroll to view when this item is selected
   React.useEffect(() => {
@@ -164,18 +179,22 @@ export function CategoryTreeNode({
         )}
 
         <label
-          className={`flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-all duration-200 ${
+          className={`flex items-center gap-3 rounded-lg px-2 py-2 transition-all duration-200 ${
             checked
               ? 'bg-purple-50'
               : isParentOfSelected
                 ? 'bg-blue-50'
                 : 'hover:bg-gray-50'
-          }`}
+          } ${canSelectNode ? 'cursor-pointer' : 'cursor-not-allowed'}`}
           onClick={e => e.stopPropagation()}
         >
           <Checkbox
             checked={checked}
-            onCheckedChange={() => onToggle(node.id)}
+            onCheckedChange={() => {
+              if (!canSelectNode) return;
+              onToggle(node.id);
+            }}
+            disabled={!canSelectNode}
           />
           <span
             className={`text-sm transition-colors duration-200 ${
@@ -183,7 +202,9 @@ export function CategoryTreeNode({
                 ? 'font-semibold text-purple-800'
                 : isParentOfSelected
                   ? 'font-medium text-blue-800'
-                  : 'font-medium text-gray-800'
+                  : canSelectNode
+                    ? 'font-medium text-gray-800'
+                    : 'font-medium text-gray-400'
             }`}
           >
             {renderHighlighted(node.name)}
@@ -203,7 +224,9 @@ export function CategoryTreeNode({
                 selectedIds={selectedIds}
                 onToggle={onToggle}
                 level={level + 1}
-                searchTerm={currentNodeMatches ? '' : searchTerm}
+                searchTerm={searchTerm}
+                forceExpandAll={forceExpandAll}
+                selectLeavesOnly={selectLeavesOnly}
               />
             ))}
           </div>

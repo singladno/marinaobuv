@@ -54,9 +54,9 @@ export function ProductCategoryCell({
         onChange={handleCategoryChange}
         options={categoryOptions}
         tree={categories}
-        forceExpandAll
         label=""
-        disabled={isSaving}
+        disabled={isSaving || product.isActive}
+        selectLeavesOnly
       />
     </div>
   );

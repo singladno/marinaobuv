@@ -3,24 +3,23 @@ import * as React from 'react';
 import type { Product } from '@/types/product';
 
 import { ImageGallery } from './ImageGallery';
-import { useProductImageToggle } from '@/hooks/useProductImageToggle';
 
 interface ProductImagesCellProps {
   product: Product;
 }
 
 export function ProductImagesCell({ product }: ProductImagesCellProps) {
-  // Local state to track image status changes optimistically
   const [localImages, setLocalImages] = React.useState(product.images || []);
 
-  // Update local state when product changes (e.g., after page refresh)
   React.useEffect(() => {
     setLocalImages(product.images || []);
   }, [product.images]);
 
+  const canEditImages = !product.isActive;
+
   const handleToggle = React.useCallback(
     async (imageId: string, isActive: boolean) => {
-      // Optimistically update the UI immediately
+      if (!canEditImages) return;
       setLocalImages(prevImages =>
         prevImages.map(img => (img.id === imageId ? { ...img, isActive } : img))
       );
@@ -39,11 +38,10 @@ export function ProductImagesCell({ product }: ProductImagesCellProps) {
         }
       } catch (error) {
         console.error('Failed to toggle image status:', error);
-        // Revert the optimistic update on error
         setLocalImages(product.images || []);
       }
     },
-    [product.images]
+    [canEditImages, product.images]
   );
 
   return (
@@ -52,11 +50,12 @@ export function ProductImagesCell({ product }: ProductImagesCellProps) {
         draftId={product.id}
         images={localImages.map((img: any) => ({
           ...img,
-          isActive: img.isActive !== false, // Use the actual isActive value
+          isActive: img.isActive !== false,
         }))}
-        onImageToggle={handleToggle as any}
+        onImageToggle={canEditImages ? (handleToggle as any) : undefined}
         onReload={undefined}
         singleRow
+        maxVisible={4}
       />
     </div>
   );

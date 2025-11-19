@@ -68,7 +68,6 @@ export function ProductFilters({
         onChange={handleCategoryChange}
         options={categoryOptions}
         tree={categories}
-        forceExpandAll
         label="Категория"
       />
 

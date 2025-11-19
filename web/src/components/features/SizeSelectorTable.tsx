@@ -34,7 +34,7 @@ export function SizeSelectorTable({
   return (
     <div className="space-y-3">
       {/* Table Header */}
-      <div className="grid grid-cols-[1fr_120px_44px] gap-3 px-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+      <div className="grid grid-cols-[minmax(140px,1fr)_120px_44px] gap-3 px-1 text-xs font-medium text-gray-500 dark:text-gray-400">
         <div>Размер</div>
         <div>Количество</div>
         <div></div>

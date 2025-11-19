@@ -24,6 +24,8 @@ type Props = {
   disabled?: boolean;
   // When true, expand the entire tree (admin-only usage)
   forceExpandAll?: boolean;
+  // When true, only allow selecting leaf categories from the tree
+  selectLeavesOnly?: boolean;
 };
 
 export default function CategoryControl({
@@ -34,6 +36,7 @@ export default function CategoryControl({
   label = 'Категория',
   disabled = false,
   forceExpandAll = false,
+  selectLeavesOnly = false,
 }: Props) {
   const count = value.length;
   const [query, setQuery] = useState('');
@@ -66,7 +69,33 @@ export default function CategoryControl({
     return options.filter(o => o.label.toLowerCase().includes(q));
   }, [options, query]);
 
+  const leafCategoryIds = useMemo(() => {
+    if (!tree || !Array.isArray(tree) || tree.length === 0) return null;
+
+    const leaves = new Set<string>();
+    const traverse = (nodes: CategoryNode[]) => {
+      nodes.forEach(node => {
+        if (node.children && node.children.length > 0) {
+          traverse(node.children);
+        } else {
+          leaves.add(node.id);
+        }
+      });
+    };
+
+    traverse(tree);
+    return leaves;
+  }, [tree]);
+
   const toggle = (id: string) => {
+    if (
+      selectLeavesOnly &&
+      leafCategoryIds &&
+      !leafCategoryIds.has(id)
+    ) {
+      return;
+    }
+
     if (value.includes(id)) {
       // If clicking the same category, deselect it
       const newValue = value.filter(v => v !== id);
@@ -110,22 +139,39 @@ export default function CategoryControl({
                 level={0}
                 searchTerm={query}
                 forceExpandAll={forceExpandAll}
+                selectLeavesOnly={selectLeavesOnly}
               />
             ))
           : filtered.map(option => {
               const checked = value.includes(option.id);
+              const canSelectOption =
+                !selectLeavesOnly ||
+                !leafCategoryIds ||
+                leafCategoryIds.has(option.id);
               return (
                 <label
                   key={option.id}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg py-2 hover:bg-gray-50 ${getIndentationClass(option.level || 0)}`}
+                  className={`flex items-center gap-3 rounded-lg py-2 ${getIndentationClass(option.level || 0)} ${
+                    canSelectOption ? 'cursor-pointer hover:bg-gray-50' : 'cursor-not-allowed text-gray-400'
+                  }`}
                   onClick={e => e.stopPropagation()}
                 >
                   <Checkbox
                     checked={checked}
-                    onCheckedChange={() => toggle(option.id)}
+                    onCheckedChange={() => {
+                      if (!canSelectOption) return;
+                      toggle(option.id);
+                    }}
+                    disabled={!canSelectOption}
                   />
                   <span
-                    className={`text-sm ${checked ? 'font-medium text-purple-700' : 'text-gray-800'}`}
+                    className={`text-sm ${
+                      checked
+                        ? 'font-medium text-purple-700'
+                        : canSelectOption
+                          ? 'text-gray-800'
+                          : 'text-gray-400'
+                    }`}
                   >
                     {option.label}
                   </span>

@@ -51,6 +51,23 @@ export const ProductsIcon = () => (
   </svg>
 );
 
+export const CategoriesIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M12 3v4M12 17v4M5 12h4M15 12h4M7 12a5 5 0 1110 0 5 5 0 11-10 0z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const OrdersIcon = () => (
   <svg
     className="h-5 w-5"

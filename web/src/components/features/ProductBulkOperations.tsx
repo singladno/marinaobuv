@@ -15,31 +15,8 @@ export function ProductBulkOperations({
   onBulkDeactivate,
   onClearSelection,
 }: ProductBulkOperationsProps) {
-  // Hide on mobile if nothing is selected, always show on desktop
   if (selectedCount === 0) {
-    return (
-      <div className="hidden md:flex md:flex-col md:gap-3 md:bg-blue-50 md:px-4 md:py-4 dark:md:bg-blue-900/20 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:px-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <button
-            disabled
-            className="w-full rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white opacity-50 cursor-not-allowed sm:w-auto"
-          >
-            Активировать
-          </button>
-          <button
-            disabled
-            className="w-full rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white opacity-50 cursor-not-allowed sm:w-auto"
-          >
-            Деактивировать
-          </button>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-          <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            Выберите товары для действий
-          </span>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

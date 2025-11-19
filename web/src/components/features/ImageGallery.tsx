@@ -12,6 +12,7 @@ interface ImageGalleryProps {
   onImageToggle?: (imageId: string, isActive: boolean) => Promise<void>;
   onReload?: () => void;
   singleRow?: boolean;
+  maxVisible?: number;
 }
 
 export function ImageGallery({
@@ -20,6 +21,7 @@ export function ImageGallery({
   onImageToggle,
   onReload,
   singleRow,
+  maxVisible,
 }: ImageGalleryProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
@@ -56,6 +58,7 @@ export function ImageGallery({
         onReload={onReload}
         onImageClick={openModal}
         singleRow={singleRow}
+        maxVisible={maxVisible}
       />
 
       {isModalOpen && activeImages.length > 0 && (

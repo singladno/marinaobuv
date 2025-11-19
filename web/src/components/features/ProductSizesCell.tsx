@@ -3,9 +3,10 @@ import * as React from 'react';
 import type { DraftSize } from '@/types/admin';
 
 import { OptimisticSizesCell } from './OptimisticSizesCell';
+import { ProductSizesSummary } from './ProductSizesSummary';
 
 interface ProductSizesCellProps {
-  sizes: Array<{ size: string; count: number }> | null; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}] or null
+  sizes: Array<{ size: string; count: number }> | null;
   onChange?: (
     next: Array<{ size: string; count: number }>
   ) => Promise<void> | void;
@@ -17,11 +18,14 @@ export function ProductSizesCell({
   onChange,
   disabled = false,
 }: ProductSizesCellProps) {
-  // Convert to DraftSize[] format - memoize to prevent unnecessary re-renders
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [shouldRenderEditor, setShouldRenderEditor] = React.useState(false);
+  const editPanelRef = React.useRef<HTMLDivElement | null>(null);
+
   const draftSizes: DraftSize[] = React.useMemo(
     () =>
       (sizes || []).map((sizeObj, index) => ({
-        id: `size-${index}`, // Generate temporary ID
+        id: `size-${index}`,
         size: sizeObj.size,
         quantity: sizeObj.count,
         isActive: true,
@@ -33,24 +37,79 @@ export function ProductSizesCell({
     async (nextDraftSizes: DraftSize[]) => {
       if (!onChange) return;
 
-      // Convert back to size objects format
       const nextSizes: Array<{ size: string; count: number }> =
         nextDraftSizes.map(draftSize => ({
           size: draftSize.size,
           count: draftSize.quantity,
         }));
 
-      // Defer the onChange call to avoid updating state during render
       await Promise.resolve().then(() => onChange(nextSizes));
     },
     [onChange]
   );
 
+  const canEdit = Boolean(onChange) && !disabled;
+
+  React.useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    if (isEditing) {
+      setShouldRenderEditor(true);
+    } else {
+      timeoutId = setTimeout(() => {
+        setShouldRenderEditor(false);
+      }, 300);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isEditing]);
+
+  React.useEffect(() => {
+    if (!isEditing) return;
+
+    const handleClickOutside = (event: PointerEvent) => {
+      if (!editPanelRef.current) return;
+      if (editPanelRef.current.contains(event.target as Node)) return;
+      setIsEditing(false);
+    };
+
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside);
+    };
+  }, [isEditing]);
+
   return (
-    <OptimisticSizesCell
-      sizes={draftSizes}
-      onChange={handleChange}
-      disabled={disabled}
-    />
+    <div className="space-y-2">
+      <ProductSizesSummary
+        sizes={sizes}
+        canEdit={canEdit}
+        isEditing={isEditing}
+        onToggleEdit={() => setIsEditing(prev => !prev)}
+      />
+
+      <div
+        ref={editPanelRef}
+        className={`overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition-all duration-300 dark:border-gray-800 dark:bg-gray-900 ${
+          isEditing
+            ? 'max-h-[1200px] opacity-100'
+            : 'max-h-0 opacity-0 shadow-none'
+        }`}
+      >
+        <div className="p-4">
+          {shouldRenderEditor && (
+            <OptimisticSizesCell
+              sizes={draftSizes}
+              onChange={handleChange}
+              disabled={disabled}
+            />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

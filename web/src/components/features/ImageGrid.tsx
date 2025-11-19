@@ -3,8 +3,7 @@ import * as React from 'react';
 import { useImageHandling } from '@/hooks/useImageHandling';
 import type { Draft } from '@/types/admin';
 
-import { ImageActionButton } from './ImageActionButton';
-import { ImageThumbnail } from './ImageThumbnail';
+import { ImageGridItem } from './ImageGridItem';
 
 interface ImageGridProps {
   draftId: string;
@@ -13,6 +12,7 @@ interface ImageGridProps {
   onReload?: () => void;
   onImageClick: (index: number) => void;
   singleRow?: boolean;
+  maxVisible?: number;
 }
 
 export function ImageGrid({
@@ -22,12 +22,11 @@ export function ImageGrid({
   onReload,
   onImageClick,
   singleRow,
+  maxVisible,
 }: ImageGridProps) {
   const [hoveredImages, setHoveredImages] = React.useState<Set<string>>(
     new Set()
   );
-
-  // Keep element refs for precise positioning of the floating action button
   const imageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
   const { handleImageToggle, isUpdating } = useImageHandling({
@@ -36,9 +35,33 @@ export function ImageGrid({
     onReload,
   });
 
+  const canToggleImages = Boolean(onImageToggle);
   const activeImages = images?.filter(img => img.isActive !== false) || [];
   const inactiveImages = images?.filter(img => img.isActive === false) || [];
   const allImages = [...activeImages, ...inactiveImages];
+  const visibleCount =
+    typeof maxVisible === 'number' ? Math.max(maxVisible, 0) : allImages.length;
+  const visibleImages = allImages.slice(0, visibleCount);
+  const extraCount = allImages.length - visibleImages.length;
+
+  const handleMouseEnter = React.useCallback((imageId: string) => {
+    setHoveredImages(prev => new Set(prev).add(imageId));
+  }, []);
+
+  const handleMouseLeave = React.useCallback((imageId: string) => {
+    setHoveredImages(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(imageId);
+      return newSet;
+    });
+  }, []);
+
+  const registerImageRef = React.useCallback(
+    (imageId: string, node: HTMLDivElement | null) => {
+      imageRefs.current[imageId] = node;
+    },
+    []
+  );
 
   if (allImages.length === 0) {
     return (
@@ -48,59 +71,30 @@ export function ImageGrid({
     );
   }
 
+  const containerClassName = singleRow
+    ? 'flex flex-nowrap gap-1 overflow-x-auto md:overflow-x-auto'
+    : 'flex flex-wrap gap-1';
+
   return (
-    <div
-      className={
-        singleRow
-          ? 'flex flex-nowrap gap-1 overflow-x-auto md:overflow-x-auto'
-          : 'flex flex-wrap gap-1'
-      }
-    >
-      {allImages.map((image, index) => (
-        <div
+    <div className={containerClassName}>
+      {visibleImages.map((image, index) => (
+        <ImageGridItem
           key={image.id}
-          className={`relative flex-shrink-0 ${singleRow ? 'w-12 min-w-12' : ''} ${image.isActive === false ? 'opacity-50' : ''}`}
-          ref={el => {
-            imageRefs.current[image.id] = el;
-          }}
-          onMouseEnter={() =>
-            setHoveredImages(prev => new Set(prev).add(image.id))
-          }
-          onMouseLeave={() =>
-            setHoveredImages(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(image.id);
-              return newSet;
-            })
-          }
-        >
-          <ImageThumbnail
-            image={image}
-            onImageClick={onImageClick}
-            onImageToggle={() => {}}
-            isUpdating={false}
-            index={index}
-          />
-          {hoveredImages.has(image.id) && (
-            <ImageActionButton
-              imageId={image.id}
-              isActive={image.isActive !== false}
-              isUpdating={isUpdating === image.id}
-              onToggle={handleImageToggle}
-              onMouseEnter={() =>
-                setHoveredImages(prev => new Set(prev).add(image.id))
-              }
-              onMouseLeave={() =>
-                setHoveredImages(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete(image.id);
-                  return newSet;
-                })
-              }
-              imageRef={imageRefs.current[image.id] || null}
-            />
-          )}
-        </div>
+          image={image}
+          index={index}
+          extraCount={extraCount}
+          isLastVisible={index === visibleImages.length - 1}
+          singleRow={singleRow}
+          canToggleImages={canToggleImages}
+          hovered={hoveredImages.has(image.id)}
+          onMouseEnter={() => handleMouseEnter(image.id)}
+          onMouseLeave={() => handleMouseLeave(image.id)}
+          onImageClick={onImageClick}
+          registerRef={registerImageRef}
+          imageRef={imageRefs.current[image.id] || null}
+          isUpdating={isUpdating === image.id}
+          onToggle={handleImageToggle}
+        />
       ))}
     </div>
   );

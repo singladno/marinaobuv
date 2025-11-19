@@ -1,8 +1,9 @@
 'use client';
-
 import { useEffect, useRef, useState } from 'react';
-import { Textarea } from '@/components/ui/Textarea';
-import { ProductUpdateData } from '@/types/product';
+import { useTextareaAutoResize } from '@/hooks/useTextareaAutoResize';
+import type { ProductUpdateData } from '@/types/product';
+import { ProductDescriptionEditor } from './ProductDescriptionEditor';
+import { ProductDescriptionPreview } from './ProductDescriptionPreview';
 
 interface ProductDescriptionCellProps {
   product: {
@@ -17,99 +18,68 @@ export function ProductDescriptionCell({
   product,
   onUpdateProduct,
 }: ProductDescriptionCellProps) {
-  // Always show edit control
-  const [isEditing] = useState(true);
   const [value, setValue] = useState(product.description || '');
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  // Auto-resize textarea to fit content
-  const resize = () => {
-    const el = textareaRef.current;
-    if (!el) return;
-    // Reset height to auto to get accurate scrollHeight
-    el.style.height = 'auto';
-    // Set height to scrollHeight, but ensure it's at least 1 line
-    const newHeight = Math.max(el.scrollHeight, el.offsetHeight || 40);
-    el.style.height = `${newHeight}px`;
-    // Remove max-height constraint on iPad/tablet
-    el.style.maxHeight = 'none';
-    el.style.overflow = 'hidden';
-  };
-
   useEffect(() => {
-    resize();
-    // Also resize after a short delay to handle async rendering
-    const timer = setTimeout(resize, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    resize();
-  }, [value]);
-
-  // Resize on window resize (for iPad orientation changes)
-  useEffect(() => {
-    const handleResize = () => {
-      resize();
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
+    setValue(product.description || '');
+  }, [product.description]);
+  const resize = useTextareaAutoResize(textareaRef, isExpanded, [value]);
   const handleSave = async () => {
     if (value === product.description) {
       return;
     }
-
     setIsLoading(true);
     try {
       await onUpdateProduct(product.id, { description: value || null });
-      // stay in edit mode
     } catch (error) {
       console.error('Error updating description:', error);
-      // Reset to original value on error
       setValue(product.description || '');
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleCancel = () => {
-    setValue(product.description || '');
+  const handleCollapse = () => {
+    setIsExpanded(false);
+    void handleSave();
   };
-
+  const handleBlur = () => {
+    if (!isExpanded) return;
+    handleCollapse();
+  };
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSave();
+      void handleSave();
     } else if (e.key === 'Escape') {
-      handleCancel();
+      handleCollapse();
     }
   };
-
   return (
-    <div className="min-w-[200px]">
-      <Textarea
-        ref={textareaRef}
+    <div className="space-y-2">
+      {!isExpanded && (
+        <ProductDescriptionPreview
+          value={value}
+          isLoading={isLoading}
+          onExpand={() => setIsExpanded(true)}
+        />
+      )}
+      <ProductDescriptionEditor
         value={value}
-        onChange={e => {
-          setValue(e.target.value);
-          // Resize on change for immediate feedback
+        isExpanded={isExpanded}
+        isLoading={isLoading}
+        textareaRef={textareaRef}
+        disabled={isLoading || product.isActive}
+        onChange={next => {
+          setValue(next);
           requestAnimationFrame(resize);
         }}
-        onBlur={() => handleSave()}
+        onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         onInput={resize}
-        disabled={isLoading || product.isActive}
-        className="w-full resize-none md:resize-none"
-        style={{ overflow: 'hidden', maxHeight: 'none' }}
-        rows={1}
-        placeholder="Описание товара..."
+        onCollapse={handleCollapse}
       />
-      {isLoading && (
-        <div className="mt-1 text-xs text-gray-500">Сохранение...</div>
-      )}
     </div>
   );
 }
