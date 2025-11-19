@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -17,6 +17,9 @@ type Props = {
   loading: boolean;
   error: string | null;
   onReload: () => Promise<void>;
+  onCreateRoot?: () => void;
+  onCreateSubcategory?: (parentId: string) => void;
+  onEdit?: (category: AdminCategoryNode) => void;
 };
 
 const filterTree = (
@@ -47,6 +50,9 @@ export function CategoryTreePanel({
   loading,
   error,
   onReload,
+  onCreateRoot,
+  onCreateSubcategory,
+  onEdit,
 }: Props) {
   const [search, setSearch] = React.useState('');
   const filtered = React.useMemo(
@@ -55,7 +61,7 @@ export function CategoryTreePanel({
   );
 
   return (
-    <Card className="h-full">
+    <Card className="h-full w-full min-w-0">
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -92,7 +98,21 @@ export function CategoryTreePanel({
           </p>
         )}
 
-        <div className="max-h-[520px] overflow-y-auto rounded-xl border border-gray-100 bg-white p-2">
+        {onCreateRoot && (
+          <div className="mb-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full gap-2"
+              onClick={onCreateRoot}
+            >
+              <PlusIcon className="h-4 w-4" />
+              Создать категорию в корне
+            </Button>
+          </div>
+        )}
+        <div className="max-h-[520px] overflow-y-auto overflow-x-hidden rounded-xl border border-gray-100 bg-white p-2">
           {loading ? (
             <p className="text-center text-sm text-gray-500">Загрузка...</p>
           ) : filtered.length === 0 ? (
@@ -105,6 +125,8 @@ export function CategoryTreePanel({
               selectedId={selectedId}
               onSelect={onSelect}
               searchTerm={search}
+              onCreateSubcategory={onCreateSubcategory}
+              onEdit={onEdit}
             />
           )}
         </div>

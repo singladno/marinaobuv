@@ -2,6 +2,7 @@
 
 import { useParsingStatus } from '@/hooks/useParsingStatus';
 import {
+  CategoriesIcon,
   OrdersIcon,
   ParsingIcon,
   ProductsIcon,
@@ -21,6 +22,7 @@ export function useAdminNavItems(): AdminNavItem[] {
 
   return [
     { href: '/admin/products', label: 'Товары', icon: <ProductsIcon /> },
+    { href: '/admin/categories', label: 'Категории', icon: <CategoriesIcon /> },
     { href: '/admin/orders', label: 'Заказы', icon: <OrdersIcon /> },
     { href: '/admin/users', label: 'Пользователи', icon: <UsersIcon /> },
     {

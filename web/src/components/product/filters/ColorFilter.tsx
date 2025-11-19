@@ -33,15 +33,9 @@ export default function ColorFilter({
   useEffect(() => {
     const fetchColors = async () => {
       try {
-        // If categoryId is an empty string, wait for the real value to avoid duplicate fetch
-        if (categoryId === '') {
-          log.info('⏳ Skipping colors fetch until categoryId is known');
-          return;
-        }
-
-        // Build URL with categoryId parameter if provided, undefined means global colors
+        // Build URL with categoryId parameter if provided, undefined or empty string means global colors
         const url =
-          categoryId === undefined
+          !categoryId || categoryId === ''
             ? '/api/colors'
             : `/api/colors?categoryId=${encodeURIComponent(categoryId)}`;
 

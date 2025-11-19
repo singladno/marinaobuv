@@ -1,17 +1,73 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Switch } from '@/components/ui/Switch';
+import { Label } from '@/components/ui/Label';
 import type { FlatAdminCategory } from '@/types/category';
 
 type Props = {
   category: FlatAdminCategory | null;
   loading?: boolean;
+  onReload?: () => void;
 };
 
-export function CategoryDetailsPanel({ category, loading }: Props) {
+export function CategoryDetailsPanel({
+  category,
+  loading,
+  onReload,
+}: Props) {
+  const [isToggling, setIsToggling] = React.useState(false);
+  const [optimisticIsActive, setOptimisticIsActive] = React.useState<
+    boolean | null
+  >(null);
+
+  React.useEffect(() => {
+    if (category) {
+      setOptimisticIsActive(null);
+    }
+  }, [category]);
+
+  const handleToggleActive = async (checked: boolean) => {
+    if (!category || isToggling) return;
+
+    const previousValue = category.isActive;
+    setOptimisticIsActive(checked);
+    setIsToggling(true);
+
+    try {
+      const response = await fetch(`/api/admin/categories/${category.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: category.name,
+          parentId: category.parentId,
+          urlSegment: category.segment,
+          isActive: checked,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data?.error || 'Ошибка обновления категории');
+      }
+
+      // Reload categories to update the tree
+      if (onReload) {
+        onReload();
+      }
+    } catch (error) {
+      console.error('Error toggling category active status:', error);
+      // Revert optimistic update on error
+      setOptimisticIsActive(previousValue);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   if (loading && !category) {
     return (
       <Card>
@@ -33,6 +89,8 @@ export function CategoryDetailsPanel({ category, loading }: Props) {
   }
 
   const urlPath = category.urlPath ? `/catalog/${category.urlPath}` : '/catalog';
+  const isActive =
+    optimisticIsActive !== null ? optimisticIsActive : category.isActive;
 
   return (
     <Card>
@@ -42,10 +100,10 @@ export function CategoryDetailsPanel({ category, loading }: Props) {
           <Badge
             size="sm"
             className={`text-xs ${
-              category.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-200'
+              isActive ? 'bg-green-100 text-green-700' : 'bg-gray-200'
             }`}
           >
-            {category.isActive ? 'Активна' : 'Скрыта'}
+            {isActive ? 'Активна' : 'Скрыта'}
           </Badge>
           <Badge
             size="sm"
@@ -59,13 +117,6 @@ export function CategoryDetailsPanel({ category, loading }: Props) {
         </p>
       </CardHeader>
       <CardContent className="space-y-4 p-6 pt-2 text-sm text-gray-700">
-        <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600">
-          Страницы каталога работают на клиентских запросах. Новая категория
-          появляется сразу после сохранения — никаких деплоев. Фронтенд читает
-          структуру через `/api/categories/*`, поэтому обновления видны и для
-          покупателей, и в фильтрах.
-        </div>
-
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <p className="text-xs uppercase text-gray-400">URL</p>
@@ -109,10 +160,22 @@ export function CategoryDetailsPanel({ category, loading }: Props) {
           )}
         </div>
 
-        <div className="rounded-lg border border-dashed border-gray-200 p-3 text-xs text-gray-500">
-          Обновляйте ветку через форму справа: указываем название, сегмент URL и
-          родителя. Slug генерируется автоматически, а URL становится
-          доступным для `/catalog/...`.
+        <div className="border-t border-gray-200 pt-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 space-y-1">
+              <Label className="block text-sm font-medium text-gray-900">
+                Показывать на сайте
+              </Label>
+              <p className="text-xs text-gray-500">
+                Черновики сохраняются, но не попадают в каталог.
+              </p>
+            </div>
+            <Switch
+              checked={isActive}
+              onCheckedChange={handleToggleActive}
+              disabled={isToggling}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -5,29 +5,29 @@ export function normalizeInputPath(path?: string) {
 }
 
 export function dbPathFromInput(path?: string) {
-  const normalized = normalizeInputPath(path);
-  return normalized ? `obuv/${normalized}` : undefined;
+  // Return path as-is, no hardcoded prefix - categories are stored with their full path
+  return normalizeInputPath(path);
 }
 
 export function buildCategoryPath(category: {
   path: string;
   name: string;
 }): string {
-  return category.path.replace(/^obuv\//, '');
+  // Return path as-is, no prefix removal needed
+  return category.path;
 }
 
 export function buildCategoryBreadcrumbs(
   category: { path: string; name: string },
   allCategories: Array<{ id: string; name: string; path: string }>
 ): Array<{ id: string; name: string; path: string }> {
-  const pathParts = buildCategoryPath(category).split('/');
+  const pathParts = category.path.split('/');
   const breadcrumbs: Array<{ id: string; name: string; path: string }> = [];
 
   for (let i = 0; i < pathParts.length; i++) {
     const currentPath = pathParts.slice(0, i + 1).join('/');
-    const fullPath = `obuv/${currentPath}`;
 
-    const category = allCategories.find(cat => cat.path === fullPath);
+    const category = allCategories.find(cat => cat.path === currentPath);
     if (category) {
       breadcrumbs.push(category);
     }

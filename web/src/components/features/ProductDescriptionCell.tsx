@@ -70,7 +70,7 @@ export function ProductDescriptionCell({
         isExpanded={isExpanded}
         isLoading={isLoading}
         textareaRef={textareaRef}
-        disabled={isLoading || product.isActive}
+        disabled={isLoading}
         onChange={next => {
           setValue(next);
           requestAnimationFrame(resize);

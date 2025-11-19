@@ -95,7 +95,6 @@ export function createProductColumnDefinitions({
         <ProductNameCell
           product={row.original}
           onUpdateProduct={onUpdateProduct}
-          disabled={row.original.isActive}
         />
       ),
     }),
@@ -108,7 +107,6 @@ export function createProductColumnDefinitions({
         <ProductArticleCell
           product={row.original}
           onUpdateProduct={onUpdateProduct}
-          disabled={row.original.isActive}
         />
       ),
     }),
@@ -168,7 +166,6 @@ export function createProductColumnDefinitions({
           product={row.original}
           gender={getValue()}
           onUpdateProduct={onUpdateProduct}
-          disabled={row.original.isActive}
         />
       ),
       size: 160,
@@ -183,7 +180,6 @@ export function createProductColumnDefinitions({
           product={row.original}
           season={getValue()}
           onUpdateProduct={onUpdateProduct}
-          disabled={row.original.isActive}
         />
       ),
       size: 160,
@@ -217,7 +213,6 @@ export function createProductColumnDefinitions({
         return (
           <ProductSizesCell
             sizes={currentSizes}
-            disabled={row.original.isActive}
             onChange={async sizes => {
               if (!sizesChanged(currentSizes, sizes)) {
                 return; // No changes, skip update

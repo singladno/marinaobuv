@@ -17,7 +17,7 @@ export default function AdminBottomNavigation({
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
       style={{ bottom: '-1px' }}
     >
       <nav className={`bg-white shadow-2xl ${className}`}>

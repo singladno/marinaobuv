@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Hand } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState, useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -152,33 +152,46 @@ export default function ProductGalleryVertical({
           {isAdmin && productId && (
             <div className="absolute left-2 top-2 z-20 flex gap-2">
               {/* Source indicator */}
-              {sourceMessageIds && sourceMessageIds.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setIsSourceModalOpen(true)}
-                  className="source-icon-hover-toggle transition-all duration-200 focus:outline-none"
-                  title="Просмотр источника сообщений"
-                >
-                  {source === 'WA' ? (
-                    <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
-                      <Image
-                        src="/images/whatsapp-icon.png"
-                        alt="WhatsApp"
-                        width={48}
-                        height={48}
-                        className="h-full w-full rounded"
-                        unoptimized
-                      />
+              {source && (
+                <>
+                  {source === 'MANUAL' ? (
+                    <div className="group/manual-icon relative source-icon-hover-toggle flex h-12 w-12 items-center justify-center transition-all duration-200">
+                      <Hand className="h-5 w-5 text-white fill-purple-500/20" strokeWidth={1.5} />
+                      {/* Tooltip */}
+                      <div className="absolute left-full ml-2 hidden rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 opacity-0 shadow-xl transition-opacity duration-200 group-hover/manual-icon:block group-hover/manual-icon:opacity-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 pointer-events-none whitespace-nowrap z-50">
+                        Товар добавлен вручную
+                        <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 border-l border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"></div>
+                      </div>
                     </div>
-                  ) : (
-                    <Badge
-                      variant="secondary"
-                      className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                  ) : sourceMessageIds && sourceMessageIds.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsSourceModalOpen(true)}
+                      className="source-icon-hover-toggle transition-all duration-200 focus:outline-none"
+                      title="Просмотр источника сообщений"
                     >
-                      Источник
-                    </Badge>
-                  )}
-                </button>
+                      {source === 'WA' ? (
+                        <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                          <Image
+                            src="/images/whatsapp-icon.png"
+                            alt="WhatsApp"
+                            width={48}
+                            height={48}
+                            className="h-full w-full rounded"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                        >
+                          Источник
+                        </Badge>
+                      )}
+                    </button>
+                  ) : null}
+                </>
               )}
 
               {/* Edit button */}
@@ -188,7 +201,7 @@ export default function ProductGalleryVertical({
                 className="source-icon-hover-toggle inline-flex cursor-pointer items-center justify-center text-white transition-all duration-200 hover:scale-110 focus:outline-none"
                 title="Редактировать товар"
               >
-                <Pencil className="h-5 w-5 text-white" />
+                <Pencil className="h-5 w-5 text-white fill-purple-500/20" />
               </button>
             </div>
           )}

@@ -2,156 +2,49 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 
-// Generate proper category name based on path and database name
-function generateCategoryName(path: string, dbName?: string): string {
-  const segments = path.split('/');
-
-  // Handle different path patterns
-  if (segments.length === 2) {
-    // obuv/womens -> Женская обувь
-    const gender = segments[1];
-    if (gender === 'womens') return 'Женская обувь';
-    if (gender === 'mens') return 'Мужская обувь';
-    if (gender === 'girls') return 'Обувь для девочек';
-    if (gender === 'boys') return 'Обувь для мальчиков';
+// Use the actual category name from the database
+// No need for complex generation - just use what's stored in the database
+function generateCategoryName(_path: string, dbName?: string): string {
+  // Always prefer the database name - it's the source of truth
+  if (dbName) {
+    return dbName;
   }
 
-  if (segments.length === 3) {
-    // obuv/womens/autumn -> Женская осенняя обувь
-    const gender = segments[1];
-    const season = segments[2];
-
-    let genderName = '';
-    if (gender === 'womens') genderName = 'Женская';
-    if (gender === 'mens') genderName = 'Мужская';
-    if (gender === 'girls') genderName = 'Детская (девочки)';
-    if (gender === 'boys') genderName = 'Детская (мальчики)';
-
-    let seasonName = '';
-    if (season === 'autumn') seasonName = 'осенняя';
-    if (season === 'winter') seasonName = 'зимняя';
-    if (season === 'spring') seasonName = 'весенняя';
-    if (season === 'summer') seasonName = 'летняя';
-
-    return `${genderName} ${seasonName} обувь`;
-  }
-
-  // For deeper categories (4+ levels), use specific product type mappings
-  if (segments.length >= 4) {
-    const lastSegment = segments[segments.length - 1];
-
-    // Specific product type mappings
-    const productTypeMap: Record<string, string> = {
-      ugg: 'Угги',
-      sneakers: 'Кроссовки',
-      boots: 'Ботинки',
-      sandals: 'Сандалии',
-      heels: 'Туфли на каблуке',
-      flats: 'Балетки',
-      slippers: 'Тапочки',
-      sports: 'Спортивная обувь',
-      casual: 'Повседневная обувь',
-      formal: 'Официальная обувь',
-    };
-
-    if (productTypeMap[lastSegment]) {
-      return productTypeMap[lastSegment];
-    }
-
-    // If database name is descriptive and different from the last segment, use it
-    if (dbName && dbName !== lastSegment && dbName.length > 2) {
-      return dbName;
-    }
-
-    // Fallback: capitalize the last segment
-    return lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1);
-  }
-
-  // Fallback to database name or original path
-  return dbName || path;
+  // Fallback to path if no name is available (shouldn't happen)
+  return _path;
 }
 
-// Generate breadcrumbs from path with human-readable names
-function generateBreadcrumbs(path: string) {
-  const segments = path.split('/');
-  const breadcrumbs = [];
+// Generate breadcrumbs by traversing the category tree from the database
+async function generateBreadcrumbs(
+  categoryId: string,
+  categoryPath: string
+): Promise<Array<{ name: string; path: string; href: string }>> {
+  const breadcrumbs: Array<{ name: string; path: string; href: string }> = [];
 
-  // Always start with "Обувь"
-  breadcrumbs.push({ name: 'Обувь', path: 'obuv', href: '/catalog' });
+  // Start with "Каталог" as the root
+  breadcrumbs.push({ name: 'Каталог', path: '', href: '/catalog' });
 
-  if (segments.length >= 2) {
-    const gender = segments[1];
-    let genderName = '';
-    let genderPath = '';
+  // Build path segments
+  const pathSegments = categoryPath.split('/').filter(Boolean);
 
-    if (gender === 'womens') {
-      genderName = 'Женская обувь';
-      genderPath = 'womens';
-    } else if (gender === 'mens') {
-      genderName = 'Мужская обувь';
-      genderPath = 'mens';
-    } else if (gender === 'girls') {
-      genderName = 'Обувь для девочек';
-      genderPath = 'girls';
-    } else if (gender === 'boys') {
-      genderName = 'Обувь для мальчиков';
-      genderPath = 'boys';
-    }
+  // Fetch all categories along the path
+  const pathParts: string[] = [];
+  for (let i = 0; i < pathSegments.length; i++) {
+    pathParts.push(pathSegments[i]);
+    const currentPath = pathParts.join('/');
 
-    if (genderName) {
-      breadcrumbs.push({
-        name: genderName,
-        path: genderPath,
-        href: `/catalog/${genderPath}`,
-      });
-    }
-  }
-
-  if (segments.length >= 3) {
-    const season = segments[2];
-    let seasonName = '';
-
-    if (season === 'autumn') seasonName = 'Осень';
-    if (season === 'winter') seasonName = 'Зима';
-    if (season === 'spring') seasonName = 'Весна';
-    if (season === 'summer') seasonName = 'Лето';
-
-    if (seasonName) {
-      breadcrumbs.push({
-        name: seasonName,
-        path: segments.slice(0, 3).join('/'),
-        href: `/catalog/${segments.slice(1, 3).join('/')}`,
-      });
-    }
-  }
-
-  // For deeper levels (4+), add the product type
-  if (segments.length >= 4) {
-    const lastSegment = segments[segments.length - 1];
-
-    // Use the same product type mapping as in generateCategoryName
-    const productTypeMap: Record<string, string> = {
-      ugg: 'Угги',
-      sneakers: 'Кроссовки',
-      boots: 'Ботинки',
-      sandals: 'Сандалии',
-      heels: 'Туфли на каблуке',
-      flats: 'Балетки',
-      slippers: 'Тапочки',
-      sports: 'Спортивная обувь',
-      casual: 'Повседневная обувь',
-      formal: 'Официальная обувь',
-    };
-
-    const productName =
-      productTypeMap[lastSegment] ||
-      lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1);
-
-    breadcrumbs.push({
-      name: productName,
-      path: path,
-      href: `/catalog/${path.replace(/^obuv\//, '')}`,
+    const cat = await prisma.category.findFirst({
+      where: { path: currentPath, isActive: true },
+      select: { id: true, name: true, path: true },
     });
+
+    if (cat) {
+      breadcrumbs.push({
+        name: cat.name,
+        path: cat.path,
+        href: `/catalog/${cat.path}`,
+      });
+    }
   }
 
   return breadcrumbs;
@@ -169,9 +62,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const dbPath = `obuv/${path}`;
+    // Find category by exact path match (no hardcoded prefixes - works with any root category)
     const category = await prisma.category.findFirst({
-      where: { path: dbPath, isActive: true },
+      where: { path: path, isActive: true },
       select: {
         id: true,
         name: true,
@@ -207,10 +100,9 @@ export async function GET(request: NextRequest) {
       const pathSegments = path.split('/');
       if (pathSegments.length > 1) {
         const parentPath = pathSegments.slice(0, -1).join('/');
-        const dbParentPath = `obuv/${parentPath}`;
 
         const parentCategory = await prisma.category.findFirst({
-          where: { path: dbParentPath, isActive: true },
+          where: { path: parentPath, isActive: true },
           select: {
             id: true,
             name: true,
@@ -247,7 +139,10 @@ export async function GET(request: NextRequest) {
             parentCategory.path,
             parentCategory.name
           );
-          const breadcrumbs = generateBreadcrumbs(parentCategory.path);
+          const breadcrumbs = await generateBreadcrumbs(
+            parentCategory.id,
+            parentCategory.path
+          );
 
           // Format subcategories for frontend - calculate total products including subcategories
           const subcategoriesWithTotals = await Promise.all(
@@ -272,8 +167,8 @@ export async function GET(request: NextRequest) {
               return {
                 id: child.id,
                 name: child.name,
-                path: child.path.replace(/^obuv\//, ''),
-                href: `/catalog/${child.path.replace(/^obuv\//, '')}`,
+                path: child.path,
+                href: `/catalog/${child.path}`,
                 totalProducts,
                 hasChildren: child.children.length > 0,
               };
@@ -344,8 +239,8 @@ export async function GET(request: NextRequest) {
                 return {
                   id: sibling.id,
                   name: sibling.name,
-                  path: sibling.path.replace(/^obuv\//, ''),
-                  href: `/catalog/${sibling.path.replace(/^obuv\//, '')}`,
+                  path: sibling.path,
+                  href: `/catalog/${sibling.path}`,
                   totalProducts,
                   hasChildren: sibling.children.length > 0,
                 };
@@ -419,8 +314,8 @@ export async function GET(request: NextRequest) {
                   return {
                     id: child.id,
                     name: child.name,
-                    path: child.path.replace(/^obuv\//, ''),
-                    href: `/catalog/${child.path.replace(/^obuv\//, '')}`,
+                    path: child.path,
+                    href: `/catalog/${child.path}`,
                     totalProducts,
                     hasChildren: child.children.length > 0,
                   };
@@ -455,7 +350,7 @@ export async function GET(request: NextRequest) {
 
     // Generate proper category name and breadcrumbs
     const displayName = generateCategoryName(category.path, category.name);
-    const breadcrumbs = generateBreadcrumbs(category.path);
+    const breadcrumbs = await generateBreadcrumbs(category.id, category.path);
 
     // Format subcategories for frontend - calculate total products including subcategories
     const subcategoriesWithTotals = await Promise.all(
@@ -479,8 +374,8 @@ export async function GET(request: NextRequest) {
         return {
           id: child.id,
           name: child.name,
-          path: child.path.replace(/^obuv\//, ''),
-          href: `/catalog/${child.path.replace(/^obuv\//, '')}`,
+          path: child.path,
+          href: `/catalog/${child.path}`,
           totalProducts,
           hasChildren: child.children.length > 0,
         };
@@ -548,8 +443,8 @@ export async function GET(request: NextRequest) {
           return {
             id: sibling.id,
             name: sibling.name,
-            path: sibling.path.replace(/^obuv\//, ''),
-            href: `/catalog/${sibling.path.replace(/^obuv\//, '')}`,
+            path: sibling.path,
+            href: `/catalog/${sibling.path}`,
             totalProducts,
             hasChildren: sibling.children.length > 0,
           };
@@ -619,8 +514,8 @@ export async function GET(request: NextRequest) {
             return {
               id: child.id,
               name: child.name,
-              path: child.path.replace(/^obuv\//, ''),
-              href: `/catalog/${child.path.replace(/^obuv\//, '')}`,
+              path: child.path,
+              href: `/catalog/${child.path}`,
               totalProducts,
               hasChildren: child.children.length > 0,
             };
@@ -651,8 +546,8 @@ export async function GET(request: NextRequest) {
         parentCategory = {
           id: parent.id,
           name: parent.name,
-          path: parent.path.replace(/^obuv\//, ''),
-          href: `/catalog/${parent.path.replace(/^obuv\//, '')}`,
+          path: parent.path,
+          href: `/catalog/${parent.path}`,
         };
       }
     }

@@ -34,6 +34,12 @@ type TreeNode = CategoryRecord & {
 const urlPath = (path: string) => path.replace(/^obuv\/?/, '');
 const lastSegment = (path: string) => path.split('/').pop() || '';
 
+const capitalizeFirstLetter = (str: string): string => {
+  if (!str.trim()) return str;
+  const trimmed = str.trim();
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+};
+
 const buildTree = (
   categories: CategoryRecord[],
   counts: Map<string, number>
@@ -158,7 +164,6 @@ export async function POST(request: NextRequest) {
       parentId,
       urlSegment,
       slug: slugInput,
-      sort = 500,
       isActive = true,
       seoTitle,
       seoDescription,
@@ -175,23 +180,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!parentId) {
-      return NextResponse.json(
-        { ok: false, error: 'Выберите родительскую категорию' },
-        { status: 400 }
-      );
-    }
-
-    const parent = await prisma.category.findUnique({
-      where: { id: parentId },
-    });
-    if (!parent) {
-      return NextResponse.json(
-        { ok: false, error: 'Родительская категория не найдена' },
-        { status: 404 }
-      );
-    }
-
     const segment = sanitizeSegment(urlSegment || name);
     if (!segment) {
       return NextResponse.json(
@@ -200,17 +188,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const path = `${parent.path}/${segment}`;
-    const slugBase = sanitizeSlug(parent.slug, slugInput, name);
-    const slug = await ensureUniqueSlug(slugBase);
+    let path: string;
+    let slug: string;
+
+    if (parentId) {
+      // Creating a subcategory
+      const parent = await prisma.category.findUnique({
+        where: { id: parentId },
+      });
+      if (!parent) {
+        return NextResponse.json(
+          { ok: false, error: 'Родительская категория не найдена' },
+          { status: 404 }
+        );
+      }
+      path = `${parent.path}/${segment}`;
+      const slugBase = sanitizeSlug(parent.slug, slugInput, name);
+      slug = await ensureUniqueSlug(slugBase);
+    } else {
+      // Creating a root category
+      path = segment;
+      const slugBase = sanitizeSlug(null, slugInput, name);
+      slug = await ensureUniqueSlug(slugBase);
+    }
+
+    // Calculate sort value to add category at the end
+    // Find the max sort value for categories with the same parent
+    const maxSort = await prisma.category.findFirst({
+      where: { parentId: parentId || null },
+      orderBy: { sort: 'desc' },
+      select: { sort: true },
+    });
+    const sortValue = maxSort ? maxSort.sort + 1 : 500;
 
     const newCategory = await prisma.category.create({
       data: {
-        name: name.trim(),
+        name: capitalizeFirstLetter(name),
         parentId,
         slug,
         path,
-        sort: Number(sort) || 500,
+        sort: sortValue,
         isActive: Boolean(isActive),
         seoTitle,
         seoDescription,

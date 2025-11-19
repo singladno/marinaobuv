@@ -45,8 +45,42 @@ export function useScrollToProduct({
         return;
       }
 
-      const { productId, referrer } = JSON.parse(navData);
+      const { productId, referrer, timestamp } = JSON.parse(navData);
       if (!productId || !referrer) {
+        sessionStorage.removeItem('productNavigation');
+        return;
+      }
+
+      // Check if this is a page refresh (referrer is same as current page or empty)
+      const currentUrl = window.location.href;
+      if (!referrer || referrer === currentUrl || referrer === window.location.origin + window.location.pathname) {
+        // This is a refresh, not navigation from product page
+        sessionStorage.removeItem('productNavigation');
+        return;
+      }
+
+      // Check if referrer is from a product page
+      let referrerPath: string;
+      try {
+        const referrerUrl = referrer.startsWith('http')
+          ? new URL(referrer)
+          : new URL(referrer, window.location.origin);
+        referrerPath = referrerUrl.pathname;
+      } catch {
+        referrerPath = referrer.split('?')[0];
+      }
+
+      // Only show banner if coming from product page (/product/...)
+      const isFromProductPage = referrerPath.startsWith('/product/');
+
+      if (!isFromProductPage) {
+        // Not coming from product page, clear navigation data
+        sessionStorage.removeItem('productNavigation');
+        return;
+      }
+
+      // Check if navigation data is too old (more than 5 minutes) - likely a stale session
+      if (timestamp && Date.now() - timestamp > 5 * 60 * 1000) {
         sessionStorage.removeItem('productNavigation');
         return;
       }
@@ -62,22 +96,9 @@ export function useScrollToProduct({
       // Only proceed if this is the target product
       if (targetProductIdRef.current !== productId) return;
 
-      // Normalize referrer URL (handle both full URLs and relative paths)
-      let referrerPath: string;
-      try {
-        const referrerUrl = referrer.startsWith('http')
-          ? new URL(referrer)
-          : new URL(referrer, window.location.origin);
-        referrerPath = referrerUrl.pathname + referrerUrl.search;
-      } catch {
-        // If referrer is not a valid URL, try treating it as a path
-        referrerPath =
-          referrer.split('?')[0] +
-          (referrer.includes('?') ? '?' + referrer.split('?')[1] : '');
-      }
-
-      const currentUrl = new URL(window.location.href);
-      const currentPath = currentUrl.pathname + currentUrl.search;
+      // Use the referrerPath we already calculated above
+      const currentUrlObj = new URL(window.location.href);
+      const currentPath = currentUrlObj.pathname + currentUrlObj.search;
 
       // Check if current path matches target path
       const pathMatches =
@@ -92,6 +113,7 @@ export function useScrollToProduct({
           : targetPath.test(referrerPath);
 
       // Only scroll if we're on the target page and referrer matches
+      // AND we're coming from a product page or edit modal
       if (pathMatches && referrerMatches) {
         // Find the product element
         const productElement = document.querySelector(

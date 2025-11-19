@@ -70,7 +70,6 @@ export function ProductMobileCard({
                 <ProductNameCell
                   product={product}
                   onUpdateProduct={onUpdateProduct}
-                  disabled={product.isActive}
                 />
               </div>
             </div>
@@ -147,7 +146,6 @@ export function ProductMobileCard({
               <ProductArticleCell
                 product={product}
                 onUpdateProduct={onUpdateProduct}
-                disabled={product.isActive}
               />
             </div>
 
@@ -188,7 +186,6 @@ export function ProductMobileCard({
                 product={product}
                 gender={product.gender}
                 onUpdateProduct={onUpdateProduct}
-                disabled={product.isActive}
               />
             </div>
 
@@ -200,7 +197,6 @@ export function ProductMobileCard({
                 product={product}
                 season={product.season}
                 onUpdateProduct={onUpdateProduct}
-                disabled={product.isActive}
               />
             </div>
           </div>
@@ -212,7 +208,6 @@ export function ProductMobileCard({
             </div>
             <ProductSizesCell
               sizes={product.sizes}
-              disabled={product.isActive}
               onChange={async sizes => {
                 // Helper to compare sizes arrays
                 const sizesChanged = (

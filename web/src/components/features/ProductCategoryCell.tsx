@@ -55,7 +55,7 @@ export function ProductCategoryCell({
         options={categoryOptions}
         tree={categories}
         label=""
-        disabled={isSaving || product.isActive}
+        disabled={isSaving}
         selectLeavesOnly
       />
     </div>

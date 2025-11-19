@@ -4,7 +4,7 @@ export type CategoryNode = {
   id: string;
   name: string;
   slug: string;
-  path: string; // stored as obuv/...
+  path: string; // Full category path (e.g., "odezhda", "odezhda/muzhskaya-odezhda", "obuv", "obuv/womens")
   children: CategoryNode[];
 };
 
@@ -51,9 +51,9 @@ async function getCategoryChildren(parentId: string): Promise<CategoryNode[]> {
 export async function getCategoryByPath(path?: string) {
   if (!path) return null;
 
-  const dbPath = `obuv/${path}`;
+  // Match path directly, no hardcoded prefix - categories are stored with their full path
   return await prisma.category.findFirst({
-    where: { path: dbPath, isActive: true },
+    where: { path: path, isActive: true },
   });
 }
 

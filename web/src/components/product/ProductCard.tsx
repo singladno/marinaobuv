@@ -1,5 +1,5 @@
 'use client';
-import { Heart, Pencil } from 'lucide-react';
+import { Heart, Pencil, Hand } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useRef, memo } from 'react';
@@ -426,7 +426,7 @@ function ProductCard({
           className="absolute right-3 top-3 z-10 inline-flex cursor-pointer items-center justify-center text-white transition-transform hover:scale-110"
         >
           <Heart
-            className={`h-5 w-5 ${isFavorite(slug) ? 'fill-red-500 text-red-500' : ''}`}
+            className={`h-5 w-5 ${isFavorite(slug) ? 'fill-red-500 text-white' : 'fill-purple-500/20 text-white'}`}
           />
         </button>
 
@@ -533,36 +533,49 @@ function ProductCard({
               <>
                 {/* Source Button - left side */}
                 {source && (
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsSourceModalOpen(true);
-                    }}
-                    className="source-icon-hover-toggle absolute left-2 top-2 z-20 cursor-pointer transition-all duration-200 focus:outline-none"
-                    title="Просмотр источника сообщений"
-                  >
-                    {source === 'WA' ? (
-                      <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
-                        <Image
-                          src="/images/whatsapp-icon.png"
-                          alt="WhatsApp"
-                          width={36}
-                          height={36}
-                          className="h-full w-full rounded"
-                          unoptimized
-                        />
+                  <>
+                    {source === 'MANUAL' ? (
+                      <div className="group/manual-icon relative source-icon-hover-toggle absolute left-2 top-2 z-20 flex h-9 w-9 items-center justify-center transition-all duration-200">
+                        <Hand className="h-5 w-5 text-white fill-purple-500/20" strokeWidth={1.5} />
+                        {/* Tooltip */}
+                        <div className="absolute left-full ml-2 hidden rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 opacity-0 shadow-xl transition-opacity duration-200 group-hover/manual-icon:block group-hover/manual-icon:opacity-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 pointer-events-none whitespace-nowrap z-50">
+                          Товар добавлен вручную
+                          <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 border-l border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"></div>
+                        </div>
                       </div>
                     ) : (
-                      <Badge
-                        variant="secondary"
-                        className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsSourceModalOpen(true);
+                        }}
+                        className="source-icon-hover-toggle absolute left-2 top-2 z-20 cursor-pointer transition-all duration-200 focus:outline-none"
+                        title="Просмотр источника сообщений"
                       >
-                        Источник
-                      </Badge>
+                        {source === 'WA' ? (
+                          <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                            <Image
+                              src="/images/whatsapp-icon.png"
+                              alt="WhatsApp"
+                              width={36}
+                              height={36}
+                              className="h-full w-full rounded"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                          >
+                            Источник
+                          </Badge>
+                        )}
+                      </button>
                     )}
-                  </button>
+                  </>
                 )}
 
                 {/* Edit Button - right side, below heart icon, horizontally aligned with like icon */}
@@ -576,7 +589,7 @@ function ProductCard({
                   className="source-icon-hover-toggle absolute right-3 top-12 z-20 inline-flex cursor-pointer items-center justify-center text-white transition-all duration-200 hover:scale-110 focus:outline-none"
                   title="Редактировать товар"
                 >
-                  <Pencil className="h-5 w-5 text-white" />
+                  <Pencil className="h-5 w-5 text-white fill-purple-500/20" />
                 </button>
               </>
             )}

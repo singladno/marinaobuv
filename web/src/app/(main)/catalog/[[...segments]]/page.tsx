@@ -266,16 +266,23 @@ function CatalogPageContent() {
       <div className="container mx-auto px-4 pb-12 pt-8">
         {/* Header */}
         <div className="mb-6">
-          {/* Breadcrumbs */}
-          {breadcrumbs.length > 0 && (
+          {/* Breadcrumbs - always show if we have category info */}
+          {breadcrumbs.length > 0 ? (
             <div className="mb-4">
               <CategoryBreadcrumbs items={breadcrumbs} />
             </div>
-          )}
+          ) : categoryPath ? (
+            <div className="mb-4">
+              <CategoryBreadcrumbs items={[{ name: 'Каталог', path: '', href: '/catalog' }]} />
+            </div>
+          ) : null}
 
-          <Text variant="h1" as="h1" className="mb-2 text-3xl font-bold">
-            {displayName || categoryName || 'Каталог товаров'}
-          </Text>
+          {/* Title - show "Каталог" at root, category name otherwise */}
+          {!categoryPath && !filters.search && (
+            <Text variant="h1" as="h1" className="mb-2 text-3xl font-bold">
+              Каталог
+            </Text>
+          )}
 
           {filters.search && (
             <Text className="text-muted-foreground">
