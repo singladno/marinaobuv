@@ -95,6 +95,7 @@ function ProductCard({
   const { categories } = useCategories();
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTogglingActive, setIsTogglingActive] = useState(false);
@@ -188,6 +189,7 @@ function ProductCard({
 
     // Set loading state immediately for optimistic UI
     setIsProcessing(true);
+    setIsAdding(!isInPurchase);
 
     try {
       if (isInPurchase) {
@@ -215,6 +217,7 @@ function ProductCard({
     } finally {
       // Remove loading state after operation completes
       setIsProcessing(false);
+      setIsAdding(false);
     }
   };
 
@@ -405,7 +408,7 @@ function ProductCard({
             <div className="flex flex-col items-center gap-2">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"></div>
               <span className="text-xs font-medium text-purple-600">
-                {isInPurchase ? 'Удаление...' : 'Добавление...'}
+                {isAdding ? 'Добавление...' : 'Удаление...'}
               </span>
             </div>
           </div>
@@ -610,10 +613,12 @@ function ProductCard({
                 onAddColor={async color => {
                   if (!productId) return;
                   setIsProcessing(true);
+                  setIsAdding(true);
                   try {
                     await addProductToPurchase(productId, color);
                   } finally {
                     setIsProcessing(false);
+                    setIsAdding(false);
                   }
                 }}
               />
@@ -706,6 +711,7 @@ function ProductCard({
                 );
               } finally {
                 setIsProcessing(false);
+                setIsAdding(false);
                 setShowRemoveChooser(false);
               }
             }}

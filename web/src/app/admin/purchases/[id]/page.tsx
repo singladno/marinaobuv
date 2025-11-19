@@ -8,7 +8,6 @@ import {
   Download,
   ShoppingCart,
   Edit3,
-  Trash2,
   Plus,
   Check,
   X,
@@ -30,6 +29,7 @@ import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import ScrollArrows from '@/components/ui/ScrollArrows';
 import BulkDescriptionEditModal from '@/components/features/BulkDescriptionEditModal';
+import { ProductImageModal } from '@/components/features/ProductImageModal';
 
 interface PurchaseItem {
   id: string;
@@ -71,21 +71,17 @@ function PurchaseDetailPageContent() {
   const [purchase, setPurchase] = useState<Purchase | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingItem, setEditingItem] = useState<PurchaseItem | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editPrice, setEditPrice] = useState(0);
-  const [editSortIndex, setEditSortIndex] = useState(0);
-  const [isSaving, setIsSaving] = useState(false);
   const [editingField, setEditingField] = useState<{
     itemId: string;
     field: 'name' | 'description' | 'price' | 'sortIndex';
   } | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedItemForImageModal, setSelectedItemForImageModal] =
+    useState<PurchaseItem | null>(null);
 
   const confirmationModal = useConfirmationModal();
   const { addNotification } = useNotifications();
@@ -117,155 +113,6 @@ function PurchaseDetailPageContent() {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateItem = async () => {
-    if (!editingItem) return;
-
-    try {
-      setIsSaving(true);
-
-      // Check if any values actually changed
-      const hasNameChanged = editName !== editingItem.name;
-      const hasDescriptionChanged = editDescription !== editingItem.description;
-      const hasPriceChanged = editPrice !== Number(editingItem.price);
-      const hasSortIndexChanged = editSortIndex !== editingItem.sortIndex;
-
-      // If no changes, just close modal without making a request
-      if (
-        !hasNameChanged &&
-        !hasDescriptionChanged &&
-        !hasPriceChanged &&
-        !hasSortIndexChanged
-      ) {
-        setEditingItem(null);
-        return;
-      }
-
-      const response = await fetch(
-        `/api/admin/purchases/${params.id}/items/${editingItem.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: editName,
-            description: editDescription,
-            price: editPrice,
-            sortIndex: editSortIndex,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to update item');
-      }
-
-      const updatedItem = await response.json();
-      // Trigger DnD-like animation BEFORE state update to avoid context setState in render
-      if (hasSortIndexChanged && purchase) {
-        try {
-          const sortedBefore = getSortedItems(purchase.items, purchase.id);
-          const destinationIndex = editSortIndex - 1;
-          const overCandidate = sortedBefore[destinationIndex];
-          if (overCandidate && overCandidate.id !== editingItem.id) {
-            handleDragEnd(
-              {
-                active: { id: editingItem.id },
-                over: { id: overCandidate.id },
-              },
-              purchase.items,
-              purchase.id
-            );
-          }
-        } catch {}
-      }
-      setPurchase(prev => {
-        if (!prev) return null;
-        const updatedItems = prev.items.map(item =>
-          item.id === updatedItem.id ? updatedItem : item
-        );
-
-        // Only recalculate indexes if sortIndex was changed
-        if (hasSortIndexChanged) {
-          const recalculatedItems = recalculateIndexes(updatedItems);
-          // Update indexes in database only when sort order changes
-          updateItemIndexes(recalculatedItems);
-          return {
-            ...prev,
-            items: recalculatedItems,
-          };
-        } else {
-          // For other fields, just update the single item
-          return {
-            ...prev,
-            items: updatedItems,
-          };
-        }
-      });
-      setEditingItem(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update item');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const deleteItem = async (itemId: string) => {
-    const confirmed = await confirmationModal.showConfirmation({
-      title: 'Подтверждение удаления',
-      message:
-        'Вы уверены, что хотите удалить этот товар из закупки? Это действие нельзя отменить.',
-      confirmText: 'Удалить',
-      cancelText: 'Отмена',
-      variant: 'danger',
-    });
-
-    if (!confirmed) return;
-
-    try {
-      setDeletingItemId(itemId);
-
-      const response = await fetch(
-        `/api/admin/purchases/${params.id}/items/${itemId}`,
-        {
-          method: 'DELETE',
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to delete item');
-      }
-
-      setPurchase(prev => {
-        if (!prev) return null;
-        const remainingItems = prev.items.filter(item => item.id !== itemId);
-        const recalculatedItems = recalculateIndexes(remainingItems);
-
-        // Update indexes in database
-        updateItemIndexes(recalculatedItems);
-
-        return {
-          ...prev,
-          items: recalculatedItems,
-          _count: {
-            ...prev._count,
-            items: recalculatedItems.length,
-          },
-        };
-      });
-    } catch (err) {
-      addNotification({
-        type: 'error',
-        title: 'Ошибка при удалении',
-        message: err instanceof Error ? err.message : 'Failed to delete item',
-      });
-    } finally {
-      setDeletingItemId(null);
-      confirmationModal.setLoading(false);
-      confirmationModal.closeModal();
     }
   };
 
@@ -336,14 +183,6 @@ function PurchaseDetailPageContent() {
             : 'Не удалось экспортировать закупку',
       });
     }
-  };
-
-  const openEditModal = (item: PurchaseItem) => {
-    setEditingItem(item);
-    setEditName(item.name);
-    setEditDescription(item.description);
-    setEditPrice(Number(item.price));
-    setEditSortIndex(item.sortIndex);
   };
 
   const startFieldEdit = (
@@ -760,16 +599,6 @@ function PurchaseDetailPageContent() {
                           {item.sortIndex}
                         </div>
                       )}
-
-                      {/* Mobile: Modal edit */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditModal(item)}
-                        className="h-8 w-8 p-0 md:hidden"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                      </Button>
                     </div>
 
                     {/* Product Image */}
@@ -786,11 +615,8 @@ function PurchaseDetailPageContent() {
                         return src ? (
                           <div
                             className="h-16 w-16 cursor-pointer"
-                            onClick={() =>
-                              item.product.slug &&
-                              router.push(`/product/${item.product.slug}`)
-                            }
-                            title="Открыть страницу товара"
+                            onClick={() => setSelectedItemForImageModal(item)}
+                            title="Просмотр изображений"
                           >
                             <Image
                               src={src}
@@ -934,91 +760,12 @@ function PurchaseDetailPageContent() {
                       )}
                     </div>
                   </div>
-
-                  {/* Delete Icon */}
-                  {deletingItemId === item.id ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
-                  ) : (
-                    <Trash2
-                      className="h-4 w-4 cursor-pointer text-red-600 hover:text-red-700"
-                      onClick={() => deleteItem(item.id)}
-                    />
-                  )}
                 </div>
               </Card>
             )}
           </DraggablePurchaseItemList>
         )}
       </div>
-
-      {/* Edit Item Modal */}
-      <Modal
-        isOpen={!!editingItem}
-        onClose={() => setEditingItem(null)}
-        title="Редактировать товар"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium">Название</label>
-            <Input
-              value={editName}
-              onChange={e => setEditName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium">Описание</label>
-            <textarea
-              value={editDescription}
-              onChange={e => {
-                setEditDescription(e.target.value);
-                const el = e.currentTarget;
-                el.style.height = 'auto';
-                el.style.height = `${el.scrollHeight}px`;
-              }}
-              onFocus={e => {
-                const el = e.currentTarget;
-                el.style.height = 'auto';
-                el.style.height = `${el.scrollHeight}px`;
-              }}
-              onInput={e => {
-                const el = e.currentTarget;
-                el.style.height = 'auto';
-                el.style.height = `${el.scrollHeight}px`;
-              }}
-              className="w-full rounded-md border border-gray-200 p-2"
-              rows={1}
-              style={{ overflow: 'hidden', resize: 'none' }}
-              aria-label="Описание товара"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium">Цена</label>
-              <Input
-                type="number"
-                value={editPrice}
-                onChange={e => setEditPrice(Number(e.target.value))}
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium">
-                Порядок сортировки
-              </label>
-              <Input
-                type="number"
-                value={editSortIndex}
-                onChange={e => setEditSortIndex(Number(e.target.value))}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setEditingItem(null)}>
-              Отмена
-            </Button>
-            <Button onClick={updateItem}>Сохранить</Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Confirmation Modal */}
       <ConfirmationModal
@@ -1038,6 +785,32 @@ function PurchaseDetailPageContent() {
         onApply={handleApplyBulkDescriptions}
         isProcessing={isBulkProcessing}
       />
+      {selectedItemForImageModal && (() => {
+        const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
+        const itemColor = normalize(selectedItemForImageModal.color);
+        const allImages = selectedItemForImageModal.product.images || [];
+        // Filter images to only show the ones matching the item's color
+        const filteredImages = allImages.filter(img =>
+          normalize(img.color) === itemColor
+        );
+        // If no color match, fall back to all images
+        const images = filteredImages.length > 0 ? filteredImages : allImages;
+        const initialIndex = 0; // Always start at first image since we filtered
+        return (
+          <ProductImageModal
+            isOpen={!!selectedItemForImageModal}
+            onClose={() => setSelectedItemForImageModal(null)}
+            images={images.map(img => ({
+              id: img.id,
+              url: img.url,
+              alt: img.color || null,
+              isPrimary: img.isPrimary,
+            }))}
+            productName={selectedItemForImageModal.name}
+            initialIndex={initialIndex}
+          />
+        );
+      })()}
       <ScrollArrows offsetBottomPx={28} showOnMobile />
     </div>
   );

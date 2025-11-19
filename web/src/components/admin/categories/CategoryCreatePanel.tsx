@@ -217,7 +217,7 @@ function CategoryCreateFields({ parents, controller }: FieldsProps) {
             }}
           />
           <p className="text-xs text-gray-500">
-            Итоговый путь: /catalog/.../{'{segment}'}
+            Итоговый путь: /catalog/.../[сегмент]
           </p>
         </div>
         <div className="space-y-1.5">

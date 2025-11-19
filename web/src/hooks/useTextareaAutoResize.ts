@@ -1,12 +1,12 @@
 'use client';
 
-import type { RefObject } from 'react';
+import type { DependencyList, RefObject } from 'react';
 import { useCallback, useEffect } from 'react';
 
 export function useTextareaAutoResize(
-  ref: RefObject<HTMLTextAreaElement>,
+  ref: RefObject<HTMLTextAreaElement | null>,
   enabled: boolean,
-  deps: React.DependencyList = []
+  deps: DependencyList = []
 ) {
   const resize = useCallback(() => {
     if (!enabled) return;

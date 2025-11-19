@@ -34,6 +34,7 @@ export default function AdminSidebarLayout({
         style={
           {
             '--sidebar-width': isCollapsed ? '80px' : '224px',
+            WebkitOverflowScrolling: 'touch',
           } as React.CSSProperties
         }
       >

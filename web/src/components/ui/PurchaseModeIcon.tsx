@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { PlusIcon, ArrowRightIcon, StarIcon } from '@heroicons/react/24/outline';
 // Custom Purchase Mode Icon - colorful pinwheel/flower design
 
@@ -14,6 +15,7 @@ import { usePurchase } from '@/contexts/PurchaseContext';
 import { useUser } from '@/contexts/NextAuthUserContext';
 
 export function PurchaseModeIcon() {
+  const router = useRouter();
   const { user } = useUser();
   const {
     isPurchaseMode,
@@ -154,9 +156,17 @@ export function PurchaseModeIcon() {
                     variant="outline"
                     size="md"
                     className="w-full"
-                    onClick={() => (window.location.href = '/admin/purchases')}
+                    onClick={() => {
+                      if (activePurchase?.id) {
+                        router.push(`/admin/purchases/${activePurchase.id}`);
+                      } else {
+                        router.push('/admin/purchases');
+                      }
+                    }}
                   >
-                    Перейти к закупкам
+                    {activePurchase?.id
+                      ? 'Перейти к закупке'
+                      : 'Перейти к закупкам'}
                     <ArrowRightIcon className="ml-2 h-4 w-4" />
                   </Button>
                 </div>

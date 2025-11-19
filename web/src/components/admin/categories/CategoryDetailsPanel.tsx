@@ -112,7 +112,7 @@ export function CategoryDetailsPanel({ category, loading }: Props) {
         <div className="rounded-lg border border-dashed border-gray-200 p-3 text-xs text-gray-500">
           Обновляйте ветку через форму справа: указываем название, сегмент URL и
           родителя. Slug генерируется автоматически, а URL становится
-          доступным для `/catalog/{segment}`.
+          доступным для `/catalog/...`.
         </div>
       </CardContent>
     </Card>

@@ -1,10 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import Image from 'next/image';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, EffectFade } from 'swiper/modules';
+import type { Swiper as SwiperType } from 'swiper';
+
+// Import Swiper styles
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/effect-fade';
 
 import { ImageModalBadges } from '@/components/ui/ImageModalBadges';
-import { ImageModalMainImage } from '@/components/ui/ImageModalMainImage';
-import { ImageModalNavigation } from '@/components/ui/ImageModalNavigation';
 import { ImageModalThumbnails } from '@/components/ui/ImageModalThumbnails';
 import { Modal } from '@/components/ui/Modal';
 import type { ProductImage } from '@/types/product';
@@ -14,6 +22,7 @@ interface ProductImageModalProps {
   onClose: () => void;
   images: ProductImage[];
   productName: string;
+  initialIndex?: number;
 }
 
 export function ProductImageModal({
@@ -21,8 +30,10 @@ export function ProductImageModal({
   onClose,
   images,
   productName,
+  initialIndex = 0,
 }: ProductImageModalProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const swiperRef = useRef<SwiperType | null>(null);
 
   // Filter out any null/undefined images and ensure we have valid image objects
   const validImages = React.useMemo(
@@ -61,9 +72,17 @@ export function ProductImageModal({
 
   React.useEffect(() => {
     if (isOpen && validImages.length > 0) {
-      setCurrentIndex(0);
+      const safeIndex = Math.max(0, Math.min(initialIndex, validImages.length - 1));
+      setCurrentIndex(safeIndex);
+      if (swiperRef.current) {
+        swiperRef.current.slideTo(safeIndex);
+      }
     }
-  }, [isOpen, validImages.length]);
+  }, [isOpen, validImages.length, initialIndex]);
+
+  const handleSlideChange = React.useCallback((swiper: SwiperType) => {
+    setCurrentIndex(swiper.activeIndex);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -95,43 +114,94 @@ export function ProductImageModal({
       onClose={onClose}
       title={`Изображения товара: ${productName}`}
       size="xl"
-      className="!max-w-[95vw] md:!max-w-[85vw] lg:!max-w-5xl"
+      className="!max-w-[95vw] md:!max-w-[90vw] lg:!max-w-5xl"
     >
-      <div className="relative flex flex-col min-h-0 max-h-[calc(90vh-120px)]">
-        {/* Main image container - flex-1 to take available space */}
-        <div className="relative flex-1 min-h-0 overflow-hidden">
-          {/* Navigation buttons */}
-          {validImages.length > 1 && (
-            <ImageModalNavigation
-              totalImages={validImages.length}
-              onPrevious={() =>
-                setCurrentIndex(prev =>
-                  prev > 0 ? prev - 1 : validImages.length - 1
-                )
-              }
-              onNext={() =>
-                setCurrentIndex(prev =>
-                  prev < validImages.length - 1 ? prev + 1 : 0
-                )
-              }
-            />
-          )}
+      <div className="relative flex flex-col min-h-0 max-h-[calc(90vh-120px)] w-full">
+        {/* Swiper carousel - fixed height to prevent overlap with thumbnails */}
+        <div className="relative mb-4 flex-shrink-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 w-full" style={{ height: '350px', maxHeight: '350px', minHeight: '350px', overflow: 'hidden', position: 'relative' }}>
+          <Swiper
+            modules={[Navigation, Pagination, EffectFade]}
+            spaceBetween={0}
+            slidesPerView={1}
+            loop={false}
+            navigation={{
+              nextEl: '.product-image-modal-button-next',
+              prevEl: '.product-image-modal-button-prev',
+            }}
+            pagination={{
+              clickable: true,
+              bulletClass: 'swiper-pagination-bullet',
+              bulletActiveClass: 'swiper-pagination-bullet-active',
+              dynamicBullets: true,
+            }}
+            effect="fade"
+            fadeEffect={{
+              crossFade: true,
+            }}
+            speed={300}
+            initialSlide={safeCurrentIndex}
+            onSwiper={swiper => {
+              swiperRef.current = swiper;
+            }}
+            onSlideChange={handleSlideChange}
+            className="!h-full !w-full max-w-full"
+          >
+            {validImages.map((image, index) => (
+              <SwiperSlide key={image.id || index} className="!flex !items-center !justify-center">
+                <div className="relative h-full w-full">
+                  <Image
+                    src={image.url}
+                    alt={image.alt || `${productName} - ${index + 1}`}
+                    fill
+                    className="object-contain"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+                    priority={index === safeCurrentIndex}
+                  />
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
 
-          {/* Main image */}
-          {currentImage && (
-            <ImageModalMainImage
-              currentImage={{
-                id: currentImage.id,
-                url: currentImage.url,
-                alt: currentImage.alt || null,
-                color: null,
-                isActive: true,
-              }}
-              currentIndex={safeCurrentIndex}
-              selectedImages={new Set()}
-              onImageToggle={() => {}}
-              isUpdating={null}
-            />
+          {/* Custom Navigation Buttons */}
+          {validImages.length > 1 && (
+            <>
+              <button
+                className="product-image-modal-button-prev absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-opacity hover:bg-white disabled:opacity-30"
+                aria-label="Previous image"
+              >
+                <svg
+                  className="h-6 w-6 text-gray-800"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              <button
+                className="product-image-modal-button-next absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-2 shadow-lg transition-opacity hover:bg-white disabled:opacity-30"
+                aria-label="Next image"
+              >
+                <svg
+                  className="h-6 w-6 text-gray-800"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </>
           )}
 
           {/* Badges */}
@@ -145,7 +215,7 @@ export function ProductImageModal({
         </div>
 
         {/* Thumbnail strip - fixed at bottom */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 w-full overflow-x-auto">
           <ImageModalThumbnails
             images={validImages.map(img => ({
               id: img.id,

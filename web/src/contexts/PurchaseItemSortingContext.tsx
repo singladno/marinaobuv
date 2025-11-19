@@ -162,11 +162,8 @@ export function PurchaseItemSortingProvider({
   // Update sorting when drag ends
   const handleDragEnd = useCallback(
     (result: any, items: PurchaseItem[], purchaseId: string) => {
-      console.log('Context handleDragEnd called:', { result, purchaseId });
-
       // Check if we have valid active and over elements
       if (!result.active || !result.over) {
-        console.log('Invalid drag result - missing active or over');
         return;
       }
 
@@ -174,10 +171,6 @@ export function PurchaseItemSortingProvider({
 
       // Get the sorted items to find the correct indices
       const sortedItems = getSortedItems(items, purchaseId);
-      console.log(
-        'Sorted items for drag calculation:',
-        sortedItems.map(item => ({ id: item.id, name: item.name }))
-      );
 
       // Find indices of active and over items in the sorted array
       const sourceIndex = sortedItems.findIndex(item => item.id === active.id);
@@ -185,16 +178,12 @@ export function PurchaseItemSortingProvider({
         item => item.id === over.id
       );
 
-      console.log('Drag indices:', { sourceIndex, destinationIndex });
-
       // Validate indices
       if (sourceIndex === -1 || destinationIndex === -1) {
-        console.log('Invalid indices - item not found in sorted array');
         return;
       }
 
       if (sourceIndex === destinationIndex) {
-        console.log('Same position - no reordering needed');
         return;
       }
 
@@ -208,16 +197,12 @@ export function PurchaseItemSortingProvider({
       // Filter out null values from baseOrder
       const filteredBaseOrder = baseOrder.filter(id => id !== null);
 
-      console.log('Base order for reordering:', filteredBaseOrder);
-
       // Create new array with reordered items using arrayMove
       const newSorted = arrayMove(
         filteredBaseOrder,
         sourceIndex,
         destinationIndex
       );
-
-      console.log('New sorted order:', newSorted);
 
       // Save new sorting
       saveSorting(newSorted, purchaseId);

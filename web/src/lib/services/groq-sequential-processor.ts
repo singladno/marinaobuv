@@ -784,7 +784,7 @@ export class GroqSequentialProcessor {
             },
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.2, // Lower temperature for more consistent and accurate price parsing
+          temperature: 0.3, // Balanced temperature for better reasoning while maintaining consistency
           max_tokens: 2500, // Set to maintain ~4:1 input:output ratio (6074 input → ~1500 output target, with buffer for safety)
         },
         `text-analysis-${productId}`,

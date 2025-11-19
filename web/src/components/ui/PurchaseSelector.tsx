@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 
 import { Button } from '@/components/ui/Button';
@@ -38,8 +38,14 @@ export function PurchaseSelector({
   disabled = false,
   loading = false,
 }: PurchaseSelectorProps) {
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Prevent hydration mismatch by only rendering on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const selectedPurchase = purchases.find(p => p.id === value);
 
@@ -56,7 +62,28 @@ export function PurchaseSelector({
   const handleClear = () => {
     onChange(null);
     setSearchTerm('');
+    setIsOpen(false);
   };
+
+  // Prevent hydration mismatch - don't render Popover on server
+  if (!mounted) {
+    return (
+      <Button
+        variant="outline"
+        className="h-10 w-full justify-between border-gray-200 bg-white text-left font-normal transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+        disabled={disabled || loading}
+      >
+        <span
+          className={
+            selectedPurchase ? 'font-medium text-gray-900' : 'text-gray-500'
+          }
+        >
+          {selectedPurchase ? selectedPurchase.name : placeholder}
+        </span>
+        <ChevronDownIcon className="h-4 w-4 text-gray-400 transition-transform duration-200" />
+      </Button>
+    );
+  }
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>

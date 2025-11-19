@@ -48,7 +48,11 @@ interface SortableItemWrapperProps {
   children: (isDragging: boolean) => React.ReactNode;
 }
 
-function SortableItemWrapper({ item, children }: SortableItemWrapperProps) {
+function SortableItemWrapper({
+  item,
+  children,
+  isAnyDragging,
+}: SortableItemWrapperProps & { isAnyDragging: boolean }) {
   const {
     attributes,
     listeners,
@@ -64,6 +68,18 @@ function SortableItemWrapper({ item, children }: SortableItemWrapperProps) {
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
+    // When any item is dragging, disable touch-action on all items to prevent interference
+    // This fixes the issue where vertical drags get blocked
+    // When not dragging, allow vertical scrolling
+    touchAction: isAnyDragging ? 'none' : 'pan-y',
+    // When dragging, hide the original item from collision detection and pointer events
+    // This prevents it from detecting itself when dragging vertically
+    pointerEvents: isDragging ? 'none' : 'auto',
+    // When dragging, hide the original item completely (DragOverlay will show it)
+    // This prevents collision detection from finding the original item
+    visibility: isDragging ? 'hidden' : 'visible',
+    // Raise z-index when dragging to ensure it's above neighbors
+    zIndex: isDragging ? 50 : 'auto',
   };
 
   return (
@@ -72,8 +88,8 @@ function SortableItemWrapper({ item, children }: SortableItemWrapperProps) {
       data-item-id={item.id}
       style={style}
       className={cn(
-        'cursor-grab touch-none select-none transition-opacity active:cursor-grabbing',
-        isDragging && 'opacity-30' // Make original item very transparent when dragging
+        'cursor-grab select-none transition-opacity active:cursor-grabbing',
+        isDragging && 'opacity-30' // Make original item very transparent when dragging (DragOverlay shows it)
       )}
       {...listeners}
       {...attributes}
@@ -91,9 +107,11 @@ export function DraggablePurchaseItemList({
 }: DraggablePurchaseItemListProps) {
   const { getSortedItems, handleDragEnd } = usePurchaseItemSorting();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const prevRectsRef = useRef<Map<string, DOMRect>>(new Map());
+
+  // When dragging, disable touch-action on all items to prevent interference
+  const isDragging = activeId !== null;
 
   // Load sorting for this purchase when component mounts or purchaseId changes
   useEffect(() => {
@@ -101,18 +119,20 @@ export function DraggablePurchaseItemList({
     getSortedItems(items, purchaseId);
   }, [purchaseId, items, getSortedItems]);
 
-  // Sensors with activation constraints to prevent immediate dragging
+  // Sensors with activation constraints
+  // Both use delay-based activation: hold for 300ms to start dragging
+  // This allows normal scrolling while enabling drag on intentional hold
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 300, // 0.3 seconds delay before drag starts
-        tolerance: 5, // Allow 5px movement before canceling
+        delay: 300, // Hold for 300ms to activate drag
+        tolerance: 10, // Allow more movement during hold to prevent accidental cancellation
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 300, // 0.3 seconds delay before drag starts
-        tolerance: 5, // Allow 5px movement before canceling
+        delay: 300, // Hold for 300ms to activate drag
+        tolerance: 10, // Allow more movement during hold to prevent accidental cancellation
       },
     })
     // KeyboardSensor disabled to prevent key press interference with editing
@@ -160,12 +180,7 @@ export function DraggablePurchaseItemList({
   };
 
   const handleDragEndEvent = (event: DragEndEvent) => {
-    // Prevent multiple simultaneous drag end events
-    if (isProcessing) {
-      return;
-    }
-
-    setIsProcessing(true);
+    // Clear active ID immediately to allow next drag
     setActiveId(null);
 
     // Handle the drag end in the context (for localStorage)
@@ -197,9 +212,6 @@ export function DraggablePurchaseItemList({
         onItemsReordered(itemsWithNewIndexes);
       }
     }
-
-    // Reset processing state after a short delay
-    setTimeout(() => setIsProcessing(false), 100);
   };
 
   if (items.length === 0) {
@@ -212,20 +224,39 @@ export function DraggablePurchaseItemList({
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEndEvent}
+      onDragCancel={() => {
+        // Clear active ID if drag is cancelled
+        setActiveId(null);
+      }}
     >
       <SortableContext
         items={sortedItems.map(item => item.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div ref={containerRef} className="touch-none space-y-4">
+        <div
+          ref={containerRef}
+          className="space-y-4"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {sortedItems.map(item => (
-            <SortableItemWrapper key={item.id} item={item}>
+            <SortableItemWrapper
+              key={item.id}
+              item={item}
+              isAnyDragging={isDragging}
+            >
               {isDragging => children(item, isDragging)}
             </SortableItemWrapper>
           ))}
         </div>
       </SortableContext>
-      <DragOverlay>
+      <DragOverlay
+        style={{
+          touchAction: 'none',
+          pointerEvents: 'auto',
+          zIndex: 9999,
+        }}
+        dropAnimation={null}
+      >
         {activeId ? (
           <div className="scale-105 transform rounded-lg border-2 border-blue-400 bg-white p-4 opacity-95 shadow-2xl">
             <div className="flex gap-4">
@@ -246,20 +277,20 @@ export function DraggablePurchaseItemList({
                     const colorMatch = imgs.find(img => normalize(img.color) === color);
                     const src = (colorMatch || imgs[0])?.url;
                     return src ? (
-                    <Image
-                      src={src}
-                      alt={
-                        sortedItems.find(item => item.id === activeId)?.name ||
-                        ''
-                      }
-                      width={64}
-                      height={64}
-                      className="h-16 w-16 rounded object-cover"
-                    />
+                      <Image
+                        src={src}
+                        alt={
+                          sortedItems.find(item => item.id === activeId)?.name ||
+                          ''
+                        }
+                        width={64}
+                        height={64}
+                        className="h-16 w-16 rounded object-cover"
+                      />
                     ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
-                      <span className="text-xs text-gray-500">Нет фото</span>
-                    </div>
+                      <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
+                        <span className="text-xs text-gray-500">Нет фото</span>
+                      </div>
                     );
                   })()}
                 </div>

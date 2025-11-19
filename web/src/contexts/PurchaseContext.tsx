@@ -115,18 +115,25 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
   // Note: When activePurchase is null (e.g., purchase mode turned off),
   // we intentionally DO NOT remove the saved id so the last used purchase
   // can be restored when purchase mode is turned back on.
+  // However, if purchase mode is ON and activePurchase is null, it means
+  // the user explicitly cleared the selection, so we should clear the saved ID.
   useEffect(() => {
     if (typeof window !== 'undefined' && user && hasInitialized) {
       try {
         if (activePurchase) {
           localStorage.setItem('active-purchase-id', activePurchase.id);
           setSavedActivePurchaseId(activePurchase.id);
+        } else if (isPurchaseMode) {
+          // If purchase mode is ON but activePurchase is null, user explicitly cleared selection
+          // Clear the saved ID to prevent restoration
+          localStorage.removeItem('active-purchase-id');
+          setSavedActivePurchaseId(null);
         }
       } catch (error) {
         console.warn('Failed to save active purchase to localStorage:', error);
       }
     }
-  }, [activePurchase, user, hasInitialized]);
+  }, [activePurchase, isPurchaseMode, user, hasInitialized]);
 
   // Fetch purchases when user changes
   useEffect(() => {
@@ -140,8 +147,15 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   // Restore active purchase from localStorage after purchases are loaded
+  // Only restore when purchase mode is on and we have a saved ID, but NOT when
+  // the user explicitly cleared the selection (savedActivePurchaseId would be null in that case)
   useEffect(() => {
-    if (purchases.length > 0 && !activePurchase && savedActivePurchaseId) {
+    if (
+      purchases.length > 0 &&
+      !activePurchase &&
+      savedActivePurchaseId &&
+      isPurchaseMode
+    ) {
       try {
         const savedPurchase = purchases.find(
           p => p.id === savedActivePurchaseId
@@ -162,7 +176,7 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
         );
       }
     }
-  }, [purchases, activePurchase, savedActivePurchaseId]);
+  }, [purchases, activePurchase, savedActivePurchaseId, isPurchaseMode]);
 
   // Update selected products when active purchase changes
   useEffect(() => {
@@ -378,11 +392,27 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Wrapper for setActivePurchase that handles clearing saved ID when explicitly clearing
+  const handleSetActivePurchase = (purchase: Purchase | null) => {
+    setActivePurchase(purchase);
+    // If clearing while purchase mode is on, immediately clear saved ID to prevent restoration
+    if (!purchase && isPurchaseMode) {
+      setSavedActivePurchaseId(null);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('active-purchase-id');
+        } catch (error) {
+          console.warn('Failed to clear active purchase from localStorage:', error);
+        }
+      }
+    }
+  };
+
   const value: PurchaseContextType = {
     isPurchaseMode,
     setIsPurchaseMode: handleSetIsPurchaseMode,
     activePurchase,
-    setActivePurchase,
+    setActivePurchase: handleSetActivePurchase,
     purchases,
     setPurchases,
     selectedProductIds,

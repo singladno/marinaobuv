@@ -8,7 +8,7 @@ type ProductDescriptionEditorProps = {
   value: string;
   isExpanded: boolean;
   isLoading: boolean;
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
   disabled: boolean;
   onChange: (next: string) => void;
   onBlur: () => void;
