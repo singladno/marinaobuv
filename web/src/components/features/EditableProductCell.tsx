@@ -36,6 +36,7 @@ export function EditableProductCell({
 }: EditableProductCellProps) {
   const [editValue, setEditValue] = useState(value);
 
+  // Sync editValue with value prop to show optimistic updates immediately
   useEffect(() => {
     setEditValue(value);
   }, [value]);
@@ -43,6 +44,9 @@ export function EditableProductCell({
   const handleSave = (nextValue?: string) => {
     const finalValue = nextValue ?? editValue;
     if (finalValue !== value) {
+      // Update editValue immediately for instant feedback
+      setEditValue(finalValue);
+      // Call onSave - it will trigger optimistic update synchronously
       onSave(finalValue);
     }
     if (onCancel) {

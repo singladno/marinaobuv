@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
     const suggestions =
       await addressGeocodingService.getAddressSuggestions(query);
 
+    console.log(`Address suggestions for "${query}":`, suggestions.length, 'results');
+
     return NextResponse.json({ success: true, suggestions }, { status: 200 });
   } catch (error) {
     console.error('Address suggestions API error:', error);

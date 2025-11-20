@@ -5,6 +5,7 @@ export interface Product {
   article: string | null;
   categoryId: string;
   pricePair: number; // in rubles
+  buyPrice: number | null; // закупочная цена (purchase price)
   currency: string;
   material: string | null;
   gender: 'FEMALE' | 'MALE' | null;
@@ -30,6 +31,8 @@ export interface Product {
   images: ProductImage[];
   sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
   sourceMessageIds: string[] | null; // Array of WhatsApp message IDs that created this product
+  sourceScreenshotUrl: string | null; // URL of source screenshot for MANUAL products
+  sourceScreenshotKey: string | null; // S3 key of source screenshot for MANUAL products
   source: 'WA' | 'AG' | 'MANUAL'; // Source of the product: WA (WhatsApp), AG (aggregator), or MANUAL (manually created)
   gptRequest: string | null; // GPT request for debugging
   gptResponse: string | null; // GPT response for debugging
@@ -47,6 +50,7 @@ export interface ProductUpdateData {
   article?: string | null;
   categoryId?: string;
   pricePair?: number; // in rubles
+  buyPrice?: number | null; // закупочная цена (purchase price)
   currency?: string;
   material?: string | null;
   gender?: 'FEMALE' | 'MALE' | null;
@@ -54,6 +58,7 @@ export interface ProductUpdateData {
   description?: string | null;
   isActive?: boolean;
   sizes?: Array<{ size: string; count: number }>;
+  providerId?: string | null;
 }
 
 export interface ProductsResponse {

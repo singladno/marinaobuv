@@ -19,7 +19,7 @@ interface EditableRoleBadgeProps {
 const roleOptions = [
   { value: 'ADMIN', label: 'Администратор' },
   { value: 'CLIENT', label: 'Клиент' },
-  { value: 'SUPPLIER', label: 'Поставщик' },
+  { value: 'PROVIDER', label: 'Поставщик' },
   { value: 'GRUZCHIK', label: 'Грузчик' },
 ];
 

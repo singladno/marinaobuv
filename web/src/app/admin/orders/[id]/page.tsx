@@ -101,7 +101,13 @@ interface OrderDetails {
   status: string;
   phone: string;
   fullName: string | null;
+  transportId: string | null;
   transportName: string | null;
+  transportOptions?: Array<{
+    id: string;
+    transportId: string;
+    transportName: string;
+  }>;
   subtotal: number;
   total: number;
   label: string | null;
@@ -503,7 +509,7 @@ export default function OrderDetailsPage() {
       </div>
 
       {/* Order Info */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 sm:gap-6">
         <Card>
           <CardHeader>
             <h3 className="text-sm font-medium text-gray-500">Клиент</h3>
@@ -539,9 +545,19 @@ export default function OrderDetailsPage() {
             <p className="font-medium">
               {order.gruzchik?.name || 'Не назначен'}
             </p>
-            {order.transportName && (
-              <p className="text-sm text-gray-600">{order.transportName}</p>
-            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h3 className="text-sm font-medium text-gray-500">Транспортная компания</h3>
+          </CardHeader>
+          <CardContent>
+            <p className="font-medium">
+              {order.transportOptions && order.transportOptions.length > 0
+                ? order.transportOptions.map(opt => opt.transportName).join(', ')
+                : order.transportName || 'Не выбрана'}
+            </p>
           </CardContent>
         </Card>
       </div>

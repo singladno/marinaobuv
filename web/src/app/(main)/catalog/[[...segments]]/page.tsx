@@ -225,7 +225,7 @@ function CatalogPageContent() {
     prevSearchParamsRef.current = currentParams;
 
     const pageParam = parseInt(
-      searchParams.get('page') || String(filters.page),
+      searchParams.get('page') || '1',
       10
     );
     const pageSizeParam = parseInt(

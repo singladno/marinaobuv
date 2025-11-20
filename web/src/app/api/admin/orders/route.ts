@@ -40,6 +40,14 @@ export async function GET(req: NextRequest) {
             },
           },
           gruzchik: { select: { id: true, name: true } },
+          transportOptions: {
+            where: { isSelected: true },
+            select: {
+              id: true,
+              transportId: true,
+              transportName: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         take: 200,

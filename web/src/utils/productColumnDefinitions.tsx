@@ -10,7 +10,7 @@ import { ProductGptDebugCell } from '@/components/features/ProductGptDebugCell';
 import { ProductImagesCell } from '@/components/features/ProductImagesCell';
 import { ProductNameCell } from '@/components/features/ProductNameCell';
 import { ProductPriceCell } from '@/components/features/ProductPriceCell';
-import { ProductProviderCell } from '@/components/features/ProductProviderCell';
+import { ProductProviderEditableCell } from '@/components/features/ProductProviderEditableCell';
 import { ProductSeasonCell } from '@/components/features/ProductSeasonCell';
 import { ProductSelectionCheckbox } from '@/components/features/ProductSelectionCheckbox';
 import { ProductSizesCell } from '@/components/features/ProductSizesCell';
@@ -141,7 +141,12 @@ export function createProductColumnDefinitions({
     columnHelper.display({
       id: 'provider',
       header: 'Поставщик',
-      cell: ({ row }) => <ProductProviderCell product={row.original} />,
+      cell: ({ row }) => (
+        <ProductProviderEditableCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+        />
+      ),
     }),
 
     // Price column

@@ -841,7 +841,7 @@ export class GroqSequentialProcessor {
             },
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.5,
+          temperature: 0.3,
         },
         null,
         2

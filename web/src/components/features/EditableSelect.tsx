@@ -39,7 +39,7 @@ export function EditableSelect({
           onSave(val);
         }}
         className="w-full"
-        disabled={disabled || isSaving}
+        disabled={disabled}
       >
         <SelectTrigger
           className={`pr-8 ${className}`}
@@ -50,7 +50,7 @@ export function EditableSelect({
             <SelectValue placeholder="-">{value}</SelectValue>
             <span className="ml-2">
               {status === 'saving' && (
-                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" />
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" />
               )}
               {status === 'success' && (
                 <span className="inline-flex h-3 w-3 items-center justify-center rounded-full bg-green-500">

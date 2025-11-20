@@ -25,18 +25,45 @@ export function EditableInput({
   isSaving,
 }: EditableInputProps) {
   return (
-    <Input
-      type={type}
-      value={value}
-      onChange={e => onChange((e.target as HTMLInputElement).value)}
-      onBlur={() => onSave()}
-      onKeyDown={onKeyDown}
-      step={step}
-      className={className}
-      // avoid autoFocus to prevent global focus/blur cascades
-      disabled={disabled || isSaving}
-      aria-label="Редактировать значение"
-      fullWidth
-    />
+    <div className="relative w-full">
+      <Input
+        type={type}
+        value={value}
+        onChange={e => onChange((e.target as HTMLInputElement).value)}
+        onBlur={(e) => {
+          // CRITICAL: Use requestAnimationFrame to defer onSave AFTER blur completes
+          // This ensures the input loses focus immediately and browser processes blur first
+          const target = e.currentTarget;
+          requestAnimationFrame(() => {
+            // Only save if still blurred (not refocused)
+            if (document.activeElement !== target) {
+              onSave();
+            }
+          });
+        }}
+        onKeyDown={onKeyDown}
+        step={step}
+        className={`${className} ${isSaving ? 'pr-10' : ''}`}
+        disabled={disabled}
+        aria-label="Редактировать значение"
+        fullWidth
+      />
+      {isSaving && (
+        <div
+          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none z-50 bg-white dark:bg-gray-900 p-1 rounded-full flex items-center justify-center"
+          aria-label="Сохранение..."
+        >
+          <div
+            className="h-4 w-4 animate-spin rounded-full border-2 border-purple-600 border-t-transparent"
+            role="status"
+            aria-live="polite"
+            style={{
+              minWidth: '16px',
+              minHeight: '16px',
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 }

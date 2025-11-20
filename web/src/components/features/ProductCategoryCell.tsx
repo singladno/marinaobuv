@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { flushSync } from 'react-dom';
 import type { Product, ProductUpdateData } from '@/types/product';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 
@@ -32,16 +33,21 @@ export function ProductCategoryCell({
   }, [categories]);
 
   const handleCategoryChange = async (categoryIds: string[]) => {
-    // Optimistic update without indicators
-    setSelectedIds(categoryIds);
-    setIsSaving(true);
+    const previousIds = selectedIds;
+    // Optimistic update - flush immediately to ensure UI updates
+    flushSync(() => {
+      setSelectedIds(categoryIds);
+      setIsSaving(true);
+    });
     try {
       await onUpdateProduct(product.id, {
         categoryId: categoryIds.length > 0 ? categoryIds[0] : undefined,
       });
+      // Success - keep optimistic value
     } catch (e) {
+      console.error('Error updating product category:', e);
       // Revert on error
-      setSelectedIds(product.categoryId ? [product.categoryId] : []);
+      setSelectedIds(previousIds);
     } finally {
       setIsSaving(false);
     }
@@ -49,15 +55,22 @@ export function ProductCategoryCell({
 
   return (
     <div className="flex items-center space-x-2">
-      <CategoryControl
-        value={selectedIds}
-        onChange={handleCategoryChange}
-        options={categoryOptions}
-        tree={categories}
-        label=""
-        disabled={isSaving}
-        selectLeavesOnly
-      />
+      <div className="relative">
+        <CategoryControl
+          value={selectedIds}
+          onChange={handleCategoryChange}
+          options={categoryOptions}
+          tree={categories}
+          label=""
+          disabled={isSaving}
+          selectLeavesOnly
+        />
+        {isSaving && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

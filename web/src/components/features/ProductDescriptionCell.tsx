@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useTextareaAutoResize } from '@/hooks/useTextareaAutoResize';
 import type { ProductUpdateData } from '@/types/product';
 import { ProductDescriptionEditor } from './ProductDescriptionEditor';
@@ -19,22 +20,40 @@ export function ProductDescriptionCell({
   onUpdateProduct,
 }: ProductDescriptionCellProps) {
   const [value, setValue] = useState(product.description || '');
+  const [optimisticValue, setOptimisticValue] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   useEffect(() => {
     setValue(product.description || '');
+    setOptimisticValue(null);
   }, [product.description]);
+
   const resize = useTextareaAutoResize(textareaRef, isExpanded, [value]);
+
+  const currentValue = optimisticValue ?? (product.description || '');
+
   const handleSave = async () => {
-    if (value === product.description) {
+    const newValue = value || '';
+    if (newValue === product.description) {
       return;
     }
-    setIsLoading(true);
+
+    // Optimistic update - flush immediately to ensure UI updates
+    flushSync(() => {
+      setOptimisticValue(newValue);
+      setIsLoading(true);
+    });
+
     try {
-      await onUpdateProduct(product.id, { description: value || null });
+      await onUpdateProduct(product.id, { description: newValue || null });
+      // Success - keep optimistic value, sync value state
+      setValue(newValue);
     } catch (error) {
       console.error('Error updating description:', error);
+      // Revert on error
+      setOptimisticValue(null);
       setValue(product.description || '');
     } finally {
       setIsLoading(false);
@@ -60,7 +79,7 @@ export function ProductDescriptionCell({
     <div className="space-y-2">
       {!isExpanded && (
         <ProductDescriptionPreview
-          value={value}
+          value={currentValue}
           isLoading={isLoading}
           onExpand={() => setIsExpanded(true)}
         />

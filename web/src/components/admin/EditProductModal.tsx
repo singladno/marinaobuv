@@ -10,6 +10,9 @@ import { useUpdateProduct } from '@/hooks/useUpdateProduct';
 
 import { CreateProductFormFields } from './CreateProductFormFields';
 import { ProductImageUpload, type ImageFile } from './ProductImageUpload';
+import { ProductImageUploadArea } from './ProductImageUploadArea';
+import Image from 'next/image';
+import { Text } from '@/components/ui/Text';
 import type { CreateProductData } from './CreateProductModal';
 
 export type { ImageFile };
@@ -46,6 +49,9 @@ export function EditProductModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formReady, setFormReady] = useState(false);
   const originalImagesRef = useRef<ImageFile[]>([]);
+  const [sourceScreenshot, setSourceScreenshot] = useState<File | null>(null);
+  const [sourceScreenshotPreview, setSourceScreenshotPreview] = useState<string | null>(null);
+  const [existingSourceScreenshot, setExistingSourceScreenshot] = useState<string | null>(null);
 
   // Store original images when they're loaded
   useEffect(() => {
@@ -57,6 +63,31 @@ export function EditProductModal({
       originalImagesRef.current = JSON.parse(JSON.stringify(images));
     }
   }, [loadingProduct, images]);
+
+  // Load existing source screenshot when product loads
+  useEffect(() => {
+    if (!loadingProduct && productId) {
+      const loadSourceScreenshot = async () => {
+        try {
+          const response = await fetch(`/api/admin/products/${productId}`);
+          if (response.ok) {
+            const data = await response.json();
+            const screenshotUrl = (data.product as any).sourceScreenshotUrl;
+            if (screenshotUrl) {
+              setExistingSourceScreenshot(screenshotUrl);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading source screenshot:', error);
+        }
+      };
+      loadSourceScreenshot();
+    } else if (!productId) {
+      setExistingSourceScreenshot(null);
+      setSourceScreenshot(null);
+      setSourceScreenshotPreview(null);
+    }
+  }, [loadingProduct, productId]);
 
   // Mark form as ready once product data is loaded
   useEffect(() => {
@@ -127,6 +158,26 @@ export function EditProductModal({
         JSON.stringify(submitData.sizes)
       );
       const updatedProduct = await updateProduct(productId, submitData);
+
+      // Upload source screenshot if a new one was selected
+      if (sourceScreenshot) {
+        try {
+          const formData = new FormData();
+          formData.append('file', sourceScreenshot);
+          const response = await fetch(
+            `/api/admin/products/${productId}/source-screenshot`,
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+          if (!response.ok) {
+            console.error('Failed to upload source screenshot');
+          }
+        } catch (screenshotError) {
+          console.error('Error uploading source screenshot:', screenshotError);
+        }
+      }
 
       // Update image metadata (isPrimary, sort, color) only for images that changed
       const originalImages = originalImagesRef.current;
@@ -370,6 +421,12 @@ export function EditProductModal({
       reset();
       setImages([]);
       originalImagesRef.current = []; // Reset original images
+      if (sourceScreenshotPreview) {
+        URL.revokeObjectURL(sourceScreenshotPreview);
+      }
+      setSourceScreenshot(null);
+      setSourceScreenshotPreview(null);
+      setExistingSourceScreenshot(null);
       // Update product optimistically - will preserve scroll position
       onProductUpdated?.(finalProduct);
       onClose();
@@ -393,6 +450,13 @@ export function EditProductModal({
         }
       });
       setImages([]);
+      // Clean up source screenshot preview
+      if (sourceScreenshotPreview) {
+        URL.revokeObjectURL(sourceScreenshotPreview);
+      }
+      setSourceScreenshot(null);
+      setSourceScreenshotPreview(null);
+      setExistingSourceScreenshot(null);
       onClose();
     }
   };
@@ -431,6 +495,77 @@ export function EditProductModal({
                   disabled={isSubmitting || isUpdating}
                 />
 
+                {/* Source Screenshot Section */}
+                <div className="space-y-2">
+                  <Text variant="body" className="font-medium text-gray-900 dark:text-white">
+                    Скриншот исходного сообщения (опционально)
+                  </Text>
+                  {existingSourceScreenshot && !sourceScreenshotPreview ? (
+                    <div className="relative inline-block">
+                      <Image
+                        src={existingSourceScreenshot}
+                        alt="Existing source screenshot"
+                        width={128}
+                        height={128}
+                        className="h-32 w-auto rounded-lg border object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExistingSourceScreenshot(null);
+                          // Optionally delete from server
+                        }}
+                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 shadow-lg"
+                        disabled={isSubmitting || isUpdating}
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : !sourceScreenshotPreview ? (
+                    <ProductImageUploadArea
+                      onFilesSelect={(files) => {
+                        const file = files?.[0];
+                        if (file) {
+                          setSourceScreenshot(file);
+                          setSourceScreenshotPreview(URL.createObjectURL(file));
+                          setExistingSourceScreenshot(null);
+                        }
+                      }}
+                      disabled={isSubmitting || isUpdating}
+                      maxImages={1}
+                      currentCount={0}
+                    />
+                  ) : (
+                    <div className="relative inline-block">
+                      <Image
+                        src={sourceScreenshotPreview}
+                        alt="Source screenshot preview"
+                        width={128}
+                        height={128}
+                        className="h-32 w-auto rounded-lg border object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (sourceScreenshotPreview) {
+                            URL.revokeObjectURL(sourceScreenshotPreview);
+                          }
+                          setSourceScreenshot(null);
+                          setSourceScreenshotPreview(null);
+                        }}
+                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 shadow-lg"
+                        disabled={isSubmitting || isUpdating}
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <CreateProductFormFields
                   formData={formData}
                   errors={errors}
@@ -438,6 +573,7 @@ export function EditProductModal({
                   isSubmitting={isSubmitting || isUpdating || !formReady}
                   onFieldChange={handleFieldChange}
                   onClearError={clearError}
+                  isEditMode={true}
                 />
 
                 {/* Error message */}

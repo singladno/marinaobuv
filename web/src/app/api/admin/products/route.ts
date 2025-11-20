@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       name,
       categoryId,
       pricePair,
+      buyPrice,
       material,
       gender,
       season,
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
       sizes,
       currency = 'RUB',
       isActive = true,
+      providerId,
     } = body;
 
     // Validate required fields
@@ -175,23 +177,107 @@ export async function POST(req: NextRequest) {
     const article = generateArticleNumber();
 
     // Create product
+    const productData: any = {
+      name: name.trim(),
+      slug,
+      article,
+      categoryId,
+      pricePair: parseFloat(pricePair),
+      buyPrice: buyPrice ? parseFloat(buyPrice) : null,
+      currency,
+      material: material.trim(),
+      gender: gender,
+      season: season,
+      description: description.trim(),
+      sizes: sizes,
+      isActive,
+      source: 'MANUAL', // Manually created products from admin panel
+      activeUpdatedAt: new Date(),
+    };
+
+    // Add provider if provided
+    if (providerId) {
+      // providerId might be a User ID (from SupplierSelector) or a Provider ID
+      // First, check if it's a User ID by trying to find a user with this ID
+      const user = await prisma.user.findUnique({
+        where: { id: providerId },
+        select: { id: true, providerId: true, role: true, name: true, phone: true },
+      });
+
+      let actualProviderId: string | null = null;
+
+      if (user && user.role === 'PROVIDER' && user.id) {
+        if (user.providerId) {
+          // User has a providerId, use it
+          actualProviderId = user.providerId;
+        } else {
+          // User is PROVIDER but doesn't have a providerId - find or create one
+          const providerName = user.name || user.phone || `Provider ${user.id.slice(0, 8)}`;
+
+          // First, try to find an existing provider with this name
+          let existingProvider = await prisma.provider.findFirst({
+            where: { name: providerName },
+            select: { id: true },
+          });
+
+          if (!existingProvider) {
+            // If no provider exists, try to find one by phone
+            if (user.phone) {
+              existingProvider = await prisma.provider.findFirst({
+                where: { phone: user.phone },
+                select: { id: true },
+              });
+            }
+
+            // If still no provider, create a new one with a unique name
+            if (!existingProvider) {
+              let uniqueName = providerName;
+              let counter = 1;
+
+              // Ensure the name is unique
+              while (await prisma.provider.findUnique({ where: { name: uniqueName } })) {
+                uniqueName = `${providerName} ${counter}`;
+                counter++;
+              }
+
+              existingProvider = await prisma.provider.create({
+                data: {
+                  name: uniqueName,
+                  phone: user.phone || null,
+                },
+              });
+            }
+          }
+
+          // Update user with the providerId
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { providerId: existingProvider.id },
+          });
+          actualProviderId = existingProvider.id;
+        }
+      } else if (!user) {
+        // Check if it's already a Provider ID
+        const provider = await prisma.provider.findUnique({
+          where: { id: providerId },
+          select: { id: true },
+        });
+        if (provider) {
+          actualProviderId = provider.id;
+        }
+      }
+
+      if (actualProviderId) {
+        productData.provider = { connect: { id: actualProviderId } };
+      } else {
+        console.warn(
+          `Could not resolve provider for ${providerId}. Cannot set product provider.`
+        );
+      }
+    }
+
     const product = await prisma.product.create({
-      data: {
-        name: name.trim(),
-        slug,
-        article,
-        categoryId,
-        pricePair: parseFloat(pricePair),
-        currency,
-        material: material.trim(),
-        gender: gender,
-        season: season,
-        description: description.trim(),
-        sizes: sizes,
-        isActive,
-        source: 'MANUAL', // Manually created products from admin panel
-        activeUpdatedAt: new Date(),
-      },
+      data: productData,
       include: productInclude,
     });
 
@@ -245,6 +331,7 @@ export async function PATCH(req: NextRequest) {
       'name',
       'article',
       'pricePair',
+      'buyPrice',
       'currency',
       'material',
       'gender',
@@ -254,6 +341,8 @@ export async function PATCH(req: NextRequest) {
       'isActive',
       'sizes',
       'sourceMessageIds',
+      'sourceScreenshotUrl',
+      'sourceScreenshotKey',
       'analysisBatchId',
       'colorBatchId',
       'batchProcessingStatus',
@@ -264,7 +353,15 @@ export async function PATCH(req: NextRequest) {
     const updateData: Record<string, unknown> = {};
     for (const key of allowedScalarKeys) {
       if (key in rawUpdateData) {
-        updateData[key as string] = (rawUpdateData as any)[key];
+        const value = (rawUpdateData as any)[key];
+        // Handle buyPrice parsing similar to POST
+        if (key === 'buyPrice') {
+          updateData[key as string] = value !== null && value !== undefined ? parseFloat(value) : null;
+        } else if (key === 'pricePair') {
+          updateData[key as string] = parseFloat(value);
+        } else {
+          updateData[key as string] = value;
+        }
       }
     }
 
@@ -278,8 +375,89 @@ export async function PATCH(req: NextRequest) {
     if ('categoryId' in rawUpdateData && rawUpdateData.categoryId) {
       updateData.category = { connect: { id: rawUpdateData.categoryId } };
     }
-    if ('providerId' in rawUpdateData && rawUpdateData.providerId) {
-      updateData.provider = { connect: { id: rawUpdateData.providerId } };
+    if ('providerId' in rawUpdateData) {
+      if (rawUpdateData.providerId) {
+        // providerId might be a User ID (from SupplierSelector) or a Provider ID
+        // First, check if it's a User ID by trying to find a user with this ID
+        const user = await prisma.user.findUnique({
+          where: { id: rawUpdateData.providerId },
+          select: { id: true, providerId: true, role: true, name: true, phone: true },
+        });
+
+        let actualProviderId: string | null = null;
+
+        if (user && user.role === 'PROVIDER' && user.id) {
+          if (user.providerId) {
+            // User has a providerId, use it
+            actualProviderId = user.providerId;
+          } else {
+            // User is PROVIDER but doesn't have a providerId - find or create one
+            const providerName = user.name || user.phone || `Provider ${user.id.slice(0, 8)}`;
+
+            // First, try to find an existing provider with this name
+            let existingProvider = await prisma.provider.findFirst({
+              where: { name: providerName },
+              select: { id: true },
+            });
+
+            if (!existingProvider) {
+              // If no provider exists, try to find one by phone
+              if (user.phone) {
+                existingProvider = await prisma.provider.findFirst({
+                  where: { phone: user.phone },
+                  select: { id: true },
+                });
+              }
+
+              // If still no provider, create a new one with a unique name
+              if (!existingProvider) {
+                let uniqueName = providerName;
+                let counter = 1;
+
+                // Ensure the name is unique
+                while (await prisma.provider.findUnique({ where: { name: uniqueName } })) {
+                  uniqueName = `${providerName} ${counter}`;
+                  counter++;
+                }
+
+                existingProvider = await prisma.provider.create({
+                  data: {
+                    name: uniqueName,
+                    phone: user.phone || null,
+                  },
+                });
+              }
+            }
+
+            // Update user with the providerId
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { providerId: existingProvider.id },
+            });
+            actualProviderId = existingProvider.id;
+          }
+        } else if (!user) {
+          // Check if it's already a Provider ID
+          const provider = await prisma.provider.findUnique({
+            where: { id: rawUpdateData.providerId },
+            select: { id: true },
+          });
+          if (provider) {
+            actualProviderId = provider.id;
+          }
+        }
+
+        if (actualProviderId) {
+          updateData.provider = { connect: { id: actualProviderId } };
+        } else {
+          console.warn(
+            `Could not resolve provider for ${rawUpdateData.providerId}. Cannot set product provider.`
+          );
+        }
+      } else {
+        // Clear provider if providerId is null
+        updateData.provider = { disconnect: true };
+      }
     }
 
     // Always bump activeUpdatedAt for any update

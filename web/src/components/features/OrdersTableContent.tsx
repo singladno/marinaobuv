@@ -168,6 +168,20 @@ export function OrdersTableContent({
                     </div>
                   </div>
 
+                  {/* Transport Company */}
+                  {(order.transportOptions && order.transportOptions.length > 0) || order.transportName ? (
+                    <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                        Транспортная компания
+                      </div>
+                      <div className="text-sm text-gray-900 dark:text-white">
+                        {order.transportOptions && order.transportOptions.length > 0
+                          ? order.transportOptions.map(opt => opt.transportName).join(', ')
+                          : order.transportName || '—'}
+                      </div>
+                    </div>
+                  ) : null}
+
                   {/* Gruzchik and Payment */}
                   <div className="grid grid-cols-2 gap-4 pt-2">
                     <div>
@@ -230,6 +244,9 @@ export function OrdersTableContent({
               </th>
               <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
                 Грузчик
+              </th>
+              <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                Транспорт
               </th>
               <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
                 Прибыль

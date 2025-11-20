@@ -99,14 +99,18 @@ class ProductionAddressGeocodingService {
       // Use OpenStreetMap Nominatim as primary service
       const suggestions = await this.fetchFromNominatim(query);
       if (suggestions.length > 0) {
+        console.log(`Nominatim returned ${suggestions.length} suggestions for "${query}"`);
         return suggestions;
       }
+      console.log(`Nominatim returned 0 suggestions for "${query}", using mock data`);
     } catch (error) {
       console.warn('Nominatim service failed, using mock data:', error);
     }
 
     // Fallback to mock data if Nominatim fails
-    return this.getMockSuggestions(query);
+    const mockSuggestions = this.getMockSuggestions(query);
+    console.log(`Mock data returned ${mockSuggestions.length} suggestions for "${query}"`);
+    return mockSuggestions;
   }
 
   private async fetchFromNominatim(

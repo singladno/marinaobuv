@@ -1,0 +1,382 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+import { Input } from '@/components/ui/Input';
+import { Text } from '@/components/ui/Text';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/Popover';
+import { Button } from '@/components/ui/Button';
+import { useProviders } from '@/hooks/useProviders';
+
+interface Supplier {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+interface SupplierSelectorProps {
+  value: string | null;
+  onChange: (supplierId: string | null) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  isLoading?: boolean;
+}
+
+export function SupplierSelector({
+  value,
+  onChange,
+  placeholder = 'Выберите поставщика',
+  disabled = false,
+  isLoading = false,
+}: SupplierSelectorProps) {
+  const { providers, loading: providersLoading } = useProviders();
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null
+  );
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSelectedValueRef = useRef<string | null>(null);
+  const isSelectingRef = useRef(false);
+
+  // Find supplier from shared providers list instead of fetching
+  const findSupplierById = useCallback(
+    (id: string) => {
+      // Validate ID format (should be a valid cuid)
+      if (!id || typeof id !== 'string' || id.length < 20) {
+        return null;
+      }
+
+      const provider = providers.find(p => p.id === id);
+      if (provider) {
+        return {
+          id: provider.id,
+          name: provider.name,
+          email: provider.email,
+          phone: provider.phone,
+        };
+      }
+      return null;
+    },
+    [providers]
+  );
+
+  // Find selected supplier from shared list when value changes
+  // Only sync when providers are loaded and value actually changed
+  useEffect(() => {
+    // Don't sync if we're in the middle of a selection
+    if (isSelectingRef.current) {
+      return;
+    }
+
+    if (!providersLoading && providers.length > 0) {
+      if (
+        value &&
+        typeof value === 'string' &&
+        value.length >= 20 &&
+        value.length <= 30
+      ) {
+        // Skip if this is the value we just set in handleSelect (to prevent clearing)
+        if (lastSelectedValueRef.current === value) {
+          // Clear the ref after skipping once
+          setTimeout(() => {
+            lastSelectedValueRef.current = null;
+          }, 100);
+          return;
+        }
+
+        const supplier = findSupplierById(value);
+        if (supplier) {
+          // Update if the supplier ID is different from current selection
+          setSelectedSupplier(prev => {
+            if (prev?.id !== supplier.id) {
+              return supplier;
+            }
+            return prev;
+          });
+        } else {
+          // If supplier not found, don't clear - might be a timing issue
+          // Only clear if current selection doesn't match value
+          setSelectedSupplier(prev => {
+            if (prev?.id === value) {
+              // Current selection matches value but supplier not found - keep it
+              return prev;
+            }
+            // Selection doesn't match value - but don't clear if we just set it
+            return prev;
+          });
+        }
+      } else if (!value) {
+        // Clear selection if value is explicitly cleared (and we're not selecting)
+        setSelectedSupplier(null);
+        lastSelectedValueRef.current = null;
+      }
+    }
+  }, [value, findSupplierById, providersLoading, providers.length]);
+
+  // Filter suppliers from shared list based on search term
+  const filterSuppliers = useCallback(
+    (search: string) => {
+      if (!providers || providers.length === 0) {
+        setSuppliers([]);
+        return;
+      }
+
+      if (!search.trim()) {
+        // Convert providers to suppliers format
+        const suppliersList: Supplier[] = providers.map(p => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          phone: p.phone,
+        }));
+        setSuppliers(suppliersList);
+        return;
+      }
+
+      const searchLower = search.toLowerCase();
+      const filtered = providers
+        .filter(
+          p =>
+            p.name?.toLowerCase().includes(searchLower) ||
+            p.email?.toLowerCase().includes(searchLower) ||
+            p.phone?.toLowerCase().includes(searchLower)
+        )
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          phone: p.phone,
+        }));
+      setSuppliers(filtered);
+    },
+    [providers]
+  );
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (isOpen && !providersLoading) {
+      searchTimeoutRef.current = setTimeout(() => {
+        filterSuppliers(searchTerm);
+      }, 300);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchTerm, isOpen, filterSuppliers, providersLoading]);
+
+  // Initialize suppliers from shared list when providers are loaded
+  useEffect(() => {
+    if (!providersLoading && providers.length > 0) {
+      filterSuppliers(searchTerm);
+    } else if (!providersLoading && providers.length === 0) {
+      setSuppliers([]);
+    }
+  }, [providersLoading, providers.length, filterSuppliers, searchTerm]);
+
+  // Also populate suppliers when dropdown opens (in case providers loaded after mount)
+  useEffect(() => {
+    if (
+      isOpen &&
+      !providersLoading &&
+      providers.length > 0 &&
+      suppliers.length === 0
+    ) {
+      filterSuppliers(searchTerm);
+    }
+  }, [
+    isOpen,
+    providersLoading,
+    providers.length,
+    suppliers.length,
+    filterSuppliers,
+    searchTerm,
+  ]);
+
+  const handleSelect = (supplier: Supplier) => {
+    // Mark that we're in the middle of a selection
+    isSelectingRef.current = true;
+    // Set selected supplier immediately for instant UI feedback (fast, non-blocking)
+    setSelectedSupplier(supplier);
+    // Track the selected value to prevent useEffect from clearing it
+    lastSelectedValueRef.current = supplier.id;
+    // Close dropdown immediately
+    setIsOpen(false);
+    setSearchTerm('');
+    // Defer onChange to allow dropdown to close first
+    setTimeout(() => {
+      onChange(supplier.id);
+    }, 0);
+    // Clear the flag after a short delay
+    setTimeout(() => {
+      isSelectingRef.current = false;
+    }, 200);
+  };
+
+  const handleClear = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // Mark that we're clearing
+    isSelectingRef.current = true;
+    // Clear selection immediately for instant UI feedback
+    setSelectedSupplier(null);
+    // Clear the search term
+    setSearchTerm('');
+    // Track the cleared value
+    lastSelectedValueRef.current = null;
+    // Defer onChange to allow UI to update first
+    setTimeout(() => {
+      onChange(null);
+    }, 0);
+    // Clear the flag after a short delay
+    setTimeout(() => {
+      isSelectingRef.current = false;
+    }, 200);
+  };
+
+  // Use suppliers directly (they're already filtered)
+  // Fallback: if suppliers is empty but providers are loaded, use providers directly
+  const filteredSuppliers =
+    suppliers.length > 0
+      ? suppliers
+      : !providersLoading && providers.length > 0
+        ? providers.map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email,
+            phone: p.phone,
+          }))
+        : [];
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="w-full justify-between text-left font-normal"
+          disabled={disabled || isLoading}
+        >
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="truncate">
+              {selectedSupplier
+                ? selectedSupplier.name ||
+                  selectedSupplier.email ||
+                  selectedSupplier.phone ||
+                  'Поставщик'
+                : placeholder}
+            </span>
+            {isLoading && (
+              <span
+                className="inline-flex items-center justify-center h-4 w-4 animate-spin rounded-full border-2 border-purple-600 border-t-transparent bg-white dark:bg-gray-800 flex-shrink-0"
+                style={{
+                  minWidth: '16px',
+                  minHeight: '16px',
+                }}
+                role="status"
+                aria-live="polite"
+                aria-label="Сохранение..."
+              />
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {selectedSupplier && !disabled && !isLoading && (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={handleClear}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleClear(e as any);
+                  }
+                }}
+                className="cursor-pointer rounded p-0.5 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:hover:bg-gray-700"
+                onMouseDown={e => e.stopPropagation()}
+                title="Очистить поставщика"
+                aria-label="Очистить поставщика"
+              >
+                <XMarkIcon className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+              </div>
+            )}
+            <ChevronDownIcon className="h-4 w-4 opacity-50" />
+          </div>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+      >
+        <div className="p-2">
+          <Input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Поиск по имени, email или телефону..."
+            className="mb-2"
+            autoFocus
+          />
+        </div>
+        <div className="max-h-60 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-purple-600" />
+            </div>
+          ) : filteredSuppliers.length === 0 ? (
+            <div className="py-4 text-center text-sm text-gray-500">
+              {providersLoading
+                ? 'Загрузка...'
+                : searchTerm
+                  ? 'Поставщики не найдены'
+                  : providers.length === 0
+                    ? 'Нет доступных поставщиков'
+                    : 'Начните вводить для поиска'}
+            </div>
+          ) : (
+            <ul className="py-1">
+              {filteredSuppliers.map(supplier => (
+                <li key={supplier.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(supplier)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none dark:hover:bg-gray-800 dark:focus:bg-gray-800"
+                  >
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {supplier.name ||
+                        supplier.email ||
+                        supplier.phone ||
+                        'Без имени'}
+                    </div>
+                    {supplier.email && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {supplier.email}
+                      </div>
+                    )}
+                    {supplier.phone && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {supplier.phone}
+                      </div>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

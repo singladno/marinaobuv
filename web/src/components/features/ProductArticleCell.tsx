@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import { EditableProductCell } from '@/components/features/EditableProductCell';
 import type { Product } from '@/types/product';
@@ -19,22 +20,44 @@ export function ProductArticleCell({
   // Always show edit control
   const [isEditing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [optimisticValue, setOptimisticValue] = useState<string | null>(null);
 
-  const handleSave = async (value: string) => {
-    setIsSaving(true);
-    try {
-      await onUpdateProduct(product.id, { article: value || null });
-      // Keep editing visible
-    } catch (error) {
-      console.error('Error updating product article:', error);
-    } finally {
-      setIsSaving(false);
+  const currentValue = optimisticValue ?? (product.article || '');
+
+  const handleSave = (value: string) => {
+    // Don't update if already showing this value and not saving
+    if (optimisticValue === value && !isSaving) {
+      return;
     }
+
+    const previousValue = currentValue;
+
+    // CRITICAL: Set state IMMEDIATELY and flush synchronously to ensure UI updates
+    flushSync(() => {
+      setOptimisticValue(value);
+      setIsSaving(true);
+    });
+
+    // Defer async request to next tick so UI updates immediately
+    Promise.resolve().then(() => {
+      onUpdateProduct(product.id, { article: value || null })
+        .then(() => {
+          // Success - keep optimistic value
+        })
+        .catch((error) => {
+          console.error('[ProductArticleCell] Error updating product article:', error);
+          // Revert on error
+          setOptimisticValue(previousValue);
+        })
+        .finally(() => {
+          setIsSaving(false);
+        });
+    });
   };
 
   return (
     <EditableProductCell
-      value={product.article || ''}
+      value={currentValue}
       onSave={handleSave}
       isEditing={isEditing}
       isSaving={isSaving}

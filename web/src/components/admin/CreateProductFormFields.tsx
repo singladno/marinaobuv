@@ -13,6 +13,7 @@ interface CreateProductFormFieldsProps {
   isSubmitting: boolean;
   onFieldChange: (field: keyof CreateProductData, value: any) => void;
   onClearError: (field: string) => void;
+  isEditMode?: boolean;
 }
 
 export function CreateProductFormFields({
@@ -22,6 +23,7 @@ export function CreateProductFormFields({
   isSubmitting,
   onFieldChange,
   onClearError,
+  isEditMode = false,
 }: CreateProductFormFieldsProps) {
   return (
     <>
@@ -39,6 +41,7 @@ export function CreateProductFormFields({
         isSubmitting={isSubmitting}
         onFieldChange={onFieldChange}
         onClearError={onClearError}
+        isEditMode={isEditMode}
       />
     </>
   );

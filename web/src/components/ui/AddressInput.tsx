@@ -91,12 +91,16 @@ export function AddressInput({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (!isOpen || suggestions.length === 0) {
+      if (!isOpen) {
         if (e.key === 'ArrowDown' && suggestions.length > 0) {
           setIsOpen(true);
           setHighlightedIndex(0);
           e.preventDefault();
         }
+        return;
+      }
+
+      if (suggestions.length === 0) {
         return;
       }
 

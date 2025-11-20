@@ -7,6 +7,7 @@ import { Text } from '@/components/ui/Text';
 import type { CreateProductData } from './CreateProductModal';
 import { CreateProductGenderSeasonFields } from './CreateProductGenderSeasonFields';
 import { MaterialAutocomplete } from './MaterialAutocomplete';
+import { SupplierSelector } from './SupplierSelector';
 
 interface CreateProductOptionalFieldsProps {
   formData: Partial<CreateProductData>;
@@ -14,6 +15,7 @@ interface CreateProductOptionalFieldsProps {
   isSubmitting: boolean;
   onFieldChange: (field: keyof CreateProductData, value: any) => void;
   onClearError: (field: string) => void;
+  isEditMode?: boolean;
 }
 
 export function CreateProductOptionalFields({
@@ -22,6 +24,7 @@ export function CreateProductOptionalFields({
   isSubmitting,
   onFieldChange,
   onClearError,
+  isEditMode = false,
 }: CreateProductOptionalFieldsProps) {
 
   return (
@@ -79,6 +82,27 @@ export function CreateProductOptionalFields({
         )}
       </div>
 
+      {/* Supplier - Optional */}
+      <div className="space-y-2">
+        <Text variant="body" className="font-medium text-gray-900 dark:text-white">
+          Поставщик
+        </Text>
+        <SupplierSelector
+          value={formData.providerId || null}
+          onChange={providerId => {
+            onFieldChange('providerId', providerId);
+            onClearError('providerId');
+          }}
+          placeholder="Выберите поставщика"
+          disabled={isSubmitting}
+        />
+        {errors.providerId && (
+          <Text variant="caption" className="text-red-500">
+            {errors.providerId}
+          </Text>
+        )}
+      </div>
+
       {/* Sizes - Required */}
       <div className="space-y-2">
         <Text variant="body" className="font-medium text-gray-900 dark:text-white">
@@ -86,6 +110,7 @@ export function CreateProductOptionalFields({
         </Text>
         <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-600">
           <ProductSizesCell
+            key={isEditMode ? `edit-${formData.name || 'product'}` : 'create'}
             sizes={formData.sizes || []}
             onChange={async sizes => {
               // Ensure onChange completes before continuing
@@ -93,6 +118,7 @@ export function CreateProductOptionalFields({
               onClearError('sizes');
             }}
             disabled={isSubmitting}
+            hideSummary={isEditMode}
           />
         </div>
         {errors.sizes && (

@@ -6,11 +6,13 @@ const initialFormData: Partial<CreateProductData> = {
   name: '',
   categoryId: '',
   pricePair: 0,
+  buyPrice: null,
   material: '',
   gender: undefined,
   season: undefined,
   description: '',
   sizes: [],
+  providerId: null,
 };
 
 export function useCreateProductForm() {
@@ -66,6 +68,7 @@ export function useCreateProductForm() {
       name: formData.name.trim(),
       categoryId: formData.categoryId,
       pricePair: formData.pricePair,
+      buyPrice: formData.buyPrice ?? null,
       material: formData.material.trim(),
       gender: formData.gender,
       season: formData.season,

@@ -99,6 +99,14 @@ export async function GET(
             name: true,
           },
         },
+        transportOptions: {
+          where: { isSelected: true },
+          select: {
+            id: true,
+            transportId: true,
+            transportName: true,
+          },
+        },
       },
     });
 

@@ -1,14 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { Text } from '@/components/ui/Text';
 import { type CategoryNode } from '@/components/ui/CategorySelector';
 import { useCreateProductForm } from '@/hooks/useCreateProductForm';
 
 import { CreateProductFormFields } from './CreateProductFormFields';
 import { ProductImageUpload, type ImageFile } from './ProductImageUpload';
+import { ProductImageUploadArea } from './ProductImageUploadArea';
 
 export type { ImageFile };
 
@@ -16,12 +19,15 @@ export interface CreateProductData {
   name: string;
   categoryId: string;
   pricePair: number;
+  buyPrice?: number | null;
   material: string;
   gender: 'FEMALE' | 'MALE';
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER';
   description: string;
   sizes: Array<{ size: string; count: number }>;
   images?: ImageFile[];
+  sourceScreenshot?: ImageFile | null;
+  providerId?: string | null;
 }
 
 interface CreateProductModalProps {
@@ -51,6 +57,8 @@ export function CreateProductModal({
   } = useCreateProductForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<ImageFile[]>([]);
+  const [sourceScreenshot, setSourceScreenshot] = useState<File | null>(null);
+  const [sourceScreenshotPreview, setSourceScreenshotPreview] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,11 +80,23 @@ export function CreateProductModal({
 
     try {
       const submitData = prepareSubmitData();
-      // Include images in submit data
-      const dataWithImages = { ...submitData, images };
+      // Include images and source screenshot in submit data
+      const dataWithImages = {
+        ...submitData,
+        images,
+        sourceScreenshot: sourceScreenshot ? {
+          file: sourceScreenshot,
+          preview: sourceScreenshotPreview || '',
+        } as ImageFile : null,
+      };
       await onCreate(dataWithImages);
       reset();
       setImages([]);
+      if (sourceScreenshotPreview) {
+        URL.revokeObjectURL(sourceScreenshotPreview);
+      }
+      setSourceScreenshot(null);
+      setSourceScreenshotPreview(null);
       onClose();
     } catch (error) {
       console.error('Error creating product:', error);
@@ -92,6 +112,11 @@ export function CreateProductModal({
       // Clean up image previews
       images.forEach(img => URL.revokeObjectURL(img.preview));
       setImages([]);
+      if (sourceScreenshotPreview) {
+        URL.revokeObjectURL(sourceScreenshotPreview);
+      }
+      setSourceScreenshot(null);
+      setSourceScreenshotPreview(null);
       onClose();
     }
   };
@@ -116,6 +141,54 @@ export function CreateProductModal({
               onImagesChange={setImages}
               disabled={isSubmitting}
             />
+
+            {/* Source Screenshot Section */}
+            <div className="space-y-2">
+              <Text variant="body" className="font-medium text-gray-900 dark:text-white">
+                Скриншот исходного сообщения (опционально)
+              </Text>
+              {!sourceScreenshotPreview ? (
+                <ProductImageUploadArea
+                  onFilesSelect={(files) => {
+                    const file = files[0];
+                    if (file) {
+                      setSourceScreenshot(file);
+                      const preview = URL.createObjectURL(file);
+                      setSourceScreenshotPreview(preview);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  maxImages={1}
+                  currentCount={0}
+                />
+              ) : (
+                <div className="relative inline-block">
+                  <Image
+                    src={sourceScreenshotPreview}
+                    alt="Source screenshot preview"
+                    width={128}
+                    height={128}
+                    className="h-32 w-auto rounded-lg border object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (sourceScreenshotPreview) {
+                        URL.revokeObjectURL(sourceScreenshotPreview);
+                      }
+                      setSourceScreenshot(null);
+                      setSourceScreenshotPreview(null);
+                    }}
+                    className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 shadow-lg"
+                    disabled={isSubmitting}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
 
             <CreateProductFormFields
               formData={formData}

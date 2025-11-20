@@ -116,8 +116,8 @@ export function ProductsPageContent() {
 
   const handleCreateProduct = async (data: CreateProductData) => {
     try {
-      // Extract images from data
-      const { images, ...productData } = data;
+      // Extract images and source screenshot from data
+      const { images, sourceScreenshot, ...productData } = data;
 
       // Create product first
       const product = await createProduct(productData);
@@ -130,6 +130,30 @@ export function ProductsPageContent() {
           console.error('Error uploading images:', imageError);
           // Don't fail the whole operation if images fail to upload
           // Product is already created
+        }
+      }
+
+      // Upload source screenshot if provided
+      if (sourceScreenshot && sourceScreenshot.file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', sourceScreenshot.file);
+
+          const response = await fetch(
+            `/api/admin/products/${product.id}/source-screenshot`,
+            {
+              method: 'POST',
+              body: formData,
+            }
+          );
+
+          if (!response.ok) {
+            console.error('Error uploading source screenshot:', await response.text());
+            // Don't fail the whole operation if screenshot fails to upload
+          }
+        } catch (screenshotError) {
+          console.error('Error uploading source screenshot:', screenshotError);
+          // Don't fail the whole operation if screenshot fails to upload
         }
       }
 

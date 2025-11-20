@@ -13,6 +13,8 @@ import { ProductGenderCell } from '@/components/features/ProductGenderCell';
 import { ProductSeasonCell } from '@/components/features/ProductSeasonCell';
 import { ProductSizesCell } from '@/components/features/ProductSizesCell';
 import { ProductProviderCell } from '@/components/features/ProductProviderCell';
+import { ProductBuyPriceCell } from '@/components/features/ProductBuyPriceCell';
+import { ProductProviderEditableCell } from '@/components/features/ProductProviderEditableCell';
 import { ProductSelectionCheckbox } from '@/components/features/ProductSelectionCheckbox';
 import { ProductSourceModal } from '@/components/product/ProductSourceModal';
 import { useUser } from '@/contexts/NextAuthUserContext';
@@ -162,6 +164,16 @@ export function ProductMobileCard({
 
             <div>
               <div className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                Закупочная цена
+              </div>
+              <ProductBuyPriceCell
+                product={product}
+                onUpdateProduct={onUpdateProduct}
+              />
+            </div>
+
+            <div>
+              <div className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                 Категория
               </div>
               <ProductCategoryCell
@@ -175,7 +187,10 @@ export function ProductMobileCard({
               <div className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                 Поставщик
               </div>
-              <ProductProviderCell product={product} />
+              <ProductProviderEditableCell
+                product={product}
+                onUpdateProduct={onUpdateProduct}
+              />
             </div>
 
             <div>

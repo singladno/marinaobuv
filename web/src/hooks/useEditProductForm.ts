@@ -24,6 +24,7 @@ interface ProductData {
   season: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER';
   description: string;
   sizes: Array<{ size: string; count: number }>;
+  sourceScreenshotUrl?: string | null;
   images?: Array<{
     id: string;
     url: string;
@@ -62,11 +63,13 @@ export function useEditProductForm(productId: string | null) {
           name: product.name || '',
           categoryId: product.categoryId || '',
           pricePair: product.pricePair || 0,
+          buyPrice: (product as any).buyPrice || null,
           material: product.material || '',
           gender: product.gender,
           season: product.season,
           description: product.description || '',
           sizes: product.sizes || [],
+          providerId: (product as any).providerId || null,
         });
 
         // Convert existing images to ImageFile format

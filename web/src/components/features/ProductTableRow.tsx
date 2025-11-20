@@ -50,8 +50,7 @@ export function ProductTableRow({
         <ProductSizesCell
           sizes={product.sizes}
           onChange={async sizes => {
-            // Note: sizes update might need a different API endpoint
-            console.log('Sizes update not implemented yet', sizes);
+            await onUpdateProduct(product.id, { sizes });
           }}
         />
       </td>

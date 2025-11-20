@@ -87,26 +87,56 @@ export function SourceMessagesModal({
     return typeMap[type || ''] || type || 'Неизвестно';
   };
 
+  // Check if this is a MANUAL product with a source screenshot
+  const hasSourceScreenshot = product.source === 'MANUAL' && product.sourceScreenshotUrl;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Исходные сообщения">
+    <Modal isOpen={isOpen} onClose={onClose} title="Исходное сообщение">
       <div className="max-h-96 overflow-y-auto">
-        {loading && (
-          <div className="flex justify-center py-4">
-            <div className="text-gray-500">Загрузка сообщений...</div>
+        {hasSourceScreenshot ? (
+          // Show source screenshot for MANUAL products
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-gray-50 p-4">
+              <div className="mb-2 text-sm font-medium text-gray-700">
+                Скриншот исходного сообщения:
+              </div>
+              <div className="flex justify-center">
+                {product.sourceScreenshotUrl && (
+                  <Image
+                    src={product.sourceScreenshotUrl}
+                    alt="Source screenshot"
+                    width={800}
+                    height={600}
+                    className="max-h-[600px] w-auto rounded border object-contain"
+                    onError={e => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
+                  />
+                )}
+              </div>
+            </div>
           </div>
-        )}
+        ) : (
+          // Show WhatsApp messages for WA/AG products
+          <>
+            {loading && (
+              <div className="flex justify-center py-4">
+                <div className="text-gray-500">Загрузка сообщений...</div>
+              </div>
+            )}
 
-        {error && (
-          <div className="py-4 text-center text-red-500">Ошибка: {error}</div>
-        )}
+            {error && (
+              <div className="py-4 text-center text-red-500">Ошибка: {error}</div>
+            )}
 
-        {!loading && !error && messages.length === 0 && (
-          <div className="py-4 text-center text-gray-500">
-            Сообщения не найдены
-          </div>
-        )}
+            {!loading && !error && messages.length === 0 && (
+              <div className="py-4 text-center text-gray-500">
+                Сообщения не найдены
+              </div>
+            )}
 
-        {!loading && !error && messages.length > 0 && (
+            {!loading && !error && messages.length > 0 && (
           <div className="space-y-4">
             {messages.map((message, index) => (
               <div
@@ -179,6 +209,8 @@ export function SourceMessagesModal({
               </div>
             ))}
           </div>
+            )}
+          </>
         )}
       </div>
 

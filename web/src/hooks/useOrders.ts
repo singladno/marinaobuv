@@ -18,7 +18,13 @@ export type AdminOrder = {
   status: string;
   phone: string;
   fullName: string | null;
+  transportId: string | null;
   transportName: string | null;
+  transportOptions?: Array<{
+    id: string;
+    transportId: string;
+    transportName: string;
+  }>;
   subtotal: number;
   total: number;
   label: string | null;

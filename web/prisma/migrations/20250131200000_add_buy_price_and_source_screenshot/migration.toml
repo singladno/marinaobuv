@@ -1,0 +1,6 @@
+# Please edit the object below. Lines beginning with a `#` will be ignored,
+# and an empty file will abort the migration. All values below are optional.
+[metadata]
+# "prisma" = "5.0.0"
+# "provider" = "postgresql"
+

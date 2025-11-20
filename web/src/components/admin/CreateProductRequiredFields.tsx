@@ -99,6 +99,33 @@ export function CreateProductRequiredFields({
           </Text>
         )}
       </div>
+
+      {/* Buy Price - Optional */}
+      <div className="space-y-2">
+        <Text variant="body" className="font-medium text-gray-900 dark:text-white">
+          Закупочная цена (руб.)
+        </Text>
+        <Input
+          type="number"
+          value={formData.buyPrice || ''}
+          onChange={e => {
+            const value = e.target.value === '' ? null : parseFloat(e.target.value) || null;
+            onFieldChange('buyPrice', value);
+            onClearError('buyPrice');
+          }}
+          placeholder="0"
+          disabled={isSubmitting}
+          min="0"
+          step="0.01"
+          fullWidth
+          className={errors.buyPrice ? 'border-red-500' : ''}
+        />
+        {errors.buyPrice && (
+          <Text variant="caption" className="text-red-500">
+            {errors.buyPrice}
+          </Text>
+        )}
+      </div>
     </>
   );
 }

@@ -39,6 +39,7 @@ model Product {
   article               String?
   categoryId            String
   pricePair             Decimal
+  buyPrice              Decimal?
   currency              String         @default("RUB")
   material              String?
   gender                Gender?
@@ -50,6 +51,8 @@ model Product {
   isActive              Boolean        @default(true)
   sizes                 Json?
   sourceMessageIds      Json?
+  sourceScreenshotUrl   String?
+  sourceScreenshotKey   String?
   analysisBatchId       String?        @unique
   colorBatchId          String?        @unique
   batchProcessingStatus String?        @default("pending")

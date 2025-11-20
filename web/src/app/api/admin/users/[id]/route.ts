@@ -3,6 +3,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await requireRole(request, ['ADMIN']);
+
+    const { id } = await params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Remove password hash from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...userWithoutPassword } = user;
+
+    return NextResponse.json(userWithoutPassword);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch user' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -20,7 +59,7 @@ export async function PATCH(
     }
 
     // Validate role value
-    const validRoles = ['ADMIN', 'CLIENT', 'SUPPLIER', 'GRUZCHIK'];
+    const validRoles = ['ADMIN', 'CLIENT', 'PROVIDER', 'GRUZCHIK'];
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }

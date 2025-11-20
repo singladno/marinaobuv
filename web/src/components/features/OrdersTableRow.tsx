@@ -129,6 +129,12 @@ export function OrdersTableRow({
           }
         />
       </td>
+      {/* Транспорт */}
+      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-900">
+        {order.transportOptions && order.transportOptions.length > 0
+          ? order.transportOptions.map(opt => opt.transportName).join(', ')
+          : order.transportName || '—'}
+      </td>
       {/* Прибыль */}
       <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-900">
         {formatProfit(calculateOrderProfit(order))}
