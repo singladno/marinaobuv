@@ -143,14 +143,19 @@ export function ProductImageColorGroup({
                     }}
                     onSelect={selectedColor => {
                       // Immediately commit when selecting from dropdown
-                      setEditingColors(prev => {
-                        const newMap = new Map(prev);
-                        newMap.delete(image.id);
-                        return newMap;
-                      });
+                      // Keep the value in editingColors temporarily to ensure input shows correct value
+                      // It will be cleared on blur
                       if (selectedColor !== image.color) {
                         onColorChange(image.id, selectedColor);
                       }
+                      // Clear editingColors after a brief delay to allow state to update
+                      setTimeout(() => {
+                        setEditingColors(prev => {
+                          const newMap = new Map(prev);
+                          newMap.delete(image.id);
+                          return newMap;
+                        });
+                      }, 100);
                     }}
                     onBlur={() => {
                       // Commit the color change on blur (triggers regrouping)

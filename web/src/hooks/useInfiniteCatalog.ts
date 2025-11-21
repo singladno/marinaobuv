@@ -153,15 +153,11 @@ export function useInfiniteCatalog(
         inFlightRequestKeyRef.current === requestKey ||
         lastRequestKeyRef.current === requestKey
       ) {
-        console.log('🚫 fetchProducts: Duplicate request detected, skipping.', {
-          requestKey,
-        });
         return;
       }
 
       // Prevent multiple simultaneous requests
       if (requestInProgress.current) {
-        console.log('🚫 fetchProducts: Request already in progress, skipping.');
         return;
       }
 
@@ -170,24 +166,15 @@ export function useInfiniteCatalog(
         requestInProgress.current = true;
         inFlightRequestKeyRef.current = requestKey;
         setLoading(true);
-        console.log(
-          '⏳ fetchProducts: Setting loading to true for initial load.'
-        );
       } else {
         // For append requests, also check if we're already loading more (use ref to avoid stale closure)
         if (loadingMoreRef.current) {
-          console.log(
-            '🚫 fetchProducts: Already loading more, skipping append request.'
-          );
           return;
         }
         requestInProgress.current = true;
         inFlightRequestKeyRef.current = requestKey;
         loadingMoreRef.current = true;
         setLoadingMore(true);
-        console.log(
-          '⏳ fetchProducts: Setting loadingMore to true for append.'
-        );
       }
       setError(null);
 
@@ -215,7 +202,6 @@ export function useInfiniteCatalog(
         searchParams.set('pageSize', updatedFilters.pageSize.toString());
 
         const url = `/api/catalog?${searchParams.toString()}`;
-        console.log('📡 fetchProducts: Making API call to:', url);
 
         // Make the request
         fetch(url)
@@ -226,10 +212,6 @@ export function useInfiniteCatalog(
             return response.json();
           })
           .then(data => {
-            console.log(
-              '✅ fetchProducts: API call successful. Products received:',
-              data.products.length
-            );
             if (append) {
               // Append new products to existing ones
               setAllProducts(prev => [...prev, ...data.products]);
@@ -249,21 +231,11 @@ export function useInfiniteCatalog(
             }
           })
           .finally(() => {
-            console.log('🏁 fetchProducts: Finally block executed.');
             setLoading(false);
             setLoadingMore(false);
             loadingMoreRef.current = false;
             requestInProgress.current = false;
             inFlightRequestKeyRef.current = null;
-            if (isInitialLoad) {
-              console.log(
-                '🔓 fetchProducts: Resetting requestInProgress for initial load.'
-              );
-            } else {
-              console.log(
-                '🔓 fetchProducts: Resetting requestInProgress for append.'
-              );
-            }
           });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -292,16 +264,6 @@ export function useInfiniteCatalog(
       const nextPage = pagination.page + 1;
       fetchProducts({ page: nextPage }, true);
     } else {
-      console.log(
-        '🚫 loadMore: Skipping - hasNextPage:',
-        hasNextPage,
-        'loadingMore:',
-        loadingMoreRef.current,
-        'loading:',
-        loading,
-        'requestInProgress:',
-        requestInProgress.current
-      );
     }
   }, [hasNextPage, loading, pagination.page, fetchProducts]);
 
@@ -349,20 +311,8 @@ export function useInfiniteCatalog(
 
   // Handle search query changes
   useEffect(() => {
-    console.log(
-      '🔍 useEffect (searchQuery): Checking search query. Current:',
-      searchQuery,
-      'Last:',
-      lastSearchQuery.current
-    );
     // Only trigger if search query actually changed and we're initialized
     if (searchQuery !== lastSearchQuery.current && hasInitialized.current) {
-      console.log(
-        '🔍 useEffect (searchQuery): Search query changed from',
-        lastSearchQuery.current,
-        'to',
-        searchQuery
-      );
       lastSearchQuery.current = searchQuery;
       const newFilters = {
         ...currentFiltersRef.current,
@@ -379,19 +329,7 @@ export function useInfiniteCatalog(
 
   // Handle initial category ID changes
   useEffect(() => {
-    console.log(
-      '🏷️ useEffect (initialCategoryId): Checking category ID. Current:',
-      initialCategoryId,
-      'Last:',
-      lastCategoryId.current
-    );
     if (initialCategoryId !== lastCategoryId.current) {
-      console.log(
-        '🏷️ useEffect (initialCategoryId): Category ID changed from',
-        lastCategoryId.current,
-        'to',
-        initialCategoryId
-      );
       lastCategoryId.current = initialCategoryId;
       // Create new filters and update state
       const newFilters = {

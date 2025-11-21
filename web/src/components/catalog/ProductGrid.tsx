@@ -1,6 +1,10 @@
-import { memo } from 'react';
+import { memo, useRef, useEffect, useState } from 'react';
 import ProductCard from '@/components/product/ProductCard';
 import { ProductGridSkeleton } from './ProductGridSkeleton';
+import { FlipCard } from './FlipCard';
+import { ProductCardSkeleton } from './ProductCardSkeleton';
+import { ProductGridFooter } from './ProductGridFooter';
+import { ProductGridEmpty } from './ProductGridEmpty';
 
 interface Product {
   id: string;
@@ -45,24 +49,40 @@ export const ProductGrid = memo(function ProductGrid({
   showEndMessage = true,
   onProductUpdated,
 }: ProductGridProps) {
-  if (loading) {
-    return <ProductGridSkeleton gridCols={gridCols} />;
-  }
+  // Track if we've ever completed a request (not just initial state)
+  const hasCompletedRequestRef = useRef(false);
+  const prevLoadingRef = useRef(loading);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
 
-  if (products.length === 0) {
-    return (
-      <div className="py-12 text-center">
-        <p className="text-lg text-gray-500">Товары не найдены</p>
-        <p className="mt-2 text-sm text-gray-400">
-          Попробуйте изменить параметры поиска или фильтры
-        </p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current;
+    const hadProducts = products.length > 0;
+    prevLoadingRef.current = loading;
+
+    // Mark as completed when loading finishes OR when products appear
+    if (
+      (wasLoading && !loading) ||
+      (!hasCompletedRequestRef.current && hadProducts)
+    ) {
+      hasCompletedRequestRef.current = true;
+      // Trigger animation when we have products
+      if (hadProducts) {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          setShouldAnimate(true);
+        }, 50);
+      }
+    }
+
+    // Reset animation when starting a new load
+    if (loading && products.length === 0) {
+      setShouldAnimate(false);
+    }
+  }, [loading, products.length]);
 
   const gridClasses = {
-    4: 'grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
-    5: 'grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
+    4: 'grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-stretch',
+    5: 'grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 items-stretch',
   };
 
   // Deduplicate products by ID to prevent duplicate keys
@@ -73,58 +93,77 @@ export const ProductGrid = memo(function ProductGrid({
     return acc;
   }, [] as Product[]);
 
+  // Show empty state after a request has completed with no products
+  if (products.length === 0 && hasCompletedRequestRef.current) {
+    return <ProductGridEmpty />;
+  }
+
+  // Determine how many items to show (products or skeletons)
+  // Priority: If we have products, always show them (even if loading)
+  // Only show skeletons if we're loading AND have no products yet AND haven't completed a request
+  const hasProducts = uniqueProducts.length > 0;
+  const shouldShowSkeletons =
+    !hasProducts && loading && !hasCompletedRequestRef.current;
+  const itemCount = shouldShowSkeletons ? 8 : uniqueProducts.length;
+  const itemsToRender: Array<Product & { isSkeleton?: boolean }> =
+    shouldShowSkeletons
+      ? Array.from({ length: itemCount }).map(
+          (_, i) =>
+            ({
+              id: `skeleton-${i}`,
+              slug: '',
+              name: '',
+              pricePair: 0,
+              primaryImageUrl: null,
+              category: null,
+              isSkeleton: true,
+            }) as Product & { isSkeleton: boolean }
+        )
+      : uniqueProducts.map(p => ({ ...p, isSkeleton: false }));
+
   return (
     <>
       <div className={gridClasses[gridCols]}>
-        {uniqueProducts.map((product, index) => (
-          <ProductCard
-            key={`${product.id}-${index}`}
-            slug={product.slug}
-            name={product.name}
-            pricePair={product.pricePair}
-            currency="RUB"
-            imageUrl={product.primaryImageUrl}
-            category={product.category?.name ?? undefined}
-            colorOptions={product.colorOptions}
-            productId={product.id}
-            activeUpdatedAt={product.activeUpdatedAt}
-            source={product.source}
-            isActive={product.isActive}
-            onProductUpdated={onProductUpdated}
+        {itemsToRender.map((item, index) => (
+          <FlipCard
+            key={item.isSkeleton ? `grid-item-${index}` : `grid-item-${index}`}
+            front={<ProductCardSkeleton />}
+            back={
+              item.isSkeleton ? (
+                <ProductCardSkeleton />
+              ) : (
+                <ProductCard
+                  slug={item.slug}
+                  name={item.name}
+                  pricePair={item.pricePair}
+                  currency="RUB"
+                  imageUrl={item.primaryImageUrl}
+                  category={item.category?.name ?? undefined}
+                  colorOptions={item.colorOptions}
+                  productId={item.id}
+                  activeUpdatedAt={item.activeUpdatedAt ?? undefined}
+                  source={item.source ?? undefined}
+                  isActive={item.isActive ?? true}
+                  onProductUpdated={onProductUpdated}
+                  priority={index < 4}
+                />
+              )
+            }
+            isFlipped={shouldAnimate && !item.isSkeleton}
+            delay={item.isSkeleton ? 0 : index * 80}
           />
         ))}
       </div>
 
-      {/* Infinite scroll trigger and loading indicator */}
-      {hasNextPage && (
-        <div ref={loadMoreRef} className="mt-8 flex justify-center">
-          {loadingMore ? (
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-purple-600 border-t-transparent"></div>
-              <span className="text-sm text-gray-600">Загрузка товаров...</span>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-sm text-red-600">Ошибка загрузки</p>
-              <button
-                onClick={onRetry}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-700"
-              >
-                Попробовать снова
-              </button>
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      {/* End of results message (only when explicitly enabled) */}
-      {showEndMessage && !hasNextPage && uniqueProducts.length > 0 && (
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
-            Показаны все товары ({uniqueProducts.length})
-          </p>
-        </div>
-      )}
+      <ProductGridFooter
+        hasNextPage={hasNextPage}
+        loadingMore={loadingMore}
+        error={error ?? null}
+        onRetry={onRetry}
+        loadMoreRef={loadMoreRef}
+        showEndMessage={showEndMessage}
+        totalProducts={uniqueProducts.length}
+      />
     </>
   );
 });

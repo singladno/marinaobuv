@@ -8,6 +8,7 @@ import { log } from '@/lib/logger';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
 import CategoryBreadcrumbs from '@/components/catalog/CategoryBreadcrumbs';
+import { ResultsHeaderSkeleton } from '@/components/catalog/ResultsHeaderSkeleton';
 import { Text } from '@/components/ui/Text';
 import { useCatalogBackend } from '@/hooks/useCatalogBackend';
 import { useSearch } from '@/contexts/SearchContext';
@@ -77,12 +78,10 @@ function CatalogPageContent() {
     const prev = history.scrollRestoration;
     try {
       history.scrollRestoration = 'manual';
-      log.info('🧭 scrollRestoration set to manual');
     } catch {}
     return () => {
       try {
         history.scrollRestoration = prev;
-        log.info('🧭 scrollRestoration restored');
       } catch {}
     };
   }, []);
@@ -90,7 +89,6 @@ function CatalogPageContent() {
   // Fetch category information when category path changes (after restore)
   useEffect(() => {
     const fetchCategory = async () => {
-      console.log('🔍 Fetching category for path:', categoryPath);
       if (!categoryPath) {
         setCategoryId('');
         setCategoryName('');
@@ -102,9 +100,6 @@ function CatalogPageContent() {
         ) {
           initialFetchDoneRef.current = true;
           setInitialFetchDone(true);
-          log.info('🚀 Initial catalog fetch (no category path)', {
-            savedFilters: savedFiltersRef.current,
-          });
           handleFiltersChange(savedFiltersRef.current);
         }
         return;
@@ -117,7 +112,6 @@ function CatalogPageContent() {
         );
         const data = await response.json();
 
-        console.log('🔍 Category API response:', data);
         if (data.ok) {
           setCategoryId(data.id);
           setCategoryName(data.name);
@@ -136,10 +130,6 @@ function CatalogPageContent() {
           ) {
             initialFetchDoneRef.current = true;
             setInitialFetchDone(true);
-            log.info('🚀 Initial catalog fetch (with category)', {
-              categoryId: data.id,
-              savedFilters: savedFiltersRef.current,
-            });
             handleFiltersChange({
               ...savedFiltersRef.current,
               categoryId: data.id,
@@ -156,7 +146,6 @@ function CatalogPageContent() {
           setIsParentCategory(false);
         }
       } catch (error) {
-        console.error('Error fetching category:', error);
         setCategoryId('');
         setCategoryName('');
       } finally {
@@ -184,7 +173,6 @@ function CatalogPageContent() {
       ...(searchParam && { search: searchParam }),
     };
 
-    log.info('📦 Restored filters (merged with URL)', merged);
     if (searchParam) setSearchQuery(searchParam);
     setSavedFilters(merged);
     savedFiltersRef.current = merged;
@@ -224,10 +212,7 @@ function CatalogPageContent() {
     if (currentParams === prevSearchParamsRef.current) return;
     prevSearchParamsRef.current = currentParams;
 
-    const pageParam = parseInt(
-      searchParams.get('page') || '1',
-      10
-    );
+    const pageParam = parseInt(searchParams.get('page') || '1', 10);
     const pageSizeParam = parseInt(
       searchParams.get('pageSize') || String(filters.pageSize),
       10
@@ -244,10 +229,37 @@ function CatalogPageContent() {
     filters.pageSize,
   ]);
 
-  // Show a single skeleton while either category or products are loading
-  if (categoryLoading || (loading && products.length === 0)) {
-    return <CatalogPageFallback />;
-  }
+  // Track if we've completed a request - check loading state, products, and pagination
+  const [hasCompletedRequest, setHasCompletedRequest] = useState(false);
+  const hasSeenLoadingRef = useRef(false);
+
+  useEffect(() => {
+    // Track if we've ever seen loading be true
+    if (loading) {
+      hasSeenLoadingRef.current = true;
+    }
+
+    // Mark as completed when:
+    // 1. Loading finishes after we've seen it start (most reliable)
+    // 2. We have pagination data (totalPages > 0 or total > 0 indicates a response was received)
+    // 3. We have products (indicates a successful response)
+    // 4. Not loading and we've seen loading before (catches the case where loading finished)
+    if (
+      !hasCompletedRequest &&
+      ((hasSeenLoadingRef.current && !loading) ||
+        pagination.totalPages > 0 ||
+        pagination.total > 0 ||
+        products.length > 0)
+    ) {
+      setHasCompletedRequest(true);
+    }
+  }, [
+    loading,
+    pagination.totalPages,
+    pagination.total,
+    products.length,
+    hasCompletedRequest,
+  ]);
 
   if (error) {
     return (
@@ -273,15 +285,17 @@ function CatalogPageContent() {
             </div>
           ) : categoryPath ? (
             <div className="mb-4">
-              <CategoryBreadcrumbs items={[{ name: 'Каталог', path: '', href: '/catalog' }]} />
+              <CategoryBreadcrumbs
+                items={[{ name: 'Каталог', path: '', href: '/catalog' }]}
+              />
             </div>
           ) : null}
 
           {/* Title - show "Каталог" at root, category name otherwise */}
           {!categoryPath && !filters.search && (
-          <Text variant="h1" as="h1" className="mb-2 text-3xl font-bold">
+            <Text variant="h1" as="h1" className="mb-2 text-3xl font-bold">
               Каталог
-          </Text>
+            </Text>
           )}
 
           {filters.search && (
@@ -322,16 +336,20 @@ function CatalogPageContent() {
         </div>
 
         {/* Results Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Text className="text-muted-foreground text-sm">
-              Найдено товаров: {pagination.total}
-            </Text>
+        {loading || !hasCompletedRequest ? (
+          <ResultsHeaderSkeleton />
+        ) : (
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Text className="text-muted-foreground text-sm">
+                Найдено товаров: {pagination.total}
+              </Text>
+            </div>
+            <div className="hidden lg:block">
+              <GridColsSwitcher value={gridCols} onChange={setGridCols} />
+            </div>
           </div>
-          <div className="hidden lg:block">
-            <GridColsSwitcher value={gridCols} onChange={setGridCols} />
-          </div>
-        </div>
+        )}
 
         {/* Products */}
         <div className="w-full">

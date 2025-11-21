@@ -16,23 +16,31 @@ export function useAllCategories(): UseAllCategoriesReturn {
 
   const fetchCategories = React.useCallback(async () => {
     try {
+      console.log('[useAllCategories] Starting fetch...');
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/categories/all');
+      console.log('[useAllCategories] Fetching categories from /api/categories/all');
+      const response = await fetch('/api/categories/all', {
+        cache: 'no-cache',
+      });
+      console.log('[useAllCategories] Response status:', response.status);
       if (!response.ok) {
         throw new Error('Failed to fetch all categories');
       }
       const data = await response.json();
+      console.log('[useAllCategories] Received data:', { itemsCount: data.items?.length || 0 });
       setCategories(data.items || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
-      console.error('Error fetching all categories:', err);
+      console.error('[useAllCategories] Error fetching all categories:', err);
     } finally {
       setLoading(false);
+      console.log('[useAllCategories] Fetch completed, loading set to false');
     }
   }, []);
 
   React.useEffect(() => {
+    console.log('[useAllCategories] useEffect triggered, calling fetchCategories');
     fetchCategories();
   }, [fetchCategories]);
 

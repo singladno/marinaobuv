@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface ProviderUser {
   id: string;
@@ -78,21 +78,30 @@ export function useProviders(): UseProvidersReturn {
     await globalLoadPromise;
   }, []);
 
+  // Load providers only once on mount - use ref to ensure it only runs once
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
-    loadProviders();
-  }, [loadProviders]);
+    // Only load if we haven't loaded yet and cache is empty
+    if (!hasLoadedRef.current && globalProvidersCache.length === 0) {
+      hasLoadedRef.current = true;
+      loadProviders();
+    } else if (globalProvidersCache.length > 0) {
+      // If cache is already populated, just sync state
+      setProviders(globalProvidersCache);
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
 
   // Sync state with global cache when it changes (for other component instances)
+  // Only sync if cache has data and we don't have it yet
   useEffect(() => {
-    // If global cache has data but local state doesn't, sync it
-    if (globalProvidersCache.length > 0 && providers.length === 0 && !loading) {
+    if (globalProvidersCache.length > 0 && providers.length === 0 && !loading && !globalLoadingState) {
       setProviders(globalProvidersCache);
+      setLoading(false);
     }
-    // Also sync loading state
-    if (globalLoadingState !== loading) {
-      setLoading(globalLoadingState);
-    }
-  }, [providers.length, loading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only check once - the initial load effect handles the rest
 
   const getUserIdByProviderId = useCallback(
     (providerId: string): string | null => {

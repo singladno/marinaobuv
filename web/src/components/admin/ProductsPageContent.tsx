@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { ProductBulkOperations } from '@/components/features/ProductBulkOperations';
 import { UnifiedDataTable } from '@/components/features/UnifiedDataTable';
@@ -15,7 +15,10 @@ import { createProductColumns } from '@/utils/productColumnConfigs';
 import type { Product } from '@/types/product';
 
 import { ProductMobileCard } from './ProductMobileCard';
-import { CreateProductModal, type CreateProductData } from './CreateProductModal';
+import {
+  CreateProductModal,
+  type CreateProductData,
+} from './CreateProductModal';
 import { EditProductModal } from './EditProductModal';
 import { EditProductImagesModal } from './EditProductImagesModal';
 
@@ -26,7 +29,9 @@ export function ProductsPageContent() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isEditImagesModalOpen, setIsEditImagesModalOpen] = useState(false);
-  const [editingImagesProductId, setEditingImagesProductId] = useState<string | null>(null);
+  const [editingImagesProductId, setEditingImagesProductId] = useState<
+    string | null
+  >(null);
 
   const {
     products,
@@ -41,7 +46,19 @@ export function ProductsPageContent() {
   } = useProducts();
 
   // Use the full categories tree for admin to ensure complete selection
-  const { categories } = useAllCategories();
+  const {
+    categories,
+    loading: categoriesLoading,
+    reload: reloadCategories,
+  } = useAllCategories();
+
+  // Debug: Log when categories change
+  useEffect(() => {
+    console.log('[ProductsPageContent] Categories state:', {
+      count: categories.length,
+      loading: categoriesLoading,
+    });
+  }, [categories, categoriesLoading]);
 
   const { createProduct, isLoading: isCreating } = useCreateProduct();
   const { uploadImages } = useUploadProductImages();
@@ -59,18 +76,15 @@ export function ProductsPageContent() {
     confirmationModal,
   } = useProductBulkOperations(products, updateProduct, async () => {});
 
-  const {
-    handleUpdateProduct,
-    handleBulkActivate,
-    handleBulkDeactivate,
-  } = useProductHandlers({
-    updateProduct,
-    deleteProduct: async () => {},
-    onBulkDelete: async () => false,
-    onBulkActivate,
-    onBulkDeactivate,
-    selectedCount,
-  });
+  const { handleUpdateProduct, handleBulkActivate, handleBulkDeactivate } =
+    useProductHandlers({
+      updateProduct,
+      deleteProduct: async () => {},
+      onBulkDelete: async () => false,
+      onBulkActivate,
+      onBulkDeactivate,
+      selectedCount,
+    });
 
   const handleEditProduct = (productId: string) => {
     setEditingProductId(productId);
@@ -148,7 +162,10 @@ export function ProductsPageContent() {
           );
 
           if (!response.ok) {
-            console.error('Error uploading source screenshot:', await response.text());
+            console.error(
+              'Error uploading source screenshot:',
+              await response.text()
+            );
             // Don't fail the whole operation if screenshot fails to upload
           }
         } catch (screenshotError) {
@@ -179,7 +196,7 @@ export function ProductsPageContent() {
         <Button
           onClick={() => setIsCreateModalOpen(true)}
           variant="primary"
-          className="w-full sm:w-auto !bg-gradient-to-r !from-violet-600 !to-violet-700 !text-white"
+          className="w-full !bg-gradient-to-r !from-violet-600 !to-violet-700 !text-white sm:w-auto"
         >
           <svg
             className="mr-2 h-4 w-4"
@@ -198,7 +215,7 @@ export function ProductsPageContent() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+      <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
         <UnifiedDataTable<ProductWithSelected, unknown>
           data={productsWithSelected}
           columns={columns as any}
@@ -245,6 +262,7 @@ export function ProductsPageContent() {
         onClose={handleEditModalClose}
         productId={editingProductId}
         categories={categories}
+        categoriesLoading={categoriesLoading}
         onProductUpdated={handleProductUpdated}
       />
 

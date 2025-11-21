@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { type CategoryNode } from '@/components/ui/CategorySelector';
 import { useEditProductForm } from '@/hooks/useEditProductForm';
 import { useUpdateProduct } from '@/hooks/useUpdateProduct';
+import { useUploadProductImages } from '@/hooks/useUploadProductImages';
 
 import { CreateProductFormFields } from './CreateProductFormFields';
 import { ProductImageUpload, type ImageFile } from './ProductImageUpload';
@@ -22,6 +23,7 @@ interface EditProductModalProps {
   onClose: () => void;
   productId: string | null;
   categories: CategoryNode[];
+  categoriesLoading?: boolean;
   onProductUpdated?: (updatedProduct: any) => void;
 }
 
@@ -30,8 +32,47 @@ export function EditProductModal({
   onClose,
   productId,
   categories,
+  categoriesLoading = false,
   onProductUpdated,
 }: EditProductModalProps) {
+  // Debug: Log categories when modal opens and manually fetch if empty
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[EditProductModal] Modal opened, categories:', {
+        count: categories.length,
+        loading: categoriesLoading,
+        categories: categories,
+      });
+
+      // If categories are empty and not loading, try to fetch them manually
+      if (categories.length === 0 && !categoriesLoading) {
+        console.log(
+          '[EditProductModal] Categories are empty, attempting manual fetch...'
+        );
+        fetch('/api/categories/all', { cache: 'no-cache' })
+          .then(response => {
+            console.log(
+              '[EditProductModal] Manual fetch response status:',
+              response.status
+            );
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error('Failed to fetch categories');
+          })
+          .then(data => {
+            console.log('[EditProductModal] Manual fetch received:', {
+              itemsCount: data.items?.length || 0,
+            });
+            // Note: We can't set categories here since they're passed as props
+            // But this will help us see if the request is being made
+          })
+          .catch(err => {
+            console.error('[EditProductModal] Manual fetch error:', err);
+          });
+      }
+    }
+  }, [isOpen, categories, categoriesLoading]);
   const {
     formData,
     setFormData,
@@ -46,12 +87,17 @@ export function EditProductModal({
     loading: loadingProduct,
   } = useEditProductForm(productId);
   const { updateProduct, isLoading: isUpdating } = useUpdateProduct();
+  const { uploadImages } = useUploadProductImages();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formReady, setFormReady] = useState(false);
   const originalImagesRef = useRef<ImageFile[]>([]);
   const [sourceScreenshot, setSourceScreenshot] = useState<File | null>(null);
-  const [sourceScreenshotPreview, setSourceScreenshotPreview] = useState<string | null>(null);
-  const [existingSourceScreenshot, setExistingSourceScreenshot] = useState<string | null>(null);
+  const [sourceScreenshotPreview, setSourceScreenshotPreview] = useState<
+    string | null
+  >(null);
+  const [existingSourceScreenshot, setExistingSourceScreenshot] = useState<
+    string | null
+  >(null);
 
   // Store original images when they're loaded
   useEffect(() => {
@@ -414,8 +460,51 @@ export function EditProductModal({
         img => !img.preview.startsWith('http')
       );
       if (newImages.length > 0) {
-        // TODO: Implement new image upload logic if needed
-        console.log('New images to upload:', newImages.length);
+        try {
+          // Upload new images
+          await uploadImages(productId, newImages);
+
+          // Fetch the updated product to get all images with proper IDs
+          const productResponse = await fetch(
+            `/api/admin/products/${productId}`
+          );
+          if (productResponse.ok) {
+            const productData = await productResponse.json();
+            const allProductImages = productData.product?.images || [];
+
+            // Get IDs of images that were deleted in the UI
+            const deletedImageIds = new Set(
+              images.filter(img => img.isDeleted && img.id).map(img => img.id)
+            );
+
+            // Filter to only include active images (not deleted in UI)
+            const updatedFinalImages = allProductImages.filter((img: any) => {
+              // Exclude if it was marked as deleted in the UI
+              if (deletedImageIds.has(img.id)) {
+                return false;
+              }
+              // Include all active images from the API
+              return img.isActive !== false;
+            });
+
+            // Sort by isPrimary desc, then sort asc
+            updatedFinalImages.sort((a: any, b: any) => {
+              if (a.isPrimary && !b.isPrimary) return -1;
+              if (!a.isPrimary && b.isPrimary) return 1;
+              return (a.sort || 0) - (b.sort || 0);
+            });
+
+            finalProduct.images = updatedFinalImages;
+          }
+        } catch (error) {
+          console.error('Error uploading new images:', error);
+          setErrors({
+            submit:
+              'Не удалось загрузить новые изображения. Попробуйте еще раз.',
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       reset();
@@ -497,7 +586,10 @@ export function EditProductModal({
 
                 {/* Source Screenshot Section */}
                 <div className="space-y-2">
-                  <Text variant="body" className="font-medium text-gray-900 dark:text-white">
+                  <Text
+                    variant="body"
+                    className="font-medium text-gray-900 dark:text-white"
+                  >
                     Скриншот исходного сообщения (опционально)
                   </Text>
                   {existingSourceScreenshot && !sourceScreenshotPreview ? (
@@ -515,17 +607,27 @@ export function EditProductModal({
                           setExistingSourceScreenshot(null);
                           // Optionally delete from server
                         }}
-                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 shadow-lg"
+                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg hover:bg-red-600"
                         disabled={isSubmitting || isUpdating}
                       >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                       </button>
                     </div>
                   ) : !sourceScreenshotPreview ? (
                     <ProductImageUploadArea
-                      onFilesSelect={(files) => {
+                      onFilesSelect={files => {
                         const file = files?.[0];
                         if (file) {
                           setSourceScreenshot(file);
@@ -555,11 +657,21 @@ export function EditProductModal({
                           setSourceScreenshot(null);
                           setSourceScreenshotPreview(null);
                         }}
-                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white hover:bg-red-600 shadow-lg"
+                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg hover:bg-red-600"
                         disabled={isSubmitting || isUpdating}
                       >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                       </button>
                     </div>

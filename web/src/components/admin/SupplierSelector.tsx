@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 import { Input } from '@/components/ui/Input';
@@ -28,7 +28,7 @@ interface SupplierSelectorProps {
   isLoading?: boolean;
 }
 
-export function SupplierSelector({
+function SupplierSelectorComponent({
   value,
   onChange,
   placeholder = 'Выберите поставщика',
@@ -39,38 +39,83 @@ export function SupplierSelector({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
+  // Helper function to find supplier (not a callback, just a function)
+  const findSupplierById = (id: string): Supplier | null => {
+    // Validate ID format (should be a valid cuid)
+    if (!id || typeof id !== 'string' || id.length < 20) {
+      return null;
+    }
+
+    const provider = providers.find(p => p.id === id);
+    if (provider) {
+      return {
+        id: provider.id,
+        name: provider.name,
+        email: provider.email,
+        phone: provider.phone,
+      };
+    }
+    return null;
+  };
+
+  // CRITICAL: Initialize selectedSupplier from value immediately on mount
+  // This prevents reset on remount
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
-    null
+    () => {
+      // Try to find supplier from value immediately if providers are loaded
+      if (value && !providersLoading && providers.length > 0) {
+        const provider = providers.find(p => p.id === value);
+        if (provider) {
+          return {
+            id: provider.id,
+            name: provider.name,
+            email: provider.email,
+            phone: provider.phone,
+          };
+        }
+      }
+      return null;
+    }
   );
+
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSelectedValueRef = useRef<string | null>(null);
   const isSelectingRef = useRef(false);
 
-  // Find supplier from shared providers list instead of fetching
-  const findSupplierById = useCallback(
-    (id: string) => {
-      // Validate ID format (should be a valid cuid)
-      if (!id || typeof id !== 'string' || id.length < 20) {
-        return null;
-      }
+  // Memoized version of findSupplierById for use in callbacks
+  const findSupplierByIdMemo = useCallback(findSupplierById, [providers]);
 
-      const provider = providers.find(p => p.id === id);
-      if (provider) {
-        return {
-          id: provider.id,
-          name: provider.name,
-          email: provider.email,
-          phone: provider.phone,
-        };
-      }
-      return null;
-    },
-    [providers]
-  );
+  // Track previous value to avoid unnecessary updates
+  const prevValueRef = useRef<string | null>(value);
+  // Initialize prevSelectedSupplierRef with the initial selectedSupplier to prevent resets
+  const prevSelectedSupplierRef = useRef<Supplier | null>(selectedSupplier);
 
   // Find selected supplier from shared list when value changes
   // Only sync when providers are loaded and value actually changed
   useEffect(() => {
+    // Skip if value hasn't actually changed
+    if (prevValueRef.current === value) {
+      // Even if value hasn't changed, ensure selectedSupplier is in sync
+      // This handles the case where component remounts and selectedSupplier is null but value is not
+      if (
+        !selectedSupplier &&
+        value &&
+        !providersLoading &&
+        providers.length > 0
+      ) {
+        const supplier = findSupplierByIdMemo(value);
+        if (supplier) {
+          setSelectedSupplier(supplier);
+          prevSelectedSupplierRef.current = supplier;
+        }
+      }
+      return;
+    }
+
+    const hadSelection = prevSelectedSupplierRef.current !== null;
+    prevValueRef.current = value;
+
     // Don't sync if we're in the middle of a selection
     if (isSelectingRef.current) {
       return;
@@ -92,11 +137,12 @@ export function SupplierSelector({
           return;
         }
 
-        const supplier = findSupplierById(value);
+        const supplier = findSupplierByIdMemo(value);
         if (supplier) {
           // Update if the supplier ID is different from current selection
           setSelectedSupplier(prev => {
             if (prev?.id !== supplier.id) {
+              prevSelectedSupplierRef.current = supplier;
               return supplier;
             }
             return prev;
@@ -114,12 +160,28 @@ export function SupplierSelector({
           });
         }
       } else if (!value) {
-        // Clear selection if value is explicitly cleared (and we're not selecting)
-        setSelectedSupplier(null);
-        lastSelectedValueRef.current = null;
+        // CRITICAL: Don't clear selection on remount if we have a selected supplier
+        // Only clear if value is explicitly null AND we're not in the middle of initialization
+        // This prevents resets when component remounts and value is briefly null
+        if (hadSelection && selectedSupplier && selectedSupplier.id) {
+          // Keep the current selection - value might be null temporarily during remount
+          return;
+        }
+        // Only clear if we actually had a selection before and it's not a remount
+        if (hadSelection) {
+          // Clear selection if value is explicitly cleared (and we're not selecting)
+          setSelectedSupplier(null);
+          lastSelectedValueRef.current = null;
+          prevSelectedSupplierRef.current = null;
+        }
       }
     }
-  }, [value, findSupplierById, providersLoading, providers.length]);
+  }, [value, findSupplierByIdMemo, providersLoading, providers.length]);
+
+  // Separate effect to sync prevSelectedSupplierRef when selectedSupplier changes
+  useEffect(() => {
+    prevSelectedSupplierRef.current = selectedSupplier;
+  }, [selectedSupplier]);
 
   // Filter suppliers from shared list based on search term
   const filterSuppliers = useCallback(
@@ -270,7 +332,7 @@ export function SupplierSelector({
           className="w-full justify-between text-left font-normal"
           disabled={disabled || isLoading}
         >
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <span className="truncate">
               {selectedSupplier
                 ? selectedSupplier.name ||
@@ -281,7 +343,7 @@ export function SupplierSelector({
             </span>
             {isLoading && (
               <span
-                className="inline-flex items-center justify-center h-4 w-4 animate-spin rounded-full border-2 border-purple-600 border-t-transparent bg-white dark:bg-gray-800 flex-shrink-0"
+                className="inline-flex h-4 w-4 flex-shrink-0 animate-spin items-center justify-center rounded-full border-2 border-purple-600 border-t-transparent bg-white dark:bg-gray-800"
                 style={{
                   minWidth: '16px',
                   minHeight: '16px',
@@ -292,7 +354,7 @@ export function SupplierSelector({
               />
             )}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
             {selectedSupplier && !disabled && !isLoading && (
               <div
                 role="button"
@@ -380,3 +442,19 @@ export function SupplierSelector({
     </Popover>
   );
 }
+
+// Memoize SupplierSelector to prevent unnecessary re-renders
+// Only re-render if value, onChange, or other props actually change
+export const SupplierSelector = memo(
+  SupplierSelectorComponent,
+  (prevProps, nextProps) => {
+    // Only re-render if value or other props change
+    return (
+      prevProps.value === nextProps.value &&
+      prevProps.onChange === nextProps.onChange &&
+      prevProps.placeholder === nextProps.placeholder &&
+      prevProps.disabled === nextProps.disabled &&
+      prevProps.isLoading === nextProps.isLoading
+    );
+  }
+);

@@ -10,7 +10,9 @@ import RemoveColorChooser from '@/components/features/RemoveColorChooser';
 import ColorSwitcher from '@/components/product/ColorSwitcher';
 import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
 import { ProductSourceModal } from '@/components/product/ProductSourceModal';
+import { SourceMessagesModal } from '@/components/features/SourceMessagesModal';
 import { EditProductModal } from '@/components/admin/EditProductModal';
+import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -74,6 +76,7 @@ type Props = {
   source?: 'WA' | 'AG' | 'MANUAL'; // Product source: WA (WhatsApp), AG (aggregator), or MANUAL (manually created)
   isActive?: boolean; // Product active status
   onProductUpdated?: (updatedProduct?: any) => void; // Callback when product is updated
+  priority?: boolean; // Image loading priority for LCP optimization
 };
 
 function ProductCard({
@@ -90,14 +93,18 @@ function ProductCard({
   source,
   isActive = true,
   onProductUpdated,
+  priority = false,
 }: Props) {
   const { user } = useUser();
-  const { categories } = useCategories();
+  const { categories, loading: categoriesLoading } = useCategories();
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isManualSourceModalOpen, setIsManualSourceModalOpen] = useState(false);
+  const [productData, setProductData] = useState<any>(null);
+  const [loadingProductData, setLoadingProductData] = useState(false);
   const [isTogglingActive, setIsTogglingActive] = useState(false);
   const [optimisticIsActive, setOptimisticIsActive] = useState(isActive);
   const [isEditingSortIndex, setIsEditingSortIndex] = useState(false);
@@ -154,33 +161,8 @@ function ProductCard({
   const purchaseSortIndex = productItems[0]?.sortIndex;
   const [showRemoveChooser, setShowRemoveChooser] = useState(false);
 
-  // Debug logging for sort index
-  useEffect(() => {
-    if (isInPurchase && purchaseSortIndex) {
-      console.log(
-        '🔍 Current sort index for product:',
-        productId,
-        'is:',
-        purchaseSortIndex
-      );
-    }
-  }, [isInPurchase, purchaseSortIndex, productId]);
-
   const handlePurchaseClick = async (e: React.MouseEvent) => {
-    console.log('🖱️ Purchase click triggered:', {
-      isPurchaseMode,
-      productId,
-      activePurchase: activePurchase?.id,
-      isInPurchase,
-    });
-
     if (!isPurchaseMode || !productId || !activePurchase || isProcessing) {
-      console.log('❌ Purchase click blocked:', {
-        isPurchaseMode,
-        productId,
-        activePurchase: activePurchase?.id,
-        isProcessing,
-      });
       return;
     }
 
@@ -200,18 +182,12 @@ function ProductCard({
         }
         // Single item: remove that color
         const onlyItem = productItems[0];
-        console.log(
-          '🗑️ Removing product from purchase:',
-          productId,
-          onlyItem?.color
-        );
         await removeProductFromPurchase(productId, onlyItem?.color ?? null);
       } else {
-        console.log('➕ Adding product to purchase:', productId, selectedColor);
         await addProductToPurchase(productId, selectedColor || null);
       }
     } catch (error) {
-      console.error('❌ Purchase operation failed:', error);
+      // Error is already handled in the context functions
       // The error is already handled in the context functions
       // The optimistic UI will be reverted automatically since the state wasn't updated
     } finally {
@@ -320,13 +296,11 @@ function ProductCard({
       );
 
       // Don't await this - let it run in background
-      Promise.all(updatePromises).catch(err =>
-        console.error('Failed to update item indexes:', err)
-      );
-
-      console.log('✅ Sort index updated successfully');
-    } catch (error) {
-      console.error('Error updating sort index:', error);
+      Promise.all(updatePromises).catch(() => {
+        // Silently handle errors - updates are non-critical
+      });
+    } catch {
+      // Error is already handled in the context functions
     } finally {
       setIsProcessing(false);
       setIsEditingSortIndex(false);
@@ -381,7 +355,6 @@ function ProductCard({
       // Success - optimistic update was correct, no need to refetch
       // The prop will update on next page load/navigation
     } catch (error) {
-      console.error('Error toggling product active status:', error);
       // Revert optimistic update on error
       setOptimisticIsActive(previousValue);
     } finally {
@@ -396,7 +369,7 @@ function ProductCard({
     <>
       <div
         data-product-id={productId}
-        className={`bg-surface rounded-card-large shadow-card hover:shadow-card-hover group relative flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+        className={`bg-surface rounded-card-large shadow-card hover:shadow-card-hover group relative flex h-full flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
           isPurchaseMode && (isInPurchase || isProcessing)
             ? 'bg-purple-50 ring-2 ring-purple-500'
             : ''
@@ -512,7 +485,7 @@ function ProductCard({
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
                 className="object-cover transition-transform duration-500 group-hover:scale-110"
-                priority={false}
+                priority={priority}
               />
             ) : (
               <NoImagePlaceholder />
@@ -535,45 +508,73 @@ function ProductCard({
                 {source && (
                   <>
                     {source === 'MANUAL' ? (
-                      <div className="group/manual-icon relative source-icon-hover-toggle absolute left-2 top-2 z-20 flex h-9 w-9 items-center justify-center transition-all duration-200">
-                        <Hand className="h-5 w-5 text-white fill-purple-500/20" strokeWidth={1.5} />
-                        {/* Tooltip */}
-                        <div className="absolute left-full ml-2 hidden rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 opacity-0 shadow-xl transition-opacity duration-200 group-hover/manual-icon:block group-hover/manual-icon:opacity-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 pointer-events-none whitespace-nowrap z-50">
-                          Товар добавлен вручную
-                          <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 border-l border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"></div>
-                        </div>
-                      </div>
-                    ) : (
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsSourceModalOpen(true);
-                    }}
-                    className="source-icon-hover-toggle absolute left-2 top-2 z-20 cursor-pointer transition-all duration-200 focus:outline-none"
-                    title="Просмотр источника сообщений"
-                  >
-                    {source === 'WA' ? (
-                      <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
-                        <Image
-                          src="/images/whatsapp-icon.png"
-                          alt="WhatsApp"
-                          width={36}
-                          height={36}
-                          className="h-full w-full rounded"
-                          unoptimized
-                        />
-                      </div>
-                    ) : (
-                      <Badge
-                        variant="secondary"
-                        className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                      <button
+                        type="button"
+                        onClick={async e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (productId) {
+                            setIsManualSourceModalOpen(true);
+                            // Fetch product data when opening modal (always fetch to get latest data)
+                            setLoadingProductData(true);
+                            try {
+                              const response = await fetch(
+                                `/api/admin/products/${productId}`
+                              );
+                              if (response.ok) {
+                                const data = await response.json();
+                                setProductData(data.product);
+                              }
+                            } catch (error) {
+                            } finally {
+                              setLoadingProductData(false);
+                            }
+                          }
+                        }}
+                        className="group/manual-icon source-icon-hover-toggle absolute relative left-2 top-2 z-20 flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
+                        title="Просмотреть исходное сообщение"
                       >
-                        Источник
-                      </Badge>
-                    )}
-                  </button>
+                        <Hand
+                          className="h-5 w-5 fill-purple-500/20 text-white"
+                          strokeWidth={1.5}
+                        />
+                        {/* Tooltip */}
+                        <div className="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 opacity-0 shadow-xl transition-opacity duration-200 group-hover/manual-icon:block group-hover/manual-icon:opacity-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                          Товар добавлен вручную
+                          <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 border-b border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"></div>
+                        </div>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsSourceModalOpen(true);
+                        }}
+                        className="source-icon-hover-toggle absolute left-2 top-2 z-20 cursor-pointer transition-all duration-200 focus:outline-none"
+                        title="Просмотр источника сообщений"
+                      >
+                        {source === 'WA' ? (
+                          <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                            <Image
+                              src="/images/whatsapp-icon.png"
+                              alt="WhatsApp"
+                              width={36}
+                              height={36}
+                              className="h-full w-full rounded"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className="cursor-pointer border-0 bg-purple-500/80 text-white shadow-sm backdrop-blur-sm transition-colors hover:bg-purple-600/80"
+                          >
+                            Источник
+                          </Badge>
+                        )}
+                      </button>
                     )}
                   </>
                 )}
@@ -589,7 +590,7 @@ function ProductCard({
                   className="source-icon-hover-toggle absolute right-3 top-12 z-20 inline-flex cursor-pointer items-center justify-center text-white transition-all duration-200 hover:scale-110 focus:outline-none"
                   title="Редактировать товар"
                 >
-                  <Pencil className="h-5 w-5 text-white fill-purple-500/20" />
+                  <Pencil className="h-5 w-5 fill-purple-500/20 text-white" />
                 </button>
               </>
             )}
@@ -735,12 +736,43 @@ function ProductCard({
 
       {/* Source Modal - rendered outside card to avoid clipping (admin only) */}
       {isAdmin && productId && (
-        <ProductSourceModal
-          isOpen={isSourceModalOpen}
-          onClose={() => setIsSourceModalOpen(false)}
-          productId={productId}
-          productName={name}
-        />
+        <>
+          <ProductSourceModal
+            isOpen={isSourceModalOpen}
+            onClose={() => setIsSourceModalOpen(false)}
+            productId={productId}
+            productName={name}
+          />
+          {/* Manual Source Modal - same as admin table */}
+          {isManualSourceModalOpen && (
+            <>
+              {loadingProductData || !productData ? (
+                <Modal
+                  isOpen={true}
+                  onClose={() => {
+                    setIsManualSourceModalOpen(false);
+                    setProductData(null);
+                  }}
+                  title="Загрузка..."
+                  size="xl"
+                >
+                  <div className="flex items-center justify-center py-8">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent"></div>
+                  </div>
+                </Modal>
+              ) : (
+                <SourceMessagesModal
+                  isOpen={isManualSourceModalOpen}
+                  onClose={() => {
+                    setIsManualSourceModalOpen(false);
+                    setProductData(null);
+                  }}
+                  product={productData}
+                />
+              )}
+            </>
+          )}
+        </>
       )}
 
       {/* Edit Modal - rendered outside card to avoid clipping (admin only) */}
@@ -751,7 +783,8 @@ function ProductCard({
           onClose={() => setIsEditModalOpen(false)}
           productId={productId}
           categories={categories}
-          onProductUpdated={(updatedProduct) => {
+          categoriesLoading={categoriesLoading}
+          onProductUpdated={updatedProduct => {
             // Pass through to parent without any side effects
             onProductUpdated?.(updatedProduct);
             setIsEditModalOpen(false);

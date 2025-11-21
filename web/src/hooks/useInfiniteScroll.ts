@@ -23,23 +23,15 @@ export function useInfiniteScroll({
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const [target] = entries;
-      console.log('👁️ Intersection observer triggered:', {
-        isIntersecting: target.isIntersecting,
-        hasNextPage,
-        isLoading,
-      });
-
       // Prevent rapid-fire triggers (debounce)
       const now = Date.now();
       if (isTriggeringRef.current || now - lastTriggerTimeRef.current < 500) {
-        console.log('🚫 Intersection observer: Debouncing rapid triggers');
         return;
       }
 
       if (target.isIntersecting && hasNextPage && !isLoading) {
         lastTriggerTimeRef.current = now;
         isTriggeringRef.current = true;
-        console.log('👁️ Triggering loadMore from intersection observer');
         onLoadMore();
 
         // Reset trigger flag after a short delay

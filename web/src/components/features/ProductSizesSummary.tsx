@@ -20,7 +20,7 @@ export function ProductSizesSummary({
 }: ProductSizesSummaryProps) {
   if (!sizes || sizes.length === 0) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2">
         <span className="text-xs text-gray-400 whitespace-nowrap">
           Размеры не указаны
         </span>
@@ -47,7 +47,7 @@ export function ProductSizesSummary({
   const hidden = sizes.length - visible.length;
 
   return (
-    <div className="flex flex-nowrap items-center gap-1 overflow-hidden">
+    <div className="flex flex-nowrap items-center justify-center gap-1 overflow-hidden">
       {visible.map((item, index) => (
         <span
           key={`${item.size}-${item.count}-${index}`}

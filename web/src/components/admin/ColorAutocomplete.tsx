@@ -31,6 +31,7 @@ export function ColorAutocomplete({
 }: ColorAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const justSelectedRef = useRef(false);
 
   const {
     suggestions,
@@ -66,6 +67,9 @@ export function ColorAutocomplete({
   };
 
   const handleSelectColor = (color: string) => {
+    // Mark that we just selected a value to prevent onBlur from overriding it
+    justSelectedRef.current = true;
+
     // Update the input value immediately with the full selected color
     onChange(color);
 
@@ -81,6 +85,11 @@ export function ColorAutocomplete({
 
     // Blur the input to prevent dropdown from reopening
     inputRef.current?.blur();
+
+    // Reset the flag after a short delay to allow blur event to be ignored
+    setTimeout(() => {
+      justSelectedRef.current = false;
+    }, 300);
 
     // Trigger onBlur callback when selecting a suggestion (only if onSelect wasn't provided)
     if (!onSelect && onBlur) {
@@ -108,7 +117,8 @@ export function ColorAutocomplete({
       if (!listRef.current?.contains(document.activeElement)) {
         closeDropdown();
         // Trigger onBlur callback after dropdown is closed
-        if (onBlur) {
+        // But skip if we just selected a value (onSelect already handled it)
+        if (onBlur && !justSelectedRef.current) {
           onBlur();
         }
       }

@@ -3,7 +3,21 @@ import * as React from 'react';
 
 const Popover = PopoverPrimitive.Root;
 
-const PopoverTrigger = PopoverPrimitive.Trigger;
+// Wrap PopoverTrigger to prevent hydration mismatches
+// Radix UI generates random IDs for aria-controls which differ between server and client
+const PopoverTrigger = React.forwardRef<
+  React.ElementRef<typeof PopoverPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Trigger>
+>((props, ref) => {
+  return (
+    <PopoverPrimitive.Trigger
+      ref={ref}
+      {...props}
+      suppressHydrationWarning
+    />
+  );
+});
+PopoverTrigger.displayName = PopoverPrimitive.Trigger.displayName;
 
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,

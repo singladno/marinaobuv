@@ -27,7 +27,7 @@ interface ParsingStatus {
   error?: string;
 }
 
-export function useParsingStatus() {
+export function useParsingStatus(enablePolling = false) {
   const [parsingStatus, setParsingStatus] = useState<ParsingStatus | null>(
     null
   );
@@ -59,10 +59,12 @@ export function useParsingStatus() {
 
     loadData();
 
-    // Refresh status every 5 seconds for real-time updates
-    const interval = setInterval(fetchParsingStatus, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    // Only refresh status every 5 seconds if polling is enabled
+    if (enablePolling) {
+      const interval = setInterval(fetchParsingStatus, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [enablePolling]);
 
   return {
     parsingStatus,

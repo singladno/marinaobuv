@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { MessageSquare, Pencil, Hand } from 'lucide-react';
 
-import { ProductSourceModal } from '@/components/product/ProductSourceModal';
+import { SourceMessagesModal } from '@/components/features/SourceMessagesModal';
 import { useUser } from '@/contexts/NextAuthUserContext';
 import type { Product } from '@/types/product';
 
@@ -53,15 +53,49 @@ export function ProductActionsCell({
         {/* Source button - show for admin users */}
         {user?.role === 'ADMIN' && (
           <>
+            {/* MANUAL icon - clickable if source screenshot exists */}
             {product.source === 'MANUAL' && (
-              <div
-                className="shrink-0 rounded tablet-desktop-view"
-                title="Создан вручную"
-                aria-label="Создан вручную"
-              >
-                <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
-              </div>
+              <>
+                {product.sourceScreenshotUrl ? (
+                  <button
+                    onClick={() => setIsSourceModalOpen(true)}
+                    className="group shrink-0 cursor-pointer rounded focus:outline-none tablet-desktop-view"
+                    title="Просмотреть скриншот исходного сообщения"
+                    aria-label="Просмотреть скриншот исходного сообщения"
+                  >
+                    <Hand className="h-6 w-6 text-gray-500 transition-transform duration-200 group-hover:scale-110 dark:text-gray-500" strokeWidth={1.5} />
+                  </button>
+                ) : (
+                  <div
+                    className="shrink-0 rounded tablet-desktop-view"
+                    title="Создан вручную"
+                    aria-label="Создан вручную"
+                  >
+                    <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
+                  </div>
+                )}
+                {/* Show MANUAL icon in iPad view */}
+                {product.sourceScreenshotUrl ? (
+                  <button
+                    onClick={() => setIsSourceModalOpen(true)}
+                    className="group shrink-0 cursor-pointer rounded focus:outline-none tablet-mobile-view"
+                    title="Просмотреть скриншот исходного сообщения"
+                    aria-label="Просмотреть скриншот исходного сообщения"
+                  >
+                    <Hand className="h-6 w-6 text-gray-500 transition-transform duration-200 group-hover:scale-110 dark:text-gray-500" strokeWidth={1.5} />
+                  </button>
+                ) : (
+                  <div
+                    className="shrink-0 rounded tablet-mobile-view"
+                    title="Создан вручную"
+                    aria-label="Создан вручную"
+                  >
+                    <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
+                  </div>
+                )}
+              </>
             )}
+            {/* WhatsApp/AG source button */}
             {product.sourceMessageIds &&
               product.sourceMessageIds.length > 0 && (
                 <button
@@ -84,16 +118,6 @@ export function ProductActionsCell({
                   )}
                 </button>
               )}
-            {/* Show MANUAL icon in iPad view */}
-            {product.source === 'MANUAL' && (
-              <div
-                className="shrink-0 rounded tablet-mobile-view"
-                title="Создан вручную"
-                aria-label="Создан вручную"
-              >
-                <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
-              </div>
-            )}
           </>
         )}
 
@@ -117,11 +141,10 @@ export function ProductActionsCell({
 
       {/* Source Modal - only for admin users */}
       {user?.role === 'ADMIN' && (
-        <ProductSourceModal
+        <SourceMessagesModal
           isOpen={isSourceModalOpen}
           onClose={() => setIsSourceModalOpen(false)}
-          productId={product.id}
-          productName={product.name}
+          product={product}
         />
       )}
 

@@ -3,6 +3,7 @@
 import { ProductGrid } from '@/components/catalog/ProductGrid';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
+import { ResultsHeaderSkeleton } from '@/components/catalog/ResultsHeaderSkeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ScrollToProductBanner } from '@/components/ui/ScrollToProductBanner';
@@ -10,7 +11,7 @@ import { Text } from '@/components/ui/Text';
 import { useInfiniteCatalog } from '@/hooks/useInfiniteCatalog';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useScrollToProduct } from '@/hooks/useScrollToProduct';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function Home() {
   const {
@@ -38,6 +39,37 @@ export default function Home() {
   });
 
   const [gridCols, setGridCols] = useState<4 | 5>(4);
+  const [hasCompletedRequest, setHasCompletedRequest] = useState(false);
+  const hasSeenLoadingRef = useRef(false);
+
+  useEffect(() => {
+    // Track if we've ever seen loading be true
+    if (loading) {
+      hasSeenLoadingRef.current = true;
+    }
+
+    // Mark as completed when:
+    // 1. Loading finishes after we've seen it start (most reliable)
+    // 2. We have pagination data (totalPages > 0 or total > 0 indicates a response was received)
+    // 3. We have products (indicates a successful response)
+    // 4. Not loading and we've seen loading before (catches the case where loading finished)
+    if (
+      !hasCompletedRequest &&
+      ((hasSeenLoadingRef.current && !loading) ||
+        pagination.totalPages > 0 ||
+        pagination.total > 0 ||
+        products.length > 0)
+    ) {
+      setHasCompletedRequest(true);
+    }
+  }, [
+    loading,
+    pagination.totalPages,
+    pagination.total,
+    products.length,
+    hasCompletedRequest,
+  ]);
+
   const { isSearching } = useScrollToProduct({
     loading,
     productsLength: products.length,
@@ -89,21 +121,25 @@ export default function Home() {
         {/* Products Grid */}
         <div className="w-full">
           {/* Results Header */}
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Text className="text-muted-foreground text-sm">
-                Найдено товаров: {pagination.total}
-              </Text>
-              {filters.search && (
-                <Badge variant="secondary">
-                  Поиск: &quot;{filters.search}&quot;
-                </Badge>
-              )}
+          {loading || !hasCompletedRequest ? (
+            <ResultsHeaderSkeleton />
+          ) : (
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Text className="text-muted-foreground text-sm">
+                  Найдено товаров: {pagination.total}
+                </Text>
+                {filters.search && (
+                  <Badge variant="secondary">
+                    Поиск: &quot;{filters.search}&quot;
+                  </Badge>
+                )}
+              </div>
+              <div className="hidden lg:block">
+                <GridColsSwitcher value={gridCols} onChange={setGridCols} />
+              </div>
             </div>
-            <div className="hidden lg:block">
-              <GridColsSwitcher value={gridCols} onChange={setGridCols} />
-            </div>
-          </div>
+          )}
 
           {/* Products */}
           <ProductGrid

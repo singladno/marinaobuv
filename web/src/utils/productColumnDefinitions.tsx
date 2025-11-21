@@ -10,6 +10,7 @@ import { ProductGptDebugCell } from '@/components/features/ProductGptDebugCell';
 import { ProductImagesCell } from '@/components/features/ProductImagesCell';
 import { ProductNameCell } from '@/components/features/ProductNameCell';
 import { ProductPriceCell } from '@/components/features/ProductPriceCell';
+import { ProductBuyPriceCell } from '@/components/features/ProductBuyPriceCell';
 import { ProductProviderEditableCell } from '@/components/features/ProductProviderEditableCell';
 import { ProductSeasonCell } from '@/components/features/ProductSeasonCell';
 import { ProductSelectionCheckbox } from '@/components/features/ProductSelectionCheckbox';
@@ -143,6 +144,7 @@ export function createProductColumnDefinitions({
       header: 'Поставщик',
       cell: ({ row }) => (
         <ProductProviderEditableCell
+          key={row.original.id}
           product={row.original}
           onUpdateProduct={onUpdateProduct}
         />
@@ -160,6 +162,19 @@ export function createProductColumnDefinitions({
         />
       ),
       size: 200, // Twice as wide
+    }),
+
+    // Buy Price column
+    columnHelper.accessor('buyPrice', {
+      header: 'Закупочная цена (руб.)',
+      meta: { width: '200px' },
+      cell: ({ row }) => (
+        <ProductBuyPriceCell
+          product={row.original}
+          onUpdateProduct={onUpdateProduct}
+        />
+      ),
+      size: 200,
     }),
 
     // Gender column

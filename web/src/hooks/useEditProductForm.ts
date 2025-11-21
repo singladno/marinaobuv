@@ -58,10 +58,30 @@ export function useEditProductForm(productId: string | null) {
         const data = await response.json();
         const product: ProductData = data.product;
 
+        // Extract categoryId - Prisma should return it as a direct field when using include
+        // But also check category relation as fallback in case the field is missing
+        const categoryId =
+          (product as any).categoryId || (product as any).category?.id || '';
+
+        // Debug logging to help diagnose categoryId issues
+        if (!categoryId) {
+          console.warn(
+            '[useEditProductForm] No categoryId found for product:',
+            {
+              productId: product.id,
+              productKeys: Object.keys(product),
+              hasCategoryId: !!(product as any).categoryId,
+              hasCategory: !!(product as any).category,
+              categoryId: (product as any).category?.id,
+              fullProduct: product,
+            }
+          );
+        }
+
         // Set form data
         setFormData({
           name: product.name || '',
-          categoryId: product.categoryId || '',
+          categoryId: categoryId,
           pricePair: product.pricePair || 0,
           buyPrice: (product as any).buyPrice || null,
           material: product.material || '',

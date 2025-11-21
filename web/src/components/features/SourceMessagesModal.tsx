@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
 import type { Product } from '@/types/product';
 import type { WhatsAppMessage } from '@/types/whatsapp';
 
@@ -88,33 +87,37 @@ export function SourceMessagesModal({
   };
 
   // Check if this is a MANUAL product with a source screenshot
-  const hasSourceScreenshot = product.source === 'MANUAL' && product.sourceScreenshotUrl;
+  const hasSourceScreenshot =
+    product.source === 'MANUAL' && product.sourceScreenshotUrl;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Исходное сообщение">
-      <div className="max-h-96 overflow-y-auto">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Исходное сообщение"
+      size="xl"
+      className="md:!max-w-4xl lg:!max-w-5xl [&>div]:!max-h-[85vh] md:[&>div]:!max-h-[90vh]"
+    >
+      <div className="max-h-[calc(85vh-120px)] overflow-y-auto p-6 md:max-h-[calc(90vh-120px)]">
         {hasSourceScreenshot ? (
           // Show source screenshot for MANUAL products
           <div className="space-y-4">
             <div className="rounded-lg border bg-gray-50 p-4">
-              <div className="mb-2 text-sm font-medium text-gray-700">
-                Скриншот исходного сообщения:
-              </div>
-              <div className="flex justify-center">
-                {product.sourceScreenshotUrl && (
+              {product.sourceScreenshotUrl && (
+                <div className="flex justify-center">
                   <Image
                     src={product.sourceScreenshotUrl}
                     alt="Source screenshot"
                     width={800}
                     height={600}
-                    className="max-h-[600px] w-auto rounded border object-contain"
+                    className="max-h-[400px] w-auto rounded border object-contain"
                     onError={e => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
                     }}
                   />
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -127,7 +130,9 @@ export function SourceMessagesModal({
             )}
 
             {error && (
-              <div className="py-4 text-center text-red-500">Ошибка: {error}</div>
+              <div className="py-4 text-center text-red-500">
+                Ошибка: {error}
+              </div>
             )}
 
             {!loading && !error && messages.length === 0 && (
@@ -137,87 +142,81 @@ export function SourceMessagesModal({
             )}
 
             {!loading && !error && messages.length > 0 && (
-          <div className="space-y-4">
-            {messages.map((message, index) => (
-              <div
-                key={message.id}
-                className="rounded-lg border bg-gray-50 p-4"
-              >
-                <div className="mb-2 flex items-start justify-between">
-                  <div className="text-sm text-gray-600">
-                    Сообщение {index + 1}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {formatDate(message.createdAt)}
-                  </div>
-                </div>
-
-                <div className="mb-2">
-                  <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
-                    {formatMessageType(message.type)}
-                  </span>
-                </div>
-
-                {message.text && (
-                  <div className="mb-2">
-                    <div className="mb-1 text-sm font-medium text-gray-700">
-                      Текст:
-                    </div>
-                    <div className="whitespace-pre-wrap text-sm text-gray-900">
-                      {message.text}
-                    </div>
-                  </div>
-                )}
-
-                {message.mediaUrl && (
-                  <div className="mb-2">
-                    <div className="mb-1 text-sm font-medium text-gray-700">
-                      Медиа:
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Image
-                        src={message.mediaUrl}
-                        alt="Media"
-                        width={64}
-                        height={64}
-                        className="h-16 w-16 rounded border object-cover"
-                        onError={e => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
-                      />
+              <div className="space-y-4">
+                {messages.map((message, index) => (
+                  <div
+                    key={message.id}
+                    className="rounded-lg border bg-gray-50 p-4"
+                  >
+                    <div className="mb-2 flex items-start justify-between">
+                      <div className="text-sm text-gray-600">
+                        Сообщение {index + 1}
+                      </div>
                       <div className="text-xs text-gray-500">
-                        {message.mediaMimeType && (
-                          <div>Тип: {message.mediaMimeType}</div>
-                        )}
-                        {message.mediaFileSize && (
-                          <div>
-                            Размер: {(message.mediaFileSize / 1024).toFixed(1)}{' '}
-                            KB
-                          </div>
-                        )}
+                        {formatDate(message.createdAt)}
                       </div>
                     </div>
-                  </div>
-                )}
 
-                {message.fromName && (
-                  <div className="text-xs text-gray-500">
-                    От: {message.fromName}
+                    <div className="mb-2">
+                      <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                        {formatMessageType(message.type)}
+                      </span>
+                    </div>
+
+                    {message.text && (
+                      <div className="mb-2">
+                        <div className="mb-1 text-sm font-medium text-gray-700">
+                          Текст:
+                        </div>
+                        <div className="whitespace-pre-wrap text-sm text-gray-900">
+                          {message.text}
+                        </div>
+                      </div>
+                    )}
+
+                    {message.mediaUrl && (
+                      <div className="mb-2">
+                        <div className="mb-1 text-sm font-medium text-gray-700">
+                          Медиа:
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Image
+                            src={message.mediaUrl}
+                            alt="Media"
+                            width={64}
+                            height={64}
+                            className="h-16 w-16 rounded border object-cover"
+                            onError={e => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                          <div className="text-xs text-gray-500">
+                            {message.mediaMimeType && (
+                              <div>Тип: {message.mediaMimeType}</div>
+                            )}
+                            {message.mediaFileSize && (
+                              <div>
+                                Размер:{' '}
+                                {(message.mediaFileSize / 1024).toFixed(1)} KB
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {message.fromName && (
+                      <div className="text-xs text-gray-500">
+                        От: {message.fromName}
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
             )}
           </>
         )}
-      </div>
-
-      <div className="mt-4 flex justify-end border-t pt-4">
-        <Button variant="outline" onClick={onClose}>
-          Закрыть
-        </Button>
       </div>
     </Modal>
   );

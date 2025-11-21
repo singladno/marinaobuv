@@ -103,14 +103,16 @@ export function ProductSizesCell({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col items-center justify-center min-h-full">
       {!hideSummary && (
-        <ProductSizesSummary
-          sizes={sizes}
-          canEdit={canEdit}
-          isEditing={isEditing}
-          onToggleEdit={() => setIsEditing(prev => !prev)}
-        />
+        <div className="w-full">
+          <ProductSizesSummary
+            sizes={sizes}
+            canEdit={canEdit}
+            isEditing={isEditing}
+            onToggleEdit={() => setIsEditing(prev => !prev)}
+          />
+        </div>
       )}
 
       {hideSummary && !isEditing && canEdit && (
@@ -126,7 +128,7 @@ export function ProductSizesCell({
 
       <div
         ref={editPanelRef}
-        className={`overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition-all duration-300 dark:border-gray-800 dark:bg-gray-900 ${
+        className={`w-full overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition-all duration-300 dark:border-gray-800 dark:bg-gray-900 ${
           isEditing
             ? 'max-h-[1200px] opacity-100'
             : 'max-h-0 opacity-0 shadow-none'

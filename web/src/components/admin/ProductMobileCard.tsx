@@ -16,7 +16,7 @@ import { ProductProviderCell } from '@/components/features/ProductProviderCell';
 import { ProductBuyPriceCell } from '@/components/features/ProductBuyPriceCell';
 import { ProductProviderEditableCell } from '@/components/features/ProductProviderEditableCell';
 import { ProductSelectionCheckbox } from '@/components/features/ProductSelectionCheckbox';
-import { ProductSourceModal } from '@/components/product/ProductSourceModal';
+import { SourceMessagesModal } from '@/components/features/SourceMessagesModal';
 import { useUser } from '@/contexts/NextAuthUserContext';
 import type { Product, ProductUpdateData } from '@/types/product';
 import type { CategoryNode } from '@/components/ui/CategorySelector';
@@ -102,15 +102,28 @@ export function ProductMobileCard({
                     )}
                   </button>
                 )}
-              {/* MANUAL source icon */}
+              {/* MANUAL source icon - clickable if source screenshot exists */}
               {user?.role === 'ADMIN' && product.source === 'MANUAL' && (
-                <div
-                  className="shrink-0 rounded"
-                  title="Создан вручную"
-                  aria-label="Создан вручную"
-                >
-                  <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
-                </div>
+                <>
+                  {product.sourceScreenshotUrl ? (
+                    <button
+                      onClick={() => setIsSourceModalOpen(true)}
+                      className="shrink-0 cursor-pointer rounded focus:outline-none"
+                      title="Просмотреть скриншот исходного сообщения"
+                      aria-label="Просмотреть скриншот исходного сообщения"
+                    >
+                      <Hand className="h-6 w-6 text-gray-500 transition-transform duration-200 hover:scale-110 dark:text-gray-500" strokeWidth={1.5} />
+                    </button>
+                  ) : (
+                    <div
+                      className="shrink-0 rounded"
+                      title="Создан вручную"
+                      aria-label="Создан вручную"
+                    >
+                      <Hand className="h-6 w-6 text-gray-500 dark:text-gray-500" strokeWidth={1.5} />
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Toggle switch */}
@@ -275,11 +288,10 @@ export function ProductMobileCard({
 
       {/* Source Modal */}
       {user?.role === 'ADMIN' && (
-        <ProductSourceModal
+        <SourceMessagesModal
           isOpen={isSourceModalOpen}
           onClose={() => setIsSourceModalOpen(false)}
-          productId={product.id}
-          productName={product.name}
+          product={product}
         />
       )}
     </>

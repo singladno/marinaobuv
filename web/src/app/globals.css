@@ -446,6 +446,63 @@
   .rounded-card-large {
     @apply rounded-xl;
   }
+
+  /* Flip card animation styles */
+  .flip-card-container {
+    perspective: 800px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    /* Isolate animation from other layout changes - but allow pointer events */
+    contain: layout style;
+  }
+
+  .flip-card-content {
+    transform-style: preserve-3d;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* Force GPU acceleration */
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  .flip-card-flipped {
+    transform: rotateY(180deg) translateZ(0);
+  }
+
+  .flip-card-front,
+  .flip-card-back {
+    backface-visibility: hidden;
+    width: 100%;
+    height: 100%;
+    /* Force GPU acceleration for front/back faces */
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg) translateZ(0);
+  }
+
+  /* Ensure pointer events work correctly */
+  .flip-card-front.pointer-events-auto,
+  .flip-card-back.pointer-events-auto {
+    pointer-events: auto;
+  }
+
+  .flip-card-front.pointer-events-none,
+  .flip-card-back.pointer-events-none {
+    pointer-events: none;
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg);
+  }
 }
 
 /**
@@ -682,7 +739,7 @@ a:hover {
   .source-icon-hover-toggle {
     opacity: 0;
   }
-  
+
   .group:hover .source-icon-hover-toggle {
     opacity: 1;
   }

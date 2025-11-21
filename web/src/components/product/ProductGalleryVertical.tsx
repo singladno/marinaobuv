@@ -41,7 +41,7 @@ export default function ProductGalleryVertical({
   source,
 }: ProductGalleryProps) {
   const { user } = useUser();
-  const { categories } = useCategories();
+  const { categories, loading: categoriesLoading } = useCategories();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -367,6 +367,7 @@ export default function ProductGalleryVertical({
               onClose={() => setIsEditModalOpen(false)}
               productId={productId}
               categories={categories}
+              categoriesLoading={categoriesLoading}
               onProductUpdated={() => {
                 setIsEditModalOpen(false);
                 // Reload the page to show updated product data

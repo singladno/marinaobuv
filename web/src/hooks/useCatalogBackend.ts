@@ -83,7 +83,6 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
     async (newFilters?: Partial<CatalogFilters>) => {
       // Skip fetch if we're in the middle of an optimistic update
       if (isOptimisticUpdateRef.current) {
-        log.info('🛑 Skipping fetch during optimistic update');
         return;
       }
 
@@ -95,7 +94,6 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         inFlightKeyRef.current === requestKey ||
         lastSuccessKeyRef.current === requestKey
       ) {
-        log.info('🛑 Skipping duplicate catalog fetch', { currentFilters });
         return;
       }
 
@@ -124,8 +122,6 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         searchParams.set('pageSize', currentFilters.pageSize.toString());
 
         const url = `/api/catalog?${searchParams.toString()}`;
-        log.group('📡 Catalog fetch START', url);
-        log.info('filters', currentFilters);
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -137,14 +133,8 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         setPagination(data.pagination);
         setFilters(currentFilters);
         lastSuccessKeyRef.current = requestKey;
-        log.info('✅ Catalog fetch DONE', {
-          count: data.products.length,
-          pagination: data.pagination,
-        });
-        log.groupEnd();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
-        log.error('❌ Catalog fetch FAILED', err);
         setProducts([]);
       } finally {
         setLoading(false);
