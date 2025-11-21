@@ -10,8 +10,10 @@ import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
 import CategoryBreadcrumbs from '@/components/catalog/CategoryBreadcrumbs';
 import { ResultsHeaderSkeleton } from '@/components/catalog/ResultsHeaderSkeleton';
 import { Text } from '@/components/ui/Text';
+import { ScrollToProductBanner } from '@/components/ui/ScrollToProductBanner';
 import { useCatalogBackend } from '@/hooks/useCatalogBackend';
 import { useSearch } from '@/contexts/SearchContext';
+import { useScrollToProduct } from '@/hooks/useScrollToProduct';
 import CatalogPagination from '@/components/ui/CatalogPagination';
 import ScrollArrows from '@/components/ui/ScrollArrows';
 import {
@@ -261,6 +263,12 @@ function CatalogPageContent() {
     hasCompletedRequest,
   ]);
 
+  const { isSearching } = useScrollToProduct({
+    loading,
+    productsLength: products.length,
+    targetPath: /^\/catalog/,
+  });
+
   if (error) {
     return (
       <div className="bg-background min-h-screen">
@@ -275,6 +283,7 @@ function CatalogPageContent() {
 
   return (
     <div className="bg-background min-h-screen">
+      <ScrollToProductBanner isVisible={isSearching} />
       <div className="container mx-auto px-4 pb-12 pt-8">
         {/* Header */}
         <div className="mb-6">
