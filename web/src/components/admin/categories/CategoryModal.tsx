@@ -284,6 +284,7 @@ export function CategoryModal({
                   onChange={categoryId => updateField('parentId', categoryId)}
                   categories={categoryTree}
                   placeholder="Корневой уровень"
+                  allowNonLeafSelection={true}
                 />
               </div>
             </div>

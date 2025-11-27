@@ -20,6 +20,7 @@ type Props = {
   onCreateRoot?: () => void;
   onCreateSubcategory?: (parentId: string) => void;
   onEdit?: (category: AdminCategoryNode) => void;
+  onDelete?: (category: AdminCategoryNode) => void;
 };
 
 const filterTree = (
@@ -53,6 +54,7 @@ export function CategoryTreePanel({
   onCreateRoot,
   onCreateSubcategory,
   onEdit,
+  onDelete,
 }: Props) {
   const [search, setSearch] = React.useState('');
   const filtered = React.useMemo(
@@ -127,6 +129,7 @@ export function CategoryTreePanel({
               searchTerm={search}
               onCreateSubcategory={onCreateSubcategory}
               onEdit={onEdit}
+              onDelete={onDelete}
             />
           )}
         </div>

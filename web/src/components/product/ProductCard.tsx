@@ -18,7 +18,7 @@ import { Text } from '@/components/ui/Text';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useUser } from '@/contexts/NextAuthUserContext';
 import { usePurchase } from '@/contexts/PurchaseContext';
-import { useCategories } from '@/contexts/CategoriesContext';
+import { useAllCategories } from '@/hooks/useAllCategories';
 import { cn } from '@/lib/utils';
 import { rub } from '@/lib/format';
 
@@ -96,7 +96,7 @@ function ProductCard({
   priority = false,
 }: Props) {
   const { user } = useUser();
-  const { categories, loading: categoriesLoading } = useCategories();
+  const { categories, loading: categoriesLoading } = useAllCategories();
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);

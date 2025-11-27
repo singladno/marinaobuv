@@ -1,6 +1,10 @@
 'use client';
 
-export function OrdersEmptyState() {
+interface OrdersEmptyStateProps {
+  isSearchResult?: boolean;
+}
+
+export function OrdersEmptyState({ isSearchResult = false }: OrdersEmptyStateProps) {
   return (
     <div className="flex h-full items-center justify-center bg-white dark:bg-gray-900">
       <div className="text-center">
@@ -20,10 +24,12 @@ export function OrdersEmptyState() {
           </svg>
         </div>
         <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-          Нет заказов
+          {isSearchResult ? 'Заказы не найдены' : 'Нет заказов'}
         </h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Заказы появятся здесь после оформления клиентами
+          {isSearchResult
+            ? 'Попробуйте изменить параметры поиска'
+            : 'Заказы появятся здесь после оформления клиентами'}
         </p>
       </div>
     </div>

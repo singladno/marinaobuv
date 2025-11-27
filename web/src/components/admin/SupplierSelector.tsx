@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
-import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { createPortal } from 'react-dom';
+import { ChevronDownIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 import { Input } from '@/components/ui/Input';
 import { Text } from '@/components/ui/Text';
@@ -11,13 +12,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/Popover';
 import { Button } from '@/components/ui/Button';
-import { useProviders } from '@/hooks/useProviders';
+import { useProviderModels } from '@/hooks/useProviderModels';
+import { CreateProviderModal } from '@/components/admin/CreateProviderModal';
 
 interface Supplier {
   id: string;
   name: string | null;
-  email: string | null;
   phone: string | null;
+  place: string | null;
 }
 
 interface SupplierSelectorProps {
@@ -35,10 +37,11 @@ function SupplierSelectorComponent({
   disabled = false,
   isLoading = false,
 }: SupplierSelectorProps) {
-  const { providers, loading: providersLoading } = useProviders();
+  const { providers, loading: providersLoading, reload: reloadProviders } = useProviderModels();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Helper function to find supplier (not a callback, just a function)
   const findSupplierById = (id: string): Supplier | null => {
@@ -52,8 +55,8 @@ function SupplierSelectorComponent({
       return {
         id: provider.id,
         name: provider.name,
-        email: provider.email,
         phone: provider.phone,
+        place: provider.place,
       };
     }
     return null;
@@ -70,8 +73,8 @@ function SupplierSelectorComponent({
           return {
             id: provider.id,
             name: provider.name,
-            email: provider.email,
             phone: provider.phone,
+            place: provider.place,
           };
         }
       }
@@ -196,8 +199,8 @@ function SupplierSelectorComponent({
         const suppliersList: Supplier[] = providers.map(p => ({
           id: p.id,
           name: p.name,
-          email: p.email,
           phone: p.phone,
+          place: p.place,
         }));
         setSuppliers(suppliersList);
         return;
@@ -208,14 +211,14 @@ function SupplierSelectorComponent({
         .filter(
           p =>
             p.name?.toLowerCase().includes(searchLower) ||
-            p.email?.toLowerCase().includes(searchLower) ||
-            p.phone?.toLowerCase().includes(searchLower)
+            p.phone?.toLowerCase().includes(searchLower) ||
+            p.place?.toLowerCase().includes(searchLower)
         )
         .map(p => ({
           id: p.id,
           name: p.name,
-          email: p.email,
           phone: p.phone,
+          place: p.place,
         }));
       setSuppliers(filtered);
     },
@@ -311,20 +314,43 @@ function SupplierSelectorComponent({
   };
 
   // Use suppliers directly (they're already filtered)
-  // Fallback: if suppliers is empty but providers are loaded, use providers directly
-  const filteredSuppliers =
-    suppliers.length > 0
-      ? suppliers
-      : !providersLoading && providers.length > 0
-        ? providers.map(p => ({
-            id: p.id,
-            name: p.name,
-            email: p.email,
-            phone: p.phone,
-          }))
-        : [];
+  // Don't use fallback - if search has no results, show empty list
+  const filteredSuppliers = suppliers;
+
+  const handleCreateProvider = async (providerData: { name: string; phone?: string; place?: string }) => {
+    try {
+      const response = await fetch('/api/admin/providers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(providerData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Не удалось создать поставщика');
+      }
+
+      const newProvider = await response.json();
+
+      // Reload providers list
+      await reloadProviders();
+
+      // Select the newly created provider (prefill the control)
+      // Use requestAnimationFrame to ensure this happens after all other updates
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          onChange(newProvider.id);
+        });
+      });
+    } catch (error: any) {
+      throw error;
+    }
+  };
 
   return (
+    <>
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
@@ -336,7 +362,6 @@ function SupplierSelectorComponent({
             <span className="truncate">
               {selectedSupplier
                 ? selectedSupplier.name ||
-                  selectedSupplier.email ||
                   selectedSupplier.phone ||
                   'Поставщик'
                 : placeholder}
@@ -387,10 +412,20 @@ function SupplierSelectorComponent({
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Поиск по имени, email или телефону..."
+            placeholder="Поиск по имени, телефону или месту..."
             className="mb-2"
             autoFocus
           />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="w-full mb-2"
+            disabled={disabled || isLoading}
+          >
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Создать поставщика
+          </Button>
         </div>
         <div className="max-h-60 overflow-y-auto">
           {isLoading ? (
@@ -418,18 +453,17 @@ function SupplierSelectorComponent({
                   >
                     <div className="font-medium text-gray-900 dark:text-white">
                       {supplier.name ||
-                        supplier.email ||
                         supplier.phone ||
                         'Без имени'}
                     </div>
-                    {supplier.email && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {supplier.email}
-                      </div>
-                    )}
                     {supplier.phone && (
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         {supplier.phone}
+                      </div>
+                    )}
+                    {supplier.place && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {supplier.place}
                       </div>
                     )}
                   </button>
@@ -440,6 +474,20 @@ function SupplierSelectorComponent({
         </div>
       </PopoverContent>
     </Popover>
+    {typeof window !== 'undefined' && createPortal(
+      <CreateProviderModal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          // Isolate the close to prevent any side effects on parent modal
+          requestAnimationFrame(() => {
+            setIsCreateModalOpen(false);
+          });
+        }}
+        onCreate={handleCreateProvider}
+      />,
+      document.body
+    )}
+    </>
   );
 }
 

@@ -12,6 +12,7 @@ type Props = {
   depth?: number;
   onCreateSubcategory?: (parentId: string) => void;
   onEdit?: (category: AdminCategoryNode) => void;
+  onDelete?: (category: AdminCategoryNode) => void;
 };
 
 export function CategoryTreeList({
@@ -22,6 +23,7 @@ export function CategoryTreeList({
   depth = 0,
   onCreateSubcategory,
   onEdit,
+  onDelete,
 }: Props) {
   return (
     <div className="space-y-1">
@@ -35,6 +37,7 @@ export function CategoryTreeList({
           searchTerm={searchTerm}
           onCreateSubcategory={onCreateSubcategory}
           onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>

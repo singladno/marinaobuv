@@ -8,19 +8,14 @@ import { Text } from '@/components/ui/Text';
 
 import type { CatalogTreeNode as CategoryTreeNode } from '@/types/catalog-tree';
 
-function stripPrefix(p: string) {
-  return p.replace(/^obuv\//, '');
-}
-
+// Use full database paths - single source of truth
 function isActive(path: string, activePath?: string) {
-  const p = stripPrefix(path);
   if (!activePath) return false;
-  return activePath === p || activePath.startsWith(p + '/');
+  return activePath === path || activePath.startsWith(path + '/');
 }
 
 function buildCatalogUrlFromPath(path: string) {
-  const p = stripPrefix(path);
-  return `/catalog/${p}`;
+  return `/catalog/${path}`;
 }
 
 function CategoryTreeClientContent({

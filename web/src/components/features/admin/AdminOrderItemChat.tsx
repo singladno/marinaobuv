@@ -552,7 +552,7 @@ export function AdminOrderItemChat({
 
           {/* Messages */}
           <ScrollArea
-            className="flex-1 overflow-hidden px-4 py-4"
+            className="flex-1 px-4 py-4"
             // eslint-disable-next-line react/no-unknown-property
             style={{
               height: isKeyboardOpen

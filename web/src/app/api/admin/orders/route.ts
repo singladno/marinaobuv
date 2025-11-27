@@ -14,8 +14,33 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Get search query from URL params
+    const searchParams = req.nextUrl.searchParams;
+    const searchQuery = searchParams.get('search')?.trim() || '';
+
+    // Build where clause for search
+    const whereClause: any = {};
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      whereClause.OR = [
+        // Search by order number
+        { orderNumber: { contains: searchLower, mode: 'insensitive' } },
+        // Search by order ID (last 8 characters) - case sensitive for CUID
+        { id: { endsWith: searchQuery } },
+        // Search by phone (order phone)
+        { phone: { contains: searchLower, mode: 'insensitive' } },
+        // Search by user name
+        { user: { name: { contains: searchLower, mode: 'insensitive' } } },
+        // Search by user email
+        { user: { email: { contains: searchLower, mode: 'insensitive' } } },
+        // Search by user phone
+        { user: { phone: { contains: searchLower, mode: 'insensitive' } } },
+      ];
+    }
+
     const [orders, gruzchiks] = await Promise.all([
       prisma.order.findMany({
+        where: whereClause,
         include: {
           items: {
             include: {

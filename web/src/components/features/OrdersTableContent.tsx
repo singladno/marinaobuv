@@ -21,6 +21,7 @@ interface OrdersTableContentProps {
   loading?: boolean;
   error?: string | null;
   onPatch: (id: string, patch: Partial<AdminOrder>) => Promise<void>;
+  isSearchResult?: boolean;
 }
 
 export function OrdersTableContent({
@@ -29,6 +30,7 @@ export function OrdersTableContent({
   loading,
   error,
   onPatch,
+  isSearchResult = false,
 }: OrdersTableContentProps) {
   const gruzchikById = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -51,7 +53,7 @@ export function OrdersTableContent({
   }
 
   if (orders.length === 0) {
-    return <OrdersEmptyState />;
+    return <OrdersEmptyState isSearchResult={isSearchResult} />;
   }
 
   const formatDate = (dateString: string) => {
@@ -118,9 +120,9 @@ export function OrdersTableContent({
                         {formatDate(order.createdAt)}
                       </div>
                     </div>
-                    {order.unreadMessageCount && order.unreadMessageCount > 0 && (
+                    {(order.unreadMessageCount ?? 0) > 0 && (
                       <div className="shrink-0">
-                        <UnreadMessageIndicator count={order.unreadMessageCount} />
+                        <UnreadMessageIndicator count={order.unreadMessageCount ?? 0} />
                       </div>
                     )}
                   </div>

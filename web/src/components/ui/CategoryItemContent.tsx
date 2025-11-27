@@ -12,6 +12,7 @@ type CategoryItemContentProps = {
   level: number;
   onSelect: () => void;
   hasChildren?: boolean;
+  allowNonLeafSelection?: boolean;
 };
 
 export function CategoryItemContent({
@@ -22,8 +23,9 @@ export function CategoryItemContent({
   level,
   onSelect,
   hasChildren = false,
+  allowNonLeafSelection = false,
 }: CategoryItemContentProps) {
-  const isSelectable = !hasChildren;
+  const isSelectable = allowNonLeafSelection || !hasChildren;
 
   return (
     <div

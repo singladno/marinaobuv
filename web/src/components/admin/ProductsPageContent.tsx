@@ -52,14 +52,6 @@ export function ProductsPageContent() {
     reload: reloadCategories,
   } = useAllCategories();
 
-  // Debug: Log when categories change
-  useEffect(() => {
-    console.log('[ProductsPageContent] Categories state:', {
-      count: categories.length,
-      loading: categoriesLoading,
-    });
-  }, [categories, categoriesLoading]);
-
   const { createProduct, isLoading: isCreating } = useCreateProduct();
   const { uploadImages } = useUploadProductImages();
 

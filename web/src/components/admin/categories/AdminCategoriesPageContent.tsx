@@ -3,19 +3,38 @@
 import * as React from 'react';
 
 import { useAdminCategories } from '@/hooks/useAdminCategories';
-import type { FlatAdminCategory, AdminCategoryNode } from '@/types/category';
+import { useCategoryDelete } from '@/hooks/useCategoryDelete';
+import { useCategoryModal } from '@/hooks/useCategoryModal';
+import type { FlatAdminCategory } from '@/types/category';
 
 import { CategoryTreePanel } from './CategoryTreePanel';
 import { CategoryDetailsPanel } from './CategoryDetailsPanel';
 import { CategoryModal } from './CategoryModal';
+import { CategoryDeleteModal } from './CategoryDeleteModal';
 
 export function AdminCategoriesPageContent() {
   const { tree, flat, loading, error, reload } = useAdminCategories();
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const [modalOpen, setModalOpen] = React.useState(false);
-  const [modalParentId, setModalParentId] = React.useState<string | null>(null);
-  const [editingCategory, setEditingCategory] =
-    React.useState<AdminCategoryNode | null>(null);
+
+  const {
+    deleteModalOpen,
+    categoryToDelete,
+    isDeleting,
+    handleDelete,
+    handleDeleteConfirm,
+    handleDeleteCancel,
+  } = useCategoryDelete(selectedId, setSelectedId, reload);
+
+  const {
+    modalOpen,
+    modalParentId,
+    editingCategory,
+    handleCreateRoot,
+    handleCreateSubcategory,
+    handleEdit,
+    handleModalSuccess,
+    handleModalClose,
+  } = useCategoryModal(setSelectedId, reload);
 
   React.useEffect(() => {
     if (loading || tree.length === 0) return;
@@ -29,39 +48,6 @@ export function AdminCategoriesPageContent() {
     if (!selectedId) return null;
     return flat.find(item => item.id === selectedId) ?? null;
   }, [flat, selectedId]);
-
-  const handleCreateRoot = () => {
-    // Create at root level (parentId === null)
-    setModalParentId(null);
-    setEditingCategory(null);
-    setModalOpen(true);
-  };
-
-  const handleCreateSubcategory = (parentId: string) => {
-    setModalParentId(parentId);
-    setEditingCategory(null);
-    setModalOpen(true);
-  };
-
-  const handleEdit = (category: AdminCategoryNode) => {
-    setEditingCategory(category);
-    setModalParentId(category.parentId);
-    setModalOpen(true);
-  };
-
-  const handleModalSuccess = (categoryId: string) => {
-    setSelectedId(categoryId);
-    reload();
-    setModalOpen(false);
-    setEditingCategory(null);
-    setModalParentId(null);
-  };
-
-  const handleModalClose = () => {
-    setModalOpen(false);
-    setEditingCategory(null);
-    setModalParentId(null);
-  };
 
   // Flatten tree for parent selection (include all categories)
   const allParents = React.useMemo(() => {
@@ -85,6 +71,7 @@ export function AdminCategoriesPageContent() {
             onCreateRoot={handleCreateRoot}
             onCreateSubcategory={handleCreateSubcategory}
             onEdit={handleEdit}
+            onDelete={handleDelete}
           />
         </div>
         <div className="min-w-0 flex-1 space-y-4">
@@ -92,6 +79,7 @@ export function AdminCategoriesPageContent() {
             category={selected}
             loading={loading}
             onReload={reload}
+            onDelete={handleDelete}
           />
         </div>
       </div>
@@ -103,6 +91,14 @@ export function AdminCategoriesPageContent() {
         parentId={modalParentId}
         category={editingCategory}
         onSuccess={handleModalSuccess}
+      />
+
+      <CategoryDeleteModal
+        isOpen={deleteModalOpen}
+        category={categoryToDelete}
+        isDeleting={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
       />
     </div>
   );

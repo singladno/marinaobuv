@@ -87,11 +87,18 @@ export function OrdersTableRow({
           <div className="text-sm text-gray-500 dark:text-gray-400">
             {order.phone || '—'}
           </div>
+          {order.address && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {order.address}
+            </div>
+          )}
         </div>
       </td>
       {/* Сообщения */}
       <td className="whitespace-nowrap px-4 py-4">
-        <UnreadMessageIndicator count={order.unreadMessageCount || 0} />
+        {order.unreadMessageCount && order.unreadMessageCount > 0 ? (
+          <UnreadMessageIndicator count={order.unreadMessageCount} />
+        ) : null}
       </td>
       {/* Метка */}
       <td className="whitespace-nowrap px-4 py-4">

@@ -13,6 +13,7 @@ type CategoryNodeProps = {
   onSelect: (id: string) => void;
   searchTerm: string;
   level?: number;
+  allowNonLeafSelection?: boolean;
 };
 
 export function CategoryNode({
@@ -21,6 +22,7 @@ export function CategoryNode({
   onSelect,
   searchTerm,
   level = 0,
+  allowNonLeafSelection = false,
 }: CategoryNodeProps) {
   const nodeRef = React.useRef<HTMLDivElement>(null);
 
@@ -85,8 +87,8 @@ export function CategoryNode({
   };
 
   const handleSelect = () => {
-    // Only allow selecting leaf nodes (categories without children)
-    if (!hasChildren) {
+    // Allow selecting any category if allowNonLeafSelection is true, otherwise only leaf nodes
+    if (allowNonLeafSelection || !hasChildren) {
       onSelect(category.id);
     }
   };
@@ -124,12 +126,13 @@ export function CategoryNode({
           level={level}
           onSelect={handleSelect}
           hasChildren={hasChildren}
+          allowNonLeafSelection={allowNonLeafSelection}
         />
       </div>
       {hasChildren && category.children && (
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+            isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
           }`}
         >
           <div className="flex">
@@ -143,6 +146,7 @@ export function CategoryNode({
                 onSelect={onSelect}
                 searchTerm={searchTerm}
                 level={level + 1}
+                allowNonLeafSelection={allowNonLeafSelection}
               />
             </div>
           </div>

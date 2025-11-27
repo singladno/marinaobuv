@@ -25,7 +25,7 @@ export function EditProductImagesModal({
     images,
     setImages,
     loading: loadingProduct,
-  } = useEditProductForm(productId);
+  } = useEditProductForm(productId, isOpen);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const originalImagesRef = useRef<ImageFile[]>([]);
 

@@ -214,7 +214,8 @@ export class SimpleProductService {
     const productName = analysisResult.name || 'Untitled Product';
 
     // Normalize season value - handle invalid values like "SPRING/SUMMER"
-    let normalizedSeason: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null = null;
+    let normalizedSeason: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER' | null =
+      null;
     if (analysisResult.season) {
       try {
         // mapSeason handles values like "SPRING/SUMMER" by checking if string includes season name
@@ -693,8 +694,7 @@ Return JSON:
 }`;
 
       const response = await groq.chat.completions.create({
-        model:
-          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+        model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
         messages: [
           {
             role: 'system',
@@ -707,7 +707,7 @@ Return JSON:
           },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.1,
+        temperature: 0.3,
       });
 
       // Log token usage

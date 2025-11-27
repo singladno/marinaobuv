@@ -11,8 +11,46 @@ interface CreateOrderItem {
 }
 
 function getBoxPriceFromPair(pricePair: any, sizes: any): number {
-  const pairs = Array.isArray(sizes) ? sizes.length : 0;
-  return Number(pricePair) * (pairs > 0 ? pairs : 1);
+  const price = Number(pricePair) || 0;
+  if (!sizes) {
+    return price; // Default to 1 pair if no sizes
+  }
+
+  // Handle JSON string if needed
+  let sizesArray: any[] = [];
+  if (typeof sizes === 'string') {
+    try {
+      sizesArray = JSON.parse(sizes);
+    } catch {
+      return price; // If parsing fails, default to 1 pair
+    }
+  } else if (Array.isArray(sizes)) {
+    sizesArray = sizes;
+  } else {
+    return price; // If not array or string, default to 1 pair
+  }
+
+  // Sum up the count from all sizes to get total pairs
+  // This correctly handles cases where one size has multiple pairs (count > 1)
+  const totalPairs = sizesArray.reduce((sum: number, size: any) => {
+    if (!size || typeof size !== 'object') {
+      return sum;
+    }
+
+    // Try different possible field names for count
+    const count =
+      (typeof size.count === 'number' ? size.count : 0) ||
+      (typeof size.quantity === 'number' ? size.quantity : 0) ||
+      (typeof size.stock === 'number' ? size.stock : 0) ||
+      (typeof size.qty === 'number' ? size.qty : 0) ||
+      0;
+
+    return sum + Number(count);
+  }, 0);
+
+  // If no pairs found, default to 1
+  const pairs = totalPairs > 0 ? totalPairs : 1;
+  return price * pairs;
 }
 
 export async function createOrder(

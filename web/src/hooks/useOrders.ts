@@ -18,6 +18,7 @@ export type AdminOrder = {
   status: string;
   phone: string;
   fullName: string | null;
+  address: string | null;
   transportId: string | null;
   transportName: string | null;
   transportOptions?: Array<{
@@ -48,7 +49,7 @@ export type Gruzchik = {
   phone: string | null;
 };
 
-export function useOrders() {
+export function useOrders(searchQuery?: string) {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [gruzchiks, setGruzchiks] = useState<Gruzchik[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,11 @@ export function useOrders() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/orders', { cache: 'no-store' });
+      const url = new URL('/api/admin/orders', window.location.origin);
+      if (searchQuery && searchQuery.trim()) {
+        url.searchParams.set('search', searchQuery.trim());
+      }
+      const res = await fetch(url.toString(), { cache: 'no-store' });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || 'Failed to load orders');
       setOrders(j.orders || []);
@@ -69,7 +74,7 @@ export function useOrders() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchQuery]);
 
   useEffect(() => {
     load();

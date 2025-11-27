@@ -35,44 +35,6 @@ export function EditProductModal({
   categoriesLoading = false,
   onProductUpdated,
 }: EditProductModalProps) {
-  // Debug: Log categories when modal opens and manually fetch if empty
-  useEffect(() => {
-    if (isOpen) {
-      console.log('[EditProductModal] Modal opened, categories:', {
-        count: categories.length,
-        loading: categoriesLoading,
-        categories: categories,
-      });
-
-      // If categories are empty and not loading, try to fetch them manually
-      if (categories.length === 0 && !categoriesLoading) {
-        console.log(
-          '[EditProductModal] Categories are empty, attempting manual fetch...'
-        );
-        fetch('/api/categories/all', { cache: 'no-cache' })
-          .then(response => {
-            console.log(
-              '[EditProductModal] Manual fetch response status:',
-              response.status
-            );
-            if (response.ok) {
-              return response.json();
-            }
-            throw new Error('Failed to fetch categories');
-          })
-          .then(data => {
-            console.log('[EditProductModal] Manual fetch received:', {
-              itemsCount: data.items?.length || 0,
-            });
-            // Note: We can't set categories here since they're passed as props
-            // But this will help us see if the request is being made
-          })
-          .catch(err => {
-            console.error('[EditProductModal] Manual fetch error:', err);
-          });
-      }
-    }
-  }, [isOpen, categories, categoriesLoading]);
   const {
     formData,
     setFormData,
@@ -85,7 +47,8 @@ export function EditProductModal({
     images,
     setImages,
     loading: loadingProduct,
-  } = useEditProductForm(productId);
+    sourceScreenshotUrl: existingSourceScreenshotUrl,
+  } = useEditProductForm(productId, isOpen);
   const { updateProduct, isLoading: isUpdating } = useUpdateProduct();
   const { uploadImages } = useUploadProductImages();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,9 +56,6 @@ export function EditProductModal({
   const originalImagesRef = useRef<ImageFile[]>([]);
   const [sourceScreenshot, setSourceScreenshot] = useState<File | null>(null);
   const [sourceScreenshotPreview, setSourceScreenshotPreview] = useState<
-    string | null
-  >(null);
-  const [existingSourceScreenshot, setExistingSourceScreenshot] = useState<
     string | null
   >(null);
 
@@ -110,30 +70,13 @@ export function EditProductModal({
     }
   }, [loadingProduct, images]);
 
-  // Load existing source screenshot when product loads
+  // Reset source screenshot when modal closes
   useEffect(() => {
-    if (!loadingProduct && productId) {
-      const loadSourceScreenshot = async () => {
-        try {
-          const response = await fetch(`/api/admin/products/${productId}`);
-          if (response.ok) {
-            const data = await response.json();
-            const screenshotUrl = (data.product as any).sourceScreenshotUrl;
-            if (screenshotUrl) {
-              setExistingSourceScreenshot(screenshotUrl);
-            }
-          }
-        } catch (error) {
-          console.error('Error loading source screenshot:', error);
-        }
-      };
-      loadSourceScreenshot();
-    } else if (!productId) {
-      setExistingSourceScreenshot(null);
+    if (!productId) {
       setSourceScreenshot(null);
       setSourceScreenshotPreview(null);
     }
-  }, [loadingProduct, productId]);
+  }, [productId]);
 
   // Mark form as ready once product data is loaded
   useEffect(() => {
@@ -199,10 +142,6 @@ export function EditProductModal({
 
     try {
       const submitData = prepareSubmitData();
-      console.log(
-        '[EditProductModal] Submitting data with sizes:',
-        JSON.stringify(submitData.sizes)
-      );
       const updatedProduct = await updateProduct(productId, submitData);
 
       // Upload source screenshot if a new one was selected
@@ -515,7 +454,6 @@ export function EditProductModal({
       }
       setSourceScreenshot(null);
       setSourceScreenshotPreview(null);
-      setExistingSourceScreenshot(null);
       // Update product optimistically - will preserve scroll position
       onProductUpdated?.(finalProduct);
       onClose();
@@ -545,7 +483,6 @@ export function EditProductModal({
       }
       setSourceScreenshot(null);
       setSourceScreenshotPreview(null);
-      setExistingSourceScreenshot(null);
       onClose();
     }
   };
@@ -574,8 +511,8 @@ export function EditProductModal({
           <>
             <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
               <form
-                onSubmit={handleSubmit}
                 className="mx-auto max-w-4xl space-y-4 sm:space-y-6"
+                onSubmit={handleSubmit}
               >
                 {/* Images Section */}
                 <ProductImageUpload
@@ -592,10 +529,10 @@ export function EditProductModal({
                   >
                     Скриншот исходного сообщения (опционально)
                   </Text>
-                  {existingSourceScreenshot && !sourceScreenshotPreview ? (
+                  {existingSourceScreenshotUrl && !sourceScreenshotPreview ? (
                     <div className="relative inline-block">
                       <Image
-                        src={existingSourceScreenshot}
+                        src={existingSourceScreenshotUrl}
                         alt="Existing source screenshot"
                         width={128}
                         height={128}
@@ -604,11 +541,12 @@ export function EditProductModal({
                       <button
                         type="button"
                         onClick={() => {
-                          setExistingSourceScreenshot(null);
                           // Optionally delete from server
                         }}
                         className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg hover:bg-red-600"
                         disabled={isSubmitting || isUpdating}
+                        aria-label="Удалить скриншот"
+                        title="Удалить скриншот"
                       >
                         <svg
                           className="h-4 w-4"
@@ -632,7 +570,6 @@ export function EditProductModal({
                         if (file) {
                           setSourceScreenshot(file);
                           setSourceScreenshotPreview(URL.createObjectURL(file));
-                          setExistingSourceScreenshot(null);
                         }
                       }}
                       disabled={isSubmitting || isUpdating}
@@ -659,6 +596,8 @@ export function EditProductModal({
                         }}
                         className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg hover:bg-red-600"
                         disabled={isSubmitting || isUpdating}
+                        aria-label="Удалить скриншот"
+                        title="Удалить скриншот"
                       >
                         <svg
                           className="h-4 w-4"
@@ -694,33 +633,32 @@ export function EditProductModal({
                     {errors.submit}
                   </div>
                 )}
-              </form>
-            </div>
 
-            {/* Fixed Footer with Action Buttons */}
-            <div className="flex-shrink-0 border-t border-gray-200 bg-white px-4 py-4 sm:px-6 dark:border-gray-700 dark:bg-gray-800">
-              <div className="mx-auto flex max-w-4xl flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  disabled={isSubmitting || isUpdating}
-                  className="w-full sm:w-auto"
-                >
-                  Отмена
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || isUpdating || loadingProduct}
-                  className="w-full !bg-gradient-to-r !from-violet-600 !to-violet-700 !text-white sm:w-auto"
-                >
-                  {isSubmitting || isUpdating
-                    ? 'Сохранение...'
-                    : 'Сохранить изменения'}
-                </Button>
-              </div>
+                {/* Fixed Footer with Action Buttons */}
+                <div className="-mx-4 -mb-4 flex-shrink-0 border-t border-gray-200 bg-white px-4 py-4 sm:-mx-6 sm:-mb-6 sm:px-6 dark:border-gray-700 dark:bg-gray-800">
+                  <div className="mx-auto flex max-w-4xl flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleClose}
+                      disabled={isSubmitting || isUpdating}
+                      className="w-full sm:w-auto"
+                    >
+                      Отмена
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={isSubmitting || isUpdating || loadingProduct}
+                      className="w-full !bg-gradient-to-r !from-violet-600 !to-violet-700 !text-white sm:w-auto"
+                    >
+                      {isSubmitting || isUpdating
+                        ? 'Сохранение...'
+                        : 'Сохранить изменения'}
+                    </Button>
+                  </div>
+                </div>
+              </form>
             </div>
           </>
         )}

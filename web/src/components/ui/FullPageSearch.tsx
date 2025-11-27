@@ -65,7 +65,7 @@ async function fetchCatalogData(): Promise<MenuItem[]> {
     const mapNode = (n: any, isFirstLevel: boolean = false): MenuItem => ({
       id: n.id,
       name: n.name,
-      href: `/catalog/${n.path.replace(/^obuv\//, '')}`,
+      href: `/catalog/${n.path}`, // Use full database path - single source of truth
       children: (n.children || []).map((child: any) => mapNode(child, false)),
       icon: isFirstLevel ? getCategoryIcon(n.name) : undefined,
     });

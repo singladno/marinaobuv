@@ -11,6 +11,7 @@ type CategoryTreeProps = {
   onSelect: (id: string) => void;
   searchTerm: string;
   level?: number;
+  allowNonLeafSelection?: boolean;
 };
 
 export function CategoryTree({
@@ -19,6 +20,7 @@ export function CategoryTree({
   onSelect,
   searchTerm,
   level = 0,
+  allowNonLeafSelection = false,
 }: CategoryTreeProps) {
   return (
     <div className="space-y-1">
@@ -30,6 +32,7 @@ export function CategoryTree({
           onSelect={onSelect}
           searchTerm={searchTerm}
           level={level}
+          allowNonLeafSelection={allowNonLeafSelection}
         />
       ))}
     </div>

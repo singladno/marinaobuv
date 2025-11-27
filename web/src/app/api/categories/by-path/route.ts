@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find category by exact path match (no hardcoded prefixes - works with any root category)
+    // Find category by exact path match (database is the single source of truth)
     const category = await prisma.category.findFirst({
       where: { path: path, isActive: true },
       select: {

@@ -3,11 +3,10 @@
 import React, {
   createContext,
   useContext,
-  useState,
-  useEffect,
+  useMemo,
   useCallback,
 } from 'react';
-import { deduplicateRequest } from '@/lib/request-deduplication';
+import { useCategories } from '@/contexts/CategoriesContext';
 
 interface CategoryLookup {
   [id: string]: string;
@@ -23,92 +22,61 @@ const CategoryLookupContext = createContext<
   CategoryLookupContextValue | undefined
 >(undefined);
 
-// Global cache for all categories
-let globalCategoryLookup: CategoryLookup = {};
-let isLoaded = false;
-let loadingPromise: Promise<void> | null = null;
+/**
+ * Builds a lookup table from category tree
+ */
+function buildLookup(categories: any[]): CategoryLookup {
+  const lookup: CategoryLookup = {};
+
+  const processCategory = (category: any) => {
+    lookup[category.id] = category.name;
+    if (category.children) {
+      Object.assign(lookup, buildLookup(category.children));
+    }
+  };
+
+  categories.forEach(processCategory);
+  return lookup;
+}
 
 export function CategoryLookupProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [lookup, setLookup] = useState<CategoryLookup>(globalCategoryLookup);
-  const [isLoading, setIsLoading] = useState(!isLoaded);
+  // Use CategoriesContext instead of fetching separately
+  const { categories, loading, reload } = useCategories();
+
+  // Build lookup table from categories whenever they change
+  const lookup = useMemo(() => {
+    if (categories.length === 0) {
+      return {};
+    }
+    return buildLookup(categories);
+  }, [categories]);
+
+  const getCategoryName = useCallback(
+    (categoryId: string | null | undefined): string | null => {
+      if (!categoryId) return null;
+      return (
+        lookup[categoryId] || `Category ${categoryId.substring(0, 8)}...`
+      );
+    },
+    [lookup]
+  );
 
   const refreshCategories = useCallback(async (): Promise<void> => {
-    await deduplicateRequest('fetch-categories', async () => {
-      try {
-        const response = await fetch('/api/categories/all');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.ok && data.items) {
-            // Build lookup table from the tree
-            const buildLookup = (categories: any[]): CategoryLookup => {
-              const lookup: CategoryLookup = {};
+    await reload();
+  }, [reload]);
 
-              const processCategory = (category: any) => {
-                lookup[category.id] = category.name;
-                if (category.children) {
-                  Object.assign(lookup, buildLookup(category.children));
-                }
-              };
-
-              categories.forEach(processCategory);
-              return lookup;
-            };
-
-            const newLookup = buildLookup(data.items);
-            globalCategoryLookup = newLookup;
-            isLoaded = true;
-            setLookup(globalCategoryLookup);
-          }
-        }
-      } catch (error) {
-        console.error('Error refreshing categories:', error);
-        throw error;
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      setLookup(globalCategoryLookup);
-      setIsLoading(false);
-      return;
-    }
-
-    if (loadingPromise) {
-      loadingPromise.then(() => {
-        setLookup(globalCategoryLookup);
-        setIsLoading(false);
-      });
-      return;
-    }
-
-    // Fetch all categories once using deduplication
-    loadingPromise = refreshCategories();
-    loadingPromise?.then(() => {
-      setLookup(globalCategoryLookup);
-      setIsLoading(false);
-    });
-  }, [refreshCategories]);
-
-  const getCategoryName = (
-    categoryId: string | null | undefined
-  ): string | null => {
-    if (!categoryId) return null;
-    return (
-      globalCategoryLookup[categoryId] ||
-      `Category ${categoryId.substring(0, 8)}...`
-    );
-  };
-
-  const value = {
-    getCategoryName,
-    isLoading,
-    refreshCategories,
-  };
+  const value = useMemo(
+    () => ({
+      getCategoryName,
+      isLoading: loading,
+      refreshCategories,
+    }),
+    [getCategoryName, loading, refreshCategories]
+  );
 
   return (
     <CategoryLookupContext.Provider value={value}>

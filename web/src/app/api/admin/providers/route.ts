@@ -26,3 +26,66 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export async function POST(req: NextRequest) {
+  try {
+    await requireRole(req, ['ADMIN']);
+
+    const body = await req.json();
+    const { name, phone, place } = body as {
+      name?: string;
+      phone?: string;
+      place?: string;
+    };
+
+    if (!name || !name.trim()) {
+      return NextResponse.json(
+        { error: 'Имя поставщика обязательно' },
+        { status: 400 }
+      );
+    }
+
+    // Check if provider with this name already exists
+    const existingProvider = await prisma.provider.findUnique({
+      where: { name: name.trim() },
+    });
+
+    if (existingProvider) {
+      return NextResponse.json(
+        { error: 'Поставщик с таким именем уже существует' },
+        { status: 409 }
+      );
+    }
+
+    const provider = await prisma.provider.create({
+      data: {
+        name: name.trim(),
+        phone: phone?.trim() || null,
+        place: place?.trim() || null,
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        place: true,
+      },
+    });
+
+    return NextResponse.json(provider, { status: 201 });
+  } catch (error) {
+    console.error('Error creating provider:', error);
+
+    // Handle Prisma unique constraint errors
+    if ((error as any).code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Поставщик с таким именем уже существует' },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Не удалось создать поставщика' },
+      { status: 500 }
+    );
+  }
+}

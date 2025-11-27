@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, MessageSquare, Tag, RefreshCw } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Tag, RefreshCw, User, DollarSign, UserCheck, Truck, MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -101,6 +101,7 @@ interface OrderDetails {
   status: string;
   phone: string;
   fullName: string | null;
+  address: string | null;
   transportId: string | null;
   transportName: string | null;
   transportOptions?: Array<{
@@ -484,88 +485,145 @@ export default function OrderDetailsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col space-y-4 px-2 py-4 sm:space-y-6 sm:px-6 sm:py-6">
+    <div className="flex h-full flex-col space-y-6 px-4 py-6 sm:px-6 sm:py-8">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3 sm:space-x-4">
-          <Button onClick={() => router.back()} variant="outline" size="sm" className="shrink-0">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-4">
+          <Button
+            onClick={() => router.back()}
+            variant="outline"
+            size="sm"
+            className="shrink-0 mt-1"
+          >
             <ArrowLeft className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Назад</span>
           </Button>
-          <div className="flex items-center gap-3 min-w-0 flex-1 sm:space-x-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 sm:text-2xl truncate">
-                  Заказ {formatOrderNumber(order.orderNumber)}
-                </h1>
-                <StatusBadge status={order.status} />
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm mt-1">
-                {formatDate(order.createdAt)}
-              </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3 flex-wrap mb-2">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">
+                Заказ {formatOrderNumber(order.orderNumber)}
+              </h1>
+              <StatusBadge status={order.status} />
             </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {formatDate(order.createdAt)}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Order Info */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 sm:gap-6">
-        <Card>
-          <CardHeader>
-            <h3 className="text-sm font-medium text-gray-500">Клиент</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2">
-              <Tag className="h-4 w-4 text-gray-400" />
-              <span className="font-medium">
-                {order.user?.label || 'Без метки'}
-              </span>
+      {/* Order Info Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Клиент */}
+        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Клиент</h3>
             </div>
-            <p className="text-sm text-gray-600">{order.phone}</p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {order.user?.label && (
+              <div className="flex items-center gap-2">
+                <Tag className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {order.user.label}
+                </span>
+              </div>
+            )}
+            {order.fullName && (
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {order.fullName}
+              </p>
+            )}
+            <p className="text-sm text-gray-600 dark:text-gray-400">{order.phone}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <h3 className="text-sm font-medium text-gray-500">Сумма</h3>
+        {/* Сумма */}
+        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+                <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Сумма</h3>
+            </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatPrice(order.total)}</p>
-            <p className="text-sm text-gray-600">
-              Оплата: {formatPrice(order.payment)}
+          <CardContent className="space-y-1">
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {formatPrice(order.total)}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Оплата: <span className="font-medium">{formatPrice(order.payment)}</span>
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <h3 className="text-sm font-medium text-gray-500">Грузчик</h3>
+        {/* Грузчик */}
+        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30">
+                <UserCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Грузчик</h3>
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="font-medium">
-              {order.gruzchik?.name || 'Не назначен'}
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {order.gruzchik?.name || (
+                <span className="text-gray-400 dark:text-gray-500">Не назначен</span>
+              )}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <h3 className="text-sm font-medium text-gray-500">Транспортная компания</h3>
+        {/* Транспортная компания */}
+        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+                <Truck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Доставка</h3>
+            </div>
           </CardHeader>
-          <CardContent>
-            <p className="font-medium">
+          <CardContent className="space-y-3">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {order.transportOptions && order.transportOptions.length > 0
                 ? order.transportOptions.map(opt => opt.transportName).join(', ')
-                : order.transportName || 'Не выбрана'}
+                : order.transportName || (
+                    <span className="text-gray-400 dark:text-gray-500">Не выбрана</span>
+                  )}
             </p>
+            {order.address && (
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Адрес доставки
+                    </p>
+                    <p className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
+                      {order.address}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Order Items */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold sm:text-lg">Товары в заказе</h2>
+      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+        <CardHeader className="border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Товары в заказе
+          </h2>
         </CardHeader>
         <CardContent className="p-0">
           {/* Mobile Card View */}

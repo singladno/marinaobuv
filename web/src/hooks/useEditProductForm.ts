@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import type { CreateProductData } from '@/components/admin/CreateProductModal';
 import type { ImageFile } from '@/components/admin/CreateProductModal';
+import { deduplicateRequest } from '@/lib/request-deduplication';
 
 const initialFormData: Partial<CreateProductData> = {
   name: '',
@@ -34,28 +35,51 @@ interface ProductData {
   }>;
 }
 
-export function useEditProductForm(productId: string | null) {
+export function useEditProductForm(
+  productId: string | null,
+  enabled: boolean = true
+) {
   const [formData, setFormData] =
     useState<Partial<CreateProductData>>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [images, setImages] = useState<ImageFile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sourceScreenshotUrl, setSourceScreenshotUrl] = useState<string | null>(
+    null
+  );
 
-  // Load product data when productId changes
+  // Define reset function before useEffect
+  const reset = useCallback(() => {
+    setFormData(initialFormData);
+    setErrors({});
+    setImages([]);
+    setSourceScreenshotUrl(null);
+  }, []);
+
+  // Load product data when productId changes and enabled is true
   useEffect(() => {
-    if (!productId) {
-      reset();
+    if (!productId || !enabled) {
+      if (!productId) {
+        reset();
+      }
       return;
     }
 
     const loadProduct = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/admin/products/${productId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch product');
-        }
-        const data = await response.json();
+        // Use request deduplication to prevent duplicate requests
+        // (e.g., from React Strict Mode double renders)
+        const data = await deduplicateRequest(
+          `fetch-product-${productId}`,
+          async () => {
+            const response = await fetch(`/api/admin/products/${productId}`);
+            if (!response.ok) {
+              throw new Error('Failed to fetch product');
+            }
+            return await response.json();
+          }
+        );
         const product: ProductData = data.product;
 
         // Extract categoryId - Prisma should return it as a direct field when using include
@@ -92,6 +116,9 @@ export function useEditProductForm(productId: string | null) {
           providerId: (product as any).providerId || null,
         });
 
+        // Store source screenshot URL
+        setSourceScreenshotUrl((product as any).sourceScreenshotUrl || null);
+
         // Convert existing images to ImageFile format
         if (product.images && product.images.length > 0) {
           const imageFiles: ImageFile[] = product.images.map((img: any) => ({
@@ -117,7 +144,7 @@ export function useEditProductForm(productId: string | null) {
     };
 
     loadProduct();
-  }, [productId]);
+  }, [productId, enabled, reset]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -176,12 +203,6 @@ export function useEditProductForm(productId: string | null) {
     };
   };
 
-  const reset = () => {
-    setFormData(initialFormData);
-    setErrors({});
-    setImages([]);
-  };
-
   const clearError = (field: string) => {
     if (errors[field]) {
       setErrors({ ...errors, [field]: '' });
@@ -200,5 +221,6 @@ export function useEditProductForm(productId: string | null) {
     images,
     setImages,
     loading,
+    sourceScreenshotUrl,
   };
 }

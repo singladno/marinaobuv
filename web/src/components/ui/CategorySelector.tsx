@@ -27,6 +27,7 @@ type CategorySelectorProps = {
   categories: CategoryNode[];
   placeholder?: string;
   disabled?: boolean;
+  allowNonLeafSelection?: boolean;
 };
 
 export function CategorySelector({
@@ -35,6 +36,7 @@ export function CategorySelector({
   categories,
   placeholder = 'Выберите категорию',
   disabled = false,
+  allowNonLeafSelection = false,
 }: CategorySelectorProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -86,24 +88,27 @@ export function CategorySelector({
         align="start"
         sideOffset={4}
       >
-        <div className="flex max-h-[400px] flex-col overflow-hidden">
-          <CategorySelectorSearch
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-          />
+        <div className="flex max-h-[400px] flex-col">
+          <div className="flex-shrink-0">
+            <CategorySelectorSearch
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+            />
 
-          {selectedCategory && <CategorySelectorClear onClear={handleClear} />}
+            {selectedCategory && <CategorySelectorClear onClear={handleClear} />}
+          </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
             {filteredCategories.length === 0 ? (
               <CategorySelectorEmpty searchTerm={searchTerm} />
             ) : (
-              <div className="animate-in fade-in-0 p-2 duration-200">
+              <div className="animate-in fade-in-0 p-2 pb-4 duration-200">
                 <CategoryTree
                   categories={filteredCategories}
                   selectedId={value}
                   onSelect={handleSelect}
                   searchTerm={searchTerm}
+                  allowNonLeafSelection={allowNonLeafSelection}
                 />
               </div>
             )}

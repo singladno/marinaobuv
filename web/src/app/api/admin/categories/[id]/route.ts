@@ -222,3 +222,86 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAuth(request, 'ADMIN');
+  if (auth.error) return auth.error;
+
+  try {
+    const { id: categoryId } = await params;
+
+    // Check if category exists
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      include: {
+        children: {
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!category) {
+      return NextResponse.json(
+        { ok: false, error: 'Категория не найдена' },
+        { status: 404 }
+      );
+    }
+
+    // Check if category has children
+    if (category.children.length > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'Нельзя удалить категорию с подкатегориями. Сначала удалите все подкатегории.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if category has active products
+    const activeProductCount = await prisma.product.count({
+      where: {
+        categoryId: categoryId,
+        isActive: true,
+      },
+    });
+
+    if (activeProductCount > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Нельзя удалить категорию с активными товарами. В категории ${activeProductCount} активных товаров.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Delete the category
+    await prisma.category.delete({
+      where: { id: categoryId },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    console.error('[admin/categories][DELETE] Failed:', error);
+
+    // Handle foreign key constraint errors
+    if (error?.code === 'P2003') {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'Нельзя удалить категорию, так как она используется в системе',
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { ok: false, error: 'Не удалось удалить категорию' },
+      { status: 500 }
+    );
+  }
+}

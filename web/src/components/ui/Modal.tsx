@@ -23,6 +23,8 @@ export function Modal({
   headerContent,
 }: ModalProps) {
   const [mounted, setMounted] = React.useState(false);
+  const modalRef = React.useRef<HTMLDivElement>(null);
+  const modalIdRef = React.useRef<string>(`modal-${Math.random().toString(36).substr(2, 9)}`);
 
   // Ensure component is mounted on client side
   React.useEffect(() => {
@@ -32,19 +34,60 @@ export function Modal({
   React.useEffect(() => {
     if (!isOpen || !mounted) return;
 
+    // Track if body scroll was locked by this modal
+    const wasBodyScrollLocked = document.body.style.overflow === 'hidden';
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        // Find all modal containers with data-modal-id attribute
+        const allModalContainers = Array.from(
+          document.querySelectorAll('[data-modal-id]')
+        ) as HTMLElement[];
+
+        if (allModalContainers.length === 0) {
+          e.stopPropagation();
+          e.preventDefault();
+          onClose();
+          return;
+        }
+
+        // Find the container with the highest z-index by comparing computed styles
+        let topContainer: HTMLElement | null = null;
+        let highestZ = -1;
+
+        allModalContainers.forEach(container => {
+          const computedStyle = window.getComputedStyle(container);
+          const z = parseInt(computedStyle.zIndex) || 0;
+          if (z > highestZ) {
+            highestZ = z;
+            topContainer = container;
+          }
+        });
+
+        // Only close if this modal's container is the topmost one
+        if (modalRef.current && modalRef.current === topContainer) {
+          e.stopPropagation();
+          e.preventDefault();
+          onClose();
+        }
       }
     };
 
     // Prevent body scroll when modal is open
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', handleKeyDown);
+    if (!wasBodyScrollLocked) {
+      document.body.style.overflow = 'hidden';
+    }
+    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase
 
     return () => {
-      document.body.style.overflow = 'unset';
-      document.removeEventListener('keydown', handleKeyDown);
+      // Only restore scroll if no other modals are open
+      const otherModals = Array.from(document.querySelectorAll('[data-modal-id]')).filter(
+        el => el !== modalRef.current
+      );
+      if (otherModals.length === 0 && !wasBodyScrollLocked) {
+        document.body.style.overflow = 'unset';
+      }
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [isOpen, onClose, mounted]);
 
@@ -60,13 +103,103 @@ export function Modal({
 
   const isFullscreen = size === 'fullscreen';
 
+  // Convert Tailwind z-index class to numeric value for comparison
+  const getZIndexValue = (zIndexClass: string): number => {
+    if (zIndexClass.includes('[')) {
+      // Handle arbitrary values like z-[60]
+      const match = zIndexClass.match(/\[(\d+)\]/);
+      return match ? parseInt(match[1]) : 50;
+    }
+    // Handle standard Tailwind classes
+    const zIndexMap: Record<string, number> = {
+      'z-0': 0,
+      'z-10': 10,
+      'z-20': 20,
+      'z-30': 30,
+      'z-40': 40,
+      'z-50': 50,
+    };
+    return zIndexMap[zIndexClass] || 50;
+  };
+
+  const numericZIndex = getZIndexValue(zIndex);
+
   const modalContent = (
-    <div className={`fixed inset-0 ${zIndex} ${isFullscreen ? '' : 'grid place-items-center p-4'}`}>
+    <div
+      ref={modalRef}
+      data-modal-id={modalIdRef.current}
+      className={`fixed inset-0 ${zIndex} ${isFullscreen ? '' : 'grid place-items-center p-4'}`}
+      style={{ zIndex: numericZIndex }}
+      onClick={e => {
+        // Only handle backdrop clicks, not content clicks
+        if (e.target === e.currentTarget) {
+          e.stopPropagation();
+          e.preventDefault();
+          // Check if this is the topmost modal before closing
+          const allModals = Array.from(document.querySelectorAll('[data-modal-id]')) as HTMLElement[];
+          if (allModals.length > 0) {
+            let topModal: HTMLElement | null = null;
+            let highestZ = -1;
+            allModals.forEach(modal => {
+              const z = parseInt(window.getComputedStyle(modal).zIndex) || 0;
+              if (z > highestZ) {
+                highestZ = z;
+                topModal = modal;
+              }
+            });
+            if (e.currentTarget === topModal) {
+              setTimeout(() => {
+                onClose();
+              }, 0);
+            }
+          } else {
+            setTimeout(() => {
+              onClose();
+            }, 0);
+          }
+        }
+      }}
+      onMouseDown={e => {
+        // Stop propagation to prevent parent modals from receiving the event
+        if (e.target === e.currentTarget) {
+          e.stopPropagation();
+        }
+      }}
+    >
       {/* Backdrop */}
       {!isFullscreen && (
         <div
           className="absolute inset-0 cursor-pointer bg-black/50 backdrop-blur-sm"
-          onClick={onClose}
+          onClick={e => {
+            e.stopPropagation();
+            e.preventDefault();
+            // Check if this is the topmost modal before closing
+            const allModals = Array.from(document.querySelectorAll('[data-modal-id]')) as HTMLElement[];
+            if (allModals.length > 0) {
+              let topModal: HTMLElement | null = null;
+              let highestZ = -1;
+              allModals.forEach(modal => {
+                const z = parseInt(window.getComputedStyle(modal).zIndex) || 0;
+                if (z > highestZ) {
+                  highestZ = z;
+                  topModal = modal;
+                }
+              });
+              if (modalRef.current === topModal) {
+                setTimeout(() => {
+                  onClose();
+                }, 0);
+              }
+            } else {
+              setTimeout(() => {
+                onClose();
+              }, 0);
+            }
+          }}
+          onMouseDown={e => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           aria-hidden="true"
         />
       )}
@@ -78,6 +211,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         onClick={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
       >
         <div className={`${isFullscreen ? 'h-full' : 'rounded-card-large max-h-[80vh]'} bg-card shadow-modal flex flex-col overflow-hidden`}>
           {/* Header */}
@@ -93,7 +227,14 @@ export function Modal({
                 {headerContent}
               </div>
               <button
-                onClick={onClose}
+                onClick={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  // Use setTimeout to ensure this doesn't interfere with parent modals
+                  setTimeout(() => {
+                    onClose();
+                  }, 0);
+                }}
                 className="rounded-card cursor-pointer p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                 aria-label="Закрыть"
               >
