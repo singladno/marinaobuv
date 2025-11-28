@@ -7,7 +7,9 @@ export type GruzchikOrderItem = {
   priceBox: number;
   qty: number;
   itemCode: string | null;
+  color: string | null;
   isAvailable: boolean | null;
+  isPurchased: boolean | null;
   product: {
     id: string;
     name: string;
@@ -24,6 +26,7 @@ export type GruzchikOrderItem = {
       id: string;
       url: string;
       alt: string | null;
+      color: string | null;
       isPrimary: boolean;
       sort: number;
     }[];
@@ -82,6 +85,7 @@ export type GruzchikOrderItemRow = {
   itemQty: number;
   itemPrice: number;
   itemCode: string | null;
+  itemColor: string | null;
   itemImage: string | null;
   itemImages?: string[];
 
@@ -100,4 +104,6 @@ export type GruzchikOrderItemRow = {
 
   // Availability info
   isAvailable?: boolean | null;
+  // Purchase info
+  isPurchased?: boolean | null;
 };

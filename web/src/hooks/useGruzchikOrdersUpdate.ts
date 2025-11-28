@@ -157,11 +157,87 @@ export function useGruzchikOrdersUpdate(
     [orders, setOrders]
   );
 
+  const [updatingPurchases, setUpdatingPurchases] = useState<
+    Map<string, boolean | null | 'unsetting-true' | 'unsetting-false'>
+  >(new Map());
+
+  const updateItemPurchaseOptimistically = useCallback(
+    async (
+      itemId: string,
+      isPurchased: boolean | null,
+      clickedButton?: boolean
+    ) => {
+      // Mark item as updating with the specific value
+      let updateValue: boolean | null | 'unsetting-true' | 'unsetting-false';
+      if (isPurchased === null) {
+        updateValue =
+          clickedButton === true ? 'unsetting-true' : 'unsetting-false';
+      } else {
+        updateValue = isPurchased;
+      }
+      setUpdatingPurchases(prev => new Map(prev).set(itemId, updateValue));
+
+      // Store original state for rollback
+      const originalOrders = [...orders];
+
+      // Apply optimistic update immediately
+      setOrders(
+        orders.map(order => ({
+          ...order,
+          items: order.items.map(item =>
+            item.id === itemId ? { ...item, isPurchased } : item
+          ),
+        }))
+      );
+
+      try {
+        const response = await fetch(
+          `/api/gruzchik/order-items/${itemId}/purchase`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ isPurchased }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update purchase status');
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          return { success: true };
+        } else {
+          throw new Error(result.error || 'Failed to update purchase status');
+        }
+      } catch (error) {
+        // Rollback on error
+        setOrders(originalOrders);
+        console.error('Failed to update item purchase status:', error);
+        throw error;
+      } finally {
+        // Remove from updating map
+        setUpdatingPurchases(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(itemId);
+          return newMap;
+        });
+      }
+    },
+    [orders, setOrders]
+  );
+
   return {
     updatingOrders,
     updateOrderOptimistically,
     updateItemAvailabilityOptimistically,
+    updateItemPurchaseOptimistically,
     updatingItems,
+    updatingPurchases,
     isUpdatingItem: (itemId: string) => updatingItems.has(itemId),
     isUpdatingItemToValue: (itemId: string, value: boolean | null) =>
       updatingItems.get(itemId) === value,
@@ -173,5 +249,16 @@ export function useGruzchikOrdersUpdate(
       updatingItems.get(itemId) === 'unsetting-true',
     isUnsettingItemFromFalse: (itemId: string) =>
       updatingItems.get(itemId) === 'unsetting-false',
+    isUpdatingPurchase: (itemId: string) => updatingPurchases.has(itemId),
+    isUpdatingPurchaseToValue: (itemId: string, value: boolean | null) =>
+      updatingPurchases.get(itemId) === value,
+    isUnsettingPurchase: (itemId: string) => {
+      const value = updatingPurchases.get(itemId);
+      return value === 'unsetting-true' || value === 'unsetting-false';
+    },
+    isUnsettingPurchaseFromTrue: (itemId: string) =>
+      updatingPurchases.get(itemId) === 'unsetting-true',
+    isUnsettingPurchaseFromFalse: (itemId: string) =>
+      updatingPurchases.get(itemId) === 'unsetting-false',
   };
 }

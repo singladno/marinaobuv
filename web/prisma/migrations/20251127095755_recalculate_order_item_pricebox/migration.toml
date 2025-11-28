@@ -2,3 +2,5 @@
 # This migration recalculates the priceBox for all order items based on product sizes
 # It correctly sums all pairs from sizes (handling cases where one size has multiple pairs)
 # Then recalculates order totals based on the corrected priceBox values
+
+

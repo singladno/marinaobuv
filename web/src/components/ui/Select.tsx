@@ -194,7 +194,8 @@ export const SelectContent = React.forwardRef<
   HTMLDivElement,
   SelectContentProps
 >(({ children, className, ...props }, ref) => {
-  const { isOpen, setIsOpen, triggerRef, preferredPlacement } = React.useContext(SelectContext);
+  const { isOpen, setIsOpen, triggerRef, preferredPlacement } =
+    React.useContext(SelectContext);
   const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 });
   const [placement, setPlacement] = React.useState<'bottom' | 'top'>('bottom');
   const [mounted, setMounted] = React.useState(false);
@@ -208,18 +209,32 @@ export const SelectContent = React.forwardRef<
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (
-        !target.closest('[data-select-content]') &&
-        !triggerRef?.current?.contains(target)
-      ) {
+
+      // Check if click is on a SelectItem (should not close)
+      const isSelectItem = target.closest('[data-select-item-value]');
+      if (isSelectItem) {
+        return; // Don't close if clicking on an item
+      }
+
+      // Check if click is inside SelectContent or SelectTrigger
+      const isInsideContent = target.closest('[data-select-content]');
+      const isInsideTrigger = triggerRef?.current?.contains(target);
+
+      if (!isInsideContent && !isInsideTrigger) {
         setIsOpen(false);
       }
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () =>
-        document.removeEventListener('mousedown', handleClickOutside);
+      // Use bubble phase (not capture) so SelectItem clicks process first
+      // Add a small delay to ensure SelectItem onClick fires before this
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 10);
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('click', handleClickOutside);
+      };
     }
   }, [isOpen, setIsOpen, triggerRef]);
 
@@ -229,7 +244,12 @@ export const SelectContent = React.forwardRef<
       const rect = trigger.getBoundingClientRect();
       const viewportSpaceBelow = window.innerHeight - rect.bottom;
       const autoFlip = viewportSpaceBelow < 200;
-      const shouldFlipUp = preferredPlacement === 'top' ? true : preferredPlacement === 'bottom' ? false : autoFlip;
+      const shouldFlipUp =
+        preferredPlacement === 'top'
+          ? true
+          : preferredPlacement === 'bottom'
+            ? false
+            : autoFlip;
       setPlacement(shouldFlipUp ? 'top' : 'bottom');
       // For fixed-positioned portal content, rect values are viewport-relative;
       // do NOT add window scroll offsets, or the menu will drift off-screen.
@@ -245,7 +265,7 @@ export const SelectContent = React.forwardRef<
 
   const content = (
     <div
-      ref={(node) => {
+      ref={node => {
         if (typeof ref === 'function') ref(node as HTMLDivElement);
         else if (ref && 'current' in (ref as any)) (ref as any).current = node;
         contentRef.current = node as HTMLDivElement | null;
@@ -260,13 +280,16 @@ export const SelectContent = React.forwardRef<
         top: position.top,
         left: position.left,
         width: position.width,
-        transform: placement === 'top' ? 'translateY(calc(-100% - 6px))' : 'translateY(6px)',
+        transform:
+          placement === 'top'
+            ? 'translateY(calc(-100% - 6px))'
+            : 'translateY(6px)',
       }}
       {...props}
     >
       <div
         className={cn(
-          'p-1 max-h-[320px] overflow-auto',
+          'max-h-[320px] overflow-auto p-1',
           placement === 'top' && ''
         )}
       >
@@ -292,13 +315,58 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
 
     // Register this item when it mounts
     React.useEffect(() => {
-      registerItem?.(value, children as string);
+      // Extract text from children if it's a string, otherwise use value
+      const text = typeof children === 'string' ? children : value;
+      registerItem?.(value, text);
     }, [value, children, registerItem]);
 
-    const handleClick = () => {
-      onValueChange?.(value);
-      setSelectedText?.(children as string);
-      setIsOpen(false);
+    const handleClick = (e: React.MouseEvent) => {
+      console.log('[SelectItem] handleClick called', {
+        value,
+        valueType: typeof value,
+        hasOnValueChange: !!onValueChange,
+        hasSetIsOpen: !!setIsOpen,
+        eventTarget: e.target,
+        currentSelectedValue: selectedValue,
+      });
+
+      // Stop propagation to prevent click-outside handler from firing
+      e.stopPropagation();
+
+      // Call onValueChange with the item's value immediately
+      // Handle null/undefined values by converting to empty string or skipping
+      if (onValueChange) {
+        // Allow null/undefined values to be passed (for "all" or empty selections)
+        const stringValue = value != null ? String(value) : '';
+        console.log(
+          '[SelectItem] Calling onValueChange with:',
+          stringValue,
+          '(original value:',
+          value,
+          ')'
+        );
+        onValueChange(stringValue);
+      } else {
+        console.warn(
+          '[SelectItem] Cannot call onValueChange - onValueChange is missing'
+        );
+      }
+
+      // Extract text from children if it's a string, otherwise use value
+      const text =
+        typeof children === 'string'
+          ? children
+          : String(value != null ? value : '');
+      if (setSelectedText) {
+        console.log('[SelectItem] Setting selected text:', text);
+        setSelectedText(text);
+      }
+
+      // Close the dropdown immediately
+      if (setIsOpen) {
+        console.log('[SelectItem] Closing dropdown');
+        setIsOpen(false);
+      }
     };
 
     return (
@@ -312,6 +380,9 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
           className
         )}
         onClick={handleClick}
+        role="option"
+        aria-selected={isSelected}
+        data-select-item-value={value}
         {...props}
       >
         {children}

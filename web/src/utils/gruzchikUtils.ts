@@ -30,8 +30,32 @@ export function flattenOrdersToItems(
         itemQty: item.qty,
         itemPrice: item.priceBox,
         itemCode: item.itemCode,
-        itemImage: item.product.images?.[0]?.url || null,
-        itemImages: item.product.images?.map(img => img.url) || [],
+        itemColor: item.color || null,
+        // Filter images by ordered color
+        itemImage: (() => {
+          const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
+          const itemColor = normalize(item.color);
+          if (itemColor && item.product.images) {
+            const filtered = item.product.images.filter(img =>
+              normalize(img.color) === itemColor
+            );
+            return filtered[0]?.url || item.product.images[0]?.url || null;
+          }
+          return item.product.images?.[0]?.url || null;
+        })(),
+        itemImages: (() => {
+          const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
+          const itemColor = normalize(item.color);
+          if (itemColor && item.product.images) {
+            const filtered = item.product.images.filter(img =>
+              normalize(img.color) === itemColor
+            );
+            return filtered.length > 0
+              ? filtered.map(img => img.url)
+              : item.product.images.map(img => img.url);
+          }
+          return item.product.images?.map(img => img.url) || [];
+        })(),
 
         // Product details
         pricePair: item.product.pricePair,
@@ -39,6 +63,8 @@ export function flattenOrdersToItems(
 
         // Availability info
         isAvailable: item.isAvailable,
+        // Purchase info
+        isPurchased: item.isPurchased,
 
         // WhatsApp message info
         messageId: item.messageId,

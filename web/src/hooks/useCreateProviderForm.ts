@@ -28,7 +28,11 @@ export function useCreateProviderForm() {
   };
 
   const submit = async (
-    onCreate: (provider: { name: string; phone?: string; place?: string }) => Promise<void>
+    onCreate: (provider: {
+      name: string;
+      phone?: string;
+      place?: string;
+    }) => Promise<void>
   ) => {
     if (!formData.name.trim() || isSubmitting) return;
 

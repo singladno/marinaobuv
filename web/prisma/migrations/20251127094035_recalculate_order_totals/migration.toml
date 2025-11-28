@@ -2,3 +2,5 @@
 # This migration recalculates the total and subtotal for all existing orders
 # by correctly summing priceBox * qty for all non-refused items
 # Items with WRONG_SIZE or WRONG_ITEM feedback are excluded from the calculation
+
+

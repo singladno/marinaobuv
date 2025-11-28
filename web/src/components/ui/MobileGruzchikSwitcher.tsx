@@ -3,12 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import { useSwitcher } from '@/contexts/SwitcherContext';
 
 export function MobileGruzchikSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useUser();
   const { setIsSwitcherOpen } = useSwitcher();
+
+  // Only show for gruzchik users
+  if (user?.role !== 'GRUZCHIK') return null;
 
   const toggleMenu = () => {
     const newState = !isOpen;

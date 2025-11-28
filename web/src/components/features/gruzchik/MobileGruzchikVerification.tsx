@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 interface OrderVerificationData {
   orderId: string;
   orderNumber: string;
+  orderStatus: string;
   customerName: string | null;
   customerPhone: string;
   items: {
@@ -21,9 +22,11 @@ interface OrderVerificationData {
     itemName: string;
     itemImage: string | null;
     isAvailable: boolean | null;
+    isPurchased: boolean | null;
   }[];
   canVerify: boolean;
   missingAvailability: string[];
+  missingPurchase: string[];
 }
 
 export function MobileGruzchikVerification() {
@@ -32,11 +35,24 @@ export function MobileGruzchikVerification() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  const { orders, loading, error, reload } = useGruzchikOrders('Наличие');
+  // Fetch both availability and purchase orders
+  const { orders: availabilityOrders, loading: loadingAvailability, error: errorAvailability, reload: reloadAvailability } = useGruzchikOrders('Наличие');
+  const { orders: purchaseOrders, loading: loadingPurchase, error: errorPurchase, reload: reloadPurchase } = useGruzchikOrders('Купить');
+
+  const loading = loadingAvailability || loadingPurchase;
+  const error = errorAvailability || errorPurchase;
+  const reload = async () => {
+    await Promise.all([reloadAvailability(), reloadPurchase()]);
+  };
+
+  // Combine both order types
+  const allOrders = useMemo(() => {
+    return [...availabilityOrders, ...purchaseOrders];
+  }, [availabilityOrders, purchaseOrders]);
 
   // Filter and prepare orders for verification
   const verificationOrders = useMemo(() => {
-    let filtered = orders.filter(order => order.status === 'Наличие');
+    let filtered = allOrders.filter(order => order.status === 'Наличие' || order.status === 'Купить');
 
     // Apply search filter
     if (searchQuery) {
@@ -61,18 +77,32 @@ export function MobileGruzchikVerification() {
     // Transform orders for verification
     return filtered.map(order => {
       const missingAvailability: string[] = [];
+      const missingPurchase: string[] = [];
       let canVerify = true;
 
-      order.items.forEach(item => {
-        if (item.isAvailable === null || item.isAvailable === undefined) {
-          missingAvailability.push(item.name);
-          canVerify = false;
-        }
-      });
+      // Check based on order status
+      if (order.status === 'Наличие') {
+        // For availability orders, check isAvailable
+        order.items.forEach(item => {
+          if (item.isAvailable === null || item.isAvailable === undefined) {
+            missingAvailability.push(item.name);
+            canVerify = false;
+          }
+        });
+      } else if (order.status === 'Купить') {
+        // For purchase orders, check isPurchased
+        order.items.forEach(item => {
+          if (item.isPurchased === null || item.isPurchased === undefined) {
+            missingPurchase.push(item.name);
+            canVerify = false;
+          }
+        });
+      }
 
       return {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        orderStatus: order.status,
         customerName: order.fullName,
         customerPhone: order.phone,
         items: order.items.map(item => ({
@@ -83,12 +113,14 @@ export function MobileGruzchikVerification() {
             item.product.images[0]?.url ||
             null,
           isAvailable: item.isAvailable,
+          isPurchased: item.isPurchased,
         })),
         canVerify,
         missingAvailability,
+        missingPurchase,
       } as OrderVerificationData;
     });
-  }, [orders, searchQuery, filters.clientId]);
+  }, [allOrders, searchQuery, filters.clientId]);
 
   const selectedOrder = verificationOrders.find(
     order => order.orderId === selectedOrderId
@@ -96,8 +128,14 @@ export function MobileGruzchikVerification() {
 
   // Don't select any order by default - list should be hidden
 
-  const handleVerifyOrder = async () => {
-    if (!selectedOrder || !selectedOrder.canVerify) return;
+  const handleVerifyOrder = async (orderId?: string) => {
+    const targetOrderId = orderId || selectedOrder?.orderId;
+    if (!targetOrderId) return;
+
+    const orderToVerify = verificationOrders.find(
+      order => order.orderId === targetOrderId
+    );
+    if (!orderToVerify || !orderToVerify.canVerify) return;
 
     setIsVerifying(true);
     try {
@@ -107,7 +145,7 @@ export function MobileGruzchikVerification() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          orderId: selectedOrder.orderId,
+          orderId: targetOrderId,
         }),
       });
 
@@ -182,10 +220,21 @@ export function MobileGruzchikVerification() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-gray-900">
                       Заказ {order.orderNumber}
                     </h3>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs",
+                        order.orderStatus === 'Наличие'
+                          ? "border-blue-300 bg-blue-50 text-blue-700"
+                          : "border-purple-300 bg-purple-50 text-purple-700"
+                      )}
+                    >
+                      {order.orderStatus === 'Наличие' ? 'Наличие' : 'Закупка'}
+                    </Badge>
                     <Badge
                       variant={order.canVerify ? 'default' : 'destructive'}
                       className="text-xs"
@@ -230,22 +279,47 @@ export function MobileGruzchikVerification() {
                 </Button>
               </div>
 
-              {/* Missing availability warning */}
-              {!order.canVerify && order.missingAvailability.length > 0 && (
+              {/* Missing availability/purchase warning */}
+              {!order.canVerify && (
                 <div className="mt-3 rounded-md bg-red-50 p-3">
                   <div className="flex items-start">
                     <AlertCircle className="mr-2 mt-0.5 h-4 w-4 flex-shrink-0 text-red-400" />
                     <div className="text-sm">
-                      <p className="font-medium text-red-800">
-                        Не указана доступность для товаров:
-                      </p>
-                      <p className="text-red-700">
-                        {order.missingAvailability.join(', ')}
-                      </p>
+                      {order.orderStatus === 'Наличие' && order.missingAvailability.length > 0 && (
+                        <p className="font-medium text-red-800">
+                          Не указана доступность для {order.missingAvailability.length} товар{order.missingAvailability.length === 1 ? 'а' : order.missingAvailability.length < 5 ? 'ов' : 'ов'}
+                        </p>
+                      )}
+                      {order.orderStatus === 'Купить' && order.missingPurchase.length > 0 && (
+                        <p className="font-medium text-red-800">
+                          Не указан статус покупки для {order.missingPurchase.length} товар{order.missingPurchase.length === 1 ? 'а' : order.missingPurchase.length < 5 ? 'ов' : 'ов'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Verify Button - always shown in main card */}
+              <div className="mt-4 flex justify-end">
+                <Button
+                  onClick={() => handleVerifyOrder(order.orderId)}
+                  disabled={!order.canVerify || (isVerifying && selectedOrderId === order.orderId)}
+                  className="min-w-[120px]"
+                >
+                  {isVerifying && selectedOrderId === order.orderId ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Проверка...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Подтвердить
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           ))}
 
@@ -287,30 +361,57 @@ export function MobileGruzchikVerification() {
                       <p className="truncate font-medium text-gray-900">
                         {item.itemName}
                       </p>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={
-                            item.isAvailable === true
-                              ? 'default'
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {selectedOrder.orderStatus === 'Наличие' && (
+                          <Badge
+                            variant={
+                              item.isAvailable === true
+                                ? 'default'
+                                : item.isAvailable === false
+                                  ? 'destructive'
+                                  : 'secondary'
+                            }
+                            className={cn(
+                              'text-xs font-medium',
+                              item.isAvailable === true
+                                ? 'border-green-200 bg-green-100 text-green-800'
+                                : item.isAvailable === false
+                                  ? 'border-red-200 bg-red-100 text-red-800'
+                                  : 'border-gray-200 bg-gray-100 text-gray-800'
+                            )}
+                          >
+                            {item.isAvailable === true
+                              ? 'В наличии'
                               : item.isAvailable === false
-                                ? 'destructive'
-                                : 'secondary'
-                          }
-                          className={cn(
-                            'text-xs font-medium',
-                            item.isAvailable === true
-                              ? 'border-green-200 bg-green-100 text-green-800'
-                              : item.isAvailable === false
-                                ? 'border-red-200 bg-red-100 text-red-800'
-                                : 'border-gray-200 bg-gray-100 text-gray-800'
-                          )}
-                        >
-                          {item.isAvailable === true
-                            ? 'В наличии'
-                            : item.isAvailable === false
-                              ? 'Нет в наличии'
-                              : 'Не указано'}
-                        </Badge>
+                                ? 'Нет в наличии'
+                                : 'Не указано'}
+                          </Badge>
+                        )}
+                        {selectedOrder.orderStatus === 'Купить' && (
+                          <Badge
+                            variant={
+                              item.isPurchased === true
+                                ? 'default'
+                                : item.isPurchased === false
+                                  ? 'destructive'
+                                  : 'secondary'
+                            }
+                            className={cn(
+                              'text-xs font-medium',
+                              item.isPurchased === true
+                                ? 'border-green-200 bg-green-100 text-green-800'
+                                : item.isPurchased === false
+                                  ? 'border-red-200 bg-red-100 text-red-800'
+                                  : 'border-gray-200 bg-gray-100 text-gray-800'
+                            )}
+                          >
+                            {item.isPurchased === true
+                              ? 'Куплено'
+                              : item.isPurchased === false
+                                ? 'Не куплено'
+                                : 'Не указано'}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -320,7 +421,7 @@ export function MobileGruzchikVerification() {
               {/* Verify Button */}
               <div className="mt-6 flex justify-end">
                 <Button
-                  onClick={handleVerifyOrder}
+                  onClick={() => handleVerifyOrder(selectedOrder.orderId)}
                   disabled={!selectedOrder.canVerify || isVerifying}
                   className="min-w-[120px]"
                 >

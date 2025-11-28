@@ -333,7 +333,7 @@ export function OrderItems({
                 <div className="flex justify-between">
                   <span className="text-gray-500">Цена за пару:</span>
                   <span className="font-medium">
-                    {formatPrice(item.pricePair || item.priceBox)}
+                    {formatPrice(item.product.pricePair || item.priceBox)}
                   </span>
                 </div>
                 <div className="flex justify-between">

@@ -85,3 +85,5 @@ WHERE EXISTS (
 
 -- Drop the helper function as it's no longer needed
 DROP FUNCTION IF EXISTS calculate_total_pairs_from_sizes(JSONB);
+
+

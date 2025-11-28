@@ -21,7 +21,8 @@ let globalLoadingState = false;
 let globalLoadPromise: Promise<void> | null = null;
 
 export function useProviderModels(): UseProviderModelsReturn {
-  const [providers, setProviders] = useState<ProviderModel[]>(globalProvidersCache);
+  const [providers, setProviders] =
+    useState<ProviderModel[]>(globalProvidersCache);
   const [loading, setLoading] = useState(globalLoadingState);
 
   const loadProviders = useCallback(async () => {
@@ -90,7 +91,12 @@ export function useProviderModels(): UseProviderModelsReturn {
   // Sync state with global cache when it changes (for other component instances)
   // Only sync if cache has data and we don't have it yet
   useEffect(() => {
-    if (globalProvidersCache.length > 0 && providers.length === 0 && !loading && !globalLoadingState) {
+    if (
+      globalProvidersCache.length > 0 &&
+      providers.length === 0 &&
+      !loading &&
+      !globalLoadingState
+    ) {
       setProviders(globalProvidersCache);
       setLoading(false);
     }

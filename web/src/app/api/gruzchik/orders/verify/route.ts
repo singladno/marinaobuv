@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
       where: {
         id: orderId,
         gruzchikId: auth.user.id,
-        status: 'Наличие',
+        status: {
+          in: ['Наличие', 'Купить'],
+        },
       },
       include: {
         items: true,
@@ -37,26 +39,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if all items have availability set
-    const itemsWithoutAvailability = order.items.filter(
-      item => item.isAvailable === null || item.isAvailable === undefined
-    );
-
-    if (itemsWithoutAvailability.length > 0) {
-      return NextResponse.json(
-        {
-          error: 'Cannot verify order: some items do not have availability set',
-          missingItems: itemsWithoutAvailability.map(item => item.id),
-        },
-        { status: 400 }
+    // Check validation based on order status
+    if (order.status === 'Наличие') {
+      // Check if all items have availability set
+      const itemsWithoutAvailability = order.items.filter(
+        item => item.isAvailable === null || item.isAvailable === undefined
       );
+
+      if (itemsWithoutAvailability.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Cannot verify order: some items do not have availability set',
+            missingItems: itemsWithoutAvailability.map(item => item.id),
+          },
+          { status: 400 }
+        );
+      }
+    } else if (order.status === 'Купить') {
+      // Check if all items have purchase status set
+      const itemsWithoutPurchase = order.items.filter(
+        item => item.isPurchased === null || item.isPurchased === undefined
+      );
+
+      if (itemsWithoutPurchase.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Cannot verify order: some items do not have purchase status set',
+            missingItems: itemsWithoutPurchase.map(item => item.id),
+          },
+          { status: 400 }
+        );
+      }
     }
 
-    // Update order status to Проверено
+    // Determine new status based on current status
+    const newStatus = order.status === 'Купить' ? 'Куплен' : 'Проверено';
+
+    // Update order status
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: {
-        status: 'Проверено',
+        status: newStatus,
         updatedAt: new Date(),
       },
       include: {

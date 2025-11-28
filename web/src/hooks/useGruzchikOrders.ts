@@ -35,11 +35,18 @@ export function useGruzchikOrders(status?: string) {
     updateOrderOptimistically: update.updateOrderOptimistically,
     updateItemAvailabilityOptimistically:
       update.updateItemAvailabilityOptimistically,
+    updateItemPurchaseOptimistically:
+      update.updateItemPurchaseOptimistically,
     updatingOrders: update.updatingOrders,
     isUpdatingItem: update.isUpdatingItem,
     isUpdatingItemToValue: update.isUpdatingItemToValue,
     isUnsettingItem: update.isUnsettingItem,
     isUnsettingItemFromTrue: update.isUnsettingItemFromTrue,
     isUnsettingItemFromFalse: update.isUnsettingItemFromFalse,
+    isUpdatingPurchase: update.isUpdatingPurchase,
+    isUpdatingPurchaseToValue: update.isUpdatingPurchaseToValue,
+    isUnsettingPurchase: update.isUnsettingPurchase,
+    isUnsettingPurchaseFromTrue: update.isUnsettingPurchaseFromTrue,
+    isUnsettingPurchaseFromFalse: update.isUnsettingPurchaseFromFalse,
   };
 }

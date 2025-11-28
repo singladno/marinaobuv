@@ -8,11 +8,14 @@ import { Badge } from '@/components/ui/Badge';
 import { OrderItemCard, OrderItemData } from './OrderItemCard';
 import { useGruzchikOrders } from '@/hooks/useGruzchikOrders';
 import { useGruzchikView } from '@/contexts/GruzchikViewContext';
+import { useGruzchikFilter } from '@/contexts/GruzchikFilterContext';
+import { useProviderSorting } from '@/contexts/ProviderSortingContext';
 import { cn } from '@/lib/utils';
 
 export function MobileGruzchikPurchase() {
   const { viewMode, searchQuery } = useGruzchikView();
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const { filters } = useGruzchikFilter();
+  const { getSortedProviders, sortedProviderIds } = useProviderSorting();
 
   const {
     orders,
@@ -23,47 +26,121 @@ export function MobileGruzchikPurchase() {
     onPageChange,
     onPageSizeChange,
     reload,
-    updateItemAvailabilityOptimistically,
-    isUpdatingItem,
-    isUpdatingItemToValue,
-    isUnsettingItem,
-    isUnsettingItemFromTrue,
-    isUnsettingItemFromFalse,
+    updateItemPurchaseOptimistically,
+    isUpdatingPurchase,
+    isUpdatingPurchaseToValue,
+    isUnsettingPurchase,
+    isUnsettingPurchaseFromTrue,
+    isUnsettingPurchaseFromFalse,
   } = useGruzchikOrders('Купить');
 
   // Filter items for purchase - only show items from orders with 'Купить' status
   const purchaseItems = useMemo(() => {
-    return itemRows.filter(item => item.orderStatus === 'Купить');
-  }, [itemRows]);
+    let filtered = itemRows.filter(item => item.orderStatus === 'Купить');
+
+    // Apply purchase status filter (only unpurchased items)
+    if (filters.availabilityStatus === 'unset') {
+      filtered = filtered.filter(item => {
+        // Only show items that are not purchased (false or null)
+        return item.isPurchased !== true;
+      });
+    }
+
+    // Apply provider filter (multi-select in purchase mode)
+    if (filters.providerIds && filters.providerIds.length > 0) {
+      filtered = filtered.filter(item => {
+        return item.providerId && filters.providerIds.includes(item.providerId);
+      });
+    }
+
+    // Apply client filter
+    if (filters.clientId) {
+      filtered = filtered.filter(item => {
+        return item.customerPhone === filters.clientId;
+      });
+    }
+
+    return filtered;
+  }, [
+    itemRows,
+    filters.availabilityStatus,
+    filters.providerIds,
+    filters.clientId,
+  ]);
 
   // Group items by provider or order
   const groupedItems = useMemo(() => {
     if (viewMode === 'provider') {
-      const grouped = new Map<string, OrderItemData[]>();
+      const grouped = new Map<
+        string,
+        { providerId: string | null; items: OrderItemData[] }
+      >();
 
       purchaseItems.forEach(item => {
         const provider = item.provider || 'Неизвестный поставщик';
+        const providerId = item.providerId || null;
         if (!grouped.has(provider)) {
-          grouped.set(provider, []);
+          grouped.set(provider, { providerId, items: [] });
         }
-        grouped.get(provider)!.push(item);
+        grouped.get(provider)!.items.push(item);
       });
 
-      return Array.from(grouped.entries()).map(([provider, items]) => ({
-        key: provider,
-        title: provider,
-        items: items.filter(item => {
-          if (!searchQuery) return true;
-          const customerInfo = item.orderLabel
-            ? `${item.orderLabel} ${item.customerPhone}`
-            : item.customerPhone;
-          return (
-            item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.itemCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            customerInfo.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }),
-      }));
+      // Extract unique providers for sorting
+      const uniqueProviders = Array.from(grouped.entries())
+        .map(([name, data]) => ({
+          id: data.providerId || '',
+          name: name,
+        }))
+        .filter(p => p.id); // Filter out providers without IDs
+
+      // Get sorted providers
+      const sortedProviders = getSortedProviders(uniqueProviders);
+
+      // Create a map for quick lookup of sort order
+      const sortOrderMap = new Map<string, number>();
+      sortedProviders.forEach((provider, index) => {
+        sortOrderMap.set(provider.id, index);
+      });
+
+      // Convert grouped map to array and sort by provider order
+      const groupedArray = Array.from(grouped.entries()).map(
+        ([provider, data]) => ({
+          key: provider,
+          title: provider,
+          providerId: data.providerId,
+          items: data.items.filter(item => {
+            if (!searchQuery) return true;
+            const customerInfo = item.orderLabel
+              ? `${item.orderLabel} ${item.customerPhone}`
+              : item.customerPhone;
+            return (
+              item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              item.itemCode
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase()) ||
+              customerInfo.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+          }),
+        })
+      );
+
+      // Sort by provider order (custom sorted providers first, then unsorted ones)
+      groupedArray.sort((a, b) => {
+        const aOrder = a.providerId ? sortOrderMap.get(a.providerId) : Infinity;
+        const bOrder = b.providerId ? sortOrderMap.get(b.providerId) : Infinity;
+
+        // If both have sort order, use it
+        if (aOrder !== undefined && bOrder !== undefined) {
+          return aOrder - bOrder;
+        }
+        // If only one has sort order, it comes first
+        if (aOrder !== undefined) return -1;
+        if (bOrder !== undefined) return 1;
+        // If neither has sort order, maintain original order (by name)
+        return a.title.localeCompare(b.title);
+      });
+
+      return groupedArray;
     } else {
       const grouped = new Map<string, OrderItemData[]>();
 
@@ -94,7 +171,13 @@ export function MobileGruzchikPurchase() {
         }),
       }));
     }
-  }, [purchaseItems, viewMode, searchQuery]);
+  }, [
+    purchaseItems,
+    viewMode,
+    searchQuery,
+    getSortedProviders,
+    sortedProviderIds,
+  ]);
 
   const handleChatOpen = (itemId: string) => {
     console.log('Opening chat for item:', itemId);
@@ -104,19 +187,19 @@ export function MobileGruzchikPurchase() {
     console.log('Opening source for item:', itemId);
   };
 
-  const handleAvailabilityChange = async (
+  const handlePurchaseChange = async (
     itemId: string,
-    isAvailable: boolean | null,
+    isPurchased: boolean | null,
     clickedButton?: boolean
   ) => {
     try {
-      await updateItemAvailabilityOptimistically(
+      await updateItemPurchaseOptimistically(
         itemId,
-        isAvailable,
+        isPurchased,
         clickedButton
       );
     } catch (error) {
-      console.error('Failed to update availability:', error);
+      console.error('Failed to update purchase status:', error);
       // Optionally show error message to user
     }
   };
@@ -186,20 +269,28 @@ export function MobileGruzchikPurchase() {
               <div className="space-y-3">
                 {group.items.map(item => (
                   <OrderItemCard
-                    key={`${item.itemId}-${item.isAvailable}`}
+                    key={`${item.itemId}-${item.isPurchased}`}
                     item={item}
                     onChatOpen={handleChatOpen}
                     onSourceOpen={handleSourceOpen}
-                    onAvailabilityChange={handleAvailabilityChange}
-                    isUpdatingAvailability={isUpdatingItem(item.itemId)}
-                    isUpdatingToTrue={isUpdatingItemToValue(item.itemId, true)}
-                    isUpdatingToFalse={isUpdatingItemToValue(
+                    onPurchaseChange={handlePurchaseChange}
+                    isUpdatingPurchase={isUpdatingPurchase(item.itemId)}
+                    isUpdatingPurchaseToTrue={isUpdatingPurchaseToValue(
+                      item.itemId,
+                      true
+                    )}
+                    isUpdatingPurchaseToFalse={isUpdatingPurchaseToValue(
                       item.itemId,
                       false
                     )}
-                    isUnsetting={isUnsettingItem(item.itemId)}
-                    isUnsettingFromTrue={isUnsettingItemFromTrue(item.itemId)}
-                    isUnsettingFromFalse={isUnsettingItemFromFalse(item.itemId)}
+                    isUnsettingPurchase={isUnsettingPurchase(item.itemId)}
+                    isUnsettingPurchaseFromTrue={isUnsettingPurchaseFromTrue(
+                      item.itemId
+                    )}
+                    isUnsettingPurchaseFromFalse={isUnsettingPurchaseFromFalse(
+                      item.itemId
+                    )}
+                    usePurchaseControl={true}
                   />
                 ))}
               </div>

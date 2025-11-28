@@ -18,6 +18,7 @@ import { ImageCarousel } from './ImageCarousel';
 import { OrderItemChat } from './OrderItemChat';
 import { SourceMessagesModal } from './SourceMessagesModal';
 import { AvailabilityControl } from './AvailabilityControl';
+import { PurchaseControl } from './PurchaseControl';
 import { cn } from '@/lib/utils';
 
 export interface OrderItemData {
@@ -52,6 +53,7 @@ export interface OrderItemData {
   provider?: string;
   source?: string;
   isAvailable?: boolean | null;
+  isPurchased?: boolean | null;
 
   // WhatsApp message info
   messageId?: string;
@@ -68,12 +70,24 @@ interface OrderItemCardProps {
     isAvailable: boolean | null,
     clickedButton?: boolean
   ) => void;
+  onPurchaseChange?: (
+    itemId: string,
+    isPurchased: boolean | null,
+    clickedButton?: boolean
+  ) => void;
   isUpdatingAvailability?: boolean;
   isUpdatingToTrue?: boolean;
   isUpdatingToFalse?: boolean;
   isUnsetting?: boolean;
   isUnsettingFromTrue?: boolean;
   isUnsettingFromFalse?: boolean;
+  isUpdatingPurchase?: boolean;
+  isUpdatingPurchaseToTrue?: boolean;
+  isUpdatingPurchaseToFalse?: boolean;
+  isUnsettingPurchase?: boolean;
+  isUnsettingPurchaseFromTrue?: boolean;
+  isUnsettingPurchaseFromFalse?: boolean;
+  usePurchaseControl?: boolean; // If true, show PurchaseControl instead of AvailabilityControl
   className?: string;
 }
 
@@ -82,12 +96,20 @@ export function OrderItemCard({
   onChatOpen,
   onSourceOpen,
   onAvailabilityChange,
+  onPurchaseChange,
   isUpdatingAvailability = false,
   isUpdatingToTrue = false,
   isUpdatingToFalse = false,
   isUnsetting = false,
   isUnsettingFromTrue = false,
   isUnsettingFromFalse = false,
+  isUpdatingPurchase = false,
+  isUpdatingPurchaseToTrue = false,
+  isUpdatingPurchaseToFalse = false,
+  isUnsettingPurchase = false,
+  isUnsettingPurchaseFromTrue = false,
+  isUnsettingPurchaseFromFalse = false,
+  usePurchaseControl = false,
   className,
 }: OrderItemCardProps) {
   const [showChat, setShowChat] = useState(false);
@@ -115,6 +137,13 @@ export function OrderItemCard({
       itemId: item.itemId,
     });
     await onAvailabilityChange?.(item.itemId, isAvailable, clickedButton);
+  };
+
+  const handlePurchaseChange = async (
+    isPurchased: boolean | null,
+    clickedButton?: boolean
+  ) => {
+    await onPurchaseChange?.(item.itemId, isPurchased, clickedButton);
   };
 
   const formatPrice = (price: number) => {
@@ -259,17 +288,30 @@ export function OrderItemCard({
             </div>
           )}
 
-          {/* Availability Control */}
-          <AvailabilityControl
-            isAvailable={item.isAvailable ?? null}
-            onAvailabilityChange={handleAvailabilityChange}
-            loading={isUpdatingAvailability}
-            loadingTrue={isUpdatingToTrue}
-            loadingFalse={isUpdatingToFalse}
-            loadingUnset={isUnsetting}
-            loadingUnsetFromTrue={isUnsettingFromTrue}
-            loadingUnsetFromFalse={isUnsettingFromFalse}
-          />
+          {/* Availability/Purchase Control */}
+          {usePurchaseControl ? (
+            <PurchaseControl
+              isPurchased={item.isPurchased ?? null}
+              onPurchaseChange={handlePurchaseChange}
+              loading={isUpdatingPurchase}
+              loadingTrue={isUpdatingPurchaseToTrue}
+              loadingFalse={isUpdatingPurchaseToFalse}
+              loadingUnset={isUnsettingPurchase}
+              loadingUnsetFromTrue={isUnsettingPurchaseFromTrue}
+              loadingUnsetFromFalse={isUnsettingPurchaseFromFalse}
+            />
+          ) : (
+            <AvailabilityControl
+              isAvailable={item.isAvailable ?? null}
+              onAvailabilityChange={handleAvailabilityChange}
+              loading={isUpdatingAvailability}
+              loadingTrue={isUpdatingToTrue}
+              loadingFalse={isUpdatingToFalse}
+              loadingUnset={isUnsetting}
+              loadingUnsetFromTrue={isUnsettingFromTrue}
+              loadingUnsetFromFalse={isUnsettingFromFalse}
+            />
+          )}
         </div>
 
         {/* Provider */}

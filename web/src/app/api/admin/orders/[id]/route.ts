@@ -27,11 +27,13 @@ export async function GET(
                 article: true,
                 pricePair: true,
                 sizes: true,
+                isActive: true,
                 images: {
                   select: {
                     id: true,
                     url: true,
                     alt: true,
+                    color: true,
                   },
                   orderBy: { sort: 'asc' },
                 },

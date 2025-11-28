@@ -80,7 +80,7 @@ interface ItemsCellProps {
     imageUrl?: string;
     name: string;
     size?: string;
-    color?: string;
+    color?: string | null;
   }>;
   orderId: string;
   updatingOrders: Set<string>;
@@ -106,7 +106,7 @@ export function ItemsCell({ items, orderId, updatingOrders }: ItemsCellProps) {
                 {item.name}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Размер: {item.size} | Цвет: {item.color}
+                Размер: {item.size || '—'} | Цвет: {item.color || '—'}
               </div>
             </div>
           </div>

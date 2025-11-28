@@ -51,7 +51,7 @@ export function AvailabilityControl({
           onClick={() => handleAvailabilityClick(true)}
           disabled={disabled || loadingTrue || loadingUnsetFromTrue}
           className={cn(
-            'flex-1 rounded-lg border-2 px-4 py-3 text-center font-medium transition-colors',
+            'flex-1 rounded-lg border-2 px-4 py-3 text-center font-medium transition-colors cursor-pointer',
             'focus:outline-none',
             'disabled:cursor-not-allowed disabled:opacity-50',
             isAvailable === true
@@ -71,7 +71,7 @@ export function AvailabilityControl({
           onClick={() => handleAvailabilityClick(false)}
           disabled={disabled || loadingFalse || loadingUnsetFromFalse}
           className={cn(
-            'flex-1 rounded-lg border-2 px-4 py-3 text-center font-medium transition-colors',
+            'flex-1 rounded-lg border-2 px-4 py-3 text-center font-medium transition-colors cursor-pointer',
             'focus:outline-none',
             'disabled:cursor-not-allowed disabled:opacity-50',
             isAvailable === false

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { X, Filter, Check, Tag } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
@@ -28,11 +29,15 @@ export function GruzchikFilterModal({
   isOpen,
   onClose,
 }: GruzchikFilterModalProps) {
+  const pathname = usePathname();
+  const isPurchaseMode = pathname === '/gruzchik/purchase';
+  const orderStatus = isPurchaseMode ? 'Купить' : 'Наличие';
+
   const { filters, updateFilter, clearFilters, hasActiveFilters } =
     useGruzchikFilter();
 
   const { viewMode, setViewMode } = useGruzchikView();
-  const { orders, reload } = useGruzchikOrders('Наличие');
+  const { orders, reload } = useGruzchikOrders(orderStatus);
 
   // Extract unique providers and clients from orders
   const [providers, setProviders] = useState<
@@ -52,13 +57,21 @@ export function GruzchikFilterModal({
       const providerMap = new Map<string, string>();
 
       orders.forEach(order => {
-        // Extract clients
-        if (order.user) {
-          clientMap.set(order.user.phone, {
-            name: order.user.name || 'Без имени',
-            phone: order.user.phone,
-            label: order.label,
-          });
+        // Extract clients - check both order.user and order.phone directly
+        // Order can have phone/fullName directly or in order.user
+        const phone = order.user?.phone || order.phone;
+        const name = order.user?.name || order.fullName;
+
+        if (phone) {
+          // Only add if phone exists and is not empty
+          const phoneStr = String(phone).trim();
+          if (phoneStr) {
+            clientMap.set(phoneStr, {
+              name: name || 'Без имени',
+              phone: phoneStr,
+              label: order.label,
+            });
+          }
         }
 
         // Extract providers from order items
@@ -77,12 +90,18 @@ export function GruzchikFilterModal({
         });
       });
 
-      setClients(
-        Array.from(clientMap.entries()).map(([phone, data]) => ({
-          id: phone,
-          ...data,
-        }))
-      );
+      const clientsList = Array.from(clientMap.entries()).map(([phone, data]) => ({
+        id: phone, // phone is already a string from the map key
+        ...data,
+      }));
+
+      console.log('[GruzchikFilterModal] Extracted clients:', {
+        ordersCount: orders.length,
+        clientsCount: clientsList.length,
+        clients: clientsList,
+      });
+
+      setClients(clientsList);
 
       setProviders(
         Array.from(providerMap.entries()).map(([id, name]) => ({ id, name }))
@@ -143,7 +162,7 @@ export function GruzchikFilterModal({
             <ViewToggle mode={viewMode} onModeChange={setViewMode} />
           </div>
 
-          {/* Availability Status Filter */}
+          {/* Availability/Purchase Status Filter */}
           <div>
             <h3 className="mb-3 text-sm font-medium text-gray-900">Фильтры</h3>
             <div className="space-y-2">
@@ -160,7 +179,9 @@ export function GruzchikFilterModal({
                     : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                 )}
               >
-                <span className="text-sm">Только непроверенные</span>
+                <span className="text-sm">
+                  {isPurchaseMode ? 'Только некупленые' : 'Только непроверенные'}
+                </span>
                 {filters.availabilityStatus === 'unset' && (
                   <Check className="h-4 w-4 text-blue-600" />
                 )}
@@ -175,10 +196,29 @@ export function GruzchikFilterModal({
             </h3>
             <DraggableProviderList
               providers={providers}
-              selectedProviderId={filters.providerId}
+              selectedProviderId={isPurchaseMode ? null : filters.providerId}
+              selectedProviderIds={isPurchaseMode ? filters.providerIds : undefined}
               onProviderSelect={providerId => {
-                updateFilter('providerId', providerId);
+                if (isPurchaseMode) {
+                  // In purchase mode, we use multi-select, so this shouldn't be called
+                  // But keep for backward compatibility
+                  updateFilter('providerId', providerId);
+                } else {
+                  updateFilter('providerId', providerId);
+                }
               }}
+              onProviderToggle={isPurchaseMode ? (providerId) => {
+                const currentIds = filters.providerIds || [];
+                const newIds = currentIds.includes(providerId)
+                  ? currentIds.filter(id => id !== providerId)
+                  : [...currentIds, providerId];
+                updateFilter('providerIds', newIds);
+              } : undefined}
+              onClearAll={isPurchaseMode ? () => {
+                updateFilter('providerIds', []);
+              } : undefined}
+              multiSelect={isPurchaseMode}
+              emptyMessage={isPurchaseMode ? 'Нет поставщиков' : 'Нет поставщиков в заказах'}
             />
           </div>
 
@@ -188,7 +228,14 @@ export function GruzchikFilterModal({
             <Select
               value={filters.clientId || 'all'}
               onValueChange={value => {
+                console.log('[GruzchikFilterModal] Select onValueChange called', {
+                  receivedValue: value,
+                  valueType: typeof value,
+                  currentFilters: filters,
+                  willSetTo: value === 'all' ? null : value,
+                });
                 updateFilter('clientId', value === 'all' ? null : value);
+                console.log('[GruzchikFilterModal] After updateFilter call');
               }}
             >
               <SelectTrigger className="w-full">

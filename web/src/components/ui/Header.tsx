@@ -184,6 +184,13 @@ export default function Header({ onSearch }: HeaderProps) {
               </div>
             )}
 
+            {/* Mobile Gruzchik Switcher - only on mobile/tablet */}
+            {user?.role === 'GRUZCHIK' && (
+              <div className="md:hidden">
+                <MobileGruzchikSwitcher />
+              </div>
+            )}
+
             {/* Desktop Actions (hidden on mobile to avoid layout gap) */}
             <div className="hidden items-center gap-4 md:flex">
               {/* Switchers moved into profile dropdown */}

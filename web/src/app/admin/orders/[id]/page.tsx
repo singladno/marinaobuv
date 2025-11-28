@@ -1,9 +1,10 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, MessageSquare, Tag, RefreshCw, User, DollarSign, UserCheck, Truck, MapPin } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Tag, RefreshCw, User, DollarSign, UserCheck, Truck, MapPin, ExternalLink } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -13,12 +14,15 @@ import { AdminOrderItemChat } from '@/components/features/admin/AdminOrderItemCh
 import { ChatButtonWithIndicator } from '@/components/features/admin/ChatButtonWithIndicator';
 import { OrderItemData } from '@/components/features/gruzchik/OrderItemCard';
 import { useAdminOrderUnreadCounts } from '@/hooks/useAdminOrderUnreadCounts';
-import { StatusBadge } from '@/components/features/OrderStatusBadge';
+import { EditableStatusBadge } from '@/components/features/EditableStatusBadge';
+import { EditableGruzchikSelector } from '@/components/features/EditableGruzchikSelector';
 import { FeedbackStatusIconsCompact } from '@/components/features/admin/FeedbackStatusIcons';
 import { MessagePreviewCompact } from '@/components/features/admin/MessagePreview';
 import { AdminReplacementModal } from '@/components/features/admin/AdminReplacementModal';
+import { ProductImageModal } from '@/components/features/ProductImageModal';
 import { cn } from '@/lib/utils';
 import { formatOrderNumber } from '@/utils/orderNumberUtils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 
 interface OrderItem {
   id: string;
@@ -29,7 +33,9 @@ interface OrderItem {
   priceBox: number;
   qty: number;
   itemCode: string | null;
+  color: string | null;
   isAvailable: boolean | null;
+  isPurchased: boolean | null;
   createdAt: string;
   product: {
     id: string;
@@ -38,10 +44,12 @@ interface OrderItem {
     article: string | null;
     pricePair: number;
     sizes: any;
+    isActive: boolean;
     images: Array<{
       id: string;
       url: string;
       alt: string | null;
+      color: string | null;
     }>;
   };
   feedbacks: Array<{
@@ -136,6 +144,15 @@ export default function OrderDetailsPage() {
   const [replacementModalOpen, setReplacementModalOpen] = useState(false);
   const [selectedItemForReplacement, setSelectedItemForReplacement] =
     useState<OrderItem | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedItemImages, setSelectedItemImages] = useState<{
+    images: Array<{ id: string; url: string; alt: string | null }>;
+    productName: string;
+    initialIndex: number;
+  } | null>(null);
+  const [gruzchiks, setGruzchiks] = useState<Array<{ id: string; name: string | null; phone: string | null }>>([]);
+  const [purchasedFilter, setPurchasedFilter] = useState<string>('all'); // 'all' | 'purchased' | 'not-purchased'
+  const [availableFilter, setAvailableFilter] = useState<string>('all'); // 'all' | 'available' | 'not-available'
 
   // Get unread counts for all items in this order
   const { getUnreadCount, refetch: refetchUnreadCounts } =
@@ -145,12 +162,21 @@ export default function OrderDetailsPage() {
     const fetchOrderDetails = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/admin/orders/${orderId}`);
-        if (!response.ok) {
+        const [orderResponse, gruzchiksResponse] = await Promise.all([
+          fetch(`/api/admin/orders/${orderId}`),
+          fetch('/api/admin/orders?limit=1'), // Just to get gruzchiks list
+        ]);
+
+        if (!orderResponse.ok) {
           throw new Error('Failed to fetch order details');
         }
-        const data = await response.json();
-        setOrder(data.order);
+        const orderData = await orderResponse.json();
+        setOrder(orderData.order);
+
+        if (gruzchiksResponse.ok) {
+          const gruzchiksData = await gruzchiksResponse.json();
+          setGruzchiks(gruzchiksData.gruzchiks || []);
+        }
       } catch (err) {
         setError(
           err instanceof Error ? err.message : 'Failed to fetch order details'
@@ -197,7 +223,7 @@ export default function OrderDetailsPage() {
     return isAvailable ? (
       <Badge
         variant="outline"
-        className="!border-green-400 !bg-green-400 !text-white hover:!bg-green-500"
+        className="!border-orange-400 !bg-orange-400 !text-white hover:!bg-orange-500"
       >
         В наличии
       </Badge>
@@ -207,6 +233,34 @@ export default function OrderDetailsPage() {
         className="border-red-500 bg-red-500 text-white hover:bg-red-600"
       >
         Нет в наличии
+      </Badge>
+    );
+  };
+
+  const getPurchaseBadge = (isPurchased: boolean | null) => {
+    if (isPurchased === null) {
+      return (
+        <Badge
+          variant="outline"
+          className="border-gray-300 bg-gray-50 text-gray-600"
+        >
+          Не указано
+        </Badge>
+      );
+    }
+    return isPurchased ? (
+      <Badge
+        variant="outline"
+        className="!border-green-400 !bg-green-400 !text-white hover:!bg-green-500"
+      >
+        Куплено
+      </Badge>
+    ) : (
+      <Badge
+        variant="default"
+        className="border-red-500 bg-red-500 text-white hover:bg-red-600"
+      >
+        Не куплено
       </Badge>
     );
   };
@@ -397,6 +451,80 @@ export default function OrderDetailsPage() {
     }
   };
 
+  const handleOrderUpdate = async (updates: { status?: string; gruzchikId?: string | null }) => {
+    if (!order) return;
+
+    try {
+      const response = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: order.id,
+          ...updates,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update order');
+      }
+
+      const data = await response.json();
+      // Update local state
+      setOrder(prev => {
+        if (!prev) return null;
+        const updatedOrder = { ...prev, ...updates };
+        if (updates.gruzchikId !== undefined) {
+          if (updates.gruzchikId) {
+            const selectedGruzchik = gruzchiks.find(g => g.id === updates.gruzchikId);
+            updatedOrder.gruzchik = selectedGruzchik
+              ? { id: selectedGruzchik.id, name: selectedGruzchik.name }
+              : null;
+            updatedOrder.gruzchikId = updates.gruzchikId;
+          } else {
+            updatedOrder.gruzchik = null;
+            updatedOrder.gruzchikId = null;
+          }
+        }
+        return updatedOrder;
+      });
+    } catch (error) {
+      console.error('Failed to update order:', error);
+      alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    }
+  };
+
+  const handleImageClick = (
+    item: OrderItem,
+    imageIndex: number = 0
+  ) => {
+    if (item.product.images && item.product.images.length > 0) {
+      // Normalize color strings for comparison (trim and lowercase)
+      const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
+      const itemColor = normalize(item.color);
+
+      // Filter images to only show the ones matching the item's color
+      const filteredImages = item.product.images.filter(img =>
+        normalize(img.color) === itemColor
+      );
+
+      // If no color match, fall back to all images
+      const images = filteredImages.length > 0 ? filteredImages : item.product.images;
+
+      // Always start at first image since we filtered
+      const initialIndex = 0;
+
+      setSelectedItemImages({
+        images,
+        productName: item.name,
+        initialIndex,
+      });
+      setImageModalOpen(true);
+    }
+  };
+
   const convertToOrderItemData = (item: OrderItem): OrderItemData => {
     return {
       // Order info
@@ -503,7 +631,12 @@ export default function OrderDetailsPage() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">
                 Заказ {formatOrderNumber(order.orderNumber)}
               </h1>
-              <StatusBadge status={order.status} />
+              <EditableStatusBadge
+                status={order.status || 'Новый'}
+                onStatusChange={async newStatus =>
+                  handleOrderUpdate({ status: newStatus })
+                }
+              />
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {formatDate(order.createdAt)}
@@ -573,11 +706,13 @@ export default function OrderDetailsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {order.gruzchik?.name || (
-                <span className="text-gray-400 dark:text-gray-500">Не назначен</span>
-              )}
-            </p>
+            <EditableGruzchikSelector
+              value={order.gruzchikId}
+              gruzchiks={gruzchiks}
+              onGruzchikChange={async newGruzchikId =>
+                handleOrderUpdate({ gruzchikId: newGruzchikId })
+              }
+            />
           </CardContent>
         </Card>
 
@@ -621,47 +756,153 @@ export default function OrderDetailsPage() {
       {/* Order Items */}
       <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
         <CardHeader className="border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Товары в заказе
-          </h2>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Товары в заказе
+            </h2>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              <Select value={purchasedFilter} onValueChange={setPurchasedFilter}>
+                <SelectTrigger className="w-full sm:w-48" aria-label="Фильтр по покупке">
+                  <SelectValue placeholder="Все товары" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все товары</SelectItem>
+                  <SelectItem value="purchased">Куплено</SelectItem>
+                  <SelectItem value="not-purchased">Не куплено</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={availableFilter} onValueChange={setAvailableFilter}>
+                <SelectTrigger className="w-full sm:w-48" aria-label="Фильтр по наличию">
+                  <SelectValue placeholder="Все товары" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все товары</SelectItem>
+                  <SelectItem value="available">В наличии</SelectItem>
+                  <SelectItem value="not-available">Нет в наличии</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          {/* Mobile Card View */}
-          <div className="block md:hidden">
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {order.items.map(item => (
-                <div
-                  key={item.id}
-                  className="px-4 py-4 bg-white dark:bg-gray-800"
-                >
+          {(() => {
+            // Filter items based on selected filters
+            const filteredItems = order.items.filter(item => {
+              // Filter by purchased status
+              if (purchasedFilter === 'purchased') {
+                if (item.isPurchased !== true) return false;
+              } else if (purchasedFilter === 'not-purchased') {
+                // Include items that are false or null (not purchased)
+                if (item.isPurchased === true) return false;
+              }
+
+              // Filter by available status
+              if (availableFilter === 'available') {
+                if (item.isAvailable !== true) return false;
+              } else if (availableFilter === 'not-available') {
+                // Include items that are false or null (not available)
+                if (item.isAvailable === true) return false;
+              }
+
+              return true;
+            });
+
+            return (
+              <>
+                {/* Mobile Card View */}
+                <div className="block md:hidden">
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {filteredItems.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        Нет товаров, соответствующих выбранным фильтрам
+                      </div>
+                    ) : (
+                      filteredItems.map(item => (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "px-4 py-4 bg-white dark:bg-gray-800",
+                            (order.status === 'Куплен' || item.isPurchased === true) && "bg-green-50 dark:bg-green-950/20",
+                            item.isAvailable === true && !(order.status === 'Куплен' || item.isPurchased === true) && "bg-orange-50 dark:bg-orange-950/20"
+                          )}
+                        >
                   <div className="space-y-4">
                     {/* Item Header */}
                     <div className="flex items-start gap-3">
-                      {/* Image */}
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
-                        {item.product.images[0] ? (
-                          <Image
-                            src={item.product.images[0].url}
-                            alt={item.product.images[0].alt || item.name}
-                            width={64}
-                            height={64}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-gray-400">
-                            <svg
-                              className="h-6 w-6"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
+                      {/* Images - show 2 images side by side, filtered by ordered color */}
+                      <div className="flex gap-1 shrink-0">
+                        {(() => {
+                          // Normalize color strings for comparison (trim and lowercase)
+                          const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
+                          const itemColor = normalize(item.color);
+
+                          // Filter images to only show the ones matching the item's color
+                          const filteredImages = item.product.images.filter(img =>
+                            normalize(img.color) === itemColor
+                          );
+
+                          // If no color match, fall back to all images
+                          const imagesToShow = filteredImages.length > 0 ? filteredImages : item.product.images;
+                          const visibleImages = imagesToShow.slice(0, 2);
+                          const extraCount = imagesToShow.length - visibleImages.length;
+
+                          return visibleImages.map((image, imgIndex) => {
+                            const isLastVisible = imgIndex === visibleImages.length - 1;
+                            const shouldShowOverlay = extraCount > 0 && isLastVisible;
+                            // Find the original index in the full images array for the carousel
+                            const originalIndex = item.product.images.findIndex(img => img.id === image.id);
+
+                            return (
+                              <div key={image.id} className="relative h-16 w-16">
+                                <div
+                                  className={cn(
+                                    "relative h-16 w-16 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity",
+                                    !item.product.isActive && "opacity-50 grayscale"
+                                  )}
+                                  onClick={() => handleImageClick(item, originalIndex >= 0 ? originalIndex : 0)}
+                                >
+                                  <Image
+                                    src={image.url}
+                                    alt={image.alt || item.name}
+                                    width={64}
+                                    height={64}
+                                    className="h-full w-full object-cover"
+                                  />
+                                  {/* Photo count overlay - same as ImageGridItem */}
+                                  {shouldShowOverlay && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleImageClick(item, originalIndex >= 0 ? originalIndex : 0);
+                                      }}
+                                      className="absolute inset-0 flex items-center justify-center rounded-md bg-black/60 text-xs font-semibold text-white backdrop-blur-sm cursor-pointer"
+                                    >
+                                      +{extraCount}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                        {item.product.images.length === 0 && (
+                          <div className="relative h-16 w-16">
+                            <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400">
+                              <svg
+                                className="h-6 w-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -669,7 +910,18 @@ export default function OrderDetailsPage() {
                       {/* Item Info */}
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                          {item.name}
+                          <Link
+                            href={{
+                              pathname: `/product/${item.product.slug}`,
+                              query: item.color ? { color: item.color } : {},
+                            }}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors group"
+                          >
+                            <span>{item.name}</span>
+                            <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                          </Link>
                         </h3>
                         {item.itemCode && (
                           <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -699,6 +951,12 @@ export default function OrderDetailsPage() {
                           Наличие
                         </div>
                         <div>{getAvailabilityBadge(item.isAvailable)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          Куплено
+                        </div>
+                        <div>{getPurchaseBadge(item.isPurchased)}</div>
                       </div>
                     </div>
 
@@ -838,86 +1096,162 @@ export default function OrderDetailsPage() {
                         <span>Предложить замену</span>
                       </Button>
                     </div>
+                        </div>
+                      </div>
+                      ))
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block">
-            <div className="h-full overflow-auto">
-              <table className="w-full border-collapse">
-                {/* Header */}
-                <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Код
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Изображение
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Название
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Артикул
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Кол-во
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Размеры
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Наличие
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Обратная связь
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Сообщения
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      За пару
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      За коробку
-                    </th>
-                    <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      Сумма
-                    </th>
-                    <th className="sticky right-0 z-30 border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                      Действия
-                    </th>
-                  </tr>
-                </thead>
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                  {filteredItems.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      Нет товаров, соответствующих выбранным фильтрам
+                    </div>
+                  ) : (
+                    <div className="h-full overflow-auto">
+                      <table className="w-full border-collapse">
+                        {/* Header */}
+                        <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
+                          <tr>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Код
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Изображение
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Название
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Артикул
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Кол-во
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Размеры
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Наличие
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Куплено
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Обратная связь
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Сообщения
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              За пару
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              За коробку
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Сумма
+                            </th>
+                            <th className="sticky right-0 z-30 border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                              Действия
+                            </th>
+                          </tr>
+                        </thead>
 
-                {/* Body */}
-                <tbody className="bg-white dark:bg-gray-900">
-                  {order.items.map(item => (
+                        {/* Body */}
+                        <tbody className="bg-white dark:bg-gray-900">
+                          {filteredItems.map(item => (
                     <tr
                       key={item.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className={cn(
+                        "hover:bg-gray-50 dark:hover:bg-gray-800",
+                        (order.status === 'Куплен' || item.isPurchased === true) && "bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30",
+                        item.isAvailable === true && !(order.status === 'Куплен' || item.isPurchased === true) && "bg-orange-50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-950/30"
+                      )}
                     >
                       <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
                         {item.itemCode || '—'}
                       </td>
                       <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                        {item.product.images[0] ? (
-                          <Image
-                            src={item.product.images[0].url}
-                            alt={item.product.images[0].alt || item.name}
-                            width={48}
-                            height={48}
-                            className="h-12 w-12 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700" />
-                        )}
+                        <div className="flex gap-1">
+                          {(() => {
+                            // Normalize color strings for comparison (trim and lowercase)
+                            const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
+                            const itemColor = normalize(item.color);
+
+                            // Filter images to only show the ones matching the item's color
+                            const filteredImages = item.product.images.filter(img =>
+                              normalize(img.color) === itemColor
+                            );
+
+                            // If no color match, fall back to all images
+                            const imagesToShow = filteredImages.length > 0 ? filteredImages : item.product.images;
+                            const visibleImages = imagesToShow.slice(0, 2);
+                            const extraCount = imagesToShow.length - visibleImages.length;
+
+                            return visibleImages.map((image, imgIndex) => {
+                              const isLastVisible = imgIndex === visibleImages.length - 1;
+                              const shouldShowOverlay = extraCount > 0 && isLastVisible;
+                              // Find the original index in the full images array for the carousel
+                              const originalIndex = item.product.images.findIndex(img => img.id === image.id);
+
+                              return (
+                                <div key={image.id} className="relative h-12 w-12">
+                                  <div
+                                    className={cn(
+                                      "relative h-12 w-12 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity",
+                                      !item.product.isActive && "opacity-50 grayscale"
+                                    )}
+                                    onClick={() => handleImageClick(item, originalIndex >= 0 ? originalIndex : 0)}
+                                  >
+                                    <Image
+                                      src={image.url}
+                                      alt={image.alt || item.name}
+                                      width={48}
+                                      height={48}
+                                      className="h-12 w-12 rounded-lg object-cover"
+                                    />
+                                    {/* Photo count overlay - same as ImageGridItem */}
+                                    {shouldShowOverlay && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleImageClick(item, originalIndex >= 0 ? originalIndex : 0);
+                                        }}
+                                        className="absolute inset-0 flex items-center justify-center rounded-md bg-black/60 text-xs font-semibold text-white backdrop-blur-sm cursor-pointer"
+                                      >
+                                        +{extraCount}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
+                          {item.product.images.length === 0 && (
+                            <div className={cn(
+                              "h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700",
+                              !item.product.isActive && "opacity-50"
+                            )} />
+                          )}
+                        </div>
                       </td>
                       <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                        {item.name}
+                        <Link
+                          href={{
+                            pathname: `/product/${item.product.slug}`,
+                            query: item.color ? { color: item.color } : {},
+                          }}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors group"
+                        >
+                          <span>{item.name}</span>
+                          <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        </Link>
                       </td>
                       <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
                         {item.product.article || '—'}
@@ -930,6 +1264,9 @@ export default function OrderDetailsPage() {
                       </td>
                       <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
                         {getAvailabilityBadge(item.isAvailable)}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                        {getPurchaseBadge(item.isPurchased)}
                       </td>
                       <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
                         <div className="space-y-2">
@@ -1038,11 +1375,15 @@ export default function OrderDetailsPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -1078,6 +1419,25 @@ export default function OrderDetailsPage() {
             console.log('Available images for replacement:', images);
             return images;
           })()}
+        />
+      )}
+
+      {/* Image Carousel Modal */}
+      {selectedItemImages && (
+        <ProductImageModal
+          isOpen={imageModalOpen}
+          onClose={() => {
+            setImageModalOpen(false);
+            setSelectedItemImages(null);
+          }}
+          images={selectedItemImages.images.map(img => ({
+            id: img.id,
+            url: img.url,
+            alt: img.alt,
+            isPrimary: false,
+          }))}
+          productName={selectedItemImages.productName}
+          initialIndex={selectedItemImages.initialIndex}
         />
       )}
     </div>

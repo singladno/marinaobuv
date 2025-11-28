@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
                       id: true,
                       url: true,
                       alt: true,
+                      color: true,
                       isPrimary: true,
                       sort: true,
                     },

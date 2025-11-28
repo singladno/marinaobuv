@@ -12,7 +12,8 @@ import {
 
 export interface GruzchikFilters {
   availabilityStatus: 'all' | 'unset' | 'available' | 'unavailable';
-  providerId: string | null;
+  providerId: string | null; // For backward compatibility with availability page
+  providerIds: string[]; // For multi-select in purchase page
   clientId: string | null;
 }
 
@@ -38,6 +39,7 @@ interface GruzchikFilterProviderProps {
 const defaultFilters: GruzchikFilters = {
   availabilityStatus: 'all',
   providerId: null,
+  providerIds: [],
   clientId: null,
 };
 
@@ -48,7 +50,17 @@ export function GruzchikFilterProvider({
 
   const updateFilter = useCallback(
     <K extends keyof GruzchikFilters>(key: K, value: GruzchikFilters[K]) => {
-      setFilters(prev => ({ ...prev, [key]: value }));
+      console.log('[GruzchikFilterContext] updateFilter called', {
+        key,
+        value,
+        valueType: typeof value,
+      });
+      setFilters(prev => {
+        console.log('[GruzchikFilterContext] Current filters (prev):', prev);
+        const newFilters = { ...prev, [key]: value };
+        console.log('[GruzchikFilterContext] New filters:', newFilters);
+        return newFilters;
+      });
     },
     []
   );
@@ -61,8 +73,9 @@ export function GruzchikFilterProvider({
     () =>
       filters.availabilityStatus !== 'all' ||
       filters.providerId !== null ||
+      filters.providerIds.length > 0 ||
       filters.clientId !== null,
-    [filters.availabilityStatus, filters.providerId, filters.clientId]
+    [filters.availabilityStatus, filters.providerId, filters.providerIds, filters.clientId]
   );
 
   const contextValue = useMemo(
