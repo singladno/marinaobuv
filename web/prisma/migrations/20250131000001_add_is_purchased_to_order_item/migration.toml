@@ -1,2 +1,3 @@
 # Migration: Add isPurchased field to OrderItem
 # This field tracks whether the грузчик has purchased the item (for purchase page)
+

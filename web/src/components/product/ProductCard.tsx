@@ -595,8 +595,8 @@ function ProductCard({
               </>
             )}
 
-            {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
+            {/* Hover Overlay (visual only, allow right-click on image) */}
+            <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
           </div>
 
           <div className="space-y-3 p-5">

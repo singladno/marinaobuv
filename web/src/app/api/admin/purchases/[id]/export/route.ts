@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import * as XLSX from 'xlsx';
 
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
@@ -112,7 +113,7 @@ export async function GET(
       'Описание',
       'Размеры',
       'Изображение',
-    ].join(';');
+    ];
 
     const rows = purchase.items.map(item => {
       const allImages = item.product.images || [];
@@ -148,36 +149,49 @@ export async function GET(
         ? formatSizes(item.product.sizes)
         : '';
       return [
-        escapeCsvValue(item.name),
-        escapeCsvValue(item.product.article || ''),
-        escapeCsvValue(Number(item.price)),
-        escapeCsvValue(Number(item.oldPrice)),
-        escapeCsvValue(item.description),
-        escapeCsvValue(sizesValue),
-        escapeCsvValue(imageUrls),
-      ].join(';');
+        item.name,
+        item.product.article || '',
+        Number(item.price),
+        Number(item.oldPrice),
+        item.description,
+        sizesValue,
+        imageUrls,
+      ];
     });
 
     // First Title Row + header row
-    const titleRow = 'Файл выгрузки на сайт покупок';
-    const csvContent = ['\uFEFF' + titleRow, header, ...rows].join('\n');
+    const titleRow = ['Файл выгрузки на сайт покупок'];
+
+    const worksheetData: (string | number)[][] = [titleRow, header, ...rows];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Export');
+
+    const xlsxArrayBuffer = XLSX.write(workbook, {
+      type: 'array',
+      bookType: 'xlsx',
+    }) as ArrayBuffer;
 
     // Build RFC 5987 compliant Content-Disposition for non-ASCII filenames
     const rawFilename = `purchase-export-${purchase.name}-${
       new Date().toISOString().split('T')[0]
-    }.csv`;
+    }.xlsx`;
     const asciiFallback = rawFilename.replace(/[^\x20-\x7E]/g, '_');
     const encodedUtf8 = encodeURIComponent(rawFilename);
 
     const headers = new Headers();
-    headers.set('Content-Type', 'text/csv; charset=utf-8');
+    headers.set(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
     headers.set(
       'Content-Disposition',
       `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedUtf8}`
     );
     headers.set('Cache-Control', 'no-store');
 
-    return new NextResponse(csvContent, { headers });
+    return new NextResponse(xlsxArrayBuffer, { headers });
   } catch (error) {
     console.error('Error exporting purchase:', error);
     return NextResponse.json(

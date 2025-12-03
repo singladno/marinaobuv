@@ -155,7 +155,9 @@ function PurchaseDetailPageContent() {
       const contentDisposition = response.headers.get('content-disposition');
       const filename = contentDisposition
         ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
-        : `purchase-export-${purchase.name}-${new Date().toISOString().split('T')[0]}.csv`;
+        : `purchase-export-${purchase.name}-${
+            new Date().toISOString().split('T')[0]
+          }.xlsx`;
 
       // Create blob and download
       const blob = await response.blob();

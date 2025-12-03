@@ -42,10 +42,7 @@ export async function PATCH(
     }
 
     if (orderItem.order.gruzchikId !== auth.user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Update the order item purchase status
