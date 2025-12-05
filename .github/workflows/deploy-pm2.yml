@@ -309,11 +309,11 @@ jobs:
 
             # Test database connection
             echo "🔍 Testing database connection..."
-            cd web && ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
-            if [ $? -ne 0 ]; then
-              echo "⚠️ Database connection test failed, but continuing with deployment..."
-            else
+            cd web
+            if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
               echo "✅ Database connection verified"
+            else
+              echo "⚠️ Database connection test failed, but continuing with deployment..."
             fi
             cd ..
 
@@ -649,8 +649,7 @@ jobs:
             # Database connectivity health check
             echo "🔍 Testing database connectivity..."
             cd web
-            ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
+            if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
               echo "✅ Database connectivity verified"
             else
               echo "❌ Database connectivity failed!"
@@ -686,8 +685,7 @@ jobs:
 
               # Test connection again
               cd web
-              ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
-              if [ $? -eq 0 ]; then
+              if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
                 echo "✅ Database connection restored"
               else
                 echo "❌ Database connection could not be restored"
