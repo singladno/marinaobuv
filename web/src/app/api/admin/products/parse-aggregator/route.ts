@@ -76,15 +76,61 @@ async function fetchHtmlWithPlaywright(
     }
 
     const page = await context.newPage();
-    // Increase navigation timeout and wait for network to be idle
+    // Increase navigation timeout
     page.setDefaultNavigationTimeout(navigationTimeoutMs);
+
+    console.log('[AGGREGATOR] Navigating to:', url);
     await page.goto(url, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
       timeout: navigationTimeoutMs,
     });
 
-    // Small extra wait in case of late JS updates
-    await page.waitForTimeout(1000);
+    // Wait for the page content to be rendered - wait for wrap-text or gallery-images to appear
+    console.log('[AGGREGATOR] Waiting for page content to load...');
+    try {
+      await page.waitForSelector('div.wrap-text, div.gallery-images', {
+        timeout: 10000,
+      });
+      console.log('[AGGREGATOR] Page content loaded');
+    } catch (error) {
+      console.warn(
+        '[AGGREGATOR] Timeout waiting for page content, continuing anyway'
+      );
+    }
+
+    // Click "Показать описание" button to unfold the hidden text block
+    try {
+      // Wait for the link to be visible
+      const showDescriptionLink = page
+        .locator('div.wrap-text div.link-show a')
+        .first();
+
+      try {
+        await showDescriptionLink.waitFor({ state: 'visible', timeout: 5000 });
+        console.log(
+          '[AGGREGATOR] "Показать описание" button found, clicking...'
+        );
+        await showDescriptionLink.click();
+
+        // Wait for the text to become visible (unfolded state)
+        // After clicking, the text should be in div.wrap-text > div:not(.link-show)
+        await page.waitForSelector('div.wrap-text > div:not(.link-show)', {
+          timeout: 5000,
+          state: 'visible',
+        });
+        console.log('[AGGREGATOR] Description unfolded successfully');
+      } catch (waitError) {
+        console.log(
+          '[AGGREGATOR] "Показать описание" button not found or already unfolded, continuing'
+        );
+      }
+    } catch (error) {
+      console.warn(
+        '[AGGREGATOR] Failed to click "Показать описание" button:',
+        error
+      );
+      // Continue anyway - the screenshot will still be taken
+    }
 
     const html = await page.content();
     let screenshotBuffer: Buffer | null = null;
@@ -96,11 +142,16 @@ async function fetchHtmlWithPlaywright(
 
     try {
       // Always take a screenshot so we can attach it as source screenshot
+      console.log('[AGGREGATOR] Taking screenshot...');
       screenshotBuffer = await page.screenshot({
         path: debug ? 'playwright-aggregator-debug.png' : undefined,
         fullPage: true,
         type: 'png',
       });
+      console.log(
+        '[AGGREGATOR] Screenshot captured successfully:',
+        screenshotBuffer ? `${screenshotBuffer.length} bytes` : 'NULL'
+      );
       if (debug) {
         console.log(
           '[AGGREGATOR DEBUG] Saved screenshot to playwright-aggregator-debug.png'
@@ -110,9 +161,10 @@ async function fetchHtmlWithPlaywright(
       }
     } catch (screenshotError) {
       console.error(
-        '[AGGREGATOR DEBUG] Failed to capture screenshot:',
+        '[AGGREGATOR] Failed to capture screenshot:',
         screenshotError
       );
+      screenshotBuffer = null;
     }
 
     await context.close();
@@ -139,19 +191,35 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { dataId, html: rawHtml } = body as {
+    const {
+      dataId,
+      html: rawHtml,
+      test,
+    } = body as {
       dataId?: string;
       html?: string;
+      test?: boolean;
     };
 
     let html: string;
     let screenshotBuffer: Buffer | null = null;
 
+    console.log('[AGGREGATOR] ========================================');
+    console.log('[AGGREGATOR] Starting aggregator product parsing');
+    console.log('[AGGREGATOR] Request body:', {
+      dataId: dataId || 'NOT PROVIDED',
+      hasHtml: !!rawHtml,
+    });
     if (rawHtml && rawHtml.trim()) {
       // Safe/offline mode: HTML already provided by client, no external fetch
+      console.log('[AGGREGATOR] Using provided HTML (offline mode)');
       html = rawHtml;
+      console.log('[AGGREGATOR] Provided HTML length:', html.length);
     } else {
       if (!dataId || !dataId.trim()) {
+        console.error(
+          '[AGGREGATOR] ERROR: data-id is required but not provided'
+        );
         return NextResponse.json(
           { error: 'data-id обязателен' },
           { status: 400 }
@@ -160,17 +228,44 @@ export async function POST(req: NextRequest) {
 
       // Fetch HTML from aggregator using Playwright (real browser)
       const url = `https://tk-sad.ru/baza/search?q=${dataId.trim()}`;
-      console.log(`Fetching aggregator HTML with Playwright from: ${url}`);
+      console.log('[AGGREGATOR] Fetching HTML with Playwright from:', url);
 
       try {
         const debugMode = process.env.AGGREGATOR_PLAYWRIGHT_DEBUG === 'true';
+        console.log('[AGGREGATOR] Playwright debug mode:', debugMode);
         const result = await fetchHtmlWithPlaywright(url, debugMode);
         html = result.html;
         screenshotBuffer = result.screenshotBuffer;
-      } catch (playwrightError) {
+        console.log(
+          '[AGGREGATOR] Playwright fetch successful. HTML length:',
+          html.length
+        );
+        console.log(
+          '[AGGREGATOR] Screenshot buffer:',
+          screenshotBuffer ? `${screenshotBuffer.length} bytes` : 'NONE'
+        );
+      } catch (playwrightError: any) {
         console.error(
-          'Playwright failed to fetch aggregator HTML:',
-          playwrightError
+          '[AGGREGATOR] Playwright failed to fetch aggregator HTML'
+        );
+        console.error(
+          '[AGGREGATOR] Playwright error type:',
+          typeof playwrightError
+        );
+        console.error(
+          '[AGGREGATOR] Playwright error message:',
+          playwrightError?.message
+        );
+        console.error(
+          '[AGGREGATOR] Playwright error stack:',
+          playwrightError?.stack
+        );
+        console.error(
+          '[AGGREGATOR] Full Playwright error:',
+          JSON.stringify(
+            playwrightError,
+            Object.getOwnPropertyNames(playwrightError)
+          )
         );
         return NextResponse.json(
           {
@@ -183,9 +278,50 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse HTML
+    console.log('[AGGREGATOR] Starting HTML parsing...');
+    console.log('[AGGREGATOR] HTML length before parsing:', html.length);
     const parsedData = parseAggregatorHTML(html);
+    console.log('[AGGREGATOR] HTML parsing completed');
+
+    console.log('[AGGREGATOR] Parsed data validation:');
+    console.log(
+      '[AGGREGATOR] - Has textInfo:',
+      !!parsedData.textInfo,
+      parsedData.textInfo ? `${parsedData.textInfo.length} chars` : 'EMPTY'
+    );
+    console.log('[AGGREGATOR] - Images count:', parsedData.images.length);
+    console.log('[AGGREGATOR] - Images array:', parsedData.images);
+
+    // TEST MODE: Only parse and log, don't proceed with LLM or DB operations
+    // Only allow test mode in development
+    if (test) {
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { error: 'Test mode is not available in production' },
+          { status: 403 }
+        );
+      }
+      console.log('[AGGREGATOR TEST] ========================================');
+      console.log('[AGGREGATOR TEST] TEST MODE - Parsed HTML data object:');
+      console.log('[AGGREGATOR TEST]', JSON.stringify(parsedData, null, 2));
+      console.log('[AGGREGATOR TEST] ========================================');
+      return NextResponse.json(
+        {
+          message:
+            'Test parsing completed. Check server console for parsed data.',
+          parsedData,
+        },
+        { status: 200 }
+      );
+    }
 
     if (!parsedData.textInfo && parsedData.images.length === 0) {
+      console.error(
+        '[AGGREGATOR] ERROR: No text info and no images extracted from HTML'
+      );
+      console.error(
+        '[AGGREGATOR] This usually means the HTML structure is different than expected'
+      );
       return NextResponse.json(
         { error: 'Не удалось извлечь данные из HTML' },
         { status: 400 }
@@ -245,7 +381,35 @@ export async function POST(req: NextRequest) {
 
     // Download and upload first image to S3 for vision analysis
     // We need at least one image for vision API
-    if (parsedData.images.length === 0) {
+    // Check if we have images for analysis
+    console.log('[AGGREGATOR] Checking for images before analysis...');
+    console.log('[AGGREGATOR] parsedData.images:', parsedData.images);
+    console.log(
+      '[AGGREGATOR] parsedData.images type:',
+      typeof parsedData.images
+    );
+    console.log(
+      '[AGGREGATOR] parsedData.images is array:',
+      Array.isArray(parsedData.images)
+    );
+    console.log(
+      '[AGGREGATOR] parsedData.images length:',
+      parsedData.images?.length || 0
+    );
+
+    if (!parsedData.images || parsedData.images.length === 0) {
+      console.error('[AGGREGATOR] ERROR: No images found for analysis');
+      console.error(
+        '[AGGREGATOR] This is a critical error - images are required for vision analysis'
+      );
+      console.error('[AGGREGATOR] Parsed data summary:', {
+        hasTextInfo: !!parsedData.textInfo,
+        textInfoLength: parsedData.textInfo?.length || 0,
+        imagesCount: parsedData.images?.length || 0,
+        imagesArray: parsedData.images,
+        labelsCount: parsedData.labels?.length || 0,
+        hasProvider: !!parsedData.providerName,
+      });
       return NextResponse.json(
         { error: 'Не найдено изображений для анализа' },
         { status: 400 }
@@ -253,11 +417,17 @@ export async function POST(req: NextRequest) {
     }
 
     const firstImageUrl = parsedData.images[0];
+    console.log('[AGGREGATOR] First image URL:', firstImageUrl);
+    console.log(
+      '[AGGREGATOR] Total images to process:',
+      parsedData.images.length
+    );
     let firstImagePublicUrl: string | null = null;
     let firstImageS3Key: string | null = null;
     let base64Image: string;
 
     try {
+      console.log('[AGGREGATOR] Downloading first image from:', firstImageUrl);
       // Download first image
       const imageResponse = await fetch(firstImageUrl, {
         headers: {
@@ -265,7 +435,22 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      console.log(
+        '[AGGREGATOR] Image fetch response status:',
+        imageResponse.status,
+        imageResponse.statusText
+      );
+      console.log(
+        '[AGGREGATOR] Image fetch response headers:',
+        Object.fromEntries(imageResponse.headers.entries())
+      );
       if (!imageResponse.ok) {
+        console.error('[AGGREGATOR] ERROR: Failed to fetch image');
+        console.error('[AGGREGATOR] Response status:', imageResponse.status);
+        console.error(
+          '[AGGREGATOR] Response statusText:',
+          imageResponse.statusText
+        );
         return NextResponse.json(
           {
             error: `Не удалось загрузить изображение: ${imageResponse.statusText}`,
@@ -275,18 +460,35 @@ export async function POST(req: NextRequest) {
       }
 
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+      console.log(
+        '[AGGREGATOR] Image downloaded successfully. Buffer size:',
+        imageBuffer.length,
+        'bytes'
+      );
       const contentType =
         imageResponse.headers.get('content-type') || 'image/jpeg';
       const ext = contentType.split('/')[1] || 'jpg';
+      console.log('[AGGREGATOR] Image content type:', contentType);
+      console.log('[AGGREGATOR] Image extension:', ext);
 
       // Convert to base64 for Groq vision API (Groq can't fetch S3 URLs reliably)
       base64Image = `data:${contentType};base64,${imageBuffer.toString('base64')}`;
+      console.log(
+        '[AGGREGATOR] Image converted to base64. Length:',
+        base64Image.length,
+        'chars'
+      );
 
       // Generate temporary product ID for image upload
       const tempProductId = `temp-${Date.now()}`;
       firstImageS3Key = getObjectKey({ productId: tempProductId, ext });
+      console.log(
+        '[AGGREGATOR] Generated S3 key for first image:',
+        firstImageS3Key
+      );
 
       // Upload to S3
+      console.log('[AGGREGATOR] Uploading first image to S3...');
       const uploadSuccess = await uploadImage(
         firstImageS3Key,
         imageBuffer,
@@ -294,16 +496,34 @@ export async function POST(req: NextRequest) {
       );
       if (uploadSuccess) {
         firstImagePublicUrl = getPublicUrl(firstImageS3Key);
+        console.log('[AGGREGATOR] First image uploaded to S3 successfully');
+        console.log(
+          '[AGGREGATOR] First image public URL:',
+          firstImagePublicUrl
+        );
       } else {
+        console.error('[AGGREGATOR] ERROR: Failed to upload image to S3');
         return NextResponse.json(
           { error: 'Не удалось загрузить изображение в S3' },
           { status: 500 }
         );
       }
-    } catch (error) {
-      console.error('[AGGREGATOR] Error processing first image:', error);
+    } catch (error: any) {
+      console.error(
+        '[AGGREGATOR] ERROR: Exception while processing first image'
+      );
+      console.error('[AGGREGATOR] Error type:', typeof error);
+      console.error('[AGGREGATOR] Error message:', error?.message);
+      console.error('[AGGREGATOR] Error stack:', error?.stack);
+      console.error(
+        '[AGGREGATOR] Full error:',
+        JSON.stringify(error, Object.getOwnPropertyNames(error))
+      );
+      console.error('[AGGREGATOR] First image URL that failed:', firstImageUrl);
       return NextResponse.json(
-        { error: `Ошибка при обработке изображения: ${error}` },
+        {
+          error: `Ошибка при обработке изображения: ${error?.message || error}`,
+        },
         { status: 500 }
       );
     }
@@ -819,10 +1039,15 @@ export async function POST(req: NextRequest) {
     // Attach Playwright screenshot as source screenshot, if available
     if (screenshotBuffer) {
       try {
+        console.log(
+          '[AGGREGATOR] Uploading Playwright screenshot to S3 for product',
+          product.id
+        );
         const screenshotKey = getObjectKey({
           productId: product.id,
           ext: 'png',
         });
+        console.log('[AGGREGATOR] Screenshot S3 key:', screenshotKey);
         const uploaded = await uploadImage(
           screenshotKey,
           screenshotBuffer,
@@ -830,6 +1055,10 @@ export async function POST(req: NextRequest) {
         );
         if (uploaded) {
           const screenshotUrl = getPublicUrl(screenshotKey);
+          console.log(
+            '[AGGREGATOR] Screenshot uploaded successfully:',
+            screenshotUrl
+          );
           await prisma.product.update({
             where: { id: product.id },
             data: {
@@ -837,6 +1066,9 @@ export async function POST(req: NextRequest) {
               sourceScreenshotUrl: screenshotUrl,
             },
           });
+          console.log(
+            '[AGGREGATOR] Product updated with source screenshot fields'
+          );
           // Update product object to include screenshot URL in response
           (product as any).sourceScreenshotKey = screenshotKey;
           (product as any).sourceScreenshotUrl = screenshotUrl;
@@ -852,6 +1084,11 @@ export async function POST(req: NextRequest) {
           screenshotUploadError
         );
       }
+    } else {
+      console.warn(
+        '[AGGREGATOR] No screenshot buffer available to save for product',
+        product.id
+      );
     }
 
     // Fetch the final product with all updates (including screenshot)

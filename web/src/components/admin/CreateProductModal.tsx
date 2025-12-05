@@ -66,6 +66,7 @@ export function CreateProductModal({
   const [aggregatorDataId, setAggregatorDataId] = useState('');
   const [aggregatorHtml, setAggregatorHtml] = useState('');
   const [isParsingAggregator, setIsParsingAggregator] = useState(false);
+  const [isTestParsing, setIsTestParsing] = useState(false);
   const [meditationQuote, setMeditationQuote] = useState('');
   const [meditationAuthor, setMeditationAuthor] = useState('');
   const isDev = process.env.NODE_ENV !== 'production';
@@ -313,6 +314,52 @@ export function CreateProductModal({
     }
   };
 
+  const handleAggregatorParseHtmlTest = async () => {
+    if (!aggregatorDataId.trim()) {
+      setErrors({ submit: 'Введите data-id товара из агрегатора' });
+      return;
+    }
+
+    setIsTestParsing(true);
+    setIsParsingAggregator(true);
+    setErrors({});
+    // Clear meditation quote to prevent any meditation UI
+    setMeditationQuote('');
+    setMeditationAuthor('');
+
+    try {
+      const response = await fetch('/api/admin/products/parse-aggregator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dataId: aggregatorDataId.trim(), test: true }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || 'Не удалось распарсить HTML для теста'
+        );
+      }
+
+      const result = await response.json();
+      console.log('[TEST] Parsed HTML data:', result.parsedData);
+      alert('Парсинг завершен! Проверьте консоль сервера для деталей.');
+    } catch (error) {
+      console.error('Error in test parsing:', error);
+      setErrors({
+        submit:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось распарсить HTML для теста',
+      });
+    } finally {
+      setIsParsingAggregator(false);
+      setIsTestParsing(false);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -321,7 +368,7 @@ export function CreateProductModal({
       size="fullscreen"
     >
       <div className="relative flex h-full flex-col overflow-hidden">
-        {isParsingAggregator && (
+        {isParsingAggregator && !isTestParsing && (
           <div className="pointer-events-auto fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-sky-100 via-sky-200 to-blue-300 backdrop-blur-sm">
             {/* Full-width progress bar at the top */}
             <div className="absolute left-0 right-0 top-0 h-1 overflow-hidden bg-sky-200/50">
@@ -418,6 +465,22 @@ export function CreateProductModal({
                       >
                         {isParsingAggregator ? 'Парсинг...' : 'Парсить'}
                       </Button>
+                      {isDev && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={handleAggregatorParseHtmlTest}
+                          disabled={
+                            isSubmitting ||
+                            isParsingAggregator ||
+                            !aggregatorDataId.trim()
+                          }
+                          className="!bg-gradient-to-r !from-yellow-500 !to-yellow-600 !text-white"
+                          title="Тестовый режим: только парсинг HTML, без LLM и создания товара"
+                        >
+                          {isTestParsing ? 'Только HTML...' : 'Только HTML'}
+                        </Button>
+                      )}
                     </div>
                     {isDev && (
                       <div className="space-y-2">
@@ -445,8 +508,8 @@ export function CreateProductModal({
                             }
                           >
                             {isParsingAggregator
-                              ? 'Парсинг HTML...'
-                              : 'Парсить HTML'}
+                              ? 'Анализ LLM...'
+                              : 'Анализ LLM'}
                           </Button>
                         </div>
                       </div>
