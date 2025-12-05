@@ -93,6 +93,23 @@ export function ProductsPageContent() {
     reload();
   };
 
+  // Listen for aggregator product parsed event
+  useEffect(() => {
+    const handleAggregatorProductParsed = (event: CustomEvent) => {
+      const { productId } = event.detail;
+      if (productId) {
+        setEditingProductId(productId);
+        setIsEditModalOpen(true);
+        setIsCreateModalOpen(false);
+      }
+    };
+
+    window.addEventListener('aggregatorProductParsed', handleAggregatorProductParsed as EventListener);
+    return () => {
+      window.removeEventListener('aggregatorProductParsed', handleAggregatorProductParsed as EventListener);
+    };
+  }, []);
+
   const handleEditImages = (productId: string) => {
     setEditingImagesProductId(productId);
     setIsEditImagesModalOpen(true);

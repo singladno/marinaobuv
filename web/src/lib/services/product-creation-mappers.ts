@@ -51,22 +51,22 @@ export function mapSeason(
  * Map AI gender response to valid Prisma enum values
  */
 export function mapGender(aiGender: string): 'MALE' | 'FEMALE' {
-  const gender = aiGender.toUpperCase();
+  const gender = aiGender.toUpperCase().trim();
 
-  if (gender.includes('MALE') || gender.includes('МУЖСКОЙ')) {
-    return 'MALE';
+  // Check for exact matches first (most specific)
+  if (gender === 'FEMALE' || gender === 'MALE') {
+    return gender as 'MALE' | 'FEMALE';
   }
+
+  // Check for FEMALE first (more specific, contains "MALE" as substring)
   if (gender.includes('FEMALE') || gender.includes('ЖЕНСКИЙ')) {
     return 'FEMALE';
   }
-  // Unknown string: do not assume a default here; caller should infer or set null
-  // Fallback to FEMALE only if explicitly marked as such above
-  // For safety, default to 'FEMALE' less aggressively is also incorrect; so throw to force caller to handle
-  // However, to keep function pure and non-throwing, return 'FEMALE' only if clearly indicated, otherwise 'MALE' would bias.
-  // We instead return 'FEMALE' if the string contains common feminine hints, else 'MALE' if masculine hints, already handled above.
-  // If completely unknown, return 'FEMALE' would still bias. Return 'MALE' would bias as well.
-  // To avoid bias in this mapper, we return 'FEMALE' only when explicit and 'MALE' only when explicit. For unknown, default to 'FEMALE' is removed.
-  // Since the function must return a value, keep 'MALE' as a neutral placeholder is not desired. We'll return 'FEMALE' here but upstream code will avoid calling on unknown.
+  // Then check for MALE (less specific)
+  if (gender.includes('MALE') || gender.includes('МУЖСКОЙ')) {
+    return 'MALE';
+  }
+  // Unknown string: default to FEMALE (as per original logic)
   return 'FEMALE';
 }
 

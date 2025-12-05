@@ -87,7 +87,10 @@
     "server:cron-parser:logs": "ssh -l ubuntu 130.193.56.134 'tail -n 200 -f /var/www/marinaobuv/web/logs/parsing-cron.log'",
     "webhook:monitor:logs": "ssh -l ubuntu 130.193.56.134 'echo \"=== Webhook Monitor Logs (last 50 lines) ===\" && tail -n 50 /var/www/marinaobuv/web/logs/webhook-monitor.log'",
     "webhook:monitor:logs:live": "ssh -l ubuntu 130.193.56.134 'echo \"=== Live Webhook Monitor Logs ===\" && tail -f /var/www/marinaobuv/web/logs/webhook-monitor.log'",
-    "webhook:monitor:logs:history": "ssh -l ubuntu 130.193.56.134 'echo \"=== Webhook Monitor History (last 100 lines) ===\" && tail -n 100 /var/www/marinaobuv/web/logs/webhook-monitor.log'"
+    "webhook:monitor:logs:history": "ssh -l ubuntu 130.193.56.134 'echo \"=== Webhook Monitor History (last 100 lines) ===\" && tail -n 100 /var/www/marinaobuv/web/logs/webhook-monitor.log'",
+    "playwright:install": "cd web && npm run playwright:install",
+    "playwright:install:ci": "cd web && npm run playwright:install:ci",
+    "postinstall": "cd web && npm install && npm run playwright:install"
   },
   "keywords": [
     "nextjs",

@@ -51,6 +51,11 @@ print_success "Using existing .env file for local development"
 print_status "📦 Installing dependencies..."
 npm install
 cd web && npm install
+
+# Install Playwright browser for aggregator parser (safe to run multiple times)
+print_status "🎭 Installing Playwright Chromium browser for local parsing..."
+npm run playwright:install || print_warning "Playwright install failed or skipped, aggregator parser may not work locally"
+
 cd ..
 
 # 3. Database Setup
@@ -59,7 +64,7 @@ print_status "🗄️ Setting up database..."
 # Check if PostgreSQL is running and start it if needed
 if ! pg_isready -q; then
     print_warning "PostgreSQL is not running. Starting PostgreSQL..."
-    
+
     # Try to start PostgreSQL automatically
     if command -v brew &> /dev/null; then
         print_status "Starting PostgreSQL with Homebrew..."
@@ -75,7 +80,7 @@ if ! pg_isready -q; then
         print_status "On Linux: sudo systemctl start postgresql"
         exit 1
     fi
-    
+
     # Check if PostgreSQL started successfully
     if ! pg_isready -q; then
         print_error "Failed to start PostgreSQL automatically. Please start it manually."
@@ -105,17 +110,17 @@ load_env() {
             if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
                 continue
             fi
-            
+
             # Extract key and value, handling quotes properly
             if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
                 local key="${BASH_REMATCH[1]}"
                 local value="${BASH_REMATCH[2]}"
-                
+
                 # Remove surrounding quotes if they exist and match
                 if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
                     value="${BASH_REMATCH[1]}"
                 fi
-                
+
                 # Export the variable
                 export "$key=$value"
             fi

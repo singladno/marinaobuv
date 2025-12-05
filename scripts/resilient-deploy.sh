@@ -34,15 +34,15 @@ run_with_fallback() {
     local description="$1"
     local command="$2"
     local fallback_command="${3:-}"
-    
+
     print_status "Running: $description"
-    
+
     if eval "$command"; then
         print_success "$description completed successfully"
         return 0
     else
         print_warning "$description failed"
-        
+
         if [ -n "$fallback_command" ]; then
             print_status "Running fallback: $fallback_command"
             if eval "$fallback_command"; then
@@ -63,7 +63,7 @@ run_with_fallback() {
 check_service() {
     local service_name="$1"
     local check_command="$2"
-    
+
     if eval "$check_command" > /dev/null 2>&1; then
         print_success "$service_name is running"
         return 0
@@ -77,9 +77,9 @@ check_service() {
 attempt_service_recovery() {
     local service_name="$1"
     local recovery_command="$2"
-    
+
     print_status "Attempting to recover $service_name..."
-    
+
     if eval "$recovery_command"; then
         print_success "$service_name recovery successful"
         return 0
@@ -135,7 +135,7 @@ else
 server {
     listen 80;
     server_name marina-obuv.ru www.marina-obuv.ru;
-    
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -144,7 +144,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     location /api/ {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
@@ -153,7 +153,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     location /health {
         proxy_pass http://localhost:3000/api/health;
         access_log off;
@@ -192,6 +192,12 @@ if [ ! -x node_modules/.bin/tsx ]; then
     npm install tsx@^4 --no-audit --no-fund || print_warning "tsx installation failed"
 fi
 
+# Ensure Playwright browsers are installed (for aggregator parser)
+print_status "🎭 Installing Playwright Chromium browser (idempotent)..."
+run_with_fallback "Playwright browser installation" \
+    "npm run playwright:install:ci" \
+    "echo 'Playwright installation skipped'"
+
 cd ..
 
 # 4. Database operations (critical but with fallback)
@@ -202,7 +208,7 @@ cd web
 if ! run_with_fallback "Database migrations" \
     "./prisma-server.sh npx prisma migrate deploy" \
     "npx prisma migrate deploy"; then
-    
+
     print_warning "Migrations failed, attempting schema fix..."
     if ! run_with_fallback "Database schema fix" \
         "../scripts/fix-database-schema.sh" \

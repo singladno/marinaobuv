@@ -65,6 +65,8 @@ const schema = z
     YC_API_KEY: z.string().optional(),
 
     // OpenAI Vision
+    // We always use Groq as the OpenAI-compatible backend.
+    // This value is derived from GROQ_API_KEY in the raw object below.
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_REQUEST_DELAY_MS: z.string().optional(),
     OPENAI_VISION_MODEL: z.string().optional(),
@@ -202,7 +204,9 @@ const raw = {
   YC_API_KEY: process.env.YC_API_KEY,
 
   // OpenAI Vision
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  // Always use GROQ_API_KEY for OpenAI-compatible clients (e.g. Groq Responses API)
+  // so OPENAI_API_KEY is effectively an alias of GROQ_API_KEY across the app.
+  OPENAI_API_KEY: process.env.GROQ_API_KEY,
   OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL,
   OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
   OPENAI_PROXY: process.env.OPENAI_PROXY,

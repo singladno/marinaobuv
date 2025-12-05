@@ -103,18 +103,28 @@ export function useEditProductForm(
         }
 
         // Set form data
+        console.log('[useEditProductForm] Loading product data:', {
+          id: product.id,
+          name: product.name,
+          gender: product.gender,
+          season: product.season,
+          material: product.material,
+        });
+
         setFormData({
           name: product.name || '',
           categoryId: categoryId,
           pricePair: product.pricePair || 0,
           buyPrice: (product as any).buyPrice || null,
           material: product.material || '',
-          gender: product.gender,
-          season: product.season,
+          gender: product.gender || undefined, // Convert null to undefined for form
+          season: product.season || undefined, // Convert null to undefined for form
           description: product.description || '',
           sizes: product.sizes || [],
           providerId: (product as any).providerId || null,
         });
+
+        console.log('[useEditProductForm] Form data set with gender:', product.gender);
 
         // Store source screenshot URL
         setSourceScreenshotUrl((product as any).sourceScreenshotUrl || null);

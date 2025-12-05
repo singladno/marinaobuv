@@ -20,6 +20,10 @@ pm2 stop all 2>/dev/null || true
 # Quick build and start (essential only)
 echo "🔨 Building application..."
 cd /var/www/marinaobuv/web
+
+echo "🎭 Ensuring Playwright Chromium browser is installed..."
+npm run playwright:install:ci || echo "⚠️ Playwright install failed or skipped, aggregator parser may be unavailable"
+
 npm run build
 
 # Start PM2 processes immediately

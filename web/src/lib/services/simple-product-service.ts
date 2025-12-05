@@ -626,6 +626,20 @@ export class SimpleProductService {
   }
 
   /**
+   * Public helper to determine the best category for a product name,
+   * falling back to the same temporary-category logic used in WA parser flow.
+   * This keeps other flows (e.g. aggregator import) consistent with WA behavior.
+   */
+  async getCategoryForProductName(productName: string): Promise<string> {
+    // Try to determine the most specific category via LLM
+    const determined = await this.determineCategoryFromName(productName);
+    if (determined) {
+      return determined;
+    }
+    // Fallback to the same temporary category logic as initial WA product creation
+    return this.getTemporaryCategoryId();
+  }
+  /**
    * Determine category from product name using LLM
    * Always returns the deepest-level category, never high-level like "Обувь"
    */

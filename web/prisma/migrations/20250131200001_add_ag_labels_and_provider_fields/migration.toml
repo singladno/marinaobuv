@@ -1,0 +1,5 @@
+# Please edit the object below.
+
+[[migrations]]
+  name = "20250131200001_add_ag_labels_and_provider_fields"
+  applied_at = "2025-01-31T00:00:01.000Z"

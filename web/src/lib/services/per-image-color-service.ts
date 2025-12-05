@@ -1,11 +1,12 @@
 /**
  * Service for analyzing individual images to detect colors
  */
-import { env } from '../env';
 import { normalizeColorToRussian } from '@/lib/utils/color-normalization';
-import OpenAI from 'openai';
+import { Groq } from 'groq-sdk';
+import { getGroqConfig } from '@/lib/groq-proxy-config';
+import { groqChatCompletion } from './groq-api-wrapper';
 import { ModelConfigService } from './model-config-service';
-import { withRetry, sleep } from '../../utils/retry';
+import { sleep } from '../../utils/retry';
 
 export interface ImageColorResult {
   url: string;
@@ -13,29 +14,21 @@ export interface ImageColorResult {
 }
 
 export class PerImageColorService {
-  private openai: any;
+  private groq: Groq | null = null;
 
-  constructor() {
-    if (!env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is required');
+  private async initializeGroq(): Promise<Groq> {
+    if (!this.groq) {
+      // Use same pattern as WA parser: proxy in prod, direct in dev
+      if (process.env.NODE_ENV === 'production') {
+        const groqConfig = await getGroqConfig();
+        this.groq = new Groq(groqConfig);
+      } else {
+        this.groq = new Groq({
+          apiKey: process.env.GROQ_API_KEY,
+        });
+      }
     }
-
-    // Initialize OpenAI lazily
-    this.openai = null;
-  }
-
-  private async getOpenAI() {
-    if (!this.openai) {
-      const rawBase = env.OPENAI_BASE_URL || 'https://api.openai.com';
-      const normalizedBase = rawBase.endsWith('/v1')
-        ? rawBase
-        : `${rawBase.replace(/\/+$/, '')}/v1`;
-      this.openai = new OpenAI({
-        apiKey: env.OPENAI_API_KEY,
-        baseURL: normalizedBase,
-      });
-    }
-    return this.openai;
+    return this.groq;
   }
 
   /**
@@ -113,7 +106,8 @@ export class PerImageColorService {
           base64: null,
         }));
 
-      const concurrency = env.IMAGE_DOWNLOAD_CONCURRENCY || 4;
+      const concurrency =
+        parseInt(process.env.IMAGE_DOWNLOAD_CONCURRENCY || '4', 10) || 4;
       let index = 0;
 
       const worker = async () => {
@@ -136,10 +130,18 @@ export class PerImageColorService {
 
       // Filter out failed downloads
       const successfulImages = imageData.filter(img => img.base64 !== null);
+      const failedImages = imageData.filter(img => img.base64 === null);
+
+      if (failedImages.length > 0) {
+        console.error(
+          `   ⚠️  Failed to download ${failedImages.length} images:`,
+          failedImages.map(img => img.url)
+        );
+      }
 
       if (successfulImages.length === 0) {
-        console.log(
-          `   ⚠️  No images could be downloaded, returning null colors`
+        console.error(
+          `   ❌ No images could be downloaded, returning null colors for all ${imageUrls.length} images`
         );
         return imageUrls.map(url => ({ url, color: null }));
       }
@@ -148,26 +150,28 @@ export class PerImageColorService {
         `   ✅ Successfully downloaded ${successfulImages.length}/${imageUrls.length} images`
       );
 
-      const systemPrompt = `You are a shoe color analysis expert for a shoe catalog.
-Your ONLY task is to identify the MAIN/PRIMARY color of the shoe's main material/canvas, ignoring decorative elements.
+      const systemPrompt = `You are a product color analysis expert for an e-commerce catalog.
+Your ONLY task is to identify the MAIN/PRIMARY color of the product shown in the image, regardless of product type (shoes, clothing, accessories, bags, etc.).
 
 CRITICAL RULES:
-- Focus ONLY on the shoe's main body material (upper, canvas, leather, fabric)
-- IGNORE decorative elements like logos, stitching, laces, soles, heels, buckles, zippers
-- IGNORE background colors, lighting, shadows, reflections, or any other objects
-- IGNORE the color of the surface the shoe is on (floor, table, etc.)
-- IGNORE any text, labels, or packaging in the image
-- IGNORE small colored details, patterns, or accents
-- Look for the dominant color of the shoe's main material/upper
-- If there are multiple shoes, analyze the most prominent one
-- If the shoe has multiple colors, identify the MAIN material color (not decorative accents)
-- If the main shoe color is unclear or not visible, return null for that image
+- Focus on the MAIN/PRIMARY color of the product's main material/fabric/surface
+- Identify the dominant color that covers the largest area of the product
+- IGNORE decorative elements: logos, patterns, stitching, buttons, zippers, buckles, laces, soles, labels, text
+- IGNORE background colors, lighting, shadows, reflections, or any other objects in the image
+- IGNORE the color of surfaces the product is on (floor, table, mannequin, display stand, etc.)
+- IGNORE any text, labels, tags, or packaging visible in the image
+- IGNORE small colored details, accents, or patterns
+- If there are multiple products, analyze the most prominent/central one
+- If the product has multiple colors, identify the MAIN/dominant color (not decorative accents)
+- If the main product color is unclear, not visible, or the image doesn't show a product clearly, return null
 
-EXAMPLES:
-- Black shoe with white laces and white sole → "черный" (main material)
-- Red sneaker with white logo and white sole → "красный" (main canvas)
-- Brown boot with silver buckles → "коричневый" (main leather)
-- Blue shoe with yellow stitching → "синий" (main material)
+EXAMPLES (any product type):
+- Black shoe with white laces → "черный" (main material)
+- Red bag with gold hardware → "красный" (main material)
+- Blue jacket with white logo → "синий" (main fabric)
+- White dress with colored belt → "белый" (main fabric)
+- Brown leather item with silver details → "коричневый" (main material)
+- Gray accessory with black trim → "серый" (main color)
 
 Use ONLY Russian color names in lowercase: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый", "желтый", "оранжевый", "магнета", "фуксия".
 
@@ -210,66 +214,86 @@ Return STRICT JSON with this shape:
               await sleep(delayMs);
             }
 
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(
-                () => reject(new Error('Request timeout after 90 seconds')),
-                90000
-              );
-            });
+            // Use Groq chat completions API (same as WA parser) with JSON mode
+            const groq = await this.initializeGroq();
+            const model = ModelConfigService.getModelForTask('color');
 
-            // no per-request artificial delays; retries handle rate limits
+            const response = await groqChatCompletion(
+              groq,
+              {
+                model,
+                messages: [
+                  {
+                    role: 'system',
+                    content: systemPrompt,
+                  },
+                  {
+                    role: 'user',
+                    content: [
+                      {
+                        type: 'text',
+                        text: `Analyze these ${batch.length} images for color detection:`,
+                      },
+                      ...batch.map((img, idx) => {
+                        const base64Preview = img.base64.substring(0, 50);
+                        console.log(
+                          `   📸 Image ${idx + 1} base64 preview: ${base64Preview}... (total length: ${img.base64.length})`
+                        );
+                        return {
+                          type: 'image_url' as const,
+                          image_url: { url: img.base64 },
+                        };
+                      }),
+                    ],
+                  },
+                ],
+                response_format: { type: 'json_object' }, // Force JSON output
+                temperature: 0.5,
+                max_tokens:
+                  ModelConfigService.getMaxOutputTokensForTask('color'),
+              },
+              `color-analysis-batch-${indices.join('-')}`,
+              {
+                maxRetries: 2,
+                baseDelayMs: 500,
+                maxDelayMs: 10000,
+                timeoutMs: 90000,
+              }
+            );
 
-            const userMessage = {
-              role: 'user' as const,
-              content: [
-                {
-                  type: 'text',
-                  text: `Analyze these ${batch.length} images for color detection:`,
-                },
-                ...batch.map(img => ({
-                  type: 'image_url',
-                  image_url: { url: img.base64 },
-                })),
-              ],
-            };
-
-            const response = (await Promise.race([
-              withRetry(signal =>
-                this.getOpenAI().then(client => {
-                  const model = ModelConfigService.getModelForTask('color');
-                  const payload: any = {
-                    model,
-                    input:
-                      (userMessage.content.find(c => c.type === 'text') as any)
-                        ?.text || '',
-                    max_output_tokens:
-                      ModelConfigService.getMaxOutputTokensForTask('color'),
-                  };
-                  if (ModelConfigService.supportsReasoning(model)) {
-                    payload.reasoning = {
-                      effort:
-                        ModelConfigService.getReasoningEffortForTask('color'),
-                    };
-                  }
-                  if (ModelConfigService.supportsTextControls(model)) {
-                    payload.text = {
-                      verbosity:
-                        ModelConfigService.getTextVerbosityForTask('color'),
-                    };
-                  }
-                  return client.responses.create(payload);
-                })
-              ),
-              timeoutPromise,
-            ])) as any;
-
-            const content = response.output_text;
-            if (!content) {
-              throw new Error('No content in OpenAI response');
+            // Type guard: ensure it's ChatCompletion, not Stream
+            if (!('choices' in response)) {
+              throw new Error('Unexpected response type from Groq API');
             }
-            const result = JSON.parse(content) as {
-              images?: Array<{ color?: string | null }>;
-            };
+
+            const content = response.choices[0].message.content;
+            if (!content) {
+              throw new Error('No content in Groq response');
+            }
+
+            console.log(
+              `   📋 Raw Groq color analysis response (first 500 chars):`,
+              content.substring(0, 500)
+            );
+
+            let result: { images?: Array<{ color?: string | null }> };
+            try {
+              result = JSON.parse(content) as {
+                images?: Array<{ color?: string | null }>;
+              };
+              console.log(
+                `   📋 Parsed color analysis result:`,
+                JSON.stringify(result, null, 2)
+              );
+            } catch (parseError) {
+              console.error(
+                `   ❌ Failed to parse color analysis JSON:`,
+                parseError,
+                `\n   Raw content:`,
+                content
+              );
+              throw parseError;
+            }
 
             // Validate that we got the right number of results
             if (!result.images || result.images.length !== indices.length) {
@@ -324,7 +348,14 @@ Return STRICT JSON with this shape:
           }
         }
         // If all attempts failed for this batch, leave colors as null for these indices
-        if (lastError) throw lastError;
+        if (lastError) {
+          console.error(
+            `   ❌ All retries failed for batch [${indices.join(', ')}]. Leaving colors as null. Last error:`,
+            lastError
+          );
+          // Don't throw - just leave colors as null for this batch
+          return;
+        }
       };
 
       // Build batches from successful images
@@ -354,7 +385,16 @@ Return STRICT JSON with this shape:
         console.log(
           `   🎯 Processing color batch ${i + 1}/${batches.length} (size=${batches[i].length})`
         );
-        await processBatch(batches[i], indexBatches[i]);
+        try {
+          await processBatch(batches[i], indexBatches[i]);
+        } catch (batchError) {
+          console.error(
+            `   ❌ Batch ${i + 1} failed completely, leaving colors as null for these images:`,
+            indexBatches[i],
+            batchError
+          );
+          // Colors are already null for these indices, so we just continue
+        }
       }
 
       console.log(

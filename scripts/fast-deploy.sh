@@ -26,17 +26,17 @@ load_env() {
             if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
                 continue
             fi
-            
+
             # Extract key and value, handling quotes properly
             if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
                 local key="${BASH_REMATCH[1]}"
                 local value="${BASH_REMATCH[2]}"
-                
+
                 # Remove surrounding quotes if they exist and match
                 if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
                     value="${BASH_REMATCH[1]}"
                 fi
-                
+
                 # Export the variable
                 export "$key=$value"
             fi
@@ -63,6 +63,11 @@ pm2 stop all 2>/dev/null || true
 # Quick build and start (essential only)
 echo "🔨 Building application..."
 cd web
+
+# Ensure Playwright Chromium is installed for aggregator parser
+echo "🎭 Ensuring Playwright Chromium browser is installed..."
+npm run playwright:install:ci || echo "⚠️ Playwright install failed or skipped, aggregator parser may be unavailable"
+
 npm run build
 
 # Start PM2 processes immediately

@@ -39,9 +39,19 @@ export function isGroqRetryableError(error: unknown): boolean {
   if (message.includes('rate limit')) return true;
   if (message.includes('back off')) return true;
   if (message.includes('internal_server_error')) return true;
+  // "context deadline exceeded" is a transient server timeout - should retry
+  if (message.includes('context deadline exceeded')) return true;
+  if (message.includes('deadline exceeded')) return true;
+  if (message.includes('timeout')) return true;
 
-  // Don't retry on client errors (4xx except 429)
-  if (status && status >= 400 && status < 500 && status !== 429) return false;
+  // Don't retry on client errors (4xx except 429 and timeout errors)
+  if (status && status >= 400 && status < 500 && status !== 429) {
+    // But allow retries for timeout-related 400 errors
+    if (message.includes('context deadline exceeded') || message.includes('deadline exceeded') || message.includes('timeout')) {
+      return true;
+    }
+    return false;
+  }
 
   return false;
 }
@@ -86,6 +96,10 @@ export async function executeGroqCall<T>(
           );
         } else if (message.includes('rate limit')) {
           console.warn(`⚠️ Groq API rate limit - will retry with backoff`);
+        } else if (message.includes('context deadline exceeded') || message.includes('deadline exceeded')) {
+          console.warn(
+            `⚠️ Groq API context deadline exceeded (server timeout) - will retry with exponential backoff`
+          );
         }
 
         return true;

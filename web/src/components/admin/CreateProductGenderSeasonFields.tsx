@@ -57,7 +57,7 @@ export function CreateProductGenderSeasonFields({
         </Text>
         <Select
           key={`gender-${formData.gender || 'empty'}`}
-          value={formData.gender || ''}
+          value={formData.gender || undefined}
           onValueChange={value => {
             onFieldChange(
               'gender',
@@ -69,7 +69,7 @@ export function CreateProductGenderSeasonFields({
         >
           <SelectTrigger className={errors.gender ? 'border-red-500' : ''}>
             <SelectValue placeholder="Выберите пол">
-              {selectedGenderLabel}
+              {selectedGenderLabel || 'Выберите пол'}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -96,7 +96,7 @@ export function CreateProductGenderSeasonFields({
         </Text>
         <Select
           key={`season-${formData.season || 'empty'}`}
-          value={formData.season || ''}
+          value={formData.season || undefined}
           onValueChange={value => {
             onFieldChange(
               'season',
@@ -110,7 +110,7 @@ export function CreateProductGenderSeasonFields({
         >
           <SelectTrigger className={errors.season ? 'border-red-500' : ''}>
             <SelectValue placeholder="Выберите сезон">
-              {selectedSeasonLabel}
+              {selectedSeasonLabel || 'Выберите сезон'}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
