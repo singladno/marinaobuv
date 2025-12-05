@@ -34,6 +34,9 @@ jobs:
         run: |
           npm install
           cd web && npm install
+          # Install Playwright Chromium browser for aggregator parser (for build/test)
+          echo "🎭 Installing Playwright Chromium browser..."
+          npm run playwright:install:ci || echo "⚠️ Playwright install failed, but continuing with build"
 
       - name: Run linting
         run: |
@@ -129,11 +132,11 @@ jobs:
                 gh api repos/${{ github.repository }}/actions/runs/$run_id/cancel -X POST || echo "Failed to cancel run $run_id"
                 sleep 2
               done
-              
+
               # Wait a bit for cancellations to take effect
               echo "⏳ Waiting for cancellations to take effect..."
               sleep 10
-              
+
               # Check if any are still running
               REMAINING=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.status == "in_progress" and .id != ${{ github.run_id }}) | .id')
               if [ ! -z "$REMAINING" ]; then
@@ -276,17 +279,17 @@ jobs:
                 if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
                     continue
                 fi
-                
+
                 # Extract key and value, handling quotes properly
                 if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
                     key="${BASH_REMATCH[1]}"
                     value="${BASH_REMATCH[2]}"
-                    
+
                     # Remove surrounding quotes if they exist and match
                     if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
                         value="${BASH_REMATCH[1]}"
                     fi
-                    
+
                     # Export the variable
                     export "$key"="$value"
                 fi
@@ -319,6 +322,9 @@ jobs:
 
             # Install dependencies including dev (required for tsx/typescript used by scripts)
             cd web && npm ci
+            # Install Playwright Chromium browser for aggregator parser
+            echo "🎭 Installing Playwright Chromium browser..."
+            npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
             cd ..
 
             # Note: Proxy runs on separate serverspace server
@@ -379,15 +385,15 @@ jobs:
             # Ensure default categories exist (critical for parser functionality)
             echo "🔧 Ensuring default categories exist..."
             ./prisma-server.sh npx prisma db execute --stdin <<< "
-              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\")
               VALUES ('default', 'Обувь', 'obuv', 'Основная категория обуви', NOW(), NOW())
               ON CONFLICT (id) DO NOTHING;
-              
-              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\")
               VALUES ('winter', 'Зимняя обувь', 'winter-shoes', 'Зимняя обувь и аксессуары', NOW(), NOW())
               ON CONFLICT (id) DO NOTHING;
-              
-              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\") 
+
+              INSERT INTO \"Category\" (id, name, slug, description, \"createdAt\", \"updatedAt\")
               VALUES ('summer', 'Летняя обувь', 'summer-shoes', 'Летняя обувь и сандалии', NOW(), NOW())
               ON CONFLICT (id) DO NOTHING;
             " 2>/dev/null || echo "Categories already exist or table doesn't exist yet"
@@ -410,6 +416,9 @@ jobs:
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
             npm ci
+            # Ensure Playwright Chromium browser is installed for aggregator parser
+            echo "🎭 Ensuring Playwright Chromium browser is installed..."
+            npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
             npm run build
             cd ..
             echo "✅ Server-side build completed"
@@ -442,7 +451,7 @@ jobs:
                   -keyout /etc/ssl/private/marinaobuv.ru.key \
                   -out /etc/ssl/certs/marinaobuv.ru.crt \
                   -subj "/C=RU/ST=Moscow/L=Moscow/O=MarinaObuv/OU=IT/CN=marina-obuv.ru"
-              
+
               sudo chmod 600 /etc/ssl/private/marinaobuv.ru.key
               sudo chmod 644 /etc/ssl/certs/marinaobuv.ru.crt
             else
@@ -472,7 +481,7 @@ jobs:
             server {
                 listen 80;
                 server_name marina-obuv.ru www.marina-obuv.ru;
-                
+
                 location / {
                     proxy_pass http://localhost:3000;
                     proxy_http_version 1.1;
@@ -481,7 +490,7 @@ jobs:
                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                     proxy_set_header X-Forwarded-Proto $scheme;
                 }
-                
+
                 location /api/ {
                     proxy_pass http://localhost:3000;
                     proxy_http_version 1.1;
@@ -490,7 +499,7 @@ jobs:
                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                     proxy_set_header X-Forwarded-Proto $scheme;
                 }
-                
+
                 location /health {
                     proxy_pass http://localhost:3000/api/health;
                     access_log off;
@@ -524,21 +533,21 @@ jobs:
               cd /var/www/marinaobuv
               if bash scripts/install-crons.sh; then
                 echo "✅ Cron jobs installed successfully"
-                
+
                 # Verify webhook monitor cron is installed
                 if crontab -l 2>/dev/null | grep -q "webhook-status-monitor"; then
                   echo "✅ Webhook monitor cron job verified"
                 else
                   echo "⚠️ Webhook monitor cron job not found in crontab"
                 fi
-                
+
                 # Verify cron service is running
                 if systemctl is-active --quiet cron || systemctl is-active --quiet crond; then
                   echo "✅ Cron service is running"
                 else
                   echo "⚠️ Cron service is not running"
                 fi
-                
+
                 # Ensure logs directory exists for webhook monitor
                 mkdir -p web/logs
                 touch web/logs/webhook-monitor.log
@@ -567,17 +576,17 @@ jobs:
                 if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
                     continue
                 fi
-                
+
                 # Extract key and value, handling quotes properly
                 if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
                     key="${BASH_REMATCH[1]}"
                     value="${BASH_REMATCH[2]}"
-                    
+
                     # Remove surrounding quotes if they exist and match
                     if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
                         value="${BASH_REMATCH[1]}"
                     fi
-                    
+
                     # Export the variable
                     export "$key"="$value"
                 fi
@@ -598,7 +607,7 @@ jobs:
             else
               echo "❌ Blue-Green deployment script not found!"
               echo "Falling back to traditional deployment..."
-              
+
               # Fallback to traditional deployment
               pm2 kill 2>/dev/null || true
               sleep 2
@@ -608,11 +617,11 @@ jobs:
                 pm2 logs marinaobuv --lines 50
                 exit 1
               fi
-              
+
               # Wait for application to start
               echo "Waiting for application to start..."
               sleep 15
-              
+
               # Health check with retries
               for i in {1..5}; do
                 echo "Health check attempt $i/5..."
@@ -646,7 +655,7 @@ jobs:
             else
               echo "❌ Database connectivity failed!"
               echo "🔧 Attempting to fix database connection..."
-              
+
               # Fix database authentication issues
               echo "🔧 Fixing database authentication issues..."
               cd ..
@@ -657,24 +666,24 @@ jobs:
                   if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
                       continue
                   fi
-                  
+
                   # Extract key and value, handling quotes properly
                   if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
                       local key="${BASH_REMATCH[1]}"
                       local value="${BASH_REMATCH[2]}"
-                      
+
                       # Remove surrounding quotes if they exist and match
                       if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
                           value="${BASH_REMATCH[1]}"
                       fi
-                      
+
                       # Export the variable
                       export "$key=$value"
                   fi
               done < web/.env
               set +a  # turn off automatic export
               ./scripts/fix-database-auth.sh
-              
+
               # Test connection again
               cd web
               ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1
@@ -684,7 +693,7 @@ jobs:
                 echo "❌ Database connection could not be restored"
                 echo "🔍 Database connection details:"
                 echo "Host: $DB_HOST"
-                echo "Port: $DB_PORT" 
+                echo "Port: $DB_PORT"
                 echo "Database: $DB_NAME"
                 echo "User: $DB_USER"
                 echo "🔍 Testing direct PostgreSQL connection..."
@@ -788,7 +797,7 @@ jobs:
             if [ -f "scripts/verify-webhook-deployment.sh" ]; then
               chmod +x scripts/verify-webhook-deployment.sh
               echo "✅ Webhook verification script found and made executable"
-              
+
               if ./scripts/verify-webhook-deployment.sh; then
                 echo "✅ Webhook verification completed successfully"
               else
@@ -807,16 +816,16 @@ jobs:
             # Verify webhook status monitor and Telegram configuration
             echo "🔍 Verifying webhook status monitor configuration..."
             cd web
-            
+
             # Check if Telegram environment variables are set (warn if not, but don't fail)
             if grep -q "TELEGRAM_BOT_TOKEN" .env 2>/dev/null && grep -q "TELEGRAM_CHAT_IDS" .env 2>/dev/null; then
               TELEGRAM_TOKEN=$(grep "^TELEGRAM_BOT_TOKEN=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
               TELEGRAM_CHAT_IDS=$(grep "^TELEGRAM_CHAT_IDS=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
-              
+
               if [ -n "$TELEGRAM_TOKEN" ] && [ "$TELEGRAM_TOKEN" != "your_telegram_bot_token" ] && \
                  [ -n "$TELEGRAM_CHAT_IDS" ] && [ "$TELEGRAM_CHAT_IDS" != "123456789" ]; then
                 echo "✅ Telegram configuration found in .env"
-                
+
                 # Test webhook monitor script (dry run - just check it can load)
                 echo "🧪 Testing webhook status monitor script..."
                 if timeout 30 ./node_modules/.bin/tsx src/scripts/webhook-status-monitor.ts 2>&1 | head -20; then
