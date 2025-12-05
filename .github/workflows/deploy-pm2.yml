@@ -381,6 +381,7 @@ jobs:
                 echo "💡 DEPLOYMENT FAILED - could not fix database schema"
                 exit 1
               fi
+            fi
 
             # Ensure default categories exist (critical for parser functionality)
             echo "🔧 Ensuring default categories exist..."
@@ -398,7 +399,6 @@ jobs:
               ON CONFLICT (id) DO NOTHING;
             " 2>/dev/null || echo "Categories already exist or table doesn't exist yet"
             echo "✅ Default categories ensured"
-            fi
 
             # Skip init/seed (requires tsx); run manually when needed
             echo "ℹ️ Skipping DB init/seed during deploy"
