@@ -381,10 +381,21 @@ jobs:
             # Test database connection
             echo "🔍 Testing database connection..."
             cd web
-            if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
+            echo "   Running: ./prisma-server.sh npx prisma db pull --print"
+            DB_TEST_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
+            DB_TEST_EXIT=$?
+            if [ $DB_TEST_EXIT -eq 0 ]; then
               echo "✅ Database connection verified"
             else
-              echo "⚠️ Database connection test failed, but continuing with deployment..."
+              echo "⚠️ Database connection test failed (exit code: $DB_TEST_EXIT)"
+              echo "   Error details:"
+              echo "$DB_TEST_OUTPUT" | head -30
+              echo ""
+              echo "   Continuing with deployment, but database operations may fail..."
+              echo "   Please verify:"
+              echo "   - PostgreSQL service is running: systemctl status postgresql"
+              echo "   - DATABASE_URL is correct in web/.env"
+              echo "   - Database credentials are valid"
             fi
             cd ..
 
@@ -420,7 +431,18 @@ jobs:
 
             # Verify database connection
             echo "🔍 Verifying database connection..."
-            ./prisma-server.sh npx prisma db pull --print || echo "⚠️ Database connection test failed, but continuing..."
+            echo "   Running: ./prisma-server.sh npx prisma db pull --print"
+            DB_VERIFY_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
+            DB_VERIFY_EXIT=$?
+            if [ $DB_VERIFY_EXIT -eq 0 ]; then
+              echo "✅ Database connection verified"
+            else
+              echo "⚠️ Database connection verification failed (exit code: $DB_VERIFY_EXIT)"
+              echo "   Error details:"
+              echo "$DB_VERIFY_OUTPUT" | head -30
+              echo ""
+              echo "   Continuing with Prisma client generation..."
+            fi
 
             # Skip backup (requires tsx); do backups manually or on cron
             echo "ℹ️ Skipping DB backup during deploy"
@@ -720,10 +742,16 @@ jobs:
             # Database connectivity health check
             echo "🔍 Testing database connectivity..."
             cd web
-            if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
+            echo "   Running: ./prisma-server.sh npx prisma db pull --print"
+            DB_HEALTH_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
+            DB_HEALTH_EXIT=$?
+            if [ $DB_HEALTH_EXIT -eq 0 ]; then
               echo "✅ Database connectivity verified"
             else
-              echo "❌ Database connectivity failed!"
+              echo "❌ Database connectivity failed! (exit code: $DB_HEALTH_EXIT)"
+              echo "   Error details:"
+              echo "$DB_HEALTH_OUTPUT" | head -40
+              echo ""
               echo "🔧 Attempting to fix database connection..."
 
               # Fix database authentication issues
@@ -756,18 +784,31 @@ jobs:
 
               # Test connection again
               cd web
-              if ./prisma-server.sh npx prisma db pull --print > /dev/null 2>&1; then
+              echo "   Retesting database connection after auth fix..."
+              DB_RETEST_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
+              DB_RETEST_EXIT=$?
+              if [ $DB_RETEST_EXIT -eq 0 ]; then
                 echo "✅ Database connection restored"
               else
-                echo "❌ Database connection could not be restored"
+                echo "❌ Database connection could not be restored (exit code: $DB_RETEST_EXIT)"
+                echo "   Error details:"
+                echo "$DB_RETEST_OUTPUT" | head -40
+                echo ""
                 echo "🔍 Database connection details:"
-                echo "Host: $DB_HOST"
-                echo "Port: $DB_PORT"
-                echo "Database: $DB_NAME"
-                echo "User: $DB_USER"
+                echo "   Host: ${DB_HOST:-not set}"
+                echo "   Port: ${DB_PORT:-not set}"
+                echo "   Database: ${DB_NAME:-not set}"
+                echo "   User: ${DB_USER:-not set}"
+                echo ""
                 echo "🔍 Testing direct PostgreSQL connection..."
-                PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" || echo "Direct connection failed"
-                pm2 logs marinaobuv --lines 50
+                if command -v psql &> /dev/null && [ -n "$DB_HOST" ] && [ -n "$DB_USER" ] && [ -n "$DB_NAME" ]; then
+                  PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" 2>&1 | head -10 || echo "   Direct PostgreSQL connection also failed"
+                else
+                  echo "   Cannot test direct connection (psql not found or DB variables not set)"
+                fi
+                echo ""
+                echo "📋 PM2 application logs (last 50 lines):"
+                pm2 logs marinaobuv --lines 50 --nostream || echo "   Could not retrieve PM2 logs"
                 exit 1
               fi
             fi
@@ -798,35 +839,76 @@ jobs:
             # Test database connectivity and schema
             echo "🔍 Testing database schema..."
             cd web
-            if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
+            SCHEMA_TEST_OUTPUT=$(./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" 2>&1)
+            SCHEMA_TEST_EXIT=$?
+            if [ $SCHEMA_TEST_EXIT -eq 0 ]; then
               echo "✅ Database schema validation passed"
               cd ..
             else
-              echo "❌ CRITICAL: Database schema is still broken!"
+              echo "❌ CRITICAL: Database schema test failed! (exit code: $SCHEMA_TEST_EXIT)"
+              echo "   Error details:"
+              echo "$SCHEMA_TEST_OUTPUT" | head -30
+              echo ""
               echo "🔧 Attempting final schema fix..."
               # Final attempt to fix schema
               cd web
-              echo "Adding missing analysisBatchId column..."
-              ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"analysisBatchId\" TEXT;" || echo "Column may already exist"
-              echo "Adding missing colorBatchId column..."
-              ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"colorBatchId\" TEXT;" || echo "Column may already exist"
-              echo "Adding missing batchProcessingStatus column..."
-              ./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"batchProcessingStatus\" TEXT DEFAULT 'pending';" || echo "Column may already exist"
-              echo "Adding missing indexes..."
-              ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_analysisBatchId_key\" ON \"Product\"(\"analysisBatchId\");" || echo "Index may already exist"
-              ./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_colorBatchId_key\" ON \"Product\"(\"colorBatchId\");" || echo "Index may already exist"
-              echo "Regenerating Prisma client..."
+              echo "   Adding missing analysisBatchId column..."
+              ALTER_OUTPUT=$(./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"analysisBatchId\" TEXT;" 2>&1)
+              if [ $? -ne 0 ]; then
+                echo "   ⚠️  analysisBatchId: $ALTER_OUTPUT" | head -2
+              else
+                echo "   ✅ analysisBatchId column added"
+              fi
+
+              echo "   Adding missing colorBatchId column..."
+              ALTER_OUTPUT=$(./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"colorBatchId\" TEXT;" 2>&1)
+              if [ $? -ne 0 ]; then
+                echo "   ⚠️  colorBatchId: $ALTER_OUTPUT" | head -2
+              else
+                echo "   ✅ colorBatchId column added"
+              fi
+
+              echo "   Adding missing batchProcessingStatus column..."
+              ALTER_OUTPUT=$(./prisma-server.sh npx prisma db execute --stdin <<< "ALTER TABLE \"Product\" ADD COLUMN \"batchProcessingStatus\" TEXT DEFAULT 'pending';" 2>&1)
+              if [ $? -ne 0 ]; then
+                echo "   ⚠️  batchProcessingStatus: $ALTER_OUTPUT" | head -2
+              else
+                echo "   ✅ batchProcessingStatus column added"
+              fi
+
+              echo "   Adding missing indexes..."
+              INDEX_OUTPUT=$(./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_analysisBatchId_key\" ON \"Product\"(\"analysisBatchId\");" 2>&1)
+              if [ $? -ne 0 ]; then
+                echo "   ⚠️  analysisBatchId index: $INDEX_OUTPUT" | head -2
+              fi
+
+              INDEX_OUTPUT=$(./prisma-server.sh npx prisma db execute --stdin <<< "CREATE UNIQUE INDEX IF NOT EXISTS \"Product_colorBatchId_key\" ON \"Product\"(\"colorBatchId\");" 2>&1)
+              if [ $? -ne 0 ]; then
+                echo "   ⚠️  colorBatchId index: $INDEX_OUTPUT" | head -2
+              fi
+
+              echo "   Regenerating Prisma client..."
               ./prisma-server.sh npm run prisma:generate
               cd ..
-              echo "Restarting application..."
+              echo "   Restarting application..."
               pm2 restart marinaobuv
               sleep 10
+
               # Test again after fixes
-              if ./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" > /dev/null 2>&1; then
+              echo "   Retesting schema after fixes..."
+              cd web
+              SCHEMA_RETEST_OUTPUT=$(./prisma-server.sh npx prisma db execute --stdin <<< "SELECT \"analysisBatchId\" FROM \"Product\" LIMIT 1;" 2>&1)
+              SCHEMA_RETEST_EXIT=$?
+              if [ $SCHEMA_RETEST_EXIT -eq 0 ]; then
                 echo "✅ Database schema fixed successfully"
+                cd ..
               else
-                echo "❌ CRITICAL: Database schema could not be fixed!"
+                echo "❌ CRITICAL: Database schema could not be fixed! (exit code: $SCHEMA_RETEST_EXIT)"
+                echo "   Error details:"
+                echo "$SCHEMA_RETEST_OUTPUT" | head -30
+                echo ""
                 echo "💡 DEPLOYMENT FAILED - application will not work"
+                cd ..
                 exit 1
               fi
             fi
