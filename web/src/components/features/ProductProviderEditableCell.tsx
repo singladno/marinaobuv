@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, startTransition, memo, flushSync } from 'react';
+import { useState, useRef, startTransition, memo } from 'react';
+import { flushSync } from 'react-dom';
 import { SupplierSelector } from '@/components/admin/SupplierSelector';
 import { useProviderModels } from '@/hooks/useProviderModels';
 import type { Product, ProductUpdateData } from '@/types/product';
