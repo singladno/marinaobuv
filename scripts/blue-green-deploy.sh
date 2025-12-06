@@ -267,16 +267,41 @@ main() {
         target_port=3001
     fi
 
-    # Build application (skip if already built)
-    echo "🔨 Checking if application needs building..."
+    # Always rebuild application to ensure static files match HTML
+    # This prevents issues where HTML references CSS/JS files that don't exist
+    echo "🔨 Building application (always rebuild to ensure consistency)..."
+
+    # Stop any running instances to prevent serving stale files during build
+    echo "🛑 Stopping any running instances to prevent stale file serving..."
+    pm2 stop "marinaobuv-blue" 2>/dev/null || true
+    pm2 stop "marinaobuv-green" 2>/dev/null || true
+    pm2 stop "marinaobuv" 2>/dev/null || true
+    sleep 2
+
+    # Clean previous build to ensure fresh build
+    echo "🧹 Cleaning previous build artifacts..."
+    cd web
+    rm -rf .next
+    cd ..
+
+    # Build the application
+    echo "🔨 Running production build..."
+    cd web
+    timeout 1800 npm run build 2>&1 | tee /tmp/build.log || {
+        echo "❌ Build failed or timed out"
+        tail -50 /tmp/build.log || true
+        exit 1
+    }
+    cd ..
+
+    # Verify build was successful
     if [ ! -f "web/.next/BUILD_ID" ]; then
-        echo "🔨 Building application..."
-        cd web
-        npm run build
-        cd ..
-    else
-        echo "✅ Application already built, skipping build step"
+        echo "❌ Build failed - BUILD_ID not found"
+        exit 1
     fi
+
+    BUILD_ID=$(cat web/.next/BUILD_ID)
+    echo "✅ Build completed successfully (Build ID: $BUILD_ID)"
 
     # Start target deployment
     echo "🚀 Starting $target_deployment deployment on port $target_port..."

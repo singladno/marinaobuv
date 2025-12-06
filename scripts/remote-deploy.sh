@@ -245,7 +245,19 @@ fi
 mkdir -p logs
 : > logs/marinaobuv-error.log || true
 : > logs/marinaobuv-out.log || true
-echo "🔨 Building application..."
+
+# Stop any running instances to prevent serving stale files during build
+echo "🛑 Stopping any running instances to prevent stale file serving..."
+pm2 stop marinaobuv 2>/dev/null || true
+pm2 stop marinaobuv-blue 2>/dev/null || true
+pm2 stop marinaobuv-green 2>/dev/null || true
+sleep 2
+
+# Clean previous build to ensure fresh build and prevent stale static file issues
+echo "🧹 Cleaning previous build artifacts..."
+rm -rf web/.next
+
+echo "🔨 Building application (fresh build to ensure static files match HTML)..."
 timeout 1800 npm run build 2>&1 | tee /tmp/build.log || {
   echo "❌ Build failed or timed out"
   tail -50 /tmp/build.log || true
@@ -260,6 +272,9 @@ if [ ! -f "web/.next/BUILD_ID" ]; then
   ls -la web/.next || true
   exit 1
 fi
+
+BUILD_ID=$(cat web/.next/BUILD_ID)
+echo "✅ Build verified (Build ID: $BUILD_ID)"
 
 # Setup HTTPS and nginx configuration
 echo "🔒 Setting up HTTPS and nginx configuration..."
