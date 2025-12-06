@@ -278,19 +278,39 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse HTML
+    console.log('[AGGREGATOR] ========== PARSING HTML ==========');
     console.log('[AGGREGATOR] Starting HTML parsing...');
     console.log('[AGGREGATOR] HTML length before parsing:', html.length);
     const parsedData = parseAggregatorHTML(html);
     console.log('[AGGREGATOR] HTML parsing completed');
 
+    console.log('[AGGREGATOR] ========== PARSED DATA SUMMARY ==========');
     console.log('[AGGREGATOR] Parsed data validation:');
     console.log(
       '[AGGREGATOR] - Has textInfo:',
       !!parsedData.textInfo,
       parsedData.textInfo ? `${parsedData.textInfo.length} chars` : 'EMPTY'
     );
-    console.log('[AGGREGATOR] - Images count:', parsedData.images.length);
+    console.log('[AGGREGATOR] - Images count:', parsedData.images?.length || 0);
     console.log('[AGGREGATOR] - Images array:', parsedData.images);
+    console.log('[AGGREGATOR] - Provider name:', parsedData.providerName || 'NOT FOUND');
+    console.log('[AGGREGATOR] - Provider link:', parsedData.providerLink || 'NOT FOUND');
+    console.log('[AGGREGATOR] - Provider location:', parsedData.providerLocation || 'NOT FOUND');
+    console.log('[AGGREGATOR] - Price:', parsedData.price || 'NOT FOUND');
+    console.log('[AGGREGATOR] - Sizes:', parsedData.sizes || []);
+    console.log('[AGGREGATOR] - Labels:', parsedData.labels || []);
+    console.log('[AGGREGATOR] Full parsed data:', JSON.stringify({
+      hasTextInfo: !!parsedData.textInfo,
+      textInfoLength: parsedData.textInfo?.length || 0,
+      imagesCount: parsedData.images?.length || 0,
+      providerName: parsedData.providerName,
+      providerLink: parsedData.providerLink,
+      providerLocation: parsedData.providerLocation,
+      price: parsedData.price,
+      sizesCount: parsedData.sizes?.length || 0,
+      labelsCount: parsedData.labels?.length || 0,
+    }, null, 2));
+    console.log('[AGGREGATOR] ========== END PARSED DATA SUMMARY ==========');
 
     // TEST MODE: Only parse and log, don't proceed with LLM or DB operations
     // Only allow test mode in development
@@ -671,6 +691,9 @@ export async function POST(req: NextRequest) {
     const analysisResult = JSON.parse(rawContent);
 
     console.log(
+      '[AGGREGATOR] ========== LLM ANALYSIS RESULT =========='
+    );
+    console.log(
       '[AGGREGATOR] Full analysis result (parsed JSON):',
       JSON.stringify(analysisResult, null, 2)
     );
@@ -697,6 +720,23 @@ export async function POST(req: NextRequest) {
       '| HTML parsed price:',
       parsedData.price
     );
+    console.log(
+      '[AGGREGATOR] Analysis result color (LLM):',
+      analysisResult.color,
+      '| type:',
+      typeof analysisResult.color,
+      '| isNull:',
+      analysisResult.color === null,
+      '| isUndefined:',
+      analysisResult.color === undefined
+    );
+    console.log(
+      '[AGGREGATOR] Analysis result material:',
+      analysisResult.material
+    );
+    console.log(
+      '[AGGREGATOR] ========== END LLM ANALYSIS RESULT =========='
+    );
 
     // Download and upload remaining images to S3
     const uploadedImages: Array<{
@@ -715,55 +755,109 @@ export async function POST(req: NextRequest) {
     }
 
     // Process remaining images
+    console.log(
+      `[AGGREGATOR] ========== PROCESSING REMAINING ${parsedData.images.length - 1} IMAGES ==========`
+    );
     for (let i = 1; i < parsedData.images.length; i++) {
       const imageUrl = parsedData.images[i];
+      console.log(
+        `[AGGREGATOR] Processing image ${i + 1}/${parsedData.images.length}:`,
+        imageUrl
+      );
       try {
         // Download image
+        console.log(`[AGGREGATOR] Downloading image ${i + 1} from:`, imageUrl);
         const imageResponse = await fetch(imageUrl, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; MarinaObuvBot/1.0)',
           },
         });
 
+        console.log(
+          `[AGGREGATOR] Image ${i + 1} download response status:`,
+          imageResponse.status,
+          imageResponse.statusText
+        );
+
         if (!imageResponse.ok) {
           console.error(
-            `Failed to download image ${i + 1}: ${imageResponse.statusText}`
+            `[AGGREGATOR] Failed to download image ${i + 1}: ${imageResponse.statusText}`
           );
           continue;
         }
 
         const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+        console.log(
+          `[AGGREGATOR] Image ${i + 1} downloaded, buffer size:`,
+          imageBuffer.length,
+          'bytes'
+        );
         const contentType =
           imageResponse.headers.get('content-type') || 'image/jpeg';
         const ext = contentType.split('/')[1] || 'jpg';
+        console.log(
+          `[AGGREGATOR] Image ${i + 1} content type:`,
+          contentType,
+          '| extension:',
+          ext
+        );
 
         // Generate temporary product ID for image upload
         const tempProductId = `temp-${Date.now()}`;
         const s3Key = getObjectKey({ productId: tempProductId, ext });
+        console.log(`[AGGREGATOR] Image ${i + 1} S3 key:`, s3Key);
 
         // Upload to S3
+        console.log(`[AGGREGATOR] Uploading image ${i + 1} to S3...`);
         const uploadSuccess = await uploadImage(
           s3Key,
           imageBuffer,
           contentType
         );
+        console.log(
+          `[AGGREGATOR] Image ${i + 1} upload result:`,
+          uploadSuccess ? 'SUCCESS' : 'FAILED'
+        );
         if (uploadSuccess) {
           const publicUrl = getPublicUrl(s3Key);
+          console.log(`[AGGREGATOR] Image ${i + 1} public URL:`, publicUrl);
           uploadedImages.push({
             url: publicUrl,
             key: s3Key,
             color: null, // Will be set after color extraction
           });
+          console.log(
+            `[AGGREGATOR] Image ${i + 1} added to uploadedImages array. Total images:`,
+            uploadedImages.length
+          );
+        } else {
+          console.error(
+            `[AGGREGATOR] Image ${i + 1} upload to S3 failed, skipping`
+          );
         }
       } catch (error) {
-        console.error(`Error processing image ${i + 1}:`, error);
+        console.error(
+          `[AGGREGATOR] Error processing image ${i + 1}:`,
+          error
+        );
+        console.error(
+          `[AGGREGATOR] Error details for image ${i + 1}:`,
+          error instanceof Error ? error.message : String(error),
+          error instanceof Error ? error.stack : ''
+        );
         continue;
       }
     }
+    console.log(
+      `[AGGREGATOR] ========== FINISHED PROCESSING IMAGES. Total uploaded: ${uploadedImages.length} ==========`
+    );
 
     // Extract colors for each image
     console.log(
-      `[AGGREGATOR] Starting color analysis for ${uploadedImages.length} images`
+      `[AGGREGATOR] ========== STARTING COLOR ANALYSIS ==========`
+    );
+    console.log(
+      `[AGGREGATOR] Total images to analyze: ${uploadedImages.length}`
     );
     const colorService = new PerImageColorService();
     const imageUrls = uploadedImages.map(img => img.url);
@@ -771,9 +865,47 @@ export async function POST(req: NextRequest) {
       `[AGGREGATOR] Image URLs for color analysis:`,
       imageUrls.map((url, i) => `${i + 1}. ${url}`)
     );
-    const colorResults = await colorService.analyzeImageColors(imageUrls);
     console.log(
-      `[AGGREGATOR] Color analysis results:`,
+      `[AGGREGATOR] Calling colorService.analyzeImageColors with ${imageUrls.length} URLs`
+    );
+    
+    let colorResults;
+    try {
+      colorResults = await colorService.analyzeImageColors(imageUrls);
+      console.log(
+        `[AGGREGATOR] Color analysis completed. Results count: ${colorResults.length}`
+      );
+    } catch (colorError) {
+      console.error(
+        `[AGGREGATOR] ERROR in color analysis:`,
+        colorError
+      );
+      console.error(
+        `[AGGREGATOR] Color error details:`,
+        colorError instanceof Error ? colorError.message : String(colorError),
+        colorError instanceof Error ? colorError.stack : ''
+      );
+      // Continue with empty results
+      colorResults = [];
+    }
+    
+    console.log(
+      `[AGGREGATOR] Color analysis results (detailed):`,
+      JSON.stringify(
+        colorResults.map((r, i) => ({
+          index: i + 1,
+          url: r.url,
+          color: r.color,
+          colorType: typeof r.color,
+          isNull: r.color === null,
+          isUndefined: r.color === undefined,
+        })),
+        null,
+        2
+      )
+    );
+    console.log(
+      `[AGGREGATOR] Color analysis results (summary):`,
       colorResults.map((r, i) => `${i + 1}. ${r.url}: ${r.color || 'null'}`)
     );
 
@@ -781,23 +913,69 @@ export async function POST(req: NextRequest) {
     // Use color from main vision analysis as fallback for first image if per-image analysis returns null
     const mainAnalysisColor = analysisResult.color || null;
     console.log(
-      `[AGGREGATOR] Main vision analysis color: ${mainAnalysisColor || 'null'}`
+      `[AGGREGATOR] Main vision analysis color: ${mainAnalysisColor || 'null'} | type: ${typeof mainAnalysisColor}`
     );
 
-    for (let i = 0; i < uploadedImages.length && i < colorResults.length; i++) {
-      // Use per-image color if available, otherwise use main analysis color for first image
-      let finalColor = colorResults[i].color;
+    console.log(
+      `[AGGREGATOR] ========== MAPPING COLORS TO IMAGES ==========`
+    );
+    console.log(
+      `[AGGREGATOR] uploadedImages.length: ${uploadedImages.length}, colorResults.length: ${colorResults.length}`
+    );
+    
+    for (let i = 0; i < uploadedImages.length; i++) {
+      console.log(
+        `[AGGREGATOR] Processing color for image ${i + 1}/${uploadedImages.length}`
+      );
+      console.log(
+        `[AGGREGATOR] Image ${i + 1} URL: ${uploadedImages[i].url}`
+      );
+      
+      // Use per-image color if available
+      let finalColor = null;
+      if (i < colorResults.length) {
+        finalColor = colorResults[i].color;
+        console.log(
+          `[AGGREGATOR] Image ${i + 1} color from analysis: ${finalColor || 'null'}`
+        );
+      } else {
+        console.log(
+          `[AGGREGATOR] Image ${i + 1} has no color result (index ${i} >= ${colorResults.length})`
+        );
+      }
+      
+      // Use main analysis color as fallback for first image if per-image analysis returns null
       if (!finalColor && i === 0 && mainAnalysisColor) {
         finalColor = mainAnalysisColor;
         console.log(
           `[AGGREGATOR] Using main analysis color "${mainAnalysisColor}" as fallback for first image`
         );
       }
+      
       uploadedImages[i].color = finalColor;
       console.log(
-        `[AGGREGATOR] Mapped color for image ${i + 1}: ${finalColor || 'null'}`
+        `[AGGREGATOR] Image ${i + 1} final color assigned: ${finalColor || 'null'} | type: ${typeof finalColor}`
+      );
+      console.log(
+        `[AGGREGATOR] Image ${i + 1} color in uploadedImages array: ${uploadedImages[i].color || 'null'}`
       );
     }
+    console.log(
+      `[AGGREGATOR] ========== FINISHED MAPPING COLORS ==========`
+    );
+    console.log(
+      `[AGGREGATOR] Final uploadedImages with colors:`,
+      JSON.stringify(
+        uploadedImages.map((img, i) => ({
+          index: i + 1,
+          url: img.url,
+          color: img.color,
+          colorType: typeof img.color,
+        })),
+        null,
+        2
+      )
+    );
 
     // Convert sizes to the required format
     const sizes = parsedData.sizes.map(size => ({
@@ -1048,59 +1226,171 @@ export async function POST(req: NextRequest) {
       markup: '30%',
     });
 
-    console.log('[AGGREGATOR] Creating product with providerId:', providerId);
-    const product = await prisma.product.create({
-      data: {
-        name: analysisResult.name || 'Товар из агрегатора',
-        slug,
-        article,
-        categoryId, // Determined via the same logic as WA parser (with fallback)
-        pricePair,
-        buyPrice,
-        currency: 'RUB',
-        material: analysisResult.material || '',
-        gender: mappedGender, // Use mapped gender (same as WA parser) - already mapped above
-        season: mappedSeason, // Use mapped season (same as WA parser) - already mapped above
-        description: analysisResult.description || '',
-        sizes: sizes,
-        isActive: false, // Deactivated initially
-        source: 'AG',
-        agLabels: parsedData.labels,
-        providerId: providerId,
-      },
+    console.log(
+      `[AGGREGATOR] ========== CREATING PRODUCT ==========`
+    );
+    console.log('[AGGREGATOR] Product data before creation:', {
+      name: analysisResult.name || 'Товар из агрегатора',
+      slug,
+      article,
+      categoryId,
+      pricePair,
+      buyPrice,
+      currency: 'RUB',
+      material: analysisResult.material || '',
+      gender: mappedGender,
+      season: mappedSeason,
+      description: analysisResult.description || '',
+      sizes: sizes,
+      isActive: false,
+      source: 'AG',
+      agLabels: parsedData.labels,
+      providerId: providerId,
+      providerIdType: typeof providerId,
+      providerIdIsNull: providerId === null,
+      providerIdIsUndefined: providerId === undefined,
     });
+    console.log('[AGGREGATOR] Creating product with providerId:', providerId);
+    
+    let product;
+    try {
+      product = await prisma.product.create({
+        data: {
+          name: analysisResult.name || 'Товар из агрегатора',
+          slug,
+          article,
+          categoryId, // Determined via the same logic as WA parser (with fallback)
+          pricePair,
+          buyPrice,
+          currency: 'RUB',
+          material: analysisResult.material || '',
+          gender: mappedGender, // Use mapped gender (same as WA parser) - already mapped above
+          season: mappedSeason, // Use mapped season (same as WA parser) - already mapped above
+          description: analysisResult.description || '',
+          sizes: sizes,
+          isActive: false, // Deactivated initially
+          source: 'AG',
+          agLabels: parsedData.labels,
+          providerId: providerId,
+        },
+      });
+      console.log('[AGGREGATOR] Product created successfully');
+    } catch (productError) {
+      console.error('[AGGREGATOR] ERROR creating product:', productError);
+      console.error(
+        '[AGGREGATOR] Product creation error details:',
+        productError instanceof Error ? productError.message : String(productError),
+        productError instanceof Error ? productError.stack : ''
+      );
+      throw productError;
+    }
 
-    console.log('[AGGREGATOR] Product created:', {
+    console.log('[AGGREGATOR] Product created (from DB):', {
       id: product.id,
       name: product.name,
       providerId: product.providerId,
+      providerIdType: typeof product.providerId,
+      providerIdIsNull: product.providerId === null,
+      providerIdIsUndefined: product.providerId === undefined,
       buyPrice: product.buyPrice,
       pricePair: product.pricePair,
     });
+    
+    // Verify providerId was actually saved
+    if (providerId && product.providerId !== providerId) {
+      console.error(
+        `[AGGREGATOR] WARNING: providerId mismatch! Expected: ${providerId}, Got: ${product.providerId}`
+      );
+    } else if (providerId && product.providerId === providerId) {
+      console.log(
+        `[AGGREGATOR] ✓ providerId verified: ${product.providerId}`
+      );
+    } else if (!providerId && !product.providerId) {
+      console.log(
+        `[AGGREGATOR] ✓ providerId is null as expected (no provider data found)`
+      );
+    } else {
+      console.error(
+        `[AGGREGATOR] WARNING: Unexpected providerId state. Expected: ${providerId}, Got: ${product.providerId}`
+      );
+    }
+    console.log(
+      `[AGGREGATOR] ========== PRODUCT CREATED ==========`
+    );
 
     // Upload images to product
+    console.log(
+      `[AGGREGATOR] ========== CREATING PRODUCT IMAGE RECORDS ==========`
+    );
+    console.log(
+      `[AGGREGATOR] Creating ${uploadedImages.length} product image records for product ${product.id}`
+    );
+    
     for (let i = 0; i < uploadedImages.length; i++) {
       const img = uploadedImages[i];
+      console.log(
+        `[AGGREGATOR] Creating image record ${i + 1}/${uploadedImages.length}`
+      );
+      console.log(
+        `[AGGREGATOR] Image ${i + 1} data before creation:`,
+        JSON.stringify({
+          url: img.url,
+          key: img.key,
+          color: img.color,
+          colorType: typeof img.color,
+          isNull: img.color === null,
+          isUndefined: img.color === undefined,
+        }, null, 2)
+      );
+      
       // Update S3 key to use actual product ID
       const newKey = getObjectKey({
         productId: product.id,
         ext: img.key.split('.').pop() || 'jpg',
       });
+      console.log(`[AGGREGATOR] Image ${i + 1} new S3 key:`, newKey);
 
       // Copy image to new location (or just update the key reference)
       // For now, we'll create the image record with the existing URL
-      await prisma.productImage.create({
-        data: {
-          productId: product.id,
-          url: img.url,
-          key: img.key,
-          alt: `Product image ${i + 1}`,
-          color: img.color,
-          sort: i,
-          isPrimary: i === 0,
-        },
-      });
+      try {
+        const createdImage = await prisma.productImage.create({
+          data: {
+            productId: product.id,
+            url: img.url,
+            key: img.key,
+            alt: `Product image ${i + 1}`,
+            color: img.color,
+            sort: i,
+            isPrimary: i === 0,
+          },
+        });
+        console.log(
+          `[AGGREGATOR] Image ${i + 1} created successfully:`,
+          JSON.stringify({
+            id: createdImage.id,
+            url: createdImage.url,
+            color: createdImage.color,
+            colorType: typeof createdImage.color,
+            isNull: createdImage.color === null,
+            isUndefined: createdImage.color === undefined,
+          }, null, 2)
+        );
+      } catch (imageError) {
+        console.error(
+          `[AGGREGATOR] ERROR creating image record ${i + 1}:`,
+          imageError
+        );
+        console.error(
+          `[AGGREGATOR] Image creation error details:`,
+          imageError instanceof Error ? imageError.message : String(imageError),
+          imageError instanceof Error ? imageError.stack : ''
+        );
+        throw imageError; // Re-throw to fail the whole operation
+      }
     }
+    console.log(
+      `[AGGREGATOR] ========== FINISHED CREATING PRODUCT IMAGE RECORDS ==========`
+    );
 
     // Attach Playwright screenshot as source screenshot, if available
     if (screenshotBuffer) {
@@ -1158,6 +1448,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch the final product with all updates (including screenshot)
+    console.log(
+      `[AGGREGATOR] ========== FETCHING FINAL PRODUCT ==========`
+    );
     const finalProduct = await prisma.product.findUnique({
       where: { id: product.id },
       include: {
@@ -1171,15 +1464,74 @@ export async function POST(req: NextRequest) {
       id: finalProduct?.id,
       name: finalProduct?.name,
       providerId: finalProduct?.providerId,
+      providerIdType: typeof finalProduct?.providerId,
       provider: finalProduct?.provider
         ? {
             id: finalProduct.provider.id,
             name: finalProduct.provider.name,
+            phone: finalProduct.provider.phone,
+            place: finalProduct.provider.place,
           }
         : null,
       buyPrice: finalProduct?.buyPrice,
       pricePair: finalProduct?.pricePair,
+      imagesCount: finalProduct?.images?.length || 0,
+      images: finalProduct?.images?.map((img, i) => ({
+        index: i + 1,
+        id: img.id,
+        url: img.url,
+        color: img.color,
+        colorType: typeof img.color,
+        isNull: img.color === null,
+        isUndefined: img.color === undefined,
+      })),
     });
+    
+    // Verify all images have colors
+    const imagesWithoutColor = finalProduct?.images?.filter(
+      img => !img.color || img.color === null || img.color === undefined
+    ) || [];
+    if (imagesWithoutColor.length > 0) {
+      console.error(
+        `[AGGREGATOR] WARNING: ${imagesWithoutColor.length} images without color:`,
+        JSON.stringify(
+          imagesWithoutColor.map(img => ({
+            id: img.id,
+            url: img.url,
+            color: img.color,
+          })),
+          null,
+          2
+        )
+      );
+    } else {
+      console.log(
+        `[AGGREGATOR] ✓ All ${finalProduct?.images?.length || 0} images have colors`
+      );
+    }
+    
+    // Verify provider
+    if (providerId && !finalProduct?.providerId) {
+      console.error(
+        `[AGGREGATOR] ERROR: providerId was set to ${providerId} but final product has no providerId!`
+      );
+    } else if (providerId && finalProduct?.providerId !== providerId) {
+      console.error(
+        `[AGGREGATOR] ERROR: providerId mismatch! Expected: ${providerId}, Got: ${finalProduct?.providerId}`
+      );
+    } else if (providerId && finalProduct?.provider) {
+      console.log(
+        `[AGGREGATOR] ✓ Provider verified: ${finalProduct.provider.name} (${finalProduct.provider.id})`
+      );
+    } else if (!providerId) {
+      console.log(
+        `[AGGREGATOR] ✓ No provider expected (no provider data in parsed HTML)`
+      );
+    }
+    
+    console.log(
+      `[AGGREGATOR] ========== FINAL PRODUCT SUMMARY ==========`
+    );
 
     return NextResponse.json(
       {
