@@ -122,9 +122,11 @@ jobs:
             export NODE_NO_WARNINGS=1
 
             # Error trap to show what failed before exiting
-            trap 'echo "❌ ERROR: Command failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
+            # Use explicit echo to stdout (not stderr) to ensure it's captured
+            trap 'echo "❌ ERROR: Command failed at line $LINENO: $BASH_COMMAND"; echo "❌ Last command exit code: $?"; exit 1' ERR
 
             set -e  # Exit on error
+            set -o pipefail  # Also fail on pipe failures
             # Don't use set -x - it causes too much verbose output with DRONE messages
 
             # Add progress function for better visibility (with explicit flush)
@@ -444,13 +446,22 @@ jobs:
               echo "✅ SSL certificate already exists"
             fi
 
+            echo "🔍 Debug: About to check nginx.conf for rate limiting..."
             # Add rate limiting zones to main nginx.conf
             echo "⚙️ Adding rate limiting zones to nginx.conf..."
             set +e  # Temporarily disable exit on error
+            echo "   Checking if /etc/nginx/nginx.conf exists..."
             if [ -f "/etc/nginx/nginx.conf" ]; then
-              HAS_RATE_LIMIT=$(sudo grep -q "limit_req_zone.*api" /etc/nginx/nginx.conf 2>/dev/null && echo "yes" || echo "no")
+              echo "   ✅ nginx.conf found"
+              echo "   Checking for existing rate limit configuration..."
+              HAS_RATE_LIMIT=$(sudo grep -q "limit_req_zone.*api" /etc/nginx/nginx.conf 2>&1 && echo "yes" || echo "no")
+              GREP_EXIT=$?
+              echo "   grep exit code: $GREP_EXIT, result: $HAS_RATE_LIMIT"
               if [ "$HAS_RATE_LIMIT" = "no" ]; then
-                sudo sed -i '/http {/a\    # Rate limiting zones\n    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n    limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;' /etc/nginx/nginx.conf 2>/dev/null || echo "⚠️ Failed to add rate limiting zones (may already exist)"
+                echo "   Adding rate limiting zones..."
+                sudo sed -i '/http {/a\    # Rate limiting zones\n    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n    limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;' /etc/nginx/nginx.conf 2>&1 || echo "⚠️ Failed to add rate limiting zones (may already exist)"
+                SED_EXIT=$?
+                echo "   sed exit code: $SED_EXIT"
               else
                 echo "✅ Rate limiting zones already configured"
               fi
@@ -458,6 +469,7 @@ jobs:
               echo "⚠️ nginx.conf not found, skipping rate limit configuration"
             fi
             set -e  # Re-enable exit on error
+            echo "✅ Rate limiting check completed"
 
             # Fix nginx configuration first
             echo "🔧 Fixing nginx configuration..."
