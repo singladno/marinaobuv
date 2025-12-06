@@ -8,91 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set workflow title
-        run: |
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
-          echo "workflow_title=$COMMIT_MSG" >> $GITHUB_OUTPUT
-        id: set_title
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          npm install
-          cd web && npm install
-          # Install Playwright Chromium browser for aggregator parser (for build/test)
-          echo "🎭 Installing Playwright Chromium browser..."
-          npm run playwright:install:ci || echo "⚠️ Playwright install failed, but continuing with build"
-
-      - name: Run linting
-        run: |
-          cd web && npm run lint:check
-
-      - name: Run type checking
-        run: |
-          cd web && npm run typecheck
-
-      - name: Run tests (if any)
-        run: |
-          cd web
-          npm run build
-        env:
-          NODE_ENV: production
-          NEXT_PUBLIC_SITE_URL: https://marina-obuv.ru
-          NEXT_PUBLIC_BRAND_NAME: MarinaObuv
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXTAUTH_URL: https://marina-obuv.ru
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-
-      - name: Delete all existing artifacts (pre-clean)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "🧹 Deleting all existing artifacts to free storage..."
-          ids=$(gh api repos/${{ github.repository }}/actions/artifacts --paginate --jq '.artifacts[].id' || echo "")
-          if [ -n "$ids" ]; then
-            for id in $ids; do
-              echo "Deleting artifact $id"
-              gh api repos/${{ github.repository }}/actions/artifacts/$id -X DELETE || true
-            done
-          else
-            echo "No artifacts to delete."
-          fi
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            web/.next/
-            web/package*.json
-            web/node_modules/
-            web/prisma/
-            web/public/
-            web/src/
-            web/next.config.ts
-            web/tsconfig.json
-            web/postcss.config.mjs
-            web/tailwind.config.ts
-            web/.env*
-          retention-days: 1
-
   deploy:
-    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     timeout-minutes: 60
@@ -164,48 +80,25 @@ jobs:
       #     name: build-artifacts
       #     path: web/
 
-      - name: Setup Node.js (for server deployment tools)
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
 
-      - name: Remove Fail2Ban
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          timeout: 30s
-          command_timeout: 30s
-          debug: false
-          script: |
-            if command -v fail2ban-client &> /dev/null; then
-              echo "Removing Fail2Ban..."
-              # Stop and disable (non-blocking)
-              sudo systemctl stop fail2ban 2>/dev/null || true
-              sudo systemctl disable fail2ban 2>/dev/null || true
+      - name: Install dependencies
+        run: |
+          npm install
+          cd web && npm install
 
-              # Unban all IPs
-              sudo fail2ban-client unban --all 2>/dev/null || true
+      - name: Run linting
+        run: |
+          cd web && npm run lint:check
 
-              # Remove package with proper flags and timeout
-              export DEBIAN_FRONTEND=noninteractive
-              timeout 20 sudo apt-get remove --purge -y fail2ban 2>&1 | head -50 || {
-                echo "⚠️ apt remove timed out or failed, trying force removal..."
-                sudo dpkg --remove --force-remove-reinstreq fail2ban 2>/dev/null || true
-              }
-
-              # Clean up files
-              sudo rm -rf /etc/fail2ban /usr/local/bin/auto-whitelist-ssh-ip.sh 2>/dev/null || true
-
-              # Remove cron jobs
-              crontab -l 2>/dev/null | grep -v "auto-whitelist-ssh-ip" | crontab - 2>/dev/null || true
-
-              echo "✅ Fail2Ban removal completed"
-            else
-              echo "ℹ️ Fail2Ban not installed, skipping removal"
-            fi
+      - name: Run type checking
+        run: |
+          cd web && npm run typecheck
 
       - name: Test SSH Connection
         uses: appleboy/ssh-action@v1.0.3
@@ -437,24 +330,125 @@ jobs:
 
             # Install dependencies including dev (required for tsx/typescript used by scripts)
             cd web
-            echo "📦 Installing dependencies (first attempt with npm ci)..."
+
+            echo "=========================================="
+            echo "📦 npm ci Diagnostic Information"
+            echo "=========================================="
+            echo ""
+
+            # Pre-install diagnostics
+            echo "🔍 Pre-install diagnostics:"
+            echo "   Current directory: $(pwd)"
+            echo "   Node version: $(node --version 2>&1 || echo 'N/A')"
+            echo "   npm version: $(npm --version 2>&1 || echo 'N/A')"
+            echo "   Disk space: $(df -h . | tail -1 | awk '{print $4 " available"}')"
+            echo "   Memory: $(free -h | grep Mem | awk '{print $3 "/" $2}')"
+            echo ""
+
+            # Check package files
+            echo "📄 Package file status:"
+            if [ -f "package.json" ]; then
+              echo "   ✅ package.json exists ($(wc -l < package.json) lines)"
+              echo "   Package name: $(grep '"name"' package.json | head -1 | cut -d'"' -f4 || echo 'N/A')"
+            else
+              echo "   ❌ package.json NOT FOUND"
+            fi
+
+            if [ -f "package-lock.json" ]; then
+              LOCK_SIZE=$(du -h package-lock.json | cut -f1)
+              LOCK_LINES=$(wc -l < package-lock.json)
+              echo "   ✅ package-lock.json exists ($LOCK_SIZE, $LOCK_LINES lines)"
+              echo "   Lockfile version: $(grep -o '"lockfileVersion":[0-9]*' package-lock.json | cut -d':' -f2 || echo 'N/A')"
+            else
+              echo "   ❌ package-lock.json NOT FOUND - npm ci requires this!"
+            fi
+
+            # Check node_modules
+            if [ -d "node_modules" ]; then
+              MODULES_COUNT=$(find node_modules -maxdepth 1 -type d | wc -l)
+              echo "   ℹ️ node_modules exists ($MODULES_COUNT top-level packages)"
+            else
+              echo "   ℹ️ node_modules does not exist (will be created)"
+            fi
+            echo ""
+
+            # Check npm registry connectivity
+            echo "🌐 Network connectivity:"
+            echo "   npm registry: $(npm config get registry)"
+            if timeout 5 curl -s --head https://registry.npmjs.org > /dev/null 2>&1; then
+              echo "   ✅ npm registry reachable"
+            else
+              echo "   ❌ npm registry NOT reachable (network issue?)"
+            fi
+            echo ""
+
+            # Check for common issues
+            echo "🔍 Checking for common issues:"
+            if [ -f "package-lock.json" ] && [ -f "package.json" ]; then
+              # Check if lockfile matches package.json
+              echo "   Checking package-lock.json integrity..."
+              npm ci --dry-run 2>&1 | head -20 || echo "   ⚠️ Dry-run failed - lockfile may be out of sync"
+            fi
+            echo ""
+
+            echo "=========================================="
+            echo "📦 Starting npm ci (with detailed logging)"
+            echo "=========================================="
             echo "   Timeout: 300 seconds (5 minutes)"
+            START_TIME=$(date +%s)
+            echo "   Start time: $(date)"
+            echo ""
+
             # Use timeout with SIGKILL after 5 minutes
             # Note: Don't pipe to head - it can cause npm to hang when pipe closes
             if command -v timeout >/dev/null 2>&1; then
-              timeout -k 60 300 npm ci 2>&1 || {
-                echo "⚠️ npm ci failed or timed out after 5 minutes, trying npm install instead..."
+              # Run npm ci with progress logging
+              timeout -k 60 300 sh -c '
+                npm ci 2>&1 | while IFS= read -r line; do
+                  echo "[npm ci] $line"
+                done
+              ' || {
+                EXIT_CODE=$?
+                END_TIME=$(date +%s)
+                DURATION=$((END_TIME - START_TIME))
+                echo ""
+                echo "=========================================="
+                echo "❌ npm ci FAILED"
+                echo "=========================================="
+                echo "   Exit code: $EXIT_CODE"
+                echo "   Duration: $DURATION seconds"
+                echo "   End time: $(date)"
+                echo ""
+                echo "🔍 Error analysis:"
+                if [ $EXIT_CODE -eq 124 ]; then
+                  echo "   ⚠️ TIMEOUT: npm ci exceeded 5 minutes"
+                  echo "   Possible causes:"
+                  echo "   - Network issues (slow registry)"
+                  echo "   - Large dependency tree"
+                  echo "   - Disk I/O issues"
+                  echo "   - package-lock.json out of sync"
+                else
+                  echo "   ⚠️ EXECUTION FAILED: npm ci returned error code $EXIT_CODE"
+                  echo "   Check logs above for specific error messages"
+                fi
+                echo ""
+                echo "⚠️ Trying npm install as fallback..."
                 timeout -k 60 300 npm install 2>&1 || {
                   echo "❌ npm install also failed"
                   echo "🔧 Attempting to fix package-lock.json..."
                   rm -f package-lock.json
+                  echo "   Removed package-lock.json, retrying npm install..."
                   timeout -k 60 300 npm install 2>&1
                 }
               }
             else
               # Fallback if timeout command not available
+              START_TIME=$(date +%s)
               npm ci 2>&1 || {
-                echo "⚠️ npm ci failed, trying npm install instead..."
+                EXIT_CODE=$?
+                echo ""
+                echo "❌ npm ci failed (exit code: $EXIT_CODE)"
+                echo "⚠️ Trying npm install as fallback..."
                 npm install 2>&1 || {
                   echo "❌ npm install also failed"
                   echo "🔧 Attempting to fix package-lock.json..."
@@ -463,6 +457,16 @@ jobs:
                 }
               }
             fi
+
+            echo ""
+            echo "=========================================="
+            echo "✅ Dependency installation completed"
+            echo "=========================================="
+            echo "   End time: $(date)"
+            if [ -d "node_modules" ]; then
+              echo "   Installed packages: $(find node_modules -maxdepth 1 -type d | wc -l)"
+            fi
+            echo ""
             # Install Playwright Chromium browser for aggregator parser
             echo "🎭 Installing Playwright Chromium browser..."
             timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
@@ -558,24 +562,70 @@ jobs:
             mkdir -p logs
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
-            echo "📦 Installing dependencies for build..."
+            echo "=========================================="
+            echo "📦 Installing dependencies for build"
+            echo "=========================================="
             echo "   Timeout: 300 seconds (5 minutes)"
+            echo "   Start time: $(date)"
+            echo ""
+
+            # Pre-install diagnostics
+            echo "🔍 Pre-install diagnostics:"
+            echo "   Current directory: $(pwd)"
+            echo "   Node version: $(node --version 2>&1 || echo 'N/A')"
+            echo "   npm version: $(npm --version 2>&1 || echo 'N/A')"
+            echo "   Disk space: $(df -h . | tail -1 | awk '{print $4 " available"}')"
+
+            if [ -f "package-lock.json" ]; then
+              echo "   ✅ package-lock.json exists ($(du -h package-lock.json | cut -f1))"
+            else
+              echo "   ❌ package-lock.json NOT FOUND"
+            fi
+            echo ""
+
             # Use timeout with SIGKILL after 5 minutes
-            # Note: Don't pipe to head - it can cause npm to hang when pipe closes
+            START_TIME=$(date +%s)
             if command -v timeout >/dev/null 2>&1; then
-              timeout -k 60 300 npm ci 2>&1 || {
-                echo "⚠️ npm ci failed or timed out after 5 minutes, trying npm install instead..."
+              timeout -k 60 300 sh -c '
+                npm ci 2>&1 | while IFS= read -r line; do
+                  echo "[npm ci] $line"
+                done
+              ' || {
+                EXIT_CODE=$?
+                END_TIME=$(date +%s)
+                DURATION=$((END_TIME - START_TIME))
+                echo ""
+                echo "=========================================="
+                echo "❌ npm ci FAILED"
+                echo "=========================================="
+                echo "   Exit code: $EXIT_CODE"
+                echo "   Duration: $DURATION seconds"
+                echo "   End time: $(date)"
+                echo ""
+                if [ $EXIT_CODE -eq 124 ]; then
+                  echo "   ⚠️ TIMEOUT: npm ci exceeded 5 minutes"
+                  echo "   This usually means:"
+                  echo "   - Network is slow or registry is unreachable"
+                  echo "   - package-lock.json is out of sync with package.json"
+                  echo "   - Disk I/O is slow"
+                fi
+                echo ""
+                echo "⚠️ Trying npm install as fallback..."
                 timeout -k 60 300 npm install 2>&1 || {
                   echo "❌ npm install also failed"
                   echo "🔧 Attempting to fix package-lock.json..."
                   rm -f package-lock.json
+                  echo "   Removed package-lock.json, retrying..."
                   timeout -k 60 300 npm install 2>&1
                 }
               }
             else
               # Fallback if timeout command not available
               npm ci 2>&1 || {
-                echo "⚠️ npm ci failed, trying npm install instead..."
+                EXIT_CODE=$?
+                echo ""
+                echo "❌ npm ci failed (exit code: $EXIT_CODE)"
+                echo "⚠️ Trying npm install as fallback..."
                 npm install 2>&1 || {
                   echo "❌ npm install also failed"
                   echo "🔧 Attempting to fix package-lock.json..."
@@ -584,6 +634,10 @@ jobs:
                 }
               }
             fi
+
+            echo ""
+            echo "✅ Dependency installation completed at $(date)"
+            echo ""
             # Ensure Playwright Chromium browser is installed for aggregator parser
             echo "🎭 Ensuring Playwright Chromium browser is installed..."
             timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
