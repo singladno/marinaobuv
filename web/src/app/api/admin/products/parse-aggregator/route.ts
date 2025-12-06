@@ -13,7 +13,10 @@ import {
   CATEGORY_ANALYSIS_USER_PROMPT,
 } from '@/lib/prompts/category-analysis-prompts';
 import { uploadImage, getPublicUrl, getObjectKey } from '@/lib/storage';
-import { PerImageColorService } from '@/lib/services/per-image-color-service';
+import {
+  PerImageColorService,
+  type ImageColorResult,
+} from '@/lib/services/per-image-color-service';
 import { getGroqConfig } from '@/lib/groq-proxy-config';
 import { getCategoryTree, getLeafCategories } from '@/lib/catalog-categories';
 import { groqChatCompletion } from '@/lib/services/groq-api-wrapper';
@@ -868,8 +871,8 @@ export async function POST(req: NextRequest) {
     console.log(
       `[AGGREGATOR] Calling colorService.analyzeImageColors with ${imageUrls.length} URLs`
     );
-    
-    let colorResults;
+
+    let colorResults: ImageColorResult[];
     try {
       colorResults = await colorService.analyzeImageColors(imageUrls);
       console.log(
@@ -888,7 +891,7 @@ export async function POST(req: NextRequest) {
       // Continue with empty results
       colorResults = [];
     }
-    
+
     console.log(
       `[AGGREGATOR] Color analysis results (detailed):`,
       JSON.stringify(
@@ -922,7 +925,7 @@ export async function POST(req: NextRequest) {
     console.log(
       `[AGGREGATOR] uploadedImages.length: ${uploadedImages.length}, colorResults.length: ${colorResults.length}`
     );
-    
+
     for (let i = 0; i < uploadedImages.length; i++) {
       console.log(
         `[AGGREGATOR] Processing color for image ${i + 1}/${uploadedImages.length}`
@@ -930,7 +933,7 @@ export async function POST(req: NextRequest) {
       console.log(
         `[AGGREGATOR] Image ${i + 1} URL: ${uploadedImages[i].url}`
       );
-      
+
       // Use per-image color if available
       let finalColor = null;
       if (i < colorResults.length) {
@@ -943,7 +946,7 @@ export async function POST(req: NextRequest) {
           `[AGGREGATOR] Image ${i + 1} has no color result (index ${i} >= ${colorResults.length})`
         );
       }
-      
+
       // Use main analysis color as fallback for first image if per-image analysis returns null
       if (!finalColor && i === 0 && mainAnalysisColor) {
         finalColor = mainAnalysisColor;
@@ -951,7 +954,7 @@ export async function POST(req: NextRequest) {
           `[AGGREGATOR] Using main analysis color "${mainAnalysisColor}" as fallback for first image`
         );
       }
-      
+
       uploadedImages[i].color = finalColor;
       console.log(
         `[AGGREGATOR] Image ${i + 1} final color assigned: ${finalColor || 'null'} | type: ${typeof finalColor}`
@@ -1251,7 +1254,7 @@ export async function POST(req: NextRequest) {
       providerIdIsUndefined: providerId === undefined,
     });
     console.log('[AGGREGATOR] Creating product with providerId:', providerId);
-    
+
     let product;
     try {
       product = await prisma.product.create({
@@ -1295,7 +1298,7 @@ export async function POST(req: NextRequest) {
       buyPrice: product.buyPrice,
       pricePair: product.pricePair,
     });
-    
+
     // Verify providerId was actually saved
     if (providerId && product.providerId !== providerId) {
       console.error(
@@ -1325,7 +1328,7 @@ export async function POST(req: NextRequest) {
     console.log(
       `[AGGREGATOR] Creating ${uploadedImages.length} product image records for product ${product.id}`
     );
-    
+
     for (let i = 0; i < uploadedImages.length; i++) {
       const img = uploadedImages[i];
       console.log(
@@ -1342,7 +1345,7 @@ export async function POST(req: NextRequest) {
           isUndefined: img.color === undefined,
         }, null, 2)
       );
-      
+
       // Update S3 key to use actual product ID
       const newKey = getObjectKey({
         productId: product.id,
@@ -1486,7 +1489,7 @@ export async function POST(req: NextRequest) {
         isUndefined: img.color === undefined,
       })),
     });
-    
+
     // Verify all images have colors
     const imagesWithoutColor = finalProduct?.images?.filter(
       img => !img.color || img.color === null || img.color === undefined
@@ -1509,7 +1512,7 @@ export async function POST(req: NextRequest) {
         `[AGGREGATOR] ✓ All ${finalProduct?.images?.length || 0} images have colors`
       );
     }
-    
+
     // Verify provider
     if (providerId && !finalProduct?.providerId) {
       console.error(
@@ -1528,7 +1531,7 @@ export async function POST(req: NextRequest) {
         `[AGGREGATOR] ✓ No provider expected (no provider data in parsed HTML)`
       );
     }
-    
+
     console.log(
       `[AGGREGATOR] ========== FINAL PRODUCT SUMMARY ==========`
     );

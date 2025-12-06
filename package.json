@@ -40,7 +40,7 @@
     "migrate:validate": "cd web && npm run migrate:validate",
     "migrate:robust": "cd web && npm run migrate:robust",
     "migrate:check": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && ./scripts/validate-migrations.sh'",
-    "server:logs": "ssh -l ubuntu 130.193.56.134 'tail -f /var/www/marinaobuv/web/logs/marinaobuv-green-out.log /var/www/marinaobuv/web/logs/marinaobuv-green-error.log'",
+    "server:logs": "ssh -l ubuntu 130.193.56.134 'tail -n 100 -f /var/www/marinaobuv/web/logs/marinaobuv-green-out.log /var/www/marinaobuv/web/logs/marinaobuv-green-error.log'",
     "server:logs:save": "mkdir -p logs && scp ubuntu@130.193.56.134:/var/www/marinaobuv/web/logs/marinaobuv-green-out.log logs/marinaobuv-green-out.log && scp ubuntu@130.193.56.134:/var/www/marinaobuv/web/logs/marinaobuv-green-error.log logs/marinaobuv-green-error.log",
     "db:setup": "chmod +x scripts/setup-database.sh && ./scripts/setup-database.sh",
     "db:fix-auth": "chmod +x scripts/fix-database-auth.sh && ./scripts/fix-database-auth.sh",
