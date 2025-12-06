@@ -403,10 +403,20 @@ jobs:
             echo "ℹ️ Skipping DB auth modification during deploy"
 
             # Install dependencies including dev (required for tsx/typescript used by scripts)
-            cd web && npm ci
+            cd web
+            echo "📦 Installing dependencies (first attempt with npm ci)..."
+            timeout 600 npm ci || {
+              echo "⚠️ npm ci failed or timed out, trying npm install instead..."
+              timeout 600 npm install || {
+                echo "❌ npm install also failed"
+                echo "🔧 Attempting to fix package-lock.json..."
+                rm -f package-lock.json
+                timeout 600 npm install
+              }
+            }
             # Install Playwright Chromium browser for aggregator parser
             echo "🎭 Installing Playwright Chromium browser..."
-            npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
             cd ..
 
             # Note: Proxy runs on separate serverspace server
@@ -508,11 +518,24 @@ jobs:
             mkdir -p logs
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
-            npm ci
+            echo "📦 Installing dependencies for build..."
+            timeout 600 npm ci || {
+              echo "⚠️ npm ci failed or timed out, trying npm install instead..."
+              timeout 600 npm install || {
+                echo "❌ npm install also failed"
+                echo "🔧 Attempting to fix package-lock.json..."
+                rm -f package-lock.json
+                timeout 600 npm install
+              }
+            }
             # Ensure Playwright Chromium browser is installed for aggregator parser
             echo "🎭 Ensuring Playwright Chromium browser is installed..."
-            npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
-            npm run build
+            timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            echo "🔨 Building application..."
+            timeout 1800 npm run build || {
+              echo "❌ Build failed or timed out"
+              exit 1
+            }
             cd ..
             echo "✅ Server-side build completed"
 
