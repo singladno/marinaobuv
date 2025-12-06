@@ -14,34 +14,43 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
 # Load environment variables safely
+# NOTE: Don't use 'set -a' globally - it causes "Argument list too long" error
+# when appleboy/ssh-action tries to print environment variables
 load_env() {
     local env_file="$1"
     if [ -f "$env_file" ]; then
         echo "🔧 Loading environment variables from $env_file..."
-        # Use a safer method that preserves quotes and handles special characters
-        set -a  # automatically export all variables
         # Process the .env file line by line, handling quotes properly
+        # Only export variables needed for PM2/Next.js (they read .env directly)
+        # Don't use 'set -a' to avoid exporting everything globally
         while IFS= read -r line || [ -n "$line" ]; do
             # Skip empty lines and comments
             if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
                 continue
             fi
-            
+
             # Extract key and value, handling quotes properly
             if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
                 local key="${BASH_REMATCH[1]}"
                 local value="${BASH_REMATCH[2]}"
-                
+
                 # Remove surrounding quotes if they exist and match
                 if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
                     value="${BASH_REMATCH[1]}"
                 fi
-                
-                # Export the variable
-                export "$key=$value"
+
+                # Only export critical variables needed for the script itself
+                # PM2 and Next.js will read .env file directly, so we don't need to export everything
+                case "$key" in
+                    DATABASE_URL|NODE_ENV|PORT|HOSTNAME)
+                        export "$key=$value"
+                        ;;
+                    *)
+                        # Don't export other variables - they'll be read from .env by Next.js/PM2
+                        ;;
+                esac
             fi
         done < "$env_file"
-        set +a  # turn off automatic export
     else
         echo "❌ Environment file not found: $env_file"
         exit 1
@@ -78,24 +87,24 @@ get_inactive_deployment() {
 check_deployment_health() {
     local color=$1
     local port=$2
-    
+
     echo "🏥 Checking health of $color deployment on port $port..."
-    
+
     # Wait for service to start
     local max_attempts=30
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -f -s http://localhost:$port/api/health > /dev/null 2>&1; then
             echo "✅ $color deployment is healthy"
             return 0
         fi
-        
+
         echo "⏳ Health check attempt $attempt/$max_attempts for $color deployment..."
         sleep 2
         attempt=$((attempt + 1))
     done
-    
+
     echo "❌ $color deployment failed health checks"
     return 1
 }
@@ -104,21 +113,21 @@ check_deployment_health() {
 switch_nginx_traffic() {
     local target_color=$1
     local target_port=$2
-    
+
     echo "🔄 Switching nginx traffic to $target_color deployment (port $target_port)..."
-    
+
   # Update nginx HTTP configuration to point to the new deployment
     sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << EOF
 server {
     listen 80;
     server_name marina-obuv.ru www.marina-obuv.ru;
-    
+
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     # Main application - proxy to $target_color deployment
     location / {
         proxy_pass http://localhost:$target_port;
@@ -134,7 +143,7 @@ server {
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
     }
-    
+
     # API routes
     location /api/ {
         proxy_pass http://localhost:$target_port;
@@ -144,7 +153,7 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
-    
+
     # Static files with caching
     location /_next/static/ {
         proxy_pass http://localhost:$target_port;
@@ -152,7 +161,7 @@ server {
         add_header Cache-Control "public, immutable";
         expires 1y;
     }
-    
+
     # Health check
     location /health {
         proxy_pass http://localhost:$target_port/api/health;
@@ -234,7 +243,7 @@ EOF
 # Function to stop inactive deployment
 stop_inactive_deployment() {
     local inactive_color=$1
-    
+
     echo "🛑 Stopping inactive $inactive_color deployment..."
     pm2 stop "marinaobuv-$inactive_color" 2>/dev/null || true
     pm2 delete "marinaobuv-$inactive_color" 2>/dev/null || true
@@ -246,10 +255,10 @@ main() {
     # Determine current and target deployments
     local current_active=$(get_active_deployment)
     local target_deployment=$(get_inactive_deployment)
-    
+
     echo "📊 Current active deployment: $current_active"
     echo "🎯 Target deployment: $target_deployment"
-    
+
     # Determine ports
     local target_port
     if [ "$target_deployment" = "blue" ]; then
@@ -257,7 +266,7 @@ main() {
     else
         target_port=3001
     fi
-    
+
     # Build application (skip if already built)
     echo "🔨 Checking if application needs building..."
     if [ ! -f "web/.next/BUILD_ID" ]; then
@@ -268,31 +277,31 @@ main() {
     else
         echo "✅ Application already built, skipping build step"
     fi
-    
+
     # Start target deployment
     echo "🚀 Starting $target_deployment deployment on port $target_port..."
     pm2 start ecosystem-blue-green.config.js --only "marinaobuv-$target_deployment" --env production --update-env
-    
+
     # Wait a moment for PM2 to start the process
     sleep 5
-    
+
     # Wait for target deployment to be healthy
     if ! check_deployment_health "$target_deployment" "$target_port"; then
         echo "❌ Target deployment failed to become healthy"
         pm2 delete "marinaobuv-$target_deployment" 2>/dev/null || true
         exit 1
     fi
-    
+
     # Switch nginx traffic to new deployment
     if ! switch_nginx_traffic "$target_deployment" "$target_port"; then
         echo "❌ Failed to switch traffic to new deployment"
         pm2 delete "marinaobuv-$target_deployment" 2>/dev/null || true
         exit 1
     fi
-    
+
     # Wait a moment for traffic to settle
     sleep 5
-    
+
     # Verify the switch was successful
     if curl -f -s http://localhost/api/health > /dev/null 2>&1; then
         echo "✅ Traffic switch successful - application is responding"
@@ -300,15 +309,15 @@ main() {
         echo "❌ Traffic switch failed - application not responding"
         exit 1
     fi
-    
+
     # Stop the old deployment
     if [ "$current_active" != "none" ]; then
         stop_inactive_deployment "$current_active"
     fi
-    
+
     # Save PM2 state
     pm2 save
-    
+
     echo "✅ Blue-Green deployment completed successfully!"
     echo "📊 Active deployment: $target_deployment"
     echo "📊 Deployment time: $(date)"

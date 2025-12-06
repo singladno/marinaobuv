@@ -979,6 +979,49 @@ jobs:
             echo "✅ Nginx is properly configured"
             echo "✅ PM2 is managing the application"
 
+            # CRITICAL: Clean up environment variables BEFORE script ends
+            # This prevents "Argument list too long" when appleboy/ssh-action prints env vars
+            echo ""
+            echo "🧹 Cleaning up environment variables to prevent 'Argument list too long' error..."
+            # Unset all variables that were loaded from .env file
+            # Keep only essential system variables
+            if [ -f "web/.env" ]; then
+              while IFS= read -r line || [ -n "$line" ]; do
+                # Skip empty lines and comments
+                if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                  continue
+                fi
+                # Extract key name and unset it
+                if [[ "$line" =~ ^([^=]+)= ]]; then
+                  key="${BASH_REMATCH[1]}"
+                  # Only unset if it's not a critical system variable
+                  case "$key" in
+                    PATH|HOME|USER|SHELL|PWD|SSH_*|LANG|LC_*|TERM|TZ|_|NODE_ENV|NPM_*|PYTHON*)
+                      # Keep system and tool variables
+                      ;;
+                    *)
+                      unset "$key" 2>/dev/null || true
+                      ;;
+                  esac
+                fi
+              done < web/.env
+            fi
+            # Also unset any remaining exported variables from blue-green-deploy.sh
+            # Get list of all exported variables and unset non-system ones
+            set +e  # Don't fail on unset
+            for var in $(env | cut -d= -f1); do
+              case "$var" in
+                PATH|HOME|USER|SHELL|PWD|SSH_*|LANG|LC_*|TERM|TZ|_|NODE_ENV|NPM_*|PYTHON*|GITHUB_*|RUNNER_*|ACTIONS_*|CI|INPUT_*)
+                  # Keep system variables
+                  ;;
+                *)
+                  unset "$var" 2>/dev/null || true
+                  ;;
+              esac
+            done
+            set -e  # Re-enable exit on error
+            echo "✅ Environment cleanup completed"
+
       - name: Notify deployment status
         if: always()
         run: |
