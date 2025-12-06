@@ -114,6 +114,8 @@ jobs:
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script: |
             set -e
+            # Enable command tracing for better visibility (shows what's running)
+            set -x
             # Check if application directory exists
             if [ ! -d "/var/www/marinaobuv" ]; then
                 echo "Setting up application directory..."
@@ -1071,12 +1073,15 @@ jobs:
             echo "Webhook Monitor Log (last 5 lines):"
             tail -n 5 web/logs/webhook-monitor.log 2>/dev/null || echo "Log file not found or empty"
             echo ""
+            echo "[$(date +%H:%M:%S)] Testing Domain Endpoints (quick tests)..."
             echo "Domain Test (HTTPS):"
-            timeout 30 curl -f https://marina-obuv.ru/api/health || echo "HTTPS domain access failed"
+            timeout 5 curl -f --max-time 3 --connect-timeout 2 https://marina-obuv.ru/api/health 2>&1 || echo "HTTPS domain access failed"
+            echo ""
             echo "Domain Test (HTTP redirect):"
-            timeout 30 curl -f http://marina-obuv.ru/api/health || echo "HTTP redirect test failed"
+            timeout 5 curl -f --max-time 3 --connect-timeout 2 http://marina-obuv.ru/api/health 2>&1 || echo "HTTP redirect test failed"
+            echo ""
             echo "Webhook Test:"
-            timeout 30 curl -f https://marina-obuv.ru/api/webhooks/green-api || echo "Webhook endpoint test failed"
+            timeout 5 curl -f --max-time 3 --connect-timeout 2 https://marina-obuv.ru/api/webhooks/green-api 2>&1 || echo "Webhook endpoint test failed"
 
             echo ""
             echo "🎉 Deployment completed successfully!"
