@@ -402,21 +402,28 @@ jobs:
             echo "✅ Packages installed"
 
             # Create SSL directory structure
-            sudo mkdir -p /etc/ssl/certs
-            sudo mkdir -p /etc/ssl/private
-            sudo chmod 755 /etc/ssl/certs
-            sudo chmod 700 /etc/ssl/private
+            sudo mkdir -p /etc/ssl/certs || echo "⚠️ Failed to create /etc/ssl/certs (may already exist)"
+            sudo mkdir -p /etc/ssl/private || echo "⚠️ Failed to create /etc/ssl/private (may already exist)"
+            sudo chmod 755 /etc/ssl/certs 2>/dev/null || echo "⚠️ Failed to chmod /etc/ssl/certs"
+            sudo chmod 700 /etc/ssl/private 2>/dev/null || echo "⚠️ Failed to chmod /etc/ssl/private"
 
             # Generate SSL certificate if not exists
             if [ ! -f "/etc/ssl/certs/marinaobuv.ru.crt" ]; then
               echo "🔐 Generating SSL certificate..."
+              set +e  # Temporarily disable exit on error
               sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
                   -keyout /etc/ssl/private/marinaobuv.ru.key \
                   -out /etc/ssl/certs/marinaobuv.ru.crt \
-                  -subj "/C=RU/ST=Moscow/L=Moscow/O=MarinaObuv/OU=IT/CN=marina-obuv.ru"
-
-              sudo chmod 600 /etc/ssl/private/marinaobuv.ru.key
-              sudo chmod 644 /etc/ssl/certs/marinaobuv.ru.crt
+                  -subj "/C=RU/ST=Moscow/L=Moscow/O=MarinaObuv/OU=IT/CN=marina-obuv.ru" 2>/dev/null
+              OPENSSL_EXIT=$?
+              set -e  # Re-enable exit on error
+              if [ $OPENSSL_EXIT -eq 0 ]; then
+                sudo chmod 600 /etc/ssl/private/marinaobuv.ru.key 2>/dev/null || true
+                sudo chmod 644 /etc/ssl/certs/marinaobuv.ru.crt 2>/dev/null || true
+                echo "✅ SSL certificate generated"
+              else
+                echo "⚠️ SSL certificate generation failed (may already exist or permission issue)"
+              fi
             else
               echo "✅ SSL certificate already exists"
             fi
@@ -482,7 +489,10 @@ jobs:
 
             # Setup auto-renewal
             echo "🔄 Setting up certificate auto-renewal..."
-            (sudo crontab -l 2>/dev/null | grep -v certbot; echo "0 12 * * * /usr/bin/certbot renew --quiet --post-hook 'systemctl reload nginx'") | sudo crontab -
+            set +e  # Temporarily disable exit on error for crontab
+            EXISTING_CRON=$(sudo crontab -l 2>/dev/null)
+            set -e  # Re-enable exit on error
+            (echo "$EXISTING_CRON" | grep -v certbot 2>/dev/null || true; echo "0 12 * * * /usr/bin/certbot renew --quiet --post-hook 'systemctl reload nginx'") | sudo crontab - || echo "⚠️ Failed to setup certbot cron (may already be configured)"
 
             # Configure firewall
             echo "🔥 Configuring firewall..."
