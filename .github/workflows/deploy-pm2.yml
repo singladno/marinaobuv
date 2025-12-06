@@ -1008,8 +1008,9 @@ jobs:
             fi
             # Also unset any remaining exported variables from blue-green-deploy.sh
             # Get list of all exported variables and unset non-system ones
+            # Use process substitution to avoid "Argument list too long" error and subshell issues
             set +e  # Don't fail on unset
-            for var in $(env | cut -d= -f1); do
+            while IFS= read -r var; do
               case "$var" in
                 PATH|HOME|USER|SHELL|PWD|SSH_*|LANG|LC_*|TERM|TZ|_|NODE_ENV|NPM_*|PYTHON*|GITHUB_*|RUNNER_*|ACTIONS_*|CI|INPUT_*)
                   # Keep system variables
@@ -1018,7 +1019,7 @@ jobs:
                   unset "$var" 2>/dev/null || true
                   ;;
               esac
-            done
+            done < <(env | cut -d= -f1)
             set -e  # Re-enable exit on error
             echo "✅ Environment cleanup completed"
 
