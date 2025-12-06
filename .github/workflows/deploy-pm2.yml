@@ -113,7 +113,7 @@ jobs:
           use_insecure_cipher: false
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script_stop: true
-          request_pty: true
+          request_pty: false
           script: |
             # Force unbuffered output for real-time logs
             export PYTHONUNBUFFERED=1
@@ -287,12 +287,20 @@ jobs:
 
             echo "=========================================="
             echo "📦 Installing dependencies..."
-            # Force real-time output - use script with proper PTY allocation
-            npm ci --loglevel=verbose --progress=true
+            # Force unbuffered output using stdbuf
+            if command -v stdbuf >/dev/null 2>&1; then
+              stdbuf -oL -eL npm ci --loglevel=verbose --progress=true
+            else
+              npm ci --loglevel=verbose --progress=true
+            fi
             echo ""
             # Install Playwright Chromium browser for aggregator parser (idempotent - Playwright checks if already installed)
             echo "🎭 Ensuring Playwright Chromium browser is installed..."
-            timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            if command -v stdbuf >/dev/null 2>&1; then
+              stdbuf -oL -eL timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            else
+              timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            fi
             cd ..
 
             # Note: Proxy runs on separate serverspace server
@@ -387,10 +395,17 @@ jobs:
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
             echo "🔨 Building application..."
-            timeout 1800 npm run build || {
-              echo "❌ Build failed or timed out"
-              exit 1
-            }
+            if command -v stdbuf >/dev/null 2>&1; then
+              stdbuf -oL -eL timeout 1800 npm run build || {
+                echo "❌ Build failed or timed out"
+                exit 1
+              }
+            else
+              timeout 1800 npm run build || {
+                echo "❌ Build failed or timed out"
+                exit 1
+              }
+            fi
             cd ..
             echo "✅ Server-side build completed"
 
