@@ -176,16 +176,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          timeout: 30s
-          command_timeout: 30s
-          debug: true
+          timeout: 10s
+          command_timeout: 5s
+          debug: false
           use_insecure_cipher: false
-          cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script: |
-            echo "🔍 Testing SSH connection..."
-            echo "Current user: $(whoami)"
-            echo "Current directory: $(pwd)"
-            echo "Server info: $(uname -a)"
             echo "✅ SSH connection successful!"
 
       - name: Diagnose Database Connection
@@ -201,7 +196,7 @@ jobs:
           use_insecure_cipher: false
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script: |
-            set +e  # Don't exit on errors - we want to see all diagnostics
+            set -e
             echo "=========================================="
             echo "Database Connection Diagnostic"
             echo "=========================================="
@@ -378,24 +373,24 @@ jobs:
             # Skip database setup (managed manually outside deploy)
             echo "ℹ️ Skipping database setup (handled manually)"
 
-            # Test database connection
+            # Test database connection (skip if Prisma not installed yet)
             echo "🔍 Testing database connection..."
             cd web
-            echo "   Running: ./prisma-server.sh npx prisma db pull --print"
-            DB_TEST_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
-            DB_TEST_EXIT=$?
-            if [ $DB_TEST_EXIT -eq 0 ]; then
-              echo "✅ Database connection verified"
+            if [ -f "node_modules/.bin/prisma" ]; then
+              echo "   Running: ./prisma-server.sh npx prisma db pull --print"
+              DB_TEST_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
+              DB_TEST_EXIT=$?
+              if [ $DB_TEST_EXIT -eq 0 ]; then
+                echo "✅ Database connection verified"
+              else
+                echo "⚠️ Database connection test failed (exit code: $DB_TEST_EXIT)"
+                echo "   Error details:"
+                echo "$DB_TEST_OUTPUT" | head -30
+                echo ""
+                echo "   Continuing with deployment, will retry after npm install..."
+              fi
             else
-              echo "⚠️ Database connection test failed (exit code: $DB_TEST_EXIT)"
-              echo "   Error details:"
-              echo "$DB_TEST_OUTPUT" | head -30
-              echo ""
-              echo "   Continuing with deployment, but database operations may fail..."
-              echo "   Please verify:"
-              echo "   - PostgreSQL service is running: systemctl status postgresql"
-              echo "   - DATABASE_URL is correct in web/.env"
-              echo "   - Database credentials are valid"
+              echo "ℹ️ Prisma not installed yet, skipping database test (will test after npm install)"
             fi
             cd ..
 
@@ -442,17 +437,8 @@ jobs:
             # Verify database connection
             echo "🔍 Verifying database connection..."
             echo "   Running: ./prisma-server.sh npx prisma db pull --print"
-            DB_VERIFY_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
-            DB_VERIFY_EXIT=$?
-            if [ $DB_VERIFY_EXIT -eq 0 ]; then
-              echo "✅ Database connection verified"
-            else
-              echo "⚠️ Database connection verification failed (exit code: $DB_VERIFY_EXIT)"
-              echo "   Error details:"
-              echo "$DB_VERIFY_OUTPUT" | head -30
-              echo ""
-              echo "   Continuing with Prisma client generation..."
-            fi
+            ./prisma-server.sh npx prisma db pull --print
+            echo "✅ Database connection verified"
 
             # Skip backup (requires tsx); do backups manually or on cron
             echo "ℹ️ Skipping DB backup during deploy"
