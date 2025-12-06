@@ -46,6 +46,8 @@
     "db:fix-auth": "chmod +x scripts/fix-database-auth.sh && ./scripts/fix-database-auth.sh",
     "server:cron-status": "ssh -l ubuntu 130.193.56.134 'systemctl status cron --no-pager || systemctl status crond --no-pager; echo \"--- enabled ---\"; systemctl is-enabled cron || systemctl is-enabled crond; echo \"--- recent logs (last hour) ---\"; journalctl -u cron --since \"1 hour ago\" --no-pager -n 200 || journalctl -u crond --since \"1 hour ago\" --no-pager -n 200'",
     "server:check-parsers": "ssh -l ubuntu 130.193.56.134 'ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep && echo \"--- PM2 Processes ---\" && pm2 list | grep -E \"(parsing|cron|tsx)\" || echo \"No parser processes found\"'",
+    "server:security-scan": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && bash scripts/security-scan.sh'",
+    "server:security-quick": "ssh -l ubuntu 130.193.56.134 'echo \"=== Quick Security Check ===\" && echo \"CPU/Memory:\" && top -bn1 | head -5 && echo \"\" && echo \"Suspicious processes:\" && ps aux | grep -iE \"(miner|mine|stratum|xmrig|cpuminer)\" | grep -v grep || echo \"None found\" && echo \"\" && echo \"Top CPU processes:\" && ps aux --sort=-%cpu | head -6 && echo \"\" && echo \"Top Memory processes:\" && ps aux --sort=-%mem | head -6'",
     "server:prisma": "./scripts/start-prisma-studio.sh",
     "server:env": "ssh -l ubuntu 130.193.56.134 'echo \"--- /var/www/marinaobuv/web/.env ---\"; sed -n \"1,240p\" /var/www/marinaobuv/web/.env'",
     "server:restart": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && pm2 reload marinaobuv --update-env'",
