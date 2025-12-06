@@ -113,12 +113,38 @@ jobs:
           use_insecure_cipher: false
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script: |
+            # Force unbuffered output for real-time logs
+            export PYTHONUNBUFFERED=1
+            export NPM_CONFIG_PROGRESS=true
+            export NPM_CONFIG_LOGLEVEL=verbose
+            export NODE_NO_WARNINGS=1
+
             set -e
             set -x  # Enable command tracing
 
-            # Add progress function for better visibility
+            # Add progress function for better visibility (with explicit flush)
             progress() {
               echo "[$(date +%H:%M:%S)] $*" >&2
+            }
+
+            # Flush function to force output
+            flush() {
+              sync 2>/dev/null || true
+            }
+
+            # Real-time command wrapper - forces unbuffered output
+            run_realtime() {
+              local cmd="$*"
+              if command -v stdbuf >/dev/null 2>&1; then
+                # Use stdbuf for line-buffered output
+                stdbuf -oL -eL bash -c "$cmd"
+              elif command -v script >/dev/null 2>&1; then
+                # Use script command as fallback
+                script -q /dev/null bash -c "$cmd"
+              else
+                # Fallback: just run the command
+                eval "$cmd"
+              fi
             }
 
             progress "🚀 Starting deployment..."
@@ -256,11 +282,15 @@ jobs:
 
             echo "=========================================="
             echo "📦 Installing dependencies..."
-            npm ci --loglevel=verbose --progress=true
+            flush
+            run_realtime "npm ci --loglevel=verbose --progress=true"
+            flush
             echo ""
             # Install Playwright Chromium browser for aggregator parser (idempotent - Playwright checks if already installed)
             echo "🎭 Ensuring Playwright Chromium browser is installed..."
-            timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            flush
+            run_realtime "timeout 300 npm run playwright:install:ci" || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            flush
             cd ..
 
             # Note: Proxy runs on separate serverspace server
@@ -355,10 +385,12 @@ jobs:
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
             echo "🔨 Building application..."
-            timeout 1800 npm run build || {
+            flush
+            run_realtime "timeout 1800 npm run build" || {
               echo "❌ Build failed or timed out"
               exit 1
             }
+            flush
             cd ..
             echo "✅ Server-side build completed"
 
