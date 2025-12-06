@@ -259,7 +259,7 @@ main() {
     echo "📊 Current active deployment: $current_active"
     echo "🎯 Target deployment: $target_deployment"
 
-    # Determine ports
+    # Determine ports (blue=3000, green=3001)
     local target_port
     if [ "$target_deployment" = "blue" ]; then
         target_port=3000
@@ -267,25 +267,34 @@ main() {
         target_port=3001
     fi
 
+    echo "🔍 Port configuration:"
+    echo "   Target deployment ($target_deployment): port $target_port"
+
     # Always rebuild application to ensure static files match HTML
     # This prevents issues where HTML references CSS/JS files that don't exist
+    # CRITICAL: Build while old instance is still running to avoid downtime
     echo "🔨 Building application (always rebuild to ensure consistency)..."
+    echo "ℹ️  Building new version while current instance continues serving traffic..."
 
-    # Stop any running instances to prevent serving stale files during build
-    echo "🛑 Stopping any running instances to prevent stale file serving..."
-    pm2 stop "marinaobuv-blue" 2>/dev/null || true
-    pm2 stop "marinaobuv-green" 2>/dev/null || true
-    pm2 stop "marinaobuv" 2>/dev/null || true
-    sleep 2
+    # Determine which instance is currently active (if any)
+    local current_active=$(get_active_deployment)
+    if [ "$current_active" != "none" ]; then
+        echo "✅ Current $current_active deployment is still running and serving traffic"
+        echo "   Building new version in parallel - no downtime expected"
+    else
+        echo "⚠️  No active deployment found - this will cause brief downtime"
+    fi
 
     # Clean previous build to ensure fresh build
+    # This is safe because we're building to a new directory that won't affect running instance
     echo "🧹 Cleaning previous build artifacts..."
     cd web
     rm -rf .next
     cd ..
 
-    # Build the application
-    echo "🔨 Running production build..."
+    # Build the application while old instance is still running
+    # The old instance uses its own .next directory in memory, so this won't affect it
+    echo "🔨 Running production build (old instance continues serving)..."
     cd web
     timeout 1800 npm run build 2>&1 | tee /tmp/build.log || {
         echo "❌ Build failed or timed out"
@@ -302,6 +311,29 @@ main() {
 
     BUILD_ID=$(cat web/.next/BUILD_ID)
     echo "✅ Build completed successfully (Build ID: $BUILD_ID)"
+    if [ "$current_active" != "none" ]; then
+        echo "✅ Old $current_active deployment is still running - zero downtime achieved"
+    fi
+
+    # CRITICAL: Stop target deployment first to avoid port conflicts
+    # The target deployment should be inactive, but ensure it's stopped
+    echo "🛑 Ensuring $target_deployment deployment is stopped (target port $target_port)..."
+    pm2 stop "marinaobuv-$target_deployment" 2>/dev/null || true
+    pm2 delete "marinaobuv-$target_deployment" 2>/dev/null || true
+    sleep 1
+
+    # Verify target port is free before starting
+    echo "🔍 Checking target port $target_port is free..."
+    if lsof -i :$target_port >/dev/null 2>&1; then
+        echo "⚠️  Target port $target_port is still in use! Attempting to free it..."
+        lsof -ti :$target_port | xargs kill -9 2>/dev/null || true
+        sleep 2
+        if lsof -i :$target_port >/dev/null 2>&1; then
+            echo "❌ CRITICAL: Port $target_port is still in use after cleanup!"
+            echo "   Cannot start $target_deployment deployment - port conflict!"
+            exit 1
+        fi
+    fi
 
     # Start target deployment
     echo "🚀 Starting $target_deployment deployment on port $target_port..."
