@@ -329,8 +329,8 @@ jobs:
               echo "Running: npm ci --verbose --loglevel=verbose"
               echo "This will show detailed progress of package installation..."
               echo ""
-              # Use stdbuf to disable buffering so output shows immediately
-              timeout -k 60 300 stdbuf -oL -eL npm ci --verbose --loglevel=verbose 2>&1 || {
+              # Run npm ci with verbose logging
+              timeout -k 60 300 npm ci --verbose --loglevel=verbose 2>&1 || {
                 EXIT_CODE=$?
                 END_TIME=$(date +%s)
                 DURATION=$((END_TIME - START_TIME))
@@ -350,19 +350,35 @@ jobs:
                   echo "   - Large dependency tree"
                   echo "   - Disk I/O issues"
                   echo "   - package-lock.json out of sync"
+                elif [ $EXIT_CODE -eq 137 ]; then
+                  echo "   ⚠️ PROCESS KILLED (SIGKILL): npm ci was force-killed"
+                  echo "   This usually means:"
+                  echo "   - npm ci exceeded timeout and was killed"
+                  echo "   - Server may be out of memory (OOM killer)"
+                  echo "   - Process was manually killed"
+                  echo "   Duration was $DURATION seconds (timeout is 300s)"
                 else
                   echo "   ⚠️ EXECUTION FAILED: npm ci returned error code $EXIT_CODE"
                   echo "   Check logs above for specific error messages"
                 fi
                 echo ""
-                echo "⚠️ Trying npm install as fallback..."
-                timeout -k 60 300 npm install 2>&1 || {
-                  echo "❌ npm install also failed"
-                  echo "🔧 Attempting to fix package-lock.json..."
-                  rm -f package-lock.json
-                  echo "   Removed package-lock.json, retrying npm install..."
-                  timeout -k 60 300 npm install 2>&1
+                echo "⚠️ npm ci failed - attempting to fix..."
+                echo "🔧 Step 1: Clearing npm cache..."
+                npm cache clean --force 2>&1 || echo "   ⚠️ Cache clean failed, continuing..."
+                echo ""
+                echo "🔧 Step 2: Removing corrupted package-lock.json..."
+                rm -f package-lock.json
+                echo "   ✅ Removed package-lock.json"
+                echo ""
+                echo "🔧 Step 3: Regenerating package-lock.json with npm install..."
+                timeout -k 60 300 npm install --verbose --loglevel=verbose 2>&1 || {
+                  echo "❌ npm install failed after removing lockfile"
+                  echo "   This indicates a deeper issue (network, disk, or package.json problem)"
+                  exit 1
                 }
+                echo ""
+                echo "✅ Successfully regenerated package-lock.json"
+                echo "   You should commit this new lockfile to prevent future issues"
               }
             else
               # Fallback if timeout command not available
@@ -514,8 +530,8 @@ jobs:
               echo "Running: npm ci --verbose --loglevel=verbose"
               echo "This will show detailed progress of package installation..."
               echo ""
-              # Use stdbuf to disable buffering so output shows immediately
-              timeout -k 60 300 stdbuf -oL -eL npm ci --verbose --loglevel=verbose 2>&1 || {
+              # Run npm ci with verbose logging
+              timeout -k 60 300 npm ci --verbose --loglevel=verbose 2>&1 || {
                 EXIT_CODE=$?
                 END_TIME=$(date +%s)
                 DURATION=$((END_TIME - START_TIME))
@@ -530,19 +546,36 @@ jobs:
                 if [ $EXIT_CODE -eq 124 ]; then
                   echo "   ⚠️ TIMEOUT: npm ci exceeded 5 minutes"
                   echo "   This usually means:"
-                  echo "   - Network is slow or registry is unreachable"
-                  echo "   - package-lock.json is out of sync with package.json"
-                  echo "   - Disk I/O is slow"
+                  echo "   - Network is very slow or registry is unreachable"
+                  echo "   - package-lock.json is corrupted or out of sync"
+                  echo "   - Disk I/O is very slow"
+                  echo "   - Server resources are constrained"
+                elif [ $EXIT_CODE -eq 137 ]; then
+                  echo "   ⚠️ PROCESS KILLED (SIGKILL): npm ci was force-killed"
+                  echo "   Duration: $DURATION seconds (timeout is 300s + 60s grace = 360s)"
+                  echo "   This means npm ci was killed, likely due to:"
+                  echo "   - Exceeding timeout (took too long - lockfile may be corrupted)"
+                  echo "   - Server out of memory (OOM killer) - check: dmesg | grep -i oom"
+                  echo "   - Process was manually terminated"
                 fi
                 echo ""
-                echo "⚠️ Trying npm install as fallback..."
-                timeout -k 60 300 npm install 2>&1 || {
-                  echo "❌ npm install also failed"
-                  echo "🔧 Attempting to fix package-lock.json..."
-                  rm -f package-lock.json
-                  echo "   Removed package-lock.json, retrying..."
-                  timeout -k 60 300 npm install 2>&1
+                echo "⚠️ npm ci failed - attempting to fix..."
+                echo "🔧 Step 1: Clearing npm cache..."
+                npm cache clean --force 2>&1 || echo "   ⚠️ Cache clean failed, continuing..."
+                echo ""
+                echo "🔧 Step 2: Removing corrupted package-lock.json..."
+                rm -f package-lock.json
+                echo "   ✅ Removed package-lock.json"
+                echo ""
+                echo "🔧 Step 3: Regenerating package-lock.json with npm install..."
+                timeout -k 60 300 npm install --verbose --loglevel=verbose 2>&1 || {
+                  echo "❌ npm install failed after removing lockfile"
+                  echo "   This indicates a deeper issue (network, disk, or package.json problem)"
+                  exit 1
                 }
+                echo ""
+                echo "✅ Successfully regenerated package-lock.json"
+                echo "   You should commit this new lockfile to prevent future issues"
               }
             else
               # Fallback if timeout command not available
