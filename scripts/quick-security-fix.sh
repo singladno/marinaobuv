@@ -107,21 +107,18 @@ else
 fi
 echo ""
 
-# 6. Fix marinaobuv-startup.service
-log_info "6. Checking marinaobuv-startup.service..."
+# 6. Remove old marinaobuv-startup.service (redundant - marinaobuv-boot.service handles this)
+log_info "6. Removing old marinaobuv-startup.service (not needed)..."
 if [ -f /etc/systemd/system/marinaobuv-startup.service ]; then
-    STARTUP_SCRIPT=$(grep "ExecStart=" /etc/systemd/system/marinaobuv-startup.service | cut -d'=' -f2 | cut -d' ' -f1)
-    if [ -f "$STARTUP_SCRIPT" ]; then
-        sudo chmod +x "$STARTUP_SCRIPT"
-        log_success "Startup script permissions fixed"
-        sudo systemctl daemon-reload
-        sudo systemctl restart marinaobuv-startup.service 2>/dev/null || log_warning "Could not restart startup service (may need manual fix)"
-    else
-        log_warning "Startup script not found: $STARTUP_SCRIPT"
-        log_info "You may need to fix the service file manually"
-    fi
+    log_info "Old service found - it's redundant (marinaobuv-boot.service handles boot recovery)"
+    sudo systemctl stop marinaobuv-startup.service 2>/dev/null || true
+    sudo systemctl disable marinaobuv-startup.service 2>/dev/null || true
+    sudo systemctl mask marinaobuv-startup.service 2>/dev/null || true
+    sudo rm -f /etc/systemd/system/marinaobuv-startup.service
+    sudo systemctl daemon-reload
+    log_success "Old startup service removed"
 else
-    log_warning "marinaobuv-startup.service not found"
+    log_success "Old startup service not found (already removed)"
 fi
 echo ""
 
