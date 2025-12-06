@@ -100,20 +100,6 @@ jobs:
         run: |
           cd web && npm run typecheck
 
-      - name: Test SSH Connection
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          timeout: 10s
-          command_timeout: 5s
-          debug: false
-          use_insecure_cipher: false
-          script: |
-            echo "✅ SSH connection successful!"
-
       - name: Diagnose Database Connection
         uses: appleboy/ssh-action@v1.0.3
         with:
