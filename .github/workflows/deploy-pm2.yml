@@ -114,7 +114,11 @@ jobs:
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script_stop: true
           request_pty: false
-          script: |
+          # Use command instead of script to avoid "Argument list too long" error
+          # Write script to file first, then execute it
+          command: |
+            # Write deployment script to file to avoid argument list limits
+            cat > /tmp/deploy-script.sh << 'DEPLOY_SCRIPT_EOF'
             # Force unbuffered output for real-time logs
             export PYTHONUNBUFFERED=1
             export NPM_CONFIG_PROGRESS=true
@@ -1080,6 +1084,18 @@ jobs:
             echo "🏁 Script execution completed, exiting..."
             sync 2>/dev/null || true
             exit 0
+            DEPLOY_SCRIPT_EOF
+
+            # Make script executable and run it
+            chmod +x /tmp/deploy-script.sh
+            echo "✅ Deployment script written to /tmp/deploy-script.sh ($(wc -l < /tmp/deploy-script.sh) lines)"
+            echo "🚀 Executing deployment script..."
+            bash /tmp/deploy-script.sh
+            EXIT_CODE=$?
+            echo "📊 Deployment script exited with code: $EXIT_CODE"
+            # Clean up script file
+            rm -f /tmp/deploy-script.sh
+            exit $EXIT_CODE
 
       - name: Notify deployment status
         if: always()
