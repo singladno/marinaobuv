@@ -330,15 +330,30 @@ export async function POST(req: NextRequest) {
 
     // Get or create provider
     let providerId: string | null = null;
+    console.log('[AGGREGATOR] Provider processing started');
+    console.log('[AGGREGATOR] Provider data:', {
+      providerName: parsedData.providerName,
+      providerLink: parsedData.providerLink,
+      providerLocation: parsedData.providerLocation,
+    });
+
     if (parsedData.providerName || parsedData.providerLink) {
       // Check if provider with same link exists
       if (parsedData.providerLink) {
+        console.log(
+          '[AGGREGATOR] Looking for provider by link:',
+          parsedData.providerLink
+        );
         const existingProvider = await prisma.provider.findFirst({
           where: { link: parsedData.providerLink },
         });
 
         if (existingProvider) {
           providerId = existingProvider.id;
+          console.log('[AGGREGATOR] Found existing provider by link:', {
+            id: existingProvider.id,
+            name: existingProvider.name,
+          });
           // Update provider info if needed
           await prisma.provider.update({
             where: { id: existingProvider.id },
@@ -348,8 +363,10 @@ export async function POST(req: NextRequest) {
                 parsedData.providerLocation || existingProvider.location,
             },
           });
+          console.log('[AGGREGATOR] Updated existing provider info');
         } else {
           // Create new provider
+          console.log('[AGGREGATOR] Creating new provider with link');
           const newProvider = await prisma.provider.create({
             data: {
               name: parsedData.providerName || 'Неизвестный поставщик',
@@ -358,16 +375,30 @@ export async function POST(req: NextRequest) {
             },
           });
           providerId = newProvider.id;
+          console.log('[AGGREGATOR] Created new provider:', {
+            id: newProvider.id,
+            name: newProvider.name,
+            link: newProvider.link,
+          });
         }
       } else if (parsedData.providerName) {
         // Try to find by name
+        console.log(
+          '[AGGREGATOR] Looking for provider by name:',
+          parsedData.providerName
+        );
         const existingProvider = await prisma.provider.findUnique({
           where: { name: parsedData.providerName },
         });
 
         if (existingProvider) {
           providerId = existingProvider.id;
+          console.log('[AGGREGATOR] Found existing provider by name:', {
+            id: existingProvider.id,
+            name: existingProvider.name,
+          });
         } else {
+          console.log('[AGGREGATOR] Creating new provider with name only');
           const newProvider = await prisma.provider.create({
             data: {
               name: parsedData.providerName,
@@ -375,9 +406,17 @@ export async function POST(req: NextRequest) {
             },
           });
           providerId = newProvider.id;
+          console.log('[AGGREGATOR] Created new provider:', {
+            id: newProvider.id,
+            name: newProvider.name,
+          });
         }
       }
+    } else {
+      console.log('[AGGREGATOR] No provider data found in parsed HTML');
     }
+
+    console.log('[AGGREGATOR] Final providerId:', providerId);
 
     // Download and upload first image to S3 for vision analysis
     // We need at least one image for vision API
@@ -988,17 +1027,36 @@ export async function POST(req: NextRequest) {
     // Create product (deactivated initially)
     // Note: mappedGender and mappedSeason are already defined above (before category analysis)
     // Note: mappedGender and mappedSeason are already defined above (before category analysis)
+
+    // Price logic for AG flow:
+    // - buyPrice = parsed/LLM price (this is the purchase price from aggregator)
+    // - pricePair = buyPrice * 1.3 (30% markup)
+    const buyPrice =
+      analysisResult.price && analysisResult.price > 0
+        ? analysisResult.price
+        : parsedData.price && parsedData.price > 0
+          ? parsedData.price
+          : null;
+
+    const pricePair = buyPrice ? buyPrice * 1.3 : 0;
+
+    console.log('[AGGREGATOR] Price calculation:', {
+      llmPrice: analysisResult.price,
+      parsedPrice: parsedData.price,
+      buyPrice,
+      pricePair,
+      markup: '30%',
+    });
+
+    console.log('[AGGREGATOR] Creating product with providerId:', providerId);
     const product = await prisma.product.create({
       data: {
         name: analysisResult.name || 'Товар из агрегатора',
         slug,
         article,
         categoryId, // Determined via the same logic as WA parser (with fallback)
-        // Use LLM price if available (wholesale price), otherwise use HTML-parsed price
-        pricePair:
-          analysisResult.price && analysisResult.price > 0
-            ? analysisResult.price
-            : parsedData.price || 0,
+        pricePair,
+        buyPrice,
         currency: 'RUB',
         material: analysisResult.material || '',
         gender: mappedGender, // Use mapped gender (same as WA parser) - already mapped above
@@ -1010,6 +1068,14 @@ export async function POST(req: NextRequest) {
         agLabels: parsedData.labels,
         providerId: providerId,
       },
+    });
+
+    console.log('[AGGREGATOR] Product created:', {
+      id: product.id,
+      name: product.name,
+      providerId: product.providerId,
+      buyPrice: product.buyPrice,
+      pricePair: product.pricePair,
     });
 
     // Upload images to product
@@ -1099,6 +1165,20 @@ export async function POST(req: NextRequest) {
         category: true,
         provider: true,
       },
+    });
+
+    console.log('[AGGREGATOR] Final product fetched:', {
+      id: finalProduct?.id,
+      name: finalProduct?.name,
+      providerId: finalProduct?.providerId,
+      provider: finalProduct?.provider
+        ? {
+            id: finalProduct.provider.id,
+            name: finalProduct.provider.name,
+          }
+        : null,
+      buyPrice: finalProduct?.buyPrice,
+      pricePair: finalProduct?.pricePair,
     });
 
     return NextResponse.json(

@@ -103,12 +103,19 @@ export function useEditProductForm(
         }
 
         // Set form data
+        const providerId = (product as any).providerId || null;
+        const provider = (product as any).provider || null;
+
         console.log('[useEditProductForm] Loading product data:', {
           id: product.id,
           name: product.name,
           gender: product.gender,
           season: product.season,
           material: product.material,
+          providerId,
+          provider: provider ? { id: provider.id, name: provider.name } : null,
+          buyPrice: (product as any).buyPrice,
+          pricePair: product.pricePair,
         });
 
         setFormData({
@@ -121,10 +128,15 @@ export function useEditProductForm(
           season: product.season || undefined, // Convert null to undefined for form
           description: product.description || '',
           sizes: product.sizes || [],
-          providerId: (product as any).providerId || null,
+          providerId,
         });
 
-        console.log('[useEditProductForm] Form data set with gender:', product.gender);
+        console.log('[useEditProductForm] Form data set:', {
+          gender: product.gender,
+          providerId,
+          buyPrice: (product as any).buyPrice,
+          pricePair: product.pricePair,
+        });
 
         // Store source screenshot URL
         setSourceScreenshotUrl((product as any).sourceScreenshotUrl || null);
