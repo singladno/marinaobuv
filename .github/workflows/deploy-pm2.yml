@@ -112,6 +112,7 @@ jobs:
           debug: true
           use_insecure_cipher: false
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
+          script_stop: true
           script: |
             # Force unbuffered output for real-time logs
             export PYTHONUNBUFFERED=1
@@ -132,18 +133,21 @@ jobs:
               sync 2>/dev/null || true
             }
 
-            # Real-time command wrapper - forces unbuffered output
+            # Real-time command wrapper - PROVEN solution for SSH buffering
             run_realtime() {
               local cmd="$*"
-              if command -v stdbuf >/dev/null 2>&1; then
-                # Use stdbuf for line-buffered output
-                stdbuf -oL -eL bash -c "$cmd"
+              # Use unbuffer (from expect package) - BEST for SSH streaming
+              if command -v unbuffer >/dev/null 2>&1; then
+                unbuffer bash -c "$cmd"
+              # Use script -qefc (forces real-time output)
               elif command -v script >/dev/null 2>&1; then
-                # Use script command as fallback
-                script -q /dev/null bash -c "$cmd"
+                script -qefc "$cmd" /dev/null
+              # Use stdbuf as fallback
+              elif command -v stdbuf >/dev/null 2>&1; then
+                stdbuf -oL -eL -iL bash -c "$cmd"
               else
-                # Fallback: just run the command
-                eval "$cmd"
+                # Last resort: use eval with explicit flushing
+                eval "$cmd" && sync
               fi
             }
 
@@ -282,15 +286,20 @@ jobs:
 
             echo "=========================================="
             echo "📦 Installing dependencies..."
-            flush
-            run_realtime "npm ci --loglevel=verbose --progress=true"
-            flush
+            # Use script command to force real-time output (PROVEN solution)
+            if command -v script >/dev/null 2>&1; then
+              script -qefc "npm ci --loglevel=verbose --progress=true" /dev/null
+            else
+              npm ci --loglevel=verbose --progress=true
+            fi
             echo ""
             # Install Playwright Chromium browser for aggregator parser (idempotent - Playwright checks if already installed)
             echo "🎭 Ensuring Playwright Chromium browser is installed..."
-            flush
-            run_realtime "timeout 300 npm run playwright:install:ci" || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
-            flush
+            if command -v script >/dev/null 2>&1; then
+              script -qefc "timeout 300 npm run playwright:install:ci" /dev/null || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            else
+              timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+            fi
             cd ..
 
             # Note: Proxy runs on separate serverspace server
@@ -385,12 +394,17 @@ jobs:
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
             echo "🔨 Building application..."
-            flush
-            run_realtime "timeout 1800 npm run build" || {
-              echo "❌ Build failed or timed out"
-              exit 1
-            }
-            flush
+            if command -v script >/dev/null 2>&1; then
+              script -qefc "timeout 1800 npm run build" /dev/null || {
+                echo "❌ Build failed or timed out"
+                exit 1
+              }
+            else
+              timeout 1800 npm run build || {
+                echo "❌ Build failed or timed out"
+                exit 1
+              }
+            fi
             cd ..
             echo "✅ Server-side build completed"
 
