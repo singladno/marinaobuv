@@ -114,8 +114,14 @@ jobs:
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script: |
             set -e
-            # Enable command tracing for better visibility (shows what's running)
-            set -x
+            set -x  # Enable command tracing
+
+            # Add progress function for better visibility
+            progress() {
+              echo "[$(date +%H:%M:%S)] $*" >&2
+            }
+
+            progress "🚀 Starting deployment..."
             # Check if application directory exists
             if [ ! -d "/var/www/marinaobuv" ]; then
                 echo "Setting up application directory..."
@@ -470,6 +476,7 @@ jobs:
             cd ..
 
             # Build application (blue-green deployment will handle PM2)
+            progress "🔨 Building application (step 2/3)..."
             echo "🔧 Building application..."
             cd web
             # Ensure path alias '@' resolves during build
@@ -738,6 +745,7 @@ jobs:
             set +a  # turn off automatic export
 
             # Use Blue-Green Zero-Downtime Deployment
+            progress "🚀 Deploying application (step 3/3)..."
             echo "🚀 Starting Blue-Green Zero-Downtime Deployment..."
             if [ -f "scripts/blue-green-deploy.sh" ]; then
               chmod +x scripts/blue-green-deploy.sh
@@ -1084,7 +1092,7 @@ jobs:
             timeout 5 curl -f --max-time 3 --connect-timeout 2 https://marina-obuv.ru/api/webhooks/green-api 2>&1 || echo "Webhook endpoint test failed"
 
             echo ""
-            echo "🎉 Deployment completed successfully!"
+            progress "✅ Deployment completed successfully!"
             echo "✅ Application is running on port 3000"
             echo "✅ HTTPS is configured and working"
             echo "✅ Nginx is properly configured"
