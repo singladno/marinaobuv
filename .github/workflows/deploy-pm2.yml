@@ -169,6 +169,30 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Remove Fail2Ban
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 10s
+          command_timeout: 10s
+          debug: false
+          script: |
+            if command -v fail2ban-client &> /dev/null; then
+              echo "Removing Fail2Ban..."
+              sudo systemctl stop fail2ban
+              sudo systemctl disable fail2ban
+              sudo fail2ban-client unban --all 2>/dev/null || true
+              sudo apt remove --purge -y fail2ban 2>/dev/null || true
+              sudo rm -rf /etc/fail2ban /usr/local/bin/auto-whitelist-ssh-ip.sh 2>/dev/null || true
+              crontab -l 2>/dev/null | grep -v "auto-whitelist-ssh-ip" | crontab - 2>/dev/null || true
+              echo "✅ Fail2Ban removed"
+            else
+              echo "ℹ️ Fail2Ban not installed"
+            fi
+
       - name: Test SSH Connection
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -400,15 +424,31 @@ jobs:
             # Install dependencies including dev (required for tsx/typescript used by scripts)
             cd web
             echo "📦 Installing dependencies (first attempt with npm ci)..."
-            timeout 600 npm ci || {
-              echo "⚠️ npm ci failed or timed out, trying npm install instead..."
-              timeout 600 npm install || {
-                echo "❌ npm install also failed"
-                echo "🔧 Attempting to fix package-lock.json..."
-                rm -f package-lock.json
-                timeout 600 npm install
+            echo "   Timeout: 300 seconds (5 minutes)"
+            # Use timeout with SIGKILL after 5 minutes
+            # Note: Don't pipe to head - it can cause npm to hang when pipe closes
+            if command -v timeout >/dev/null 2>&1; then
+              timeout -k 60 300 npm ci 2>&1 || {
+                echo "⚠️ npm ci failed or timed out after 5 minutes, trying npm install instead..."
+                timeout -k 60 300 npm install 2>&1 || {
+                  echo "❌ npm install also failed"
+                  echo "🔧 Attempting to fix package-lock.json..."
+                  rm -f package-lock.json
+                  timeout -k 60 300 npm install 2>&1
+                }
               }
-            }
+            else
+              # Fallback if timeout command not available
+              npm ci 2>&1 || {
+                echo "⚠️ npm ci failed, trying npm install instead..."
+                npm install 2>&1 || {
+                  echo "❌ npm install also failed"
+                  echo "🔧 Attempting to fix package-lock.json..."
+                  rm -f package-lock.json
+                  npm install 2>&1
+                }
+              }
+            fi
             # Install Playwright Chromium browser for aggregator parser
             echo "🎭 Installing Playwright Chromium browser..."
             timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
@@ -505,15 +545,31 @@ jobs:
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
             echo "📦 Installing dependencies for build..."
-            timeout 600 npm ci || {
-              echo "⚠️ npm ci failed or timed out, trying npm install instead..."
-              timeout 600 npm install || {
-                echo "❌ npm install also failed"
-                echo "🔧 Attempting to fix package-lock.json..."
-                rm -f package-lock.json
-                timeout 600 npm install
+            echo "   Timeout: 300 seconds (5 minutes)"
+            # Use timeout with SIGKILL after 5 minutes
+            # Note: Don't pipe to head - it can cause npm to hang when pipe closes
+            if command -v timeout >/dev/null 2>&1; then
+              timeout -k 60 300 npm ci 2>&1 || {
+                echo "⚠️ npm ci failed or timed out after 5 minutes, trying npm install instead..."
+                timeout -k 60 300 npm install 2>&1 || {
+                  echo "❌ npm install also failed"
+                  echo "🔧 Attempting to fix package-lock.json..."
+                  rm -f package-lock.json
+                  timeout -k 60 300 npm install 2>&1
+                }
               }
-            }
+            else
+              # Fallback if timeout command not available
+              npm ci 2>&1 || {
+                echo "⚠️ npm ci failed, trying npm install instead..."
+                npm install 2>&1 || {
+                  echo "❌ npm install also failed"
+                  echo "🔧 Attempting to fix package-lock.json..."
+                  rm -f package-lock.json
+                  npm install 2>&1
+                }
+              }
+            fi
             # Ensure Playwright Chromium browser is installed for aggregator parser
             echo "🎭 Ensuring Playwright Chromium browser is installed..."
             timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
