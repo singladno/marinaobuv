@@ -580,30 +580,21 @@ jobs:
             fi
 
             # Load runtime environment for PM2 safely
-            echo "🔧 Exporting environment for PM2 runtime..."
-            set -a  # automatically export all variables
-            # Process the .env file line by line, handling quotes properly
-            while IFS= read -r line || [ -n "$line" ]; do
-                # Skip empty lines and comments
-                if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
-                    continue
-                fi
+            # NOTE: Don't use 'set -a' to export all variables - it causes "Argument list too long"
+            # when appleboy/ssh-action tries to print environment variables at the end.
+            # Instead, PM2 will read environment variables from ecosystem.config.js or .env file directly.
+            echo "🔧 Preparing environment for PM2 runtime..."
+            echo "   PM2 will read environment variables from ecosystem.config.js and web/.env"
 
-                # Extract key and value, handling quotes properly
-                if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
-                    key="${BASH_REMATCH[1]}"
-                    value="${BASH_REMATCH[2]}"
-
-                    # Remove surrounding quotes if they exist and match
-                    if [[ "$value" =~ ^\"(.*)\"$ ]] || [[ "$value" =~ ^\'(.*)\'$ ]]; then
-                        value="${BASH_REMATCH[1]}"
-                    fi
-
-                    # Export the variable
-                    export "$key"="$value"
-                fi
-            done < web/.env
-            set +a  # turn off automatic export
+            # Only export critical variables needed for the deployment script itself
+            # PM2 will handle the rest via ecosystem.config.js
+            if [ -f "web/.env" ]; then
+              # Extract only DATABASE_URL for Prisma operations if needed
+              if grep -q "^DATABASE_URL=" web/.env; then
+                DATABASE_URL=$(grep "^DATABASE_URL=" web/.env | cut -d'=' -f2- | sed 's/^"//;s/"$//' | sed "s/^'//;s/'$//")
+                export DATABASE_URL
+              fi
+            fi
 
             # Use Blue-Green Zero-Downtime Deployment
             progress "🚀 Deploying application (step 3/3)..."
@@ -938,6 +929,35 @@ jobs:
             else
               echo "⚠️ Cron service is not running"
             fi
+
+            # Clean up environment variables to prevent "Argument list too long" error
+            # when appleboy/ssh-action tries to print environment variables
+            echo ""
+            echo "🧹 Cleaning up environment variables..."
+            # Unset all variables that were loaded from .env file
+            # Keep only essential system variables
+            if [ -f "web/.env" ]; then
+              while IFS= read -r line || [ -n "$line" ]; do
+                # Skip empty lines and comments
+                if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                  continue
+                fi
+                # Extract key name and unset it
+                if [[ "$line" =~ ^([^=]+)= ]]; then
+                  key="${BASH_REMATCH[1]}"
+                  # Only unset if it's not a critical system variable
+                  case "$key" in
+                    PATH|HOME|USER|SHELL|PWD|SSH_*|LANG|LC_*|TERM|TZ|_)
+                      # Keep system variables
+                      ;;
+                    *)
+                      unset "$key" 2>/dev/null || true
+                      ;;
+                  esac
+                fi
+              done < web/.env
+            fi
+            echo "✅ Environment cleanup completed"
             echo ""
             echo "Webhook Monitor Log (last 5 lines):"
             tail -n 5 web/logs/webhook-monitor.log 2>/dev/null || echo "Log file not found or empty"
