@@ -260,7 +260,6 @@ jobs:
 
             # Skip database connection test before npm install (Prisma not available yet)
             echo "ℹ️ Skipping database connection test (will test after npm install)"
-            cd ..
 
             # Skip DB auth modification during deploy
             echo "ℹ️ Skipping DB auth modification during deploy"
