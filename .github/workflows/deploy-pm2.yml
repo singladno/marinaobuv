@@ -258,8 +258,8 @@ jobs:
             echo "📦 Installing dependencies..."
             npm ci --loglevel=verbose --progress=true
             echo ""
-            # Install Playwright Chromium browser for aggregator parser
-            echo "🎭 Installing Playwright Chromium browser..."
+            # Install Playwright Chromium browser for aggregator parser (idempotent - Playwright checks if already installed)
+            echo "🎭 Ensuring Playwright Chromium browser is installed..."
             timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
             cd ..
 
@@ -354,12 +354,6 @@ jobs:
             mkdir -p logs
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
-            echo "📦 Installing dependencies for build..."
-            npm ci --loglevel=verbose --progress=true
-            echo ""
-            # Ensure Playwright Chromium browser is installed for aggregator parser
-            echo "🎭 Ensuring Playwright Chromium browser is installed..."
-            timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
             echo "🔨 Building application..."
             timeout 1800 npm run build || {
               echo "❌ Build failed or timed out"
