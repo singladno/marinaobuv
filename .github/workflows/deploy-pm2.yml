@@ -89,8 +89,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install
-          cd web && npm install
+          npm ci
+          cd web && npm ci
 
       - name: Run linting
         run: |
@@ -256,7 +256,7 @@ jobs:
 
             echo "=========================================="
             echo "📦 Installing dependencies..."
-            npm ci
+            npm ci --loglevel=verbose --progress=true
             echo ""
             # Install Playwright Chromium browser for aggregator parser
             echo "🎭 Installing Playwright Chromium browser..."
@@ -355,7 +355,7 @@ jobs:
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
             echo "📦 Installing dependencies for build..."
-            npm ci
+            npm ci --loglevel=verbose --progress=true
             echo ""
             # Ensure Playwright Chromium browser is installed for aggregator parser
             echo "🎭 Ensuring Playwright Chromium browser is installed..."
