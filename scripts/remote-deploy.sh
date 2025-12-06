@@ -233,48 +233,10 @@ echo "✅ Default categories ensured"
 echo "ℹ️ Skipping DB init/seed during deploy"
 cd ..
 
-# Build application (blue-green deployment will handle PM2)
-progress "🔨 Building application (step 2/3)..."
-echo "🔧 Building application..."
-cd web
-# Ensure path alias '@' resolves during build
-if ! grep -q '"baseUrl"' tsconfig.json; then
-  jq '.compilerOptions.baseUrl = "."' tsconfig.json > tsconfig.tmp && mv tsconfig.tmp tsconfig.json
-fi
-# Clear old app logs to avoid confusing tail output later
-mkdir -p logs
-: > logs/marinaobuv-error.log || true
-: > logs/marinaobuv-out.log || true
-
-# Stop any running instances to prevent serving stale files during build
-echo "🛑 Stopping any running instances to prevent stale file serving..."
-pm2 stop marinaobuv 2>/dev/null || true
-pm2 stop marinaobuv-blue 2>/dev/null || true
-pm2 stop marinaobuv-green 2>/dev/null || true
-sleep 2
-
-# Clean previous build to ensure fresh build and prevent stale static file issues
-echo "🧹 Cleaning previous build artifacts..."
-rm -rf web/.next
-
-echo "🔨 Building application (fresh build to ensure static files match HTML)..."
-timeout 1800 npm run build 2>&1 | tee /tmp/build.log || {
-  echo "❌ Build failed or timed out"
-  tail -50 /tmp/build.log || true
-  exit 1
-}
-cd ..
-echo "✅ Server-side build completed"
-
-# Ensure production build exists
-if [ ! -f "web/.next/BUILD_ID" ]; then
-  echo "❌ Build artifact missing (.next/BUILD_ID not found)"
-  ls -la web/.next || true
-  exit 1
-fi
-
-BUILD_ID=$(cat web/.next/BUILD_ID)
-echo "✅ Build verified (Build ID: $BUILD_ID)"
+# Build will be handled by blue-green-deploy.sh to avoid duplicate builds
+# This ensures a single, consistent build process with proper cleanup
+progress "⏭️  Skipping build step - blue-green deployment will handle it..."
+echo "ℹ️  Build will be performed by blue-green-deploy.sh with proper cleanup"
 
 # Setup HTTPS and nginx configuration
 echo "🔒 Setting up HTTPS and nginx configuration..."
