@@ -25,10 +25,3 @@ write_files:
 runcmd:
   - systemctl enable ssh
   - systemctl restart ssh
-  - wget -qO - https://as-repository.openvpn.net/as-repo-public.gpg | gpg --dearmor -o /usr/share/keyrings/openvpn-as.gpg
-  - echo "deb [signed-by=/usr/share/keyrings/openvpn-as.gpg] https://as-repository.openvpn.net/as/debian jammy main" | tee /etc/apt/sources.list.d/openvpn-as.list
-  - apt update -y
-  - DEBIAN_FRONTEND=noninteractive apt install -y openvpn-as
-  - echo "openvpn:OpenVPN-Temp-Admin-123" | chpasswd || true
-  - systemctl enable openvpnas
-  - systemctl start openvpnas

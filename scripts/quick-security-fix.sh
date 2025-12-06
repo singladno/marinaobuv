@@ -90,8 +90,25 @@ else
 fi
 echo ""
 
-# 5. Fix marinaobuv-startup.service
-log_info "5. Checking marinaobuv-startup.service..."
+# 5. Remove OpenVPN (not used)
+log_info "5. Removing OpenVPN (not in use)..."
+if systemctl list-units --all | grep -qi openvpn; then
+    log_info "Stopping and disabling OpenVPN services..."
+    sudo systemctl stop openvpn@client.service 2>/dev/null || true
+    sudo systemctl disable openvpn@client.service 2>/dev/null || true
+    sudo systemctl mask openvpn@client.service 2>/dev/null || true
+    sudo systemctl stop openvpn.service 2>/dev/null || true
+    sudo systemctl disable openvpn.service 2>/dev/null || true
+    sudo systemctl daemon-reload
+    log_success "OpenVPN services disabled"
+    log_info "Run 'bash scripts/remove-openvpn.sh' for complete removal"
+else
+    log_success "No OpenVPN services found"
+fi
+echo ""
+
+# 6. Fix marinaobuv-startup.service
+log_info "6. Checking marinaobuv-startup.service..."
 if [ -f /etc/systemd/system/marinaobuv-startup.service ]; then
     STARTUP_SCRIPT=$(grep "ExecStart=" /etc/systemd/system/marinaobuv-startup.service | cut -d'=' -f2 | cut -d' ' -f1)
     if [ -f "$STARTUP_SCRIPT" ]; then
@@ -108,8 +125,8 @@ else
 fi
 echo ""
 
-# 6. Start PM2 application
-log_info "6. Starting PM2 application..."
+# 7. Start PM2 application
+log_info "7. Starting PM2 application..."
 cd /var/www/marinaobuv 2>/dev/null || {
     log_error "Cannot access /var/www/marinaobuv"
     echo ""
@@ -136,8 +153,8 @@ else
 fi
 echo ""
 
-# 7. Start Nginx
-log_info "7. Starting Nginx..."
+# 8. Start Nginx
+log_info "8. Starting Nginx..."
 if systemctl is-active --quiet nginx; then
     log_success "Nginx is already running"
 else
@@ -151,8 +168,8 @@ else
 fi
 echo ""
 
-# 8. Verify application health
-log_info "8. Verifying application health..."
+# 9. Verify application health
+log_info "9. Verifying application health..."
 sleep 2
 if curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
     log_success "Application is responding"
@@ -163,8 +180,8 @@ else
 fi
 echo ""
 
-# 9. Check firewall status
-log_info "9. Checking firewall status..."
+# 10. Check firewall status
+log_info "10. Checking firewall status..."
 if command -v ufw &> /dev/null; then
     if sudo ufw status | grep -q "Status: active"; then
         log_success "UFW firewall is active"
