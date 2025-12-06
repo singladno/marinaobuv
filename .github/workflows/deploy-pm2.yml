@@ -158,6 +158,14 @@ jobs:
             }
 
             progress "🚀 Starting deployment..."
+
+            # Log initial environment state for debugging
+            echo "📊 Initial environment variable count: $(env | wc -l)"
+            echo "📊 Initial environment variable names (first 10):"
+            env | cut -d= -f1 | head -10 | while IFS= read -r var; do
+              echo "   - $var"
+            done
+
             # Check if application directory exists
             if [ ! -d "/var/www/marinaobuv" ]; then
                 echo "Setting up application directory..."
@@ -956,10 +964,16 @@ jobs:
             # CRITICAL: Clean up environment variables BEFORE script ends
             # This prevents "Argument list too long" when appleboy/ssh-action prints env vars
             echo ""
-            echo "🧹 Cleaning up environment variables to prevent 'Argument list too long' error..."
-            # Unset all variables that were loaded from .env file
-            # Keep only essential system variables
+            echo "🧹 Starting environment variable cleanup..."
+            echo "📊 Step 1: Counting environment variables before cleanup..."
+            ENV_COUNT_BEFORE=$(env | wc -l)
+            echo "   Found $ENV_COUNT_BEFORE environment variables"
+
+            echo "📊 Step 2: Cleaning up variables from web/.env file..."
+            ENV_FILE_UNSET_COUNT=0
             if [ -f "web/.env" ]; then
+              ENV_FILE_LINES=$(wc -l < web/.env | tr -d ' ')
+              echo "   Processing $ENV_FILE_LINES lines from web/.env"
               while IFS= read -r line || [ -n "$line" ]; do
                 # Skip empty lines and comments
                 if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
@@ -974,28 +988,98 @@ jobs:
                       # Keep system and tool variables
                       ;;
                     *)
-                      unset "$key" 2>/dev/null || true
+                      if unset "$key" 2>/dev/null; then
+                        ENV_FILE_UNSET_COUNT=$((ENV_FILE_UNSET_COUNT + 1))
+                      fi
                       ;;
                   esac
                 fi
               done < web/.env
+              echo "   ✅ Unset $ENV_FILE_UNSET_COUNT variables from .env file"
+            else
+              echo "   ⚠️ web/.env file not found, skipping .env cleanup"
             fi
-            # Also unset any remaining exported variables from blue-green-deploy.sh
-            # Get list of all exported variables and unset non-system ones
-            # Use process substitution to avoid "Argument list too long" error and subshell issues
+
+            echo "📊 Step 3: Cleaning up remaining exported variables..."
             set +e  # Don't fail on unset
-            while IFS= read -r var; do
-              case "$var" in
-                PATH|HOME|USER|SHELL|PWD|SSH_*|LANG|LC_*|TERM|TZ|_|NODE_ENV|NPM_*|PYTHON*|GITHUB_*|RUNNER_*|ACTIONS_*|CI|INPUT_*)
-                  # Keep system variables
-                  ;;
-                *)
-                  unset "$var" 2>/dev/null || true
-                  ;;
-              esac
-            done < <(env | cut -d= -f1)
+            REMAINING_UNSET_COUNT=0
+            TOTAL_PROCESSED=0
+
+            # Use compgen -v to get variable names (more efficient than env)
+            # This avoids the "Argument list too long" error that can occur with env
+            echo "   Starting to process remaining environment variables..."
+            echo "   Using compgen -v to get variable list (safer than env)..."
+
+            # Try compgen first (bash builtin, more efficient)
+            if command -v compgen >/dev/null 2>&1; then
+              echo "   Using compgen -v method..."
+              while IFS= read -r var; do
+                TOTAL_PROCESSED=$((TOTAL_PROCESSED + 1))
+                # Log progress every 100 variables
+                if [ $((TOTAL_PROCESSED % 100)) -eq 0 ]; then
+                  echo "   Processed $TOTAL_PROCESSED variables so far..."
+                fi
+                case "$var" in
+                  PATH|HOME|USER|SHELL|PWD|SSH_*|LANG|LC_*|TERM|TZ|_|NODE_ENV|NPM_*|PYTHON*|GITHUB_*|RUNNER_*|ACTIONS_*|CI|INPUT_*)
+                    # Keep system variables
+                    ;;
+                  *)
+                    if unset "$var" 2>/dev/null; then
+                      REMAINING_UNSET_COUNT=$((REMAINING_UNSET_COUNT + 1))
+                    fi
+                    ;;
+                esac
+              done < <(compgen -v)
+            else
+              # Fallback: use env with process substitution (original method)
+              echo "   compgen not available, using env method..."
+              echo "   Attempting to get environment variable list via env..."
+              while IFS= read -r var; do
+                TOTAL_PROCESSED=$((TOTAL_PROCESSED + 1))
+                # Log progress every 100 variables
+                if [ $((TOTAL_PROCESSED % 100)) -eq 0 ]; then
+                  echo "   Processed $TOTAL_PROCESSED variables so far..."
+                fi
+                case "$var" in
+                  PATH|HOME|USER|SHELL|PWD|SSH_*|LANG|LC_*|TERM|TZ|_|NODE_ENV|NPM_*|PYTHON*|GITHUB_*|RUNNER_*|ACTIONS_*|CI|INPUT_*)
+                    # Keep system variables
+                    ;;
+                  *)
+                    if unset "$var" 2>/dev/null; then
+                      REMAINING_UNSET_COUNT=$((REMAINING_UNSET_COUNT + 1))
+                    fi
+                    ;;
+                esac
+              done < <(env | cut -d= -f1)
+            fi
+
             set -e  # Re-enable exit on error
-            echo "✅ Environment cleanup completed"
+            echo "   ✅ Processed $TOTAL_PROCESSED variables, unset $REMAINING_UNSET_COUNT non-system variables"
+
+            echo "📊 Step 4: Counting environment variables after cleanup..."
+            ENV_COUNT_AFTER=$(env | wc -l)
+            echo "   Remaining: $ENV_COUNT_AFTER environment variables (reduced from $ENV_COUNT_BEFORE)"
+
+            echo "📊 Step 5: Listing remaining environment variable names (first 20)..."
+            env | cut -d= -f1 | head -20 | while IFS= read -r var; do
+              echo "   - $var"
+            done
+
+            echo "✅ Environment cleanup completed successfully"
+            echo "   Total variables removed: $((ENV_COUNT_BEFORE - ENV_COUNT_AFTER))"
+
+            # Final safety check: Try to get environment variable count one more time
+            echo "📊 Final verification: Environment variable count..."
+            if ENV_FINAL_COUNT=$(env | wc -l 2>&1); then
+              echo "   ✅ Final count: $ENV_FINAL_COUNT variables"
+            else
+              echo "   ⚠️ Could not count final environment variables: $ENV_FINAL_COUNT"
+            fi
+
+            # Explicitly flush output and exit cleanly
+            echo "🏁 Script execution completed, exiting..."
+            sync 2>/dev/null || true
+            exit 0
 
       - name: Notify deployment status
         if: always()
