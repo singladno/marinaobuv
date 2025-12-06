@@ -13,11 +13,11 @@ users:
     shell: /bin/bash
     lock_passwd: false
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINH4flLUi8wz70+duyQUDC2tR1JSt9ypqJ61k3Gxbnga singladno@gmail.com
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC3LY63PUg8wSdDBr+p19kNxdwWOnH0TJlcOaGxCeHTR singladno@gmail.com
 
 write_files:
   - path: /etc/ssh/sshd_config.d/90-cloud-ssh.conf
-    permissions: '0644'
+    permissions: "0644"
     content: |
       PasswordAuthentication no
       PubkeyAuthentication yes
