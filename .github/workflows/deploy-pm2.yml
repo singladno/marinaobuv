@@ -122,7 +122,7 @@ jobs:
             export NODE_NO_WARNINGS=1
 
             set -e  # Exit on error
-            set -x  # Enable command tracing
+            # Don't use set -x - it causes too much verbose output with DRONE messages
 
             # Add progress function for better visibility (with explicit flush)
             progress() {
@@ -258,30 +258,8 @@ jobs:
             # Skip database setup (managed manually outside deploy)
             echo "ℹ️ Skipping database setup (handled manually)"
 
-            # Test database connection (skip if Prisma not installed yet)
-            echo "🔍 Testing database connection..."
-            cd web
-            set +e  # Temporarily disable exit on error for this check
-            if [ -f "node_modules/.bin/prisma" ]; then
-              set -e  # Re-enable exit on error
-              echo "   Running: ./prisma-server.sh npx prisma db pull --print"
-              DB_TEST_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
-              DB_TEST_EXIT=$?
-              set +e  # Disable exit on error for error handling
-              if [ $DB_TEST_EXIT -eq 0 ]; then
-                echo "✅ Database connection verified"
-              else
-                echo "⚠️ Database connection test failed (exit code: $DB_TEST_EXIT)"
-                echo "   Error details:"
-                echo "$DB_TEST_OUTPUT" | head -30
-                echo ""
-                echo "   Continuing with deployment, will retry after npm install..."
-              fi
-              set -e  # Re-enable exit on error
-            else
-              echo "ℹ️ Prisma not installed yet, skipping database test (will test after npm install)"
-            fi
-            set -e  # Ensure exit on error is enabled
+            # Skip database connection test before npm install (Prisma not available yet)
+            echo "ℹ️ Skipping database connection test (will test after npm install)"
             cd ..
 
             # Skip DB auth modification during deploy
