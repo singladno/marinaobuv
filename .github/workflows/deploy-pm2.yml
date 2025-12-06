@@ -121,6 +121,9 @@ jobs:
             export NPM_CONFIG_LOGLEVEL=verbose
             export NODE_NO_WARNINGS=1
 
+            # Error trap to show what failed before exiting
+            trap 'echo "❌ ERROR: Command failed at line $LINENO: $BASH_COMMAND" >&2; exit 1' ERR
+
             set -e  # Exit on error
             # Don't use set -x - it causes too much verbose output with DRONE messages
 
@@ -412,7 +415,16 @@ jobs:
             echo "✅ SSL directories ready"
 
             # Generate SSL certificate if not exists
-            if [ ! -f "/etc/ssl/certs/marinaobuv.ru.crt" ]; then
+            echo "🔍 Checking for existing SSL certificate..."
+            set +e  # Temporarily disable exit on error for file check
+            SSL_CERT_EXISTS=$(test -f "/etc/ssl/certs/marinaobuv.ru.crt" 2>&1 && echo "yes" || echo "no")
+            SSL_CHECK_EXIT=$?
+            set -e  # Re-enable exit on error
+            if [ $SSL_CHECK_EXIT -ne 0 ]; then
+              echo "⚠️ Warning: Could not check SSL certificate status (exit code: $SSL_CHECK_EXIT)"
+            fi
+            echo "   SSL certificate exists: $SSL_CERT_EXISTS"
+            if [ "$SSL_CERT_EXISTS" = "no" ]; then
               echo "🔐 Generating SSL certificate..."
               set +e  # Temporarily disable exit on error
               sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
