@@ -113,6 +113,7 @@ jobs:
           use_insecure_cipher: false
           cipher: aes128-ctr,aes192-ctr,aes256-ctr
           script_stop: true
+          request_pty: true
           script: |
             # Force unbuffered output for real-time logs
             export PYTHONUNBUFFERED=1
@@ -286,20 +287,12 @@ jobs:
 
             echo "=========================================="
             echo "📦 Installing dependencies..."
-            # Use script command to force real-time output (PROVEN solution)
-            if command -v script >/dev/null 2>&1; then
-              script -qefc "npm ci --loglevel=verbose --progress=true" /dev/null
-            else
-              npm ci --loglevel=verbose --progress=true
-            fi
+            # Force real-time output - use script with proper PTY allocation
+            npm ci --loglevel=verbose --progress=true
             echo ""
             # Install Playwright Chromium browser for aggregator parser (idempotent - Playwright checks if already installed)
             echo "🎭 Ensuring Playwright Chromium browser is installed..."
-            if command -v script >/dev/null 2>&1; then
-              script -qefc "timeout 300 npm run playwright:install:ci" /dev/null || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
-            else
-              timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
-            fi
+            timeout 300 npm run playwright:install:ci || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
             cd ..
 
             # Note: Proxy runs on separate serverspace server
@@ -394,17 +387,10 @@ jobs:
             : > logs/marinaobuv-error.log || true
             : > logs/marinaobuv-out.log || true
             echo "🔨 Building application..."
-            if command -v script >/dev/null 2>&1; then
-              script -qefc "timeout 1800 npm run build" /dev/null || {
-                echo "❌ Build failed or timed out"
-                exit 1
-              }
-            else
-              timeout 1800 npm run build || {
-                echo "❌ Build failed or timed out"
-                exit 1
-              }
-            fi
+            timeout 1800 npm run build || {
+              echo "❌ Build failed or timed out"
+              exit 1
+            }
             cd ..
             echo "✅ Server-side build completed"
 
