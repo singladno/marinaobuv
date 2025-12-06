@@ -402,12 +402,12 @@ jobs:
             # Use timeout with SIGKILL after 5 minutes
             # Note: Don't pipe to head - it can cause npm to hang when pipe closes
             if command -v timeout >/dev/null 2>&1; then
-              # Run npm ci with progress logging
-              timeout -k 60 300 sh -c '
-                npm ci 2>&1 | while IFS= read -r line; do
-                  echo "[npm ci] $line"
-                done
-              ' || {
+              # Run npm ci with verbose logging to see what's happening
+              echo "Running: npm ci --verbose --loglevel=verbose"
+              echo "This will show detailed progress of package installation..."
+              echo ""
+              # Use stdbuf to disable buffering so output shows immediately
+              timeout -k 60 300 stdbuf -oL -eL npm ci --verbose --loglevel=verbose 2>&1 || {
                 EXIT_CODE=$?
                 END_TIME=$(date +%s)
                 DURATION=$((END_TIME - START_TIME))
@@ -444,16 +444,17 @@ jobs:
             else
               # Fallback if timeout command not available
               START_TIME=$(date +%s)
-              npm ci 2>&1 || {
+              echo "Running: npm ci --verbose --loglevel=verbose"
+              npm ci --verbose --loglevel=verbose 2>&1 || {
                 EXIT_CODE=$?
                 echo ""
                 echo "❌ npm ci failed (exit code: $EXIT_CODE)"
                 echo "⚠️ Trying npm install as fallback..."
-                npm install 2>&1 || {
+                npm install --verbose --loglevel=verbose 2>&1 || {
                   echo "❌ npm install also failed"
                   echo "🔧 Attempting to fix package-lock.json..."
                   rm -f package-lock.json
-                  npm install 2>&1
+                  npm install --verbose --loglevel=verbose 2>&1
                 }
               }
             fi
@@ -586,11 +587,11 @@ jobs:
             # Use timeout with SIGKILL after 5 minutes
             START_TIME=$(date +%s)
             if command -v timeout >/dev/null 2>&1; then
-              timeout -k 60 300 sh -c '
-                npm ci 2>&1 | while IFS= read -r line; do
-                  echo "[npm ci] $line"
-                done
-              ' || {
+              echo "Running: npm ci --verbose --loglevel=verbose"
+              echo "This will show detailed progress of package installation..."
+              echo ""
+              # Use stdbuf to disable buffering so output shows immediately
+              timeout -k 60 300 stdbuf -oL -eL npm ci --verbose --loglevel=verbose 2>&1 || {
                 EXIT_CODE=$?
                 END_TIME=$(date +%s)
                 DURATION=$((END_TIME - START_TIME))
