@@ -48,6 +48,8 @@
     "server:check-parsers": "ssh -l ubuntu 130.193.56.134 'ps aux | grep -E \"(hourly-cron|parsing|tsx.*scripts)\" | grep -v grep && echo \"--- PM2 Processes ---\" && pm2 list | grep -E \"(parsing|cron|tsx)\" || echo \"No parser processes found\"'",
     "server:security-scan": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && bash scripts/security-scan.sh'",
     "server:security-quick": "ssh -l ubuntu 130.193.56.134 'echo \"=== Quick Security Check ===\" && echo \"CPU/Memory:\" && top -bn1 | head -5 && echo \"\" && echo \"Suspicious processes:\" && ps aux | grep -iE \"(miner|mine|stratum|xmrig|cpuminer)\" | grep -v grep || echo \"None found\" && echo \"\" && echo \"Top CPU processes:\" && ps aux --sort=-%cpu | head -6 && echo \"\" && echo \"Top Memory processes:\" && ps aux --sort=-%mem | head -6'",
+    "server:diagnose-memory": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && bash scripts/diagnose-memory-issue.sh 2>/dev/null || echo \"Script not found on server - copy it first\"'",
+    "server:emergency-fix": "ssh -l ubuntu 130.193.56.134 'bash -s' < scripts/emergency-memory-fix.sh",
     "server:prisma": "./scripts/start-prisma-studio.sh",
     "server:env": "ssh -l ubuntu 130.193.56.134 'echo \"--- /var/www/marinaobuv/web/.env ---\"; sed -n \"1,240p\" /var/www/marinaobuv/web/.env'",
     "server:restart": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && pm2 reload marinaobuv --update-env'",
