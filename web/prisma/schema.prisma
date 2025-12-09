@@ -66,6 +66,7 @@ model Product {
   category              Category       @relation(fields: [categoryId], references: [id])
   provider              Provider?      @relation(fields: [providerId], references: [id])
   images                ProductImage[]
+  videos                ProductVideo[]
   purchaseItems         PurchaseItem[]
   reviews               Review[]
 
@@ -88,6 +89,22 @@ model ProductImage {
   color     String?
   width     Int?
   height    Int?
+  isActive  Boolean @default(true)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sort])
+}
+
+model ProductVideo {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  key       String? @unique
+  alt       String?
+  sort      Int     @default(0)
+  width     Int?
+  height    Int?
+  duration  Int? // Duration in seconds
   isActive  Boolean @default(true)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -311,27 +328,27 @@ model Review {
 }
 
 model Order {
-  id            String      @id @default(cuid())
-  orderNumber   String      @unique
-  userId        String?
-  gruzchikId    String?
-  fullName      String?
-  phone         String
-  email         String?
-  address       String?
-  transportId   String?
-  transportName String?
-  subtotal      Decimal     @default(0)
-  total         Decimal     @default(0)
-  status        String      @default("Новый")
-  label         String?
-  payment       Decimal     @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  comment       String?
-  gruzchik      User?       @relation("OrderGruzchik", fields: [gruzchikId], references: [id])
-  user          User?       @relation(fields: [userId], references: [id])
-  items         OrderItem[]
+  id               String                 @id @default(cuid())
+  orderNumber      String                 @unique
+  userId           String?
+  gruzchikId       String?
+  fullName         String?
+  phone            String
+  email            String?
+  address          String?
+  transportId      String?
+  transportName    String?
+  subtotal         Decimal                @default(0)
+  total            Decimal                @default(0)
+  status           String                 @default("Новый")
+  label            String?
+  payment          Decimal                @default(0)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  comment          String?
+  gruzchik         User?                  @relation("OrderGruzchik", fields: [gruzchikId], references: [id])
+  user             User?                  @relation(fields: [userId], references: [id])
+  items            OrderItem[]
   transportOptions OrderTransportOption[]
 
   @@index([userId])
@@ -367,14 +384,14 @@ model OrderItem {
 }
 
 model OrderTransportOption {
-  id          String   @id @default(cuid())
-  orderId     String
-  transportId String
+  id            String   @id @default(cuid())
+  orderId       String
+  transportId   String
   transportName String
-  isSelected  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  isSelected    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([transportId])

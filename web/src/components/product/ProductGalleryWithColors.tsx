@@ -8,9 +8,11 @@ import ColorSwitcher from '@/components/product/ColorSwitcher';
 import ProductGalleryVertical from '@/components/product/ProductGalleryVertical';
 
 type ImageWithColor = { url: string; alt?: string; color?: string | null };
+type Video = { id: string; url: string; alt?: string; sort: number; duration?: number };
 
 type Props = {
   images: ImageWithColor[];
+  videos?: Video[];
   productName: string;
   productId?: string;
   sourceMessageIds?: string[] | null;
@@ -21,6 +23,7 @@ type Props = {
 
 export default function ProductGalleryWithColors({
   images,
+  videos = [],
   productName,
   productId,
   sourceMessageIds,
@@ -82,6 +85,7 @@ export default function ProductGalleryWithColors({
       <div className="flex-1 min-w-0">
         <ProductGalleryVertical
           images={filteredImages}
+          videos={videos}
           productName={productName}
           height={560}
           productId={productId}

@@ -29,6 +29,7 @@ export interface Product {
     place: string | null;
   } | null;
   images: ProductImage[];
+  videos?: ProductVideo[];
   sizes: Array<{ size: string; count: number }>; // Array of size objects like [{size: '36', count: 1}, {size: '38', count: 2}]
   sourceMessageIds: string[] | null; // Array of WhatsApp message IDs that created this product
   sourceScreenshotUrl: string | null; // URL of source screenshot for MANUAL products
@@ -43,6 +44,15 @@ export interface ProductImage {
   url: string;
   alt: string | null;
   isPrimary: boolean;
+}
+
+export interface ProductVideo {
+  id: string;
+  url: string;
+  alt: string | null;
+  sort: number;
+  duration?: number | null;
+  isActive: boolean;
 }
 
 export interface ProductUpdateData {

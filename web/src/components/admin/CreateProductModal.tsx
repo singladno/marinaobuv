@@ -13,8 +13,9 @@ import { AggregatorIcon } from '@/components/icons/AggregatorIcon';
 import { CreateProductFormFields } from './CreateProductFormFields';
 import { ProductImageUpload, type ImageFile } from './ProductImageUpload';
 import { ProductImageUploadArea } from './ProductImageUploadArea';
+import { ProductVideoUpload, type VideoFile } from './ProductVideoUpload';
 
-export type { ImageFile };
+export type { ImageFile, VideoFile };
 
 export interface CreateProductData {
   name: string;
@@ -27,6 +28,7 @@ export interface CreateProductData {
   description: string;
   sizes: Array<{ size: string; count: number }>;
   images?: ImageFile[];
+  videos?: VideoFile[];
   sourceScreenshot?: ImageFile | null;
   providerId?: string | null;
 }
@@ -58,6 +60,7 @@ export function CreateProductModal({
   } = useCreateProductForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<ImageFile[]>([]);
+  const [videos, setVideos] = useState<VideoFile[]>([]);
   const [sourceScreenshot, setSourceScreenshot] = useState<File | null>(null);
   const [sourceScreenshotPreview, setSourceScreenshotPreview] = useState<
     string | null
@@ -95,6 +98,7 @@ export function CreateProductModal({
       const dataWithImages = {
         ...submitData,
         images,
+        videos,
         sourceScreenshot: sourceScreenshot
           ? ({
               file: sourceScreenshot,
@@ -105,6 +109,12 @@ export function CreateProductModal({
       await onCreate(dataWithImages);
       reset();
       setImages([]);
+      videos.forEach(video => {
+        if (video.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(video.preview);
+        }
+      });
+      setVideos([]);
       if (sourceScreenshotPreview) {
         URL.revokeObjectURL(sourceScreenshotPreview);
       }
@@ -125,6 +135,13 @@ export function CreateProductModal({
       // Clean up image previews
       images.forEach(img => URL.revokeObjectURL(img.preview));
       setImages([]);
+      // Clean up video previews
+      videos.forEach(video => {
+        if (video.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(video.preview);
+        }
+      });
+      setVideos([]);
       if (sourceScreenshotPreview) {
         URL.revokeObjectURL(sourceScreenshotPreview);
       }
@@ -523,6 +540,13 @@ export function CreateProductModal({
             <ProductImageUpload
               images={images}
               onImagesChange={setImages}
+              disabled={isSubmitting}
+            />
+
+            {/* Videos Section */}
+            <ProductVideoUpload
+              videos={videos}
+              onVideosChange={setVideos}
               disabled={isSubmitting}
             />
 

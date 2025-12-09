@@ -32,22 +32,34 @@ export async function GET() {
             isPrimary: true,
           },
         },
+        videos: {
+          where: {
+            isActive: true,
+          },
+          orderBy: { sort: 'asc' },
+          select: {
+            id: true,
+            url: true,
+            alt: true,
+            sort: true,
+          },
+        },
       },
     });
 
     // Transform the data to include primaryImageUrl
-    const transformedProducts = products.map(product => {
-      const primaryImageUrl = product.images[0]?.url || null;
+    const transformedProducts = products.map((product: any) => {
+      const primaryImageUrl = product.images?.[0]?.url || null;
       const seen = new Set<string>();
-      const colorOptions = product.images
-        .filter(img => !!img.color)
-        .filter(img => {
+      const colorOptions = (product.images || [])
+        .filter((img: any) => !!img.color)
+        .filter((img: any) => {
           const key = (img.color || '').toLowerCase();
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
         })
-        .map(img => ({ color: img.color as string, imageUrl: img.url }));
+        .map((img: any) => ({ color: img.color as string, imageUrl: img.url }));
 
       return {
         ...product,

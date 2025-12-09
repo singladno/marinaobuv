@@ -42,6 +42,12 @@ export default async function ProductPage({
         },
         orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
       },
+      videos: {
+        where: {
+          isActive: true,
+        },
+        orderBy: { sort: 'asc' },
+      },
       source: true,
       category: true,
     },
@@ -55,6 +61,17 @@ export default async function ProductPage({
         color: i.color,
       }))
     : [{ url: '/images/demo/1.jpg' }];
+
+  const videos =
+    product.videos && product.videos.length > 0
+      ? product.videos.map(v => ({
+          id: v.id,
+          url: v.url,
+          alt: v.alt ?? undefined,
+          sort: v.sort,
+          duration: v.duration ?? undefined,
+        }))
+      : [];
 
   return (
     <div className="bg-background min-h-screen">
@@ -96,6 +113,7 @@ export default async function ProductPage({
           <div>
             <ProductGalleryWithColors
               images={images}
+              videos={videos}
               productName={product.name}
               productId={product.id}
               sourceMessageIds={

@@ -68,6 +68,7 @@ type Props = {
   // removed from DB; compute from sizes
   currency: string;
   imageUrl: string | null;
+  videos?: Array<{ id: string; url: string; alt: string | null }>;
   category?: string;
   showCategory?: boolean;
   colorOptions?: Array<{ color: string; imageUrl: string }>;
@@ -85,6 +86,7 @@ function ProductCard({
   pricePair,
   // removed
   imageUrl,
+  videos,
   category,
   showCategory = false,
   colorOptions = [],
@@ -131,6 +133,9 @@ function ProductCard({
       setSelectedColor(colorOptions[0]?.color ?? null);
     }
   }, [selectedColor, colorOptions]);
+  const hasVideo = videos && videos.length > 0;
+  const firstVideo = hasVideo ? videos[0] : null;
+
   const displayImageUrl = useMemo(() => {
     const effectiveColor = selectedColor || (colorOptions[0]?.color ?? null);
     if (effectiveColor) {
@@ -476,9 +481,20 @@ function ProductCard({
             }
           }}
         >
-          {/* Image Container */}
+          {/* Media Container (Image or Video) */}
           <div className="bg-muted group/image relative aspect-square w-full overflow-hidden">
-            {hasImage ? (
+            {hasVideo && firstVideo ? (
+              <video
+                src={firstVideo.url}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                poster={displayImageUrl || undefined}
+                aria-label={firstVideo.alt || name}
+              />
+            ) : hasImage ? (
               <Image
                 src={displayImageUrl as string}
                 alt={name}
@@ -489,6 +505,19 @@ function ProductCard({
               />
             ) : (
               <NoImagePlaceholder />
+            )}
+
+            {/* Video play indicator */}
+            {hasVideo && (
+              <div className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm">
+                <svg
+                  className="inline-block h-3 w-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                </svg>
+              </div>
             )}
 
             {/* Category Badge */}

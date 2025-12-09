@@ -138,6 +138,7 @@ export const ProductGrid = memo(function ProductGrid({
                   pricePair={item.pricePair}
                   currency="RUB"
                   imageUrl={item.primaryImageUrl}
+                  videos={(item as any).videos}
                   category={item.category?.name ?? undefined}
                   colorOptions={item.colorOptions}
                   productId={item.id}

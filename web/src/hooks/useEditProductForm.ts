@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import type { CreateProductData } from '@/components/admin/CreateProductModal';
 import type { ImageFile } from '@/components/admin/CreateProductModal';
+import type { VideoFile } from '@/components/admin/ProductVideoUpload';
 import { deduplicateRequest } from '@/lib/request-deduplication';
 
 const initialFormData: Partial<CreateProductData> = {
@@ -33,6 +34,13 @@ interface ProductData {
     isPrimary: boolean;
     isActive: boolean;
   }>;
+  videos?: Array<{
+    id: string;
+    url: string;
+    alt: string | null;
+    sort: number;
+    isActive: boolean;
+  }>;
 }
 
 export function useEditProductForm(
@@ -43,6 +51,7 @@ export function useEditProductForm(
     useState<Partial<CreateProductData>>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [images, setImages] = useState<ImageFile[]>([]);
+  const [videos, setVideos] = useState<VideoFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [sourceScreenshotUrl, setSourceScreenshotUrl] = useState<string | null>(
     null
@@ -53,6 +62,7 @@ export function useEditProductForm(
     setFormData(initialFormData);
     setErrors({});
     setImages([]);
+    setVideos([]);
     setSourceScreenshotUrl(null);
   }, []);
 
@@ -157,6 +167,24 @@ export function useEditProductForm(
         } else {
           setImages([]);
         }
+
+        // Convert existing videos to VideoFile format
+        if (product.videos && product.videos.length > 0) {
+          const videoFiles: VideoFile[] = product.videos.map((video: any) => ({
+            preview: video.url,
+            id: video.id,
+            url: video.url,
+            key: video.key,
+            alt: video.alt,
+            sort: video.sort,
+            duration: video.duration,
+            // Map isActive: false to isDeleted: true
+            isDeleted: !video.isActive,
+          }));
+          setVideos(videoFiles);
+        } else {
+          setVideos([]);
+        }
       } catch (error) {
         console.error('Error loading product:', error);
         setErrors({ submit: 'Не удалось загрузить товар' });
@@ -242,6 +270,8 @@ export function useEditProductForm(
     clearError,
     images,
     setImages,
+    videos,
+    setVideos,
     loading,
     sourceScreenshotUrl,
   };

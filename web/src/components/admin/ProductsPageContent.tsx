@@ -10,6 +10,7 @@ import { useProductHandlers } from '@/hooks/useProductHandlers';
 import { useProducts } from '@/hooks/useProducts';
 import { useCreateProduct } from '@/hooks/useCreateProduct';
 import { useUploadProductImages } from '@/hooks/useUploadProductImages';
+import { useUploadProductVideos } from '@/hooks/useUploadProductVideos';
 import type { ImageFile } from './CreateProductModal';
 import { createProductColumns } from '@/utils/productColumnConfigs';
 import type { Product } from '@/types/product';
@@ -54,6 +55,7 @@ export function ProductsPageContent() {
 
   const { createProduct, isLoading: isCreating } = useCreateProduct();
   const { uploadImages } = useUploadProductImages();
+  const { uploadVideos } = useUploadProductVideos();
 
   const {
     selected,
@@ -104,9 +106,15 @@ export function ProductsPageContent() {
       }
     };
 
-    window.addEventListener('aggregatorProductParsed', handleAggregatorProductParsed as EventListener);
+    window.addEventListener(
+      'aggregatorProductParsed',
+      handleAggregatorProductParsed as EventListener
+    );
     return () => {
-      window.removeEventListener('aggregatorProductParsed', handleAggregatorProductParsed as EventListener);
+      window.removeEventListener(
+        'aggregatorProductParsed',
+        handleAggregatorProductParsed as EventListener
+      );
     };
   }, []);
 
@@ -139,8 +147,8 @@ export function ProductsPageContent() {
 
   const handleCreateProduct = async (data: CreateProductData) => {
     try {
-      // Extract images and source screenshot from data
-      const { images, sourceScreenshot, ...productData } = data;
+      // Extract images, videos and source screenshot from data
+      const { images, videos, sourceScreenshot, ...productData } = data;
 
       // Create product first
       const product = await createProduct(productData);
@@ -152,6 +160,17 @@ export function ProductsPageContent() {
         } catch (imageError) {
           console.error('Error uploading images:', imageError);
           // Don't fail the whole operation if images fail to upload
+          // Product is already created
+        }
+      }
+
+      // Upload videos if any
+      if (videos && videos.length > 0) {
+        try {
+          await uploadVideos(product.id, videos);
+        } catch (videoError) {
+          console.error('Error uploading videos:', videoError);
+          // Don't fail the whole operation if videos fail to upload
           // Product is already created
         }
       }

@@ -46,10 +46,12 @@ export function PortalSwitcher() {
   // Hide when admin chat or client chat is open
   if (isAdminChatOpen || isClientChatOpen) return null;
 
+  // Hide on admin orders detail pages on desktop (chat can be opened there)
+  // This is a backup check in case the context doesn't update in time
+  if (pathname.match(/^\/admin\/orders\/[^/]+$/)) return null;
+
   // Hide on pages with fixed scroll arrows or where floating UI should be minimal
-  const hiddenOnPaths = [
-    '/catalog',
-  ];
+  const hiddenOnPaths = ['/catalog'];
   if (hiddenOnPaths.some(p => pathname.startsWith(p))) return null;
 
   return (

@@ -12,6 +12,8 @@ import { useUploadProductImages } from '@/hooks/useUploadProductImages';
 import { CreateProductFormFields } from './CreateProductFormFields';
 import { ProductImageUpload, type ImageFile } from './ProductImageUpload';
 import { ProductImageUploadArea } from './ProductImageUploadArea';
+import { ProductVideoUpload, type VideoFile } from './ProductVideoUpload';
+import { useUploadProductVideos } from '@/hooks/useUploadProductVideos';
 import Image from 'next/image';
 import { Text } from '@/components/ui/Text';
 import type { CreateProductData } from './CreateProductModal';
@@ -46,14 +48,18 @@ export function EditProductModal({
     clearError,
     images,
     setImages,
+    videos,
+    setVideos,
     loading: loadingProduct,
     sourceScreenshotUrl: existingSourceScreenshotUrl,
   } = useEditProductForm(productId, isOpen);
   const { updateProduct, isLoading: isUpdating } = useUpdateProduct();
   const { uploadImages } = useUploadProductImages();
+  const { uploadVideos } = useUploadProductVideos();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formReady, setFormReady] = useState(false);
   const originalImagesRef = useRef<ImageFile[]>([]);
+  const originalVideosRef = useRef<VideoFile[]>([]);
   const [sourceScreenshot, setSourceScreenshot] = useState<File | null>(null);
   const [sourceScreenshotPreview, setSourceScreenshotPreview] = useState<
     string | null
@@ -69,6 +75,17 @@ export function EditProductModal({
       originalImagesRef.current = JSON.parse(JSON.stringify(images));
     }
   }, [loadingProduct, images]);
+
+  // Store original videos when they're loaded
+  useEffect(() => {
+    if (
+      !loadingProduct &&
+      videos.length > 0 &&
+      originalVideosRef.current.length === 0
+    ) {
+      originalVideosRef.current = JSON.parse(JSON.stringify(videos));
+    }
+  }, [loadingProduct, videos]);
 
   // Reset source screenshot when modal closes
   useEffect(() => {
@@ -89,6 +106,7 @@ export function EditProductModal({
     } else if (!productId) {
       setFormReady(false);
       originalImagesRef.current = []; // Reset when modal closes
+      originalVideosRef.current = []; // Reset when modal closes
     }
   }, [loadingProduct, productId, formData.name]);
 
@@ -446,9 +464,116 @@ export function EditProductModal({
         }
       }
 
+      // Handle video deletions and updates
+      const activeVideos = videos.filter(video => !video.isDeleted);
+      const originalVideos = originalVideosRef.current;
+      const originalVideoMap = new Map(
+        originalVideos.map(video => [video.id, video])
+      );
+
+      // Update video metadata for existing videos
+      const videosToUpdate = activeVideos
+        .filter(video => video.preview.startsWith('http') && video.id)
+        .map(video => {
+          const original = originalVideoMap.get(video.id);
+          if (!original) return null;
+
+          const wasDeleted = original.isDeleted;
+          const isNowActive = !video.isDeleted;
+
+          if (wasDeleted === video.isDeleted) {
+            return null; // No change
+          }
+
+          return {
+            video,
+            wasDeleted,
+            isNowActive,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
+
+      // Update videos that changed
+      await Promise.all(
+        videosToUpdate.map(async ({ video, isNowActive }) => {
+          try {
+            const response = await fetch(
+              `/api/admin/products/videos/${video.id}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ isActive: isNowActive }),
+              }
+            );
+            if (!response.ok) {
+              console.error(`Failed to update video ${video.id}`);
+            }
+          } catch (error) {
+            console.error(`Error updating video ${video.id}:`, error);
+          }
+        })
+      );
+
+      // Handle new video uploads
+      const newVideos = activeVideos.filter(
+        video => !video.preview.startsWith('http')
+      );
+      if (newVideos.length > 0) {
+        try {
+          await uploadVideos(productId, newVideos);
+
+          // Fetch the updated product to get all videos with proper IDs
+          const productResponse = await fetch(
+            `/api/admin/products/${productId}`
+          );
+          if (productResponse.ok) {
+            const productData = await productResponse.json();
+            const allProductVideos = productData.product?.videos || [];
+
+            // Get IDs of videos that were deleted in the UI
+            const deletedVideoIds = new Set(
+              videos
+                .filter(video => video.isDeleted && video.id)
+                .map(video => video.id)
+            );
+
+            // Filter to only include active videos (not deleted in UI)
+            const updatedFinalVideos = allProductVideos.filter((video: any) => {
+              if (deletedVideoIds.has(video.id)) {
+                return false;
+              }
+              return video.isActive !== false;
+            });
+
+            // Sort by sort asc
+            updatedFinalVideos.sort(
+              (a: any, b: any) => (a.sort || 0) - (b.sort || 0)
+            );
+
+            finalProduct.videos = updatedFinalVideos;
+          }
+        } catch (error) {
+          console.error('Error uploading new videos:', error);
+          setErrors({
+            submit: 'Не удалось загрузить новые видео. Попробуйте еще раз.',
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       reset();
       setImages([]);
+      videos.forEach(video => {
+        if (video.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(video.preview);
+        }
+      });
+      setVideos([]);
       originalImagesRef.current = []; // Reset original images
+      originalVideosRef.current = []; // Reset original videos
       if (sourceScreenshotPreview) {
         URL.revokeObjectURL(sourceScreenshotPreview);
       }
@@ -477,6 +602,13 @@ export function EditProductModal({
         }
       });
       setImages([]);
+      // Clean up video previews
+      videos.forEach(video => {
+        if (video.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(video.preview);
+        }
+      });
+      setVideos([]);
       // Clean up source screenshot preview
       if (sourceScreenshotPreview) {
         URL.revokeObjectURL(sourceScreenshotPreview);
@@ -518,6 +650,13 @@ export function EditProductModal({
                 <ProductImageUpload
                   images={images}
                   onImagesChange={setImages}
+                  disabled={isSubmitting || isUpdating}
+                />
+
+                {/* Videos Section */}
+                <ProductVideoUpload
+                  videos={videos}
+                  onVideosChange={setVideos}
                   disabled={isSubmitting || isUpdating}
                 />
 

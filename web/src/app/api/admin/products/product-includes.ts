@@ -29,6 +29,23 @@ export const productInclude = {
     },
     orderBy: { sort: 'asc' },
   },
+  videos: {
+    select: {
+      id: true,
+      url: true,
+      key: true,
+      alt: true,
+      sort: true,
+      width: true,
+      height: true,
+      duration: true,
+      isActive: true,
+    },
+    where: {
+      isActive: true,
+    },
+    orderBy: { sort: 'asc' },
+  },
   _count: {
     select: {
       reviews: true,

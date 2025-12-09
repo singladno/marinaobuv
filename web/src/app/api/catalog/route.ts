@@ -55,10 +55,7 @@ export async function GET(request: NextRequest) {
     const where: any = {
       AND: [
         {
-          OR: [
-            { batchProcessingStatus: 'completed' },
-            { source: 'MANUAL' },
-          ],
+          OR: [{ batchProcessingStatus: 'completed' }, { source: 'MANUAL' }],
         },
       ],
     };
@@ -191,24 +188,36 @@ export async function GET(request: NextRequest) {
               isPrimary: true,
             },
           },
+          videos: {
+            where: {
+              isActive: true,
+            },
+            orderBy: { sort: 'asc' },
+            select: {
+              id: true,
+              url: true,
+              alt: true,
+              sort: true,
+            },
+          },
         },
       }),
       prisma.product.count({ where }),
     ]);
 
     // Transform the data to include primaryImageUrl and colorOptions
-    const transformedProducts = products.map(product => {
-      const primaryImageUrl = product.images[0]?.url || null;
+    const transformedProducts = products.map((product: any) => {
+      const primaryImageUrl = product.images?.[0]?.url || null;
       const seen = new Set<string>();
-      const colorOptions = product.images
-        .filter(img => !!img.color)
-        .filter(img => {
+      const colorOptions = (product.images || [])
+        .filter((img: any) => !!img.color)
+        .filter((img: any) => {
           const key = (img.color || '').toLowerCase();
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
         })
-        .map(img => ({ color: img.color as string, imageUrl: img.url }));
+        .map((img: any) => ({ color: img.color as string, imageUrl: img.url }));
 
       return {
         ...product,

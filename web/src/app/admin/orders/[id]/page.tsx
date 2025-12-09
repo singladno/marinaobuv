@@ -2,9 +2,20 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, MessageSquare, Tag, RefreshCw, User, DollarSign, UserCheck, Truck, MapPin, ExternalLink } from 'lucide-react';
+import {
+  ArrowLeft,
+  MessageSquare,
+  Tag,
+  RefreshCw,
+  User,
+  DollarSign,
+  UserCheck,
+  Truck,
+  MapPin,
+  ExternalLink,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -22,7 +33,14 @@ import { AdminReplacementModal } from '@/components/features/admin/AdminReplacem
 import { ProductImageModal } from '@/components/features/ProductImageModal';
 import { cn } from '@/lib/utils';
 import { formatOrderNumber } from '@/utils/orderNumberUtils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select';
+import { Checkbox } from '@/components/ui/Checkbox';
 
 interface OrderItem {
   id: string;
@@ -150,13 +168,53 @@ export default function OrderDetailsPage() {
     productName: string;
     initialIndex: number;
   } | null>(null);
-  const [gruzchiks, setGruzchiks] = useState<Array<{ id: string; name: string | null; phone: string | null }>>([]);
+  const [gruzchiks, setGruzchiks] = useState<
+    Array<{ id: string; name: string | null; phone: string | null }>
+  >([]);
   const [purchasedFilter, setPurchasedFilter] = useState<string>('all'); // 'all' | 'purchased' | 'not-purchased'
   const [availableFilter, setAvailableFilter] = useState<string>('all'); // 'all' | 'available' | 'not-available'
+
+  // Separate state for checkbox UI (immediate) and functionality (deferred)
+  const [showImagesCheckbox, setShowImagesCheckbox] = useState<boolean>(false);
+  const [showImages, setShowImages] = useState<boolean>(false);
+  const [isPending, startTransition] = useTransition();
+  const checkboxInputRef = useRef<HTMLInputElement | null>(null);
+  const updateScheduledRef = useRef<boolean>(false);
 
   // Get unread counts for all items in this order
   const { getUnreadCount, refetch: refetchUnreadCounts } =
     useAdminOrderUnreadCounts(orderId);
+
+  // Load showImages preference from localStorage
+  useEffect(() => {
+    const savedPreference = localStorage.getItem('admin-orders-show-images');
+    if (savedPreference !== null) {
+      const value = savedPreference === 'true';
+      setShowImagesCheckbox(value);
+      setShowImages(value);
+    }
+  }, []);
+
+  // Handler: update checkbox state immediately, defer heavy React work
+  const handleShowImagesChange = useCallback(
+    (checked: boolean) => {
+      // Update checkbox visual state IMMEDIATELY - this is synchronous
+      setShowImagesCheckbox(checked);
+
+      // Defer heavy React work (image rendering) to next tick
+      if (!updateScheduledRef.current) {
+        updateScheduledRef.current = true;
+        setTimeout(() => {
+          startTransition(() => {
+            setShowImages(checked);
+            updateScheduledRef.current = false;
+          });
+          localStorage.setItem('admin-orders-show-images', String(checked));
+        }, 0);
+      }
+    },
+    [startTransition]
+  );
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -451,7 +509,10 @@ export default function OrderDetailsPage() {
     }
   };
 
-  const handleOrderUpdate = async (updates: { status?: string; gruzchikId?: string | null }) => {
+  const handleOrderUpdate = async (updates: {
+    status?: string;
+    gruzchikId?: string | null;
+  }) => {
     if (!order) return;
 
     try {
@@ -478,7 +539,9 @@ export default function OrderDetailsPage() {
         const updatedOrder = { ...prev, ...updates };
         if (updates.gruzchikId !== undefined) {
           if (updates.gruzchikId) {
-            const selectedGruzchik = gruzchiks.find(g => g.id === updates.gruzchikId);
+            const selectedGruzchik = gruzchiks.find(
+              g => g.id === updates.gruzchikId
+            );
             updatedOrder.gruzchik = selectedGruzchik
               ? { id: selectedGruzchik.id, name: selectedGruzchik.name }
               : null;
@@ -492,26 +555,26 @@ export default function OrderDetailsPage() {
       });
     } catch (error) {
       console.error('Failed to update order:', error);
-      alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      alert(
+        `Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+      );
     }
   };
 
-  const handleImageClick = (
-    item: OrderItem,
-    imageIndex: number = 0
-  ) => {
+  const handleImageClick = (item: OrderItem, imageIndex: number = 0) => {
     if (item.product.images && item.product.images.length > 0) {
       // Normalize color strings for comparison (trim and lowercase)
       const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
       const itemColor = normalize(item.color);
 
       // Filter images to only show the ones matching the item's color
-      const filteredImages = item.product.images.filter(img =>
-        normalize(img.color) === itemColor
+      const filteredImages = item.product.images.filter(
+        img => normalize(img.color) === itemColor
       );
 
       // If no color match, fall back to all images
-      const images = filteredImages.length > 0 ? filteredImages : item.product.images;
+      const images =
+        filteredImages.length > 0 ? filteredImages : item.product.images;
 
       // Always start at first image since we filtered
       const initialIndex = 0;
@@ -621,14 +684,14 @@ export default function OrderDetailsPage() {
             onClick={() => router.back()}
             variant="outline"
             size="sm"
-            className="shrink-0 mt-1"
+            className="mt-1 shrink-0"
           >
             <ArrowLeft className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Назад</span>
           </Button>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3 flex-wrap mb-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">
+            <div className="mb-2 flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-gray-100">
                 Заказ {formatOrderNumber(order.orderNumber)}
               </h1>
               <EditableStatusBadge
@@ -648,13 +711,15 @@ export default function OrderDetailsPage() {
       {/* Order Info Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Клиент */}
-        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border border-gray-200 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+              <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-950/30">
                 <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Клиент</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Клиент
+              </h3>
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -671,18 +736,22 @@ export default function OrderDetailsPage() {
                 {order.fullName}
               </p>
             )}
-            <p className="text-sm text-gray-600 dark:text-gray-400">{order.phone}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {order.phone}
+            </p>
           </CardContent>
         </Card>
 
         {/* Сумма */}
-        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border border-gray-200 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+              <div className="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-950/30">
                 <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Сумма</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Сумма
+              </h3>
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
@@ -690,19 +759,22 @@ export default function OrderDetailsPage() {
               {formatPrice(order.total)}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Оплата: <span className="font-medium">{formatPrice(order.payment)}</span>
+              Оплата:{' '}
+              <span className="font-medium">{formatPrice(order.payment)}</span>
             </p>
           </CardContent>
         </Card>
 
         {/* Грузчик */}
-        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border border-gray-200 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30">
+              <div className="rounded-lg bg-purple-50 p-2 dark:bg-purple-950/30">
                 <UserCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Грузчик</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Грузчик
+              </h3>
             </div>
           </CardHeader>
           <CardContent>
@@ -717,32 +789,38 @@ export default function OrderDetailsPage() {
         </Card>
 
         {/* Транспортная компания */}
-        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border border-gray-200 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+              <div className="rounded-lg bg-amber-50 p-2 dark:bg-amber-950/30">
                 <Truck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Доставка</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Доставка
+              </h3>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {order.transportOptions && order.transportOptions.length > 0
-                ? order.transportOptions.map(opt => opt.transportName).join(', ')
+                ? order.transportOptions
+                    .map(opt => opt.transportName)
+                    .join(', ')
                 : order.transportName || (
-                    <span className="text-gray-400 dark:text-gray-500">Не выбрана</span>
+                    <span className="text-gray-400 dark:text-gray-500">
+                      Не выбрана
+                    </span>
                   )}
             </p>
             {order.address && (
-              <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+              <div className="border-t border-gray-100 pt-2 dark:border-gray-700">
                 <div className="flex items-start gap-2">
-                  <MapPin className="h-3.5 w-3.5 text-gray-400 mt-0.5 shrink-0" />
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                       Адрес доставки
                     </p>
-                    <p className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
+                    <p className="text-sm leading-relaxed text-gray-900 dark:text-gray-100">
                       {order.address}
                     </p>
                   </div>
@@ -754,15 +832,35 @@ export default function OrderDetailsPage() {
       </div>
 
       {/* Order Items */}
-      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+      <Card className="border border-gray-200 shadow-sm dark:border-gray-700">
         <CardHeader className="border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Товары в заказе
             </h2>
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-              <Select value={purchasedFilter} onValueChange={setPurchasedFilter}>
-                <SelectTrigger className="w-full sm:w-48" aria-label="Фильтр по покупке">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  ref={checkboxInputRef}
+                  id="show-images"
+                  checked={showImagesCheckbox}
+                  onCheckedChange={handleShowImagesChange}
+                />
+                <label
+                  htmlFor="show-images"
+                  className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Показывать картинки
+                </label>
+              </div>
+              <Select
+                value={purchasedFilter}
+                onValueChange={setPurchasedFilter}
+              >
+                <SelectTrigger
+                  className="w-full sm:w-48"
+                  aria-label="Фильтр по покупке"
+                >
                   <SelectValue placeholder="Все товары" />
                 </SelectTrigger>
                 <SelectContent>
@@ -771,8 +869,14 @@ export default function OrderDetailsPage() {
                   <SelectItem value="not-purchased">Не куплено</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={availableFilter} onValueChange={setAvailableFilter}>
-                <SelectTrigger className="w-full sm:w-48" aria-label="Фильтр по наличию">
+              <Select
+                value={availableFilter}
+                onValueChange={setAvailableFilter}
+              >
+                <SelectTrigger
+                  className="w-full sm:w-48"
+                  aria-label="Фильтр по наличию"
+                >
                   <SelectValue placeholder="Все товары" />
                 </SelectTrigger>
                 <SelectContent>
@@ -821,283 +925,342 @@ export default function OrderDetailsPage() {
                         <div
                           key={item.id}
                           className={cn(
-                            "px-4 py-4 bg-white dark:bg-gray-800",
-                            (order.status === 'Куплен' || item.isPurchased === true) && "bg-green-50 dark:bg-green-950/20",
-                            item.isAvailable === true && !(order.status === 'Куплен' || item.isPurchased === true) && "bg-orange-50 dark:bg-orange-950/20"
+                            'bg-white px-4 py-4 dark:bg-gray-800',
+                            (order.status === 'Куплен' ||
+                              item.isPurchased === true) &&
+                              'bg-green-50 dark:bg-green-950/20',
+                            item.isAvailable === true &&
+                              !(
+                                order.status === 'Куплен' ||
+                                item.isPurchased === true
+                              ) &&
+                              'bg-orange-50 dark:bg-orange-950/20'
                           )}
                         >
-                  <div className="space-y-4">
-                    {/* Item Header */}
-                    <div className="flex items-start gap-3">
-                      {/* Images - show 2 images side by side, filtered by ordered color */}
-                      <div className="flex gap-1 shrink-0">
-                        {(() => {
-                          // Normalize color strings for comparison (trim and lowercase)
-                          const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
-                          const itemColor = normalize(item.color);
+                          <div className="space-y-4">
+                            {/* Item Header */}
+                            <div className="flex items-start gap-3">
+                              {/* Images - show 2 images side by side, filtered by ordered color */}
+                              <div className="flex shrink-0 gap-1">
+                                {(() => {
+                                  // Normalize color strings for comparison (trim and lowercase)
+                                  const normalize = (s?: string | null) =>
+                                    (s || '').trim().toLowerCase();
+                                  const itemColor = normalize(item.color);
 
-                          // Filter images to only show the ones matching the item's color
-                          const filteredImages = item.product.images.filter(img =>
-                            normalize(img.color) === itemColor
-                          );
+                                  // Filter images to only show the ones matching the item's color
+                                  const filteredImages =
+                                    item.product.images.filter(
+                                      img => normalize(img.color) === itemColor
+                                    );
 
-                          // If no color match, fall back to all images
-                          const imagesToShow = filteredImages.length > 0 ? filteredImages : item.product.images;
-                          const visibleImages = imagesToShow.slice(0, 2);
-                          const extraCount = imagesToShow.length - visibleImages.length;
+                                  // If no color match, fall back to all images
+                                  const imagesToShow =
+                                    filteredImages.length > 0
+                                      ? filteredImages
+                                      : item.product.images;
+                                  const visibleImages = imagesToShow.slice(
+                                    0,
+                                    2
+                                  );
+                                  const extraCount =
+                                    imagesToShow.length - visibleImages.length;
 
-                          return visibleImages.map((image, imgIndex) => {
-                            const isLastVisible = imgIndex === visibleImages.length - 1;
-                            const shouldShowOverlay = extraCount > 0 && isLastVisible;
-                            // Find the original index in the full images array for the carousel
-                            const originalIndex = item.product.images.findIndex(img => img.id === image.id);
+                                  return visibleImages.map(
+                                    (image, imgIndex) => {
+                                      const isLastVisible =
+                                        imgIndex === visibleImages.length - 1;
+                                      const shouldShowOverlay =
+                                        extraCount > 0 && isLastVisible;
+                                      // Find the original index in the full images array for the carousel
+                                      const originalIndex =
+                                        item.product.images.findIndex(
+                                          img => img.id === image.id
+                                        );
 
-                            return (
-                              <div key={image.id} className="relative h-16 w-16">
-                                <div
-                                  className={cn(
-                                    "relative h-16 w-16 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity",
-                                    !item.product.isActive && "opacity-50 grayscale"
-                                  )}
-                                  onClick={() => handleImageClick(item, originalIndex >= 0 ? originalIndex : 0)}
-                                >
-                                  <Image
-                                    src={image.url}
-                                    alt={image.alt || item.name}
-                                    width={64}
-                                    height={64}
-                                    className="h-full w-full object-cover"
-                                  />
-                                  {/* Photo count overlay - same as ImageGridItem */}
-                                  {shouldShowOverlay && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleImageClick(item, originalIndex >= 0 ? originalIndex : 0);
-                                      }}
-                                      className="absolute inset-0 flex items-center justify-center rounded-md bg-black/60 text-xs font-semibold text-white backdrop-blur-sm cursor-pointer"
-                                    >
-                                      +{extraCount}
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                        {item.product.images.length === 0 && (
-                          <div className="relative h-16 w-16">
-                            <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400">
-                              <svg
-                                className="h-6 w-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                />
-                              </svg>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Item Info */}
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                          <Link
-                            href={{
-                              pathname: `/product/${item.product.slug}`,
-                              query: item.color ? { color: item.color } : {},
-                            }}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors group"
-                          >
-                            <span>{item.name}</span>
-                            <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                          </Link>
-                        </h3>
-                        {item.itemCode && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                            Код: {item.itemCode}
-                          </div>
-                        )}
-                        {item.product.article && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Артикул: {item.product.article}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Details Grid */}
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                          Количество
-                        </div>
-                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {item.qty} шт.
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                          Наличие
-                        </div>
-                        <div>{getAvailabilityBadge(item.isAvailable)}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                          Куплено
-                        </div>
-                        <div>{getPurchaseBadge(item.isPurchased)}</div>
-                      </div>
-                    </div>
-
-                    {/* Sizes */}
-                    <div>
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                        Размеры
-                      </div>
-                      {renderSizes(item.product.sizes)}
-                    </div>
-
-                    {/* Pricing */}
-                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                      <div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">За пару</div>
-                        <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
-                          {formatPrice(item.product.pricePair)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">За коробку</div>
-                        <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
-                          {formatPrice(item.priceBox)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Сумма</div>
-                        <div className="text-sm font-bold text-gray-900 dark:text-white mt-1">
-                          {formatPrice(item.priceBox * item.qty)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Feedback and Messages */}
-                    <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                          Обратная связь
-                        </div>
-                        <div className="space-y-2">
-                          <FeedbackStatusIconsCompact
-                            feedbacks={item.feedbacks.map(feedback => ({
-                              type: feedback.feedbackType,
-                              createdAt: feedback.createdAt,
-                            }))}
-                            replacements={item.replacements}
-                            hasMessages={item.messages.length > 0}
-                          />
-                          {item.replacements
-                            .filter(rep => rep.status === 'PENDING')
-                            .map(replacement => (
-                              <div
-                                key={replacement.id}
-                                className="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-900/20"
-                              >
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="flex items-center space-x-2">
-                                    <RefreshCw className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                    <span className="text-xs font-medium text-blue-800 dark:text-blue-300">
-                                      Предложена замена
-                                    </span>
+                                      return (
+                                        <div
+                                          key={image.id}
+                                          className="relative h-16 w-16"
+                                        >
+                                          <div
+                                            className={cn(
+                                              'relative h-16 w-16 cursor-pointer overflow-hidden rounded-lg bg-gray-100 transition-opacity hover:opacity-80 dark:bg-gray-700',
+                                              !item.product.isActive &&
+                                                'opacity-50 grayscale'
+                                            )}
+                                            onClick={() =>
+                                              handleImageClick(
+                                                item,
+                                                originalIndex >= 0
+                                                  ? originalIndex
+                                                  : 0
+                                              )
+                                            }
+                                          >
+                                            <Image
+                                              src={image.url}
+                                              alt={image.alt || item.name}
+                                              width={64}
+                                              height={64}
+                                              className="h-full w-full object-cover"
+                                            />
+                                            {/* Photo count overlay - same as ImageGridItem */}
+                                            {shouldShowOverlay && (
+                                              <button
+                                                type="button"
+                                                onClick={e => {
+                                                  e.stopPropagation();
+                                                  handleImageClick(
+                                                    item,
+                                                    originalIndex >= 0
+                                                      ? originalIndex
+                                                      : 0
+                                                  );
+                                                }}
+                                                className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-md bg-black/60 text-xs font-semibold text-white backdrop-blur-sm"
+                                              >
+                                                +{extraCount}
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                  );
+                                })()}
+                                {item.product.images.length === 0 && (
+                                  <div className="relative h-16 w-16">
+                                    <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100 text-gray-400 dark:bg-gray-700">
+                                      <svg
+                                        className="h-6 w-6"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        />
+                                      </svg>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex gap-2 mt-2">
-                                  <Button
-                                    onClick={() => {
-                                      setSelectedItemForReplacement(item);
-                                      setReplacementModalOpen(true);
-                                    }}
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 flex-1 text-xs"
-                                  >
-                                    Изменить
-                                  </Button>
-                                  <Button
-                                    onClick={() => {
-                                      if (
-                                        confirm('Удалить предложение о замене?')
-                                      ) {
-                                        handleReplacementDelete(replacement.id);
-                                      }
-                                    }}
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 flex-1 text-xs border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
-                                  >
-                                    Удалить
-                                  </Button>
-                                </div>
-                                {replacement.adminComment && (
-                                  <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
-                                    {replacement.adminComment}
-                                  </p>
                                 )}
                               </div>
-                            ))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                          Сообщения
-                        </div>
-                        <MessagePreviewCompact
-                          messages={item.messages.map(message => ({
-                            id: message.id,
-                            text: message.text,
-                            sender:
-                              message.user.role === 'ADMIN'
-                                ? 'admin'
-                                : message.user.role === 'GRUZCHIK'
-                                  ? 'gruzchik'
-                                  : 'client',
-                            senderName: message.user.name || undefined,
-                            isService: message.isService,
-                            createdAt: message.createdAt,
-                          }))}
-                          maxLength={100}
-                        />
-                      </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <ChatButtonWithIndicator
-                        itemId={item.id}
-                        onClick={() => setSelectedItemId(item.id)}
-                        unreadCount={getUnreadCount(item.id).unreadCount}
-                      />
-                      <Button
-                        onClick={() => handleReplacementProposal(item)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 flex items-center justify-center gap-2"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        <span>Предложить замену</span>
-                      </Button>
-                    </div>
+                              {/* Item Info */}
+                              <div className="min-w-0 flex-1">
+                                <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                  <Link
+                                    href={{
+                                      pathname: `/product/${item.product.slug}`,
+                                      query: item.color
+                                        ? { color: item.color }
+                                        : {},
+                                    }}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group inline-flex items-center gap-1.5 transition-colors hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                                  >
+                                    <span>{item.name}</span>
+                                    <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                                  </Link>
+                                </h3>
+                                {item.itemCode && (
+                                  <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">
+                                    Код: {item.itemCode}
+                                  </div>
+                                )}
+                                {item.product.article && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    Артикул: {item.product.article}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-2 dark:border-gray-700">
+                              <div>
+                                <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  Количество
+                                </div>
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {item.qty} шт.
+                                </div>
+                              </div>
+                              <div>
+                                <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  Наличие
+                                </div>
+                                <div>
+                                  {getAvailabilityBadge(item.isAvailable)}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  Куплено
+                                </div>
+                                <div>{getPurchaseBadge(item.isPurchased)}</div>
+                              </div>
+                            </div>
+
+                            {/* Sizes */}
+                            <div>
+                              <div className="mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                Размеры
+                              </div>
+                              {renderSizes(item.product.sizes)}
+                            </div>
+
+                            {/* Pricing */}
+                            <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                              <div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  За пару
+                                </div>
+                                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                  {formatPrice(item.product.pricePair)}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  За коробку
+                                </div>
+                                <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                  {formatPrice(item.priceBox)}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  Сумма
+                                </div>
+                                <div className="mt-1 text-sm font-bold text-gray-900 dark:text-white">
+                                  {formatPrice(item.priceBox * item.qty)}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Feedback and Messages */}
+                            <div className="space-y-2 border-t border-gray-100 pt-2 dark:border-gray-700">
+                              <div>
+                                <div className="mb-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  Обратная связь
+                                </div>
+                                <div className="space-y-2">
+                                  <FeedbackStatusIconsCompact
+                                    feedbacks={item.feedbacks.map(feedback => ({
+                                      type: feedback.feedbackType,
+                                      createdAt: feedback.createdAt,
+                                    }))}
+                                    replacements={item.replacements}
+                                    hasMessages={item.messages.length > 0}
+                                  />
+                                  {item.replacements
+                                    .filter(rep => rep.status === 'PENDING')
+                                    .map(replacement => (
+                                      <div
+                                        key={replacement.id}
+                                        className="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-900/20"
+                                      >
+                                        <div className="mb-1 flex items-center justify-between">
+                                          <div className="flex items-center space-x-2">
+                                            <RefreshCw className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                            <span className="text-xs font-medium text-blue-800 dark:text-blue-300">
+                                              Предложена замена
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="mt-2 flex gap-2">
+                                          <Button
+                                            onClick={() => {
+                                              setSelectedItemForReplacement(
+                                                item
+                                              );
+                                              setReplacementModalOpen(true);
+                                            }}
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 flex-1 text-xs"
+                                          >
+                                            Изменить
+                                          </Button>
+                                          <Button
+                                            onClick={() => {
+                                              if (
+                                                confirm(
+                                                  'Удалить предложение о замене?'
+                                                )
+                                              ) {
+                                                handleReplacementDelete(
+                                                  replacement.id
+                                                );
+                                              }
+                                            }}
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 flex-1 border-red-200 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+                                          >
+                                            Удалить
+                                          </Button>
+                                        </div>
+                                        {replacement.adminComment && (
+                                          <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+                                            {replacement.adminComment}
+                                          </p>
+                                        )}
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="mb-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  Сообщения
+                                </div>
+                                <MessagePreviewCompact
+                                  messages={item.messages.map(message => ({
+                                    id: message.id,
+                                    text: message.text,
+                                    sender:
+                                      message.user.role === 'ADMIN'
+                                        ? 'admin'
+                                        : message.user.role === 'GRUZCHIK'
+                                          ? 'gruzchik'
+                                          : 'client',
+                                    senderName: message.user.name || undefined,
+                                    isService: message.isService,
+                                    createdAt: message.createdAt,
+                                    attachments: message.attachments,
+                                  }))}
+                                  maxLength={100}
+                                  showImages={showImages}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 border-t border-gray-100 pt-2 dark:border-gray-700">
+                              <ChatButtonWithIndicator
+                                itemId={item.id}
+                                onClick={() => setSelectedItemId(item.id)}
+                                unreadCount={
+                                  getUnreadCount(item.id).unreadCount
+                                }
+                              />
+                              <Button
+                                onClick={() => handleReplacementProposal(item)}
+                                variant="outline"
+                                size="sm"
+                                className="flex flex-1 items-center justify-center gap-2"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                                <span>Предложить замену</span>
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
                       ))
                     )}
                   </div>
@@ -1163,224 +1326,281 @@ export default function OrderDetailsPage() {
                         {/* Body */}
                         <tbody className="bg-white dark:bg-gray-900">
                           {filteredItems.map(item => (
-                    <tr
-                      key={item.id}
-                      className={cn(
-                        "hover:bg-gray-50 dark:hover:bg-gray-800",
-                        (order.status === 'Куплен' || item.isPurchased === true) && "bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30",
-                        item.isAvailable === true && !(order.status === 'Куплен' || item.isPurchased === true) && "bg-orange-50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-950/30"
-                      )}
-                    >
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                        {item.itemCode || '—'}
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                        <div className="flex gap-1">
-                          {(() => {
-                            // Normalize color strings for comparison (trim and lowercase)
-                            const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
-                            const itemColor = normalize(item.color);
+                            <tr
+                              key={item.id}
+                              className={cn(
+                                'hover:bg-gray-50 dark:hover:bg-gray-800',
+                                (order.status === 'Куплен' ||
+                                  item.isPurchased === true) &&
+                                  'bg-green-50 hover:bg-green-100 dark:bg-green-950/20 dark:hover:bg-green-950/30',
+                                item.isAvailable === true &&
+                                  !(
+                                    order.status === 'Куплен' ||
+                                    item.isPurchased === true
+                                  ) &&
+                                  'bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/20 dark:hover:bg-orange-950/30'
+                              )}
+                            >
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                                {item.itemCode || '—'}
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                                <div className="flex gap-1">
+                                  {(() => {
+                                    // Normalize color strings for comparison (trim and lowercase)
+                                    const normalize = (s?: string | null) =>
+                                      (s || '').trim().toLowerCase();
+                                    const itemColor = normalize(item.color);
 
-                            // Filter images to only show the ones matching the item's color
-                            const filteredImages = item.product.images.filter(img =>
-                              normalize(img.color) === itemColor
-                            );
+                                    // Filter images to only show the ones matching the item's color
+                                    const filteredImages =
+                                      item.product.images.filter(
+                                        img =>
+                                          normalize(img.color) === itemColor
+                                      );
 
-                            // If no color match, fall back to all images
-                            const imagesToShow = filteredImages.length > 0 ? filteredImages : item.product.images;
-                            const visibleImages = imagesToShow.slice(0, 2);
-                            const extraCount = imagesToShow.length - visibleImages.length;
+                                    // If no color match, fall back to all images
+                                    const imagesToShow =
+                                      filteredImages.length > 0
+                                        ? filteredImages
+                                        : item.product.images;
+                                    const visibleImages = imagesToShow.slice(
+                                      0,
+                                      2
+                                    );
+                                    const extraCount =
+                                      imagesToShow.length -
+                                      visibleImages.length;
 
-                            return visibleImages.map((image, imgIndex) => {
-                              const isLastVisible = imgIndex === visibleImages.length - 1;
-                              const shouldShowOverlay = extraCount > 0 && isLastVisible;
-                              // Find the original index in the full images array for the carousel
-                              const originalIndex = item.product.images.findIndex(img => img.id === image.id);
+                                    return visibleImages.map(
+                                      (image, imgIndex) => {
+                                        const isLastVisible =
+                                          imgIndex === visibleImages.length - 1;
+                                        const shouldShowOverlay =
+                                          extraCount > 0 && isLastVisible;
+                                        // Find the original index in the full images array for the carousel
+                                        const originalIndex =
+                                          item.product.images.findIndex(
+                                            img => img.id === image.id
+                                          );
 
-                              return (
-                                <div key={image.id} className="relative h-12 w-12">
-                                  <div
-                                    className={cn(
-                                      "relative h-12 w-12 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity",
-                                      !item.product.isActive && "opacity-50 grayscale"
-                                    )}
-                                    onClick={() => handleImageClick(item, originalIndex >= 0 ? originalIndex : 0)}
-                                  >
-                                    <Image
-                                      src={image.url}
-                                      alt={image.alt || item.name}
-                                      width={48}
-                                      height={48}
-                                      className="h-12 w-12 rounded-lg object-cover"
+                                        return (
+                                          <div
+                                            key={image.id}
+                                            className="relative h-12 w-12"
+                                          >
+                                            <div
+                                              className={cn(
+                                                'relative h-12 w-12 cursor-pointer overflow-hidden rounded-lg transition-opacity hover:opacity-80',
+                                                !item.product.isActive &&
+                                                  'opacity-50 grayscale'
+                                              )}
+                                              onClick={() =>
+                                                handleImageClick(
+                                                  item,
+                                                  originalIndex >= 0
+                                                    ? originalIndex
+                                                    : 0
+                                                )
+                                              }
+                                            >
+                                              <Image
+                                                src={image.url}
+                                                alt={image.alt || item.name}
+                                                width={48}
+                                                height={48}
+                                                className="h-12 w-12 rounded-lg object-cover"
+                                              />
+                                              {/* Photo count overlay - same as ImageGridItem */}
+                                              {shouldShowOverlay && (
+                                                <button
+                                                  type="button"
+                                                  onClick={e => {
+                                                    e.stopPropagation();
+                                                    handleImageClick(
+                                                      item,
+                                                      originalIndex >= 0
+                                                        ? originalIndex
+                                                        : 0
+                                                    );
+                                                  }}
+                                                  className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-md bg-black/60 text-xs font-semibold text-white backdrop-blur-sm"
+                                                >
+                                                  +{extraCount}
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                    );
+                                  })()}
+                                  {item.product.images.length === 0 && (
+                                    <div
+                                      className={cn(
+                                        'h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700',
+                                        !item.product.isActive && 'opacity-50'
+                                      )}
                                     />
-                                    {/* Photo count overlay - same as ImageGridItem */}
-                                    {shouldShowOverlay && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleImageClick(item, originalIndex >= 0 ? originalIndex : 0);
-                                        }}
-                                        className="absolute inset-0 flex items-center justify-center rounded-md bg-black/60 text-xs font-semibold text-white backdrop-blur-sm cursor-pointer"
+                                  )}
+                                </div>
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                                <Link
+                                  href={{
+                                    pathname: `/product/${item.product.slug}`,
+                                    query: item.color
+                                      ? { color: item.color }
+                                      : {},
+                                  }}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="group inline-flex items-center gap-1.5 transition-colors hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                                >
+                                  <span>{item.name}</span>
+                                  <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                                </Link>
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
+                                {item.product.article || '—'}
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                                {item.qty}
+                              </td>
+                              <td className="border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                                {renderSizes(item.product.sizes)}
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                                {getAvailabilityBadge(item.isAvailable)}
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                                {getPurchaseBadge(item.isPurchased)}
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                                <div className="space-y-2">
+                                  <FeedbackStatusIconsCompact
+                                    feedbacks={item.feedbacks.map(feedback => ({
+                                      type: feedback.feedbackType,
+                                      createdAt: feedback.createdAt,
+                                    }))}
+                                    replacements={item.replacements}
+                                    hasMessages={item.messages.length > 0}
+                                  />
+                                  {item.replacements
+                                    .filter(rep => rep.status === 'PENDING')
+                                    .map(replacement => (
+                                      <div
+                                        key={replacement.id}
+                                        className="rounded-lg border border-blue-200 bg-blue-50 p-2"
                                       >
-                                        +{extraCount}
-                                      </button>
-                                    )}
-                                  </div>
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center space-x-2">
+                                            <RefreshCw className="h-3 w-3 text-blue-600" />
+                                            <span className="text-xs font-medium text-blue-800">
+                                              Предложена замена
+                                            </span>
+                                          </div>
+                                          <div className="flex space-x-1">
+                                            <Button
+                                              onClick={() => {
+                                                setSelectedItemForReplacement(
+                                                  item
+                                                );
+                                                setReplacementModalOpen(true);
+                                              }}
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-6 px-2 text-xs"
+                                            >
+                                              Изменить
+                                            </Button>
+                                            <Button
+                                              onClick={() => {
+                                                if (
+                                                  confirm(
+                                                    'Удалить предложение о замене?'
+                                                  )
+                                                ) {
+                                                  handleReplacementDelete(
+                                                    replacement.id
+                                                  );
+                                                }
+                                              }}
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-6 border-red-200 px-2 text-xs text-red-600 hover:bg-red-50"
+                                            >
+                                              Удалить
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        {replacement.adminComment && (
+                                          <p className="mt-1 text-xs text-blue-700">
+                                            {replacement.adminComment}
+                                          </p>
+                                        )}
+                                      </div>
+                                    ))}
                                 </div>
-                              );
-                            });
-                          })()}
-                          {item.product.images.length === 0 && (
-                            <div className={cn(
-                              "h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700",
-                              !item.product.isActive && "opacity-50"
-                            )} />
-                          )}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                        <Link
-                          href={{
-                            pathname: `/product/${item.product.slug}`,
-                            query: item.color ? { color: item.color } : {},
-                          }}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors group"
-                        >
-                          <span>{item.name}</span>
-                          <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                        </Link>
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
-                        {item.product.article || '—'}
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                        {item.qty}
-                      </td>
-                      <td className="border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                        {renderSizes(item.product.sizes)}
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                        {getAvailabilityBadge(item.isAvailable)}
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                        {getPurchaseBadge(item.isPurchased)}
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                        <div className="space-y-2">
-                          <FeedbackStatusIconsCompact
-                            feedbacks={item.feedbacks.map(feedback => ({
-                              type: feedback.feedbackType,
-                              createdAt: feedback.createdAt,
-                            }))}
-                            replacements={item.replacements}
-                            hasMessages={item.messages.length > 0}
-                          />
-                          {item.replacements
-                            .filter(rep => rep.status === 'PENDING')
-                            .map(replacement => (
-                              <div
-                                key={replacement.id}
-                                className="rounded-lg border border-blue-200 bg-blue-50 p-2"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-2">
-                                    <RefreshCw className="h-3 w-3 text-blue-600" />
-                                    <span className="text-xs font-medium text-blue-800">
-                                      Предложена замена
-                                    </span>
-                                  </div>
-                                  <div className="flex space-x-1">
-                                    <Button
-                                      onClick={() => {
-                                        setSelectedItemForReplacement(item);
-                                        setReplacementModalOpen(true);
-                                      }}
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-6 px-2 text-xs"
-                                    >
-                                      Изменить
-                                    </Button>
-                                    <Button
-                                      onClick={() => {
-                                        if (
-                                          confirm('Удалить предложение о замене?')
-                                        ) {
-                                          handleReplacementDelete(replacement.id);
-                                        }
-                                      }}
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-6 border-red-200 px-2 text-xs text-red-600 hover:bg-red-50"
-                                    >
-                                      Удалить
-                                    </Button>
-                                  </div>
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                                <MessagePreviewCompact
+                                  messages={item.messages.map(message => ({
+                                    id: message.id,
+                                    text: message.text,
+                                    sender:
+                                      message.user.role === 'ADMIN'
+                                        ? 'admin'
+                                        : message.user.role === 'GRUZCHIK'
+                                          ? 'gruzchik'
+                                          : 'client',
+                                    senderName: message.user.name || undefined,
+                                    isService: message.isService,
+                                    createdAt: message.createdAt,
+                                    attachments: message.attachments,
+                                  }))}
+                                  maxLength={50}
+                                  showImages={showImages}
+                                />
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                                {formatPrice(item.product.pricePair)}
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                                {formatPrice(item.priceBox)}
+                              </td>
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
+                                {formatPrice(item.priceBox * item.qty)}
+                              </td>
+                              <td className="sticky right-0 z-20 border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
+                                <div className="flex items-center space-x-2">
+                                  <ChatButtonWithIndicator
+                                    itemId={item.id}
+                                    onClick={() => setSelectedItemId(item.id)}
+                                    unreadCount={
+                                      getUnreadCount(item.id).unreadCount
+                                    }
+                                  />
+                                  <Button
+                                    onClick={() =>
+                                      handleReplacementProposal(item)
+                                    }
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center space-x-1"
+                                  >
+                                    <RefreshCw className="h-3 w-3" />
+                                    <span className="text-xs">Замена</span>
+                                  </Button>
                                 </div>
-                                {replacement.adminComment && (
-                                  <p className="mt-1 text-xs text-blue-700">
-                                    {replacement.adminComment}
-                                  </p>
-                                )}
-                              </div>
-                            ))}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 dark:border-gray-700">
-                        <MessagePreviewCompact
-                          messages={item.messages.map(message => ({
-                            id: message.id,
-                            text: message.text,
-                            sender:
-                              message.user.role === 'ADMIN'
-                                ? 'admin'
-                                : message.user.role === 'GRUZCHIK'
-                                  ? 'gruzchik'
-                                  : 'client',
-                            senderName: message.user.name || undefined,
-                            isService: message.isService,
-                            createdAt: message.createdAt,
-                          }))}
-                          maxLength={50}
-                        />
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                        {formatPrice(item.product.pricePair)}
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                        {formatPrice(item.priceBox)}
-                      </td>
-                      <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm font-medium text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                        {formatPrice(item.priceBox * item.qty)}
-                      </td>
-                      <td className="sticky right-0 z-20 border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
-                        <div className="flex items-center space-x-2">
-                          <ChatButtonWithIndicator
-                            itemId={item.id}
-                            onClick={() => setSelectedItemId(item.id)}
-                            unreadCount={getUnreadCount(item.id).unreadCount}
-                          />
-                          <Button
-                            onClick={() => handleReplacementProposal(item)}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center space-x-1"
-                          >
-                            <RefreshCw className="h-3 w-3" />
-                            <span className="text-xs">Замена</span>
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </>
             );
           })()}

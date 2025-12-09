@@ -2,6 +2,9 @@
 
 import { MessageSquare, User, Bot, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
+import { useMemo, useState, useDeferredValue } from 'react';
+import { MediaViewerModal } from '../gruzchik/MediaViewerModal';
 
 interface MessagePreviewProps {
   messages: Array<{
@@ -11,9 +14,17 @@ interface MessagePreviewProps {
     senderName?: string;
     isService: boolean;
     createdAt: string;
+    attachments?: Array<{
+      type: string;
+      name: string;
+      size?: number;
+      data?: string;
+      url?: string;
+    }>;
   }>;
   maxLength?: number;
   className?: string;
+  showImages?: boolean;
 }
 
 const senderIcons = {
@@ -143,7 +154,42 @@ export function MessagePreviewCompact({
   messages,
   maxLength = 50,
   className,
+  showImages = false,
 }: MessagePreviewProps) {
+  // ALL HOOKS MUST BE CALLED FIRST - before any early returns
+  // Use useDeferredValue to defer heavy image computations
+  // This allows the checkbox state to update immediately while
+  // image extraction/rendering happens in a lower priority update
+  const deferredShowImages = useDeferredValue(showImages);
+
+  const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
+  const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
+
+  // Extract all images from all messages when deferredShowImages is true
+  // Using deferredShowImages ensures this heavy computation doesn't block
+  // the checkbox state update
+  const allImages = useMemo(() => {
+    if (!deferredShowImages || !messages || messages.length === 0) return [];
+    return messages.flatMap(msg =>
+      (msg.attachments || [])
+        .filter(att => att.type.startsWith('image/'))
+        .map(att => ({
+          type: att.type,
+          name: att.name,
+          data: att.data,
+          url: att.url,
+          messageId: msg.id,
+        }))
+        .filter(img => img.data || img.url)
+    );
+  }, [deferredShowImages, messages]);
+
+  const handleImageClick = (index: number) => {
+    setMediaViewerIndex(index);
+    setMediaViewerOpen(true);
+  };
+
+  // Early return AFTER all hooks
   if (!messages || messages.length === 0) {
     return (
       <div className={cn('flex items-center text-gray-400', className)}>
@@ -177,43 +223,77 @@ export function MessagePreviewCompact({
   };
 
   return (
-    <div className={cn('flex items-center space-x-2', className)}>
-      <div
-        className={cn(
-          'flex h-5 w-5 items-center justify-center rounded-full',
-          senderColor
-        )}
-      >
-        <SenderIcon className="h-2.5 w-2.5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center space-x-1">
-          <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-            {latestMessage.senderName ||
-              (latestMessage.sender === 'admin'
-                ? 'Админ'
-                : latestMessage.sender === 'gruzchik'
-                  ? 'Грузчик'
-                  : 'Клиент')}
-          </span>
-          <span className="text-xs text-gray-500">
-            {formatTime(latestMessage.createdAt)}
-          </span>
-          {latestMessage.isService && (
-            <AlertCircle className="h-2.5 w-2.5 text-orange-500" />
+    <div className={cn('space-y-2', className)}>
+      <div className={cn('flex items-center space-x-2')}>
+        <div
+          className={cn(
+            'flex h-5 w-5 items-center justify-center rounded-full',
+            senderColor
+          )}
+        >
+          <SenderIcon className="h-2.5 w-2.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center space-x-1">
+            <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+              {latestMessage.senderName ||
+                (latestMessage.sender === 'admin'
+                  ? 'Админ'
+                  : latestMessage.sender === 'gruzchik'
+                    ? 'Грузчик'
+                    : 'Клиент')}
+            </span>
+            <span className="text-xs text-gray-500">
+              {formatTime(latestMessage.createdAt)}
+            </span>
+            {latestMessage.isService && (
+              <AlertCircle className="h-2.5 w-2.5 text-orange-500" />
+            )}
+          </div>
+          {truncatedText && (
+            <p className="mt-0.5 line-clamp-1 text-xs text-gray-700 dark:text-gray-300">
+              {truncatedText}
+            </p>
+          )}
+          {messages.length > 1 && (
+            <span className="text-xs text-gray-500">
+              +{messages.length - 1} еще
+            </span>
           )}
         </div>
-        {truncatedText && (
-          <p className="mt-0.5 line-clamp-1 text-xs text-gray-700 dark:text-gray-300">
-            {truncatedText}
-          </p>
-        )}
-        {messages.length > 1 && (
-          <span className="text-xs text-gray-500">
-            +{messages.length - 1} еще
-          </span>
-        )}
       </div>
+      {deferredShowImages && allImages.length > 0 && (
+        <div className="mt-2 flex flex-row gap-2 overflow-x-auto">
+          {allImages.map((img, idx) => (
+            <div
+              key={`${img.messageId}-${idx}`}
+              className="relative h-[100px] w-[100px] shrink-0 cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-gray-100 transition-opacity hover:opacity-80 dark:border-gray-700 dark:bg-gray-800"
+              onClick={() => handleImageClick(idx)}
+            >
+              <Image
+                src={img.data || img.url || ''}
+                alt={img.name || 'Изображение из чата'}
+                width={100}
+                height={100}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {mediaViewerOpen && allImages.length > 0 && (
+        <MediaViewerModal
+          onClose={() => setMediaViewerOpen(false)}
+          mediaItems={allImages.map(img => ({
+            type: img.type,
+            name: img.name || 'Изображение',
+            data: img.data,
+            url: img.url,
+          }))}
+          initialIndex={mediaViewerIndex}
+        />
+      )}
     </div>
   );
 }
