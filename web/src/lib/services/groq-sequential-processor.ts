@@ -24,6 +24,10 @@ import {
   CATEGORY_ANALYSIS_SYSTEM_PROMPT,
   CATEGORY_ANALYSIS_USER_PROMPT,
 } from '../prompts/category-analysis-prompts';
+import {
+  generateSizesExtractionSystemPrompt,
+  generateSizesExtractionUserPrompt,
+} from '../prompts/sizes-extraction-prompts';
 
 export class GroqSequentialProcessor {
   private groq: Groq | null = null;
@@ -232,11 +236,33 @@ export class GroqSequentialProcessor {
               // Product was already deleted and messages reset in updateProductWithAnalysis
               // No need to delete again, just log and continue
             } else {
-              console.log(
-                `🗑️ Cleaning up failed product ${productResult.productId}...`
-              );
-              // Clean up the failed product
-              await this.deleteInvalidProduct(productResult.productId);
+              // Check if this is a JSON validation error - these are retryable
+              const isJsonValidationError =
+                errorMessage.includes('json_validate_failed') ||
+                errorMessage.includes('Failed to validate JSON') ||
+                errorMessage.includes('Failed to generate JSON');
+
+              if (isJsonValidationError) {
+                console.log(
+                  `⚠️ JSON validation error for product ${productResult.productId} - resetting messages for retry (product will be reprocessed)`
+                );
+                // Reset messages so they can be reprocessed on next run
+                await this.prisma.whatsAppMessage.updateMany({
+                  where: { id: { in: group.messageIds } },
+                  data: {
+                    processed: false,
+                    draftProductId: null,
+                  },
+                });
+                // Delete the failed product so it can be recreated on retry
+                await this.deleteInvalidProduct(productResult.productId);
+              } else {
+                console.log(
+                  `🗑️ Cleaning up failed product ${productResult.productId}...`
+                );
+                // Clean up the failed product
+                await this.deleteInvalidProduct(productResult.productId);
+              }
             }
             // Don't re-throw - continue processing remaining groups
             // The error is already logged, and we want to process all groups in the batch
@@ -708,6 +734,84 @@ export class GroqSequentialProcessor {
   }
 
   /**
+   * Extract sizes from text using separate LLM call with DB size variants
+   * Sizes are loaded from pre-analyzed file (generated once by analyze-db-sizes.ts)
+   */
+  private async extractSizesWithGroq(
+    productId: string,
+    textContents: string
+  ): Promise<{
+    sizes: Array<{ size: string; count: number }>;
+    packPairs: number | null;
+  } | null> {
+    try {
+      console.log(`📏 Extracting sizes for product ${productId}`);
+
+      const groq = await this.initializeGroq();
+      const response = await groqChatCompletion(
+        groq,
+        {
+          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content: generateSizesExtractionSystemPrompt(), // Loads sizes from file automatically
+            },
+            {
+              role: 'user',
+              content: generateSizesExtractionUserPrompt(textContents),
+            },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.3, // Lower temperature for more consistent size extraction
+          max_tokens: 1000,
+        },
+        `sizes-extraction-${productId}`,
+        {
+          maxRetries: 5,
+          baseDelayMs: 2000,
+          maxDelayMs: 60000,
+          timeoutMs: 120000,
+        }
+      );
+
+      // Log token usage
+      if ('usage' in response && response.usage) {
+        getTokenLogger().log(
+          'sizes-extraction',
+          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          response.usage,
+          {
+            productId,
+            textLength: textContents.length,
+          }
+        );
+      }
+
+      // Type guard
+      if (!('choices' in response)) {
+        throw new Error('Unexpected response type from Groq API');
+      }
+
+      const sizesResult = JSON.parse(
+        response.choices[0].message.content || '{}'
+      );
+
+      return {
+        sizes: sizesResult.sizes || [],
+        packPairs: sizesResult.packPairs || null,
+      };
+    } catch (error) {
+      console.error(
+        `❌ Error extracting sizes for product ${productId}:`,
+        error
+      );
+      // Don't throw - return null to continue without sizes extraction
+      return null;
+    }
+  }
+
+  /**
    * Analyze product using Groq
    */
   private async analyzeProductWithGroq(
@@ -764,7 +868,13 @@ export class GroqSequentialProcessor {
     );
 
     try {
-      // Use Groq API wrapper with retry and circuit breaker
+      // Step 1: Extract sizes first using separate LLM call with DB variants
+      const extractedSizes = await this.extractSizesWithGroq(
+        productId,
+        textContents
+      );
+
+      // Step 2: Use Groq API wrapper with retry and circuit breaker for main analysis
       const groq = await this.initializeGroq();
       const response = await groqChatCompletion(
         groq,
@@ -819,6 +929,21 @@ export class GroqSequentialProcessor {
       const analysisResult = JSON.parse(
         response.choices[0].message.content || '{}'
       );
+
+      // Step 3: Merge extracted sizes into analysis result (sizes extraction takes priority)
+      if (
+        extractedSizes &&
+        extractedSizes.sizes &&
+        extractedSizes.sizes.length > 0
+      ) {
+        console.log(
+          `✅ Using extracted sizes (${extractedSizes.sizes.length} sizes) for product ${productId}`
+        );
+        analysisResult.sizes = extractedSizes.sizes;
+        if (extractedSizes.packPairs !== null) {
+          analysisResult.packPairs = extractedSizes.packPairs;
+        }
+      }
 
       // Check if analysis has minimum required data (price and sizes)
       // If missing, updateProductWithAnalysis will handle deletion and throw error
