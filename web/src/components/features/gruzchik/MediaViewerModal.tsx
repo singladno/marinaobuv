@@ -165,14 +165,13 @@ export function MediaViewerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
       {/* Close button */}
-      <Button
-        variant="ghost"
-        size="sm"
+      <button
         onClick={onClose}
-        className="absolute right-4 top-4 z-10 h-10 w-10 rounded-full bg-black/50 p-0 text-white hover:bg-black/70"
+        className="absolute right-4 top-4 z-10 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-transparent p-0 text-white transition-colors hover:bg-transparent"
+        aria-label="Close modal"
       >
         <X className="h-5 w-5" />
-      </Button>
+      </button>
 
       {/* Media counter */}
       <div className="absolute left-4 top-4 z-10 rounded-full bg-black/50 px-3 py-1 text-sm text-white">
@@ -182,24 +181,22 @@ export function MediaViewerModal({
       {/* Navigation buttons */}
       {mediaItems.length > 1 && (
         <>
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={handlePrevious}
             disabled={currentIndex === 0}
-            className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/50 p-0 text-white hover:bg-black/70 disabled:opacity-50"
+            className="absolute left-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-transparent p-0 text-white transition-colors hover:bg-transparent disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Previous image"
           >
             <ChevronLeft className="h-6 w-6" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
+          </button>
+          <button
             onClick={handleNext}
             disabled={currentIndex === mediaItems.length - 1}
-            className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/50 p-0 text-white hover:bg-black/70 disabled:opacity-50"
+            className="absolute right-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-transparent p-0 text-white transition-colors hover:bg-transparent disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Next image"
           >
             <ChevronRight className="h-6 w-6" />
-          </Button>
+          </button>
         </>
       )}
 

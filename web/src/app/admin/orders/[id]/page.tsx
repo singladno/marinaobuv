@@ -15,6 +15,8 @@ import {
   Truck,
   MapPin,
   ExternalLink,
+  Building2,
+  Phone,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
@@ -69,6 +71,13 @@ interface OrderItem {
       alt: string | null;
       color: string | null;
     }>;
+    provider: {
+      id: string;
+      name: string;
+      phone: string | null;
+      place: string | null;
+      location: string | null;
+    } | null;
   };
   feedbacks: Array<{
     id: string;
@@ -1078,6 +1087,38 @@ export default function OrderDetailsPage() {
                                     Артикул: {item.product.article}
                                   </div>
                                 )}
+                                {item.product.provider && (
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <Building2 className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+                                      <span className="text-xs text-gray-700 dark:text-gray-300">
+                                        Поставщик: {item.product.provider.name}
+                                      </span>
+                                    </div>
+                                    {item.product.provider.phone && (
+                                      <div className="flex items-center gap-1.5 pl-5">
+                                        <Phone className="h-3 w-3 shrink-0 text-gray-400 dark:text-gray-500" />
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                                          {item.product.provider.phone}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {(item.product.provider.place ||
+                                      item.product.provider.location) && (
+                                      <div className="flex items-start gap-1.5 pl-5">
+                                        <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-gray-400 dark:text-gray-500" />
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                                          {[
+                                            item.product.provider.place,
+                                            item.product.provider.location,
+                                          ]
+                                            .filter(Boolean)
+                                            .join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -1291,6 +1332,9 @@ export default function OrderDetailsPage() {
                               Артикул
                             </th>
                             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              Поставщик
+                            </th>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
                               Кол-во
                             </th>
                             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
@@ -1463,6 +1507,44 @@ export default function OrderDetailsPage() {
                               </td>
                               <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
                                 {item.product.article || '—'}
+                              </td>
+                              <td className="border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                                {item.product.provider ? (
+                                  <div className="min-w-[200px] space-y-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <Building2 className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+                                      <span className="text-sm text-gray-900 dark:text-gray-100">
+                                        {item.product.provider.name}
+                                      </span>
+                                    </div>
+                                    {item.product.provider.phone && (
+                                      <div className="flex items-center gap-1.5 pl-5">
+                                        <Phone className="h-3 w-3 shrink-0 text-gray-400 dark:text-gray-500" />
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                                          {item.product.provider.phone}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {(item.product.provider.place ||
+                                      item.product.provider.location) && (
+                                      <div className="flex items-start gap-1.5 pl-5">
+                                        <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-gray-400 dark:text-gray-500" />
+                                        <span className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                                          {[
+                                            item.product.provider.place,
+                                            item.product.provider.location,
+                                          ]
+                                            .filter(Boolean)
+                                            .join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 dark:text-gray-500">
+                                    —
+                                  </span>
+                                )}
                               </td>
                               <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
                                 {item.qty}

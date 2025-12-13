@@ -14,10 +14,21 @@ export async function GET(
 
     const { id: orderId } = await params;
 
+    // Get all valid product IDs to filter out orphaned order items
+    const validProductIds = await prisma.product.findMany({
+      select: { id: true },
+    });
+    const validProductIdSet = new Set(validProductIds.map(p => p.id));
+
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
         items: {
+          where: {
+            productId: {
+              in: Array.from(validProductIdSet),
+            },
+          },
           include: {
             product: {
               select: {
@@ -36,6 +47,15 @@ export async function GET(
                     color: true,
                   },
                   orderBy: { sort: 'asc' },
+                },
+                provider: {
+                  select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                    place: true,
+                    location: true,
+                  },
                 },
               },
             },

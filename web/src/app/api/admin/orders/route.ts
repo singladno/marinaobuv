@@ -38,11 +38,22 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    // First, get all product IDs to filter out orphaned order items
+    const validProductIds = await prisma.product.findMany({
+      select: { id: true },
+    });
+    const validProductIdSet = new Set(validProductIds.map(p => p.id));
+
     const [orders, gruzchiks] = await Promise.all([
       prisma.order.findMany({
         where: whereClause,
         include: {
           items: {
+            where: {
+              productId: {
+                in: Array.from(validProductIdSet),
+              },
+            },
             include: {
               product: {
                 select: {

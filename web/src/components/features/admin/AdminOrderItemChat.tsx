@@ -529,7 +529,7 @@ export function AdminOrderItemChat({
                 onClick={onClose}
                 variant="ghost"
                 size="sm"
-                className="h-12 w-12 p-0"
+                className="h-12 w-12 p-0 md:hover:bg-transparent"
               >
                 <ArrowLeft className="h-12 w-12" />
               </Button>
