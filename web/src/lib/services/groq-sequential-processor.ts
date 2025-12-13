@@ -28,6 +28,14 @@ import {
   generateSizesExtractionSystemPrompt,
   generateSizesExtractionUserPrompt,
 } from '../prompts/sizes-extraction-prompts';
+import {
+  PRICE_EXTRACTION_SYSTEM_PROMPT,
+  PRICE_EXTRACTION_USER_PROMPT,
+} from '../prompts/price-extraction-prompts';
+import {
+  GENDER_EXTRACTION_SYSTEM_PROMPT,
+  GENDER_EXTRACTION_USER_PROMPT,
+} from '../prompts/gender-extraction-prompts';
 
 export class GroqSequentialProcessor {
   private groq: Groq | null = null;
@@ -812,6 +820,166 @@ export class GroqSequentialProcessor {
   }
 
   /**
+   * Extract price from text using separate LLM call with very low temperature
+   */
+  private async extractPriceWithGroq(
+    productId: string,
+    textContents: string
+  ): Promise<number | null> {
+    try {
+      console.log(`💰 Extracting price for product ${productId}`);
+
+      const groq = await this.initializeGroq();
+      const response = await groqChatCompletion(
+        groq,
+        {
+          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content: PRICE_EXTRACTION_SYSTEM_PROMPT,
+            },
+            {
+              role: 'user',
+              content: PRICE_EXTRACTION_USER_PROMPT(textContents),
+            },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.0, // Very low temperature for maximum accuracy
+          max_tokens: 500,
+        },
+        `price-extraction-${productId}`,
+        {
+          maxRetries: 5,
+          baseDelayMs: 2000,
+          maxDelayMs: 60000,
+          timeoutMs: 120000,
+        }
+      );
+
+      // Log token usage
+      if ('usage' in response && response.usage) {
+        getTokenLogger().log(
+          'price-extraction',
+          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          response.usage,
+          {
+            productId,
+            textLength: textContents.length,
+          }
+        );
+      }
+
+      // Type guard
+      if (!('choices' in response)) {
+        throw new Error('Unexpected response type from Groq API');
+      }
+
+      const priceResult = JSON.parse(
+        response.choices[0].message.content || '{}'
+      );
+
+      const price = priceResult.price;
+      if (typeof price === 'number' && price > 0) {
+        console.log(`✅ Extracted price: ${price} for product ${productId}`);
+        return price;
+      } else {
+        console.log(
+          `⚠️ No valid price found for product ${productId}, returning null`
+        );
+        return null;
+      }
+    } catch (error) {
+      console.error(
+        `❌ Error extracting price for product ${productId}:`,
+        error
+      );
+      // Don't throw - return null to continue without price extraction
+      return null;
+    }
+  }
+
+  /**
+   * Extract gender from text using separate LLM call
+   */
+  private async extractGenderWithGroq(
+    productId: string,
+    textContents: string
+  ): Promise<'MALE' | 'FEMALE' | null> {
+    try {
+      console.log(`👤 Extracting gender for product ${productId}`);
+
+      const groq = await this.initializeGroq();
+      const response = await groqChatCompletion(
+        groq,
+        {
+          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content: GENDER_EXTRACTION_SYSTEM_PROMPT,
+            },
+            {
+              role: 'user',
+              content: GENDER_EXTRACTION_USER_PROMPT(textContents),
+            },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.2, // Low temperature for consistency
+          max_tokens: 500,
+        },
+        `gender-extraction-${productId}`,
+        {
+          maxRetries: 5,
+          baseDelayMs: 2000,
+          maxDelayMs: 60000,
+          timeoutMs: 120000,
+        }
+      );
+
+      // Log token usage
+      if ('usage' in response && response.usage) {
+        getTokenLogger().log(
+          'gender-extraction',
+          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          response.usage,
+          {
+            productId,
+            textLength: textContents.length,
+          }
+        );
+      }
+
+      // Type guard
+      if (!('choices' in response)) {
+        throw new Error('Unexpected response type from Groq API');
+      }
+
+      const genderResult = JSON.parse(
+        response.choices[0].message.content || '{}'
+      );
+
+      const gender = genderResult.gender;
+      if (gender === 'MALE' || gender === 'FEMALE') {
+        console.log(`✅ Extracted gender: ${gender} for product ${productId}`);
+        return gender;
+      } else {
+        console.log(
+          `⚠️ No valid gender found for product ${productId}, returning null`
+        );
+        return null;
+      }
+    } catch (error) {
+      console.error(
+        `❌ Error extracting gender for product ${productId}:`,
+        error
+      );
+      // Don't throw - return null to continue without gender extraction
+      return null;
+    }
+  }
+
+  /**
    * Analyze product using Groq
    */
   private async analyzeProductWithGroq(
@@ -868,13 +1036,25 @@ export class GroqSequentialProcessor {
     );
 
     try {
-      // Step 1: Extract sizes first using separate LLM call with DB variants
+      // Step 1: Extract price first using separate LLM call with very low temperature
+      const extractedPrice = await this.extractPriceWithGroq(
+        productId,
+        textContents
+      );
+
+      // Step 2: Extract gender using separate LLM call
+      const extractedGender = await this.extractGenderWithGroq(
+        productId,
+        textContents
+      );
+
+      // Step 3: Extract sizes using separate LLM call with DB variants
       const extractedSizes = await this.extractSizesWithGroq(
         productId,
         textContents
       );
 
-      // Step 2: Use Groq API wrapper with retry and circuit breaker for main analysis
+      // Step 4: Use Groq API wrapper with retry and circuit breaker for main analysis
       const groq = await this.initializeGroq();
       const response = await groqChatCompletion(
         groq,
@@ -930,7 +1110,23 @@ export class GroqSequentialProcessor {
         response.choices[0].message.content || '{}'
       );
 
-      // Step 3: Merge extracted sizes into analysis result (sizes extraction takes priority)
+      // Step 5: Merge extracted price into analysis result (price extraction takes priority)
+      if (extractedPrice !== null && extractedPrice > 0) {
+        console.log(
+          `✅ Using extracted price: ${extractedPrice} for product ${productId}`
+        );
+        analysisResult.price = extractedPrice;
+      }
+
+      // Step 6: Merge extracted gender into analysis result (gender extraction takes priority)
+      if (extractedGender !== null) {
+        console.log(
+          `✅ Using extracted gender: ${extractedGender} for product ${productId}`
+        );
+        analysisResult.gender = extractedGender;
+      }
+
+      // Step 7: Merge extracted sizes into analysis result (sizes extraction takes priority)
       if (
         extractedSizes &&
         extractedSizes.sizes &&

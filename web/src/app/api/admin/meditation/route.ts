@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         ],
         response_format: { type: 'json_object' },
         max_tokens: 200,
-        temperature: 0.8, // Slightly lower temperature for better grammar while maintaining variety
+        temperature: 0.5, // Slightly lower temperature for better grammar while maintaining variety
       });
     } catch (modelError: any) {
       // If the model is not available, fallback to llama-3.1-8b-instant
@@ -73,18 +73,27 @@ export async function POST(req: NextRequest) {
           ],
           response_format: { type: 'json_object' },
           max_tokens: 200,
-          temperature: 0.7, // Lower temperature for better grammar with smaller model
+          temperature: 0.5, // Lower temperature for better grammar with smaller model
         });
       } else {
         throw modelError;
       }
     }
 
-    console.log('[meditation] Groq response:', JSON.stringify(response, null, 2));
+    console.log(
+      '[meditation] Groq response:',
+      JSON.stringify(response, null, 2)
+    );
     console.log('[meditation] Response choices:', response.choices);
     console.log('[meditation] First choice:', response.choices?.[0]);
-    console.log('[meditation] First choice message:', response.choices?.[0]?.message);
-    console.log('[meditation] First choice content:', response.choices?.[0]?.message?.content);
+    console.log(
+      '[meditation] First choice message:',
+      response.choices?.[0]?.message
+    );
+    console.log(
+      '[meditation] First choice content:',
+      response.choices?.[0]?.message?.content
+    );
 
     const rawContent = response.choices[0]?.message?.content?.trim() || '{}';
     console.log('[meditation] Raw content:', rawContent);
@@ -106,7 +115,10 @@ export async function POST(req: NextRequest) {
     const author = quoteData.author?.trim() || '';
 
     if (!quote) {
-      console.error('[meditation] Empty quote received. Full response:', JSON.stringify(response, null, 2));
+      console.error(
+        '[meditation] Empty quote received. Full response:',
+        JSON.stringify(response, null, 2)
+      );
       return NextResponse.json(
         {
           error: 'Не удалось получить цитату',
