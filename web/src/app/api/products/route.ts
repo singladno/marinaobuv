@@ -10,6 +10,7 @@ export async function GET() {
         OR: [
           { batchProcessingStatus: 'completed' }, // Parsed products
           { source: 'MANUAL' }, // Manually created products
+          { source: 'AG' }, // Products from aggregator
         ],
       },
       take: 50, // Show more products

@@ -19,6 +19,7 @@ interface Product {
   colorOptions?: Array<{ color: string; imageUrl: string }>;
   activeUpdatedAt?: string;
   source?: 'WA' | 'AG' | 'MANUAL';
+  sourceScreenshotUrl?: string | null;
   isActive?: boolean;
 }
 
@@ -144,6 +145,7 @@ export const ProductGrid = memo(function ProductGrid({
                   productId={item.id}
                   activeUpdatedAt={item.activeUpdatedAt ?? undefined}
                   source={item.source ?? undefined}
+                  sourceScreenshotUrl={item.sourceScreenshotUrl ?? undefined}
                   isActive={item.isActive ?? true}
                   onProductUpdated={onProductUpdated}
                   priority={index < 4}

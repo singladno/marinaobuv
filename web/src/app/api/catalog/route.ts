@@ -52,10 +52,15 @@ export async function GET(request: NextRequest) {
     // Include products that are either:
     // 1. Completed batch processing (parsed from WhatsApp)
     // 2. Manually created (source: 'MANUAL')
+    // 3. Parsed from aggregator (source: 'AG')
     const where: any = {
       AND: [
         {
-          OR: [{ batchProcessingStatus: 'completed' }, { source: 'MANUAL' }],
+          OR: [
+            { batchProcessingStatus: 'completed' },
+            { source: 'MANUAL' },
+            { source: 'AG' },
+          ],
         },
       ],
     };
@@ -224,6 +229,7 @@ export async function GET(request: NextRequest) {
         primaryImageUrl,
         colorOptions,
         isActive: product.isActive ?? true,
+        sourceScreenshotUrl: product.sourceScreenshotUrl || null,
       };
     });
 

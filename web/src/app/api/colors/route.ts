@@ -10,7 +10,11 @@ export async function GET(request: NextRequest) {
     // Build where clause for products
     const productWhere: any = {
       isActive: true,
-      batchProcessingStatus: 'completed',
+      OR: [
+        { batchProcessingStatus: 'completed' }, // Parsed products
+        { source: 'MANUAL' }, // Manually created products
+        { source: 'AG' }, // Products from aggregator
+      ],
     };
 
     // If categoryId is provided, filter products by category (including subcategories)

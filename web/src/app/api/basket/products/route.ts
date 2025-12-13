@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
         OR: [
           { batchProcessingStatus: 'completed' }, // Parsed products
           { source: 'MANUAL' }, // Manually created products
+          { source: 'AG' }, // Products from aggregator
         ],
       },
       include: {

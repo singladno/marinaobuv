@@ -12,6 +12,7 @@ import NoImagePlaceholder from '@/components/product/NoImagePlaceholder';
 import { ProductSourceModal } from '@/components/product/ProductSourceModal';
 import { SourceMessagesModal } from '@/components/features/SourceMessagesModal';
 import { EditProductModal } from '@/components/admin/EditProductModal';
+import { AggregatorIcon } from '@/components/icons/AggregatorIcon';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 import { Text } from '@/components/ui/Text';
@@ -75,6 +76,7 @@ type Props = {
   productId?: string; // Add productId for source button
   activeUpdatedAt?: string; // Add activeUpdatedAt for availability display
   source?: 'WA' | 'AG' | 'MANUAL'; // Product source: WA (WhatsApp), AG (aggregator), or MANUAL (manually created)
+  sourceScreenshotUrl?: string | null; // Source screenshot URL for AG and MANUAL products
   isActive?: boolean; // Product active status
   onProductUpdated?: (updatedProduct?: any) => void; // Callback when product is updated
   priority?: boolean; // Image loading priority for LCP optimization
@@ -93,6 +95,7 @@ function ProductCard({
   productId,
   activeUpdatedAt,
   source,
+  sourceScreenshotUrl,
   isActive = true,
   onProductUpdated,
   priority = false,
@@ -105,6 +108,7 @@ function ProductCard({
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isManualSourceModalOpen, setIsManualSourceModalOpen] = useState(false);
+  const [isAgSourceModalOpen, setIsAgSourceModalOpen] = useState(false);
   const [productData, setProductData] = useState<any>(null);
   const [loadingProductData, setLoadingProductData] = useState(false);
   const [isTogglingActive, setIsTogglingActive] = useState(false);
@@ -573,6 +577,50 @@ function ProductCard({
                           <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 border-b border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"></div>
                         </div>
                       </button>
+                    ) : source === 'AG' ? (
+                      <button
+                        type="button"
+                        onClick={async e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!productId) return;
+
+                          // If we already have the screenshot URL, open modal immediately
+                          if (sourceScreenshotUrl) {
+                            setIsAgSourceModalOpen(true);
+                            return;
+                          }
+
+                          // Otherwise, fetch product data to get screenshot URL
+                          setLoadingProductData(true);
+                          setIsAgSourceModalOpen(true); // Open modal immediately, will show loading state
+                          try {
+                            const response = await fetch(
+                              `/api/admin/products/${productId}`
+                            );
+                            if (response.ok) {
+                              const data = await response.json();
+                              setProductData(data.product);
+                            }
+                          } catch (error) {
+                            console.error(
+                              'Error fetching product data:',
+                              error
+                            );
+                          } finally {
+                            setLoadingProductData(false);
+                          }
+                        }}
+                        className="group/ag-icon source-icon-hover-toggle absolute relative left-2 top-2 z-20 flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
+                        title="Просмотреть исходный скриншот агрегатора"
+                      >
+                        <AggregatorIcon className="h-5 w-5" />
+                        {/* Tooltip */}
+                        <div className="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 opacity-0 shadow-xl transition-opacity duration-200 group-hover/ag-icon:block group-hover/ag-icon:opacity-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                          Товар из агрегатора
+                          <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 border-b border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"></div>
+                        </div>
+                      </button>
                     ) : (
                       <button
                         type="button"
@@ -800,6 +848,57 @@ function ProductCard({
                 />
               )}
             </>
+          )}
+          {/* AG Source Screenshot Modal */}
+          {isAgSourceModalOpen && (
+            <Modal
+              isOpen={isAgSourceModalOpen}
+              onClose={() => {
+                setIsAgSourceModalOpen(false);
+                setProductData(null);
+              }}
+              title="Исходный скриншот агрегатора"
+              size="xl"
+              className="md:!max-w-4xl lg:!max-w-5xl [&>div]:!max-h-[85vh] md:[&>div]:!max-h-[90vh]"
+            >
+              <div className="max-h-[calc(85vh-120px)] overflow-y-auto p-6 md:max-h-[calc(90vh-120px)]">
+                {loadingProductData ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border bg-gray-50 p-4">
+                      {(sourceScreenshotUrl ||
+                        productData?.sourceScreenshotUrl) && (
+                        <div className="flex justify-center">
+                          <Image
+                            src={
+                              sourceScreenshotUrl ||
+                              productData?.sourceScreenshotUrl
+                            }
+                            alt="Source screenshot from aggregator"
+                            width={800}
+                            height={600}
+                            className="max-h-[400px] w-auto rounded border object-contain"
+                            onError={e => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      {!sourceScreenshotUrl &&
+                        !productData?.sourceScreenshotUrl && (
+                          <div className="py-4 text-center text-gray-500">
+                            Скриншот источника не найден
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Modal>
           )}
         </>
       )}

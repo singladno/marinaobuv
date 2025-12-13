@@ -12,7 +12,11 @@ export async function GET(
       where: {
         slug,
         isActive: true, // Only show active products
-        batchProcessingStatus: 'completed', // Only show fully processed products
+        OR: [
+          { batchProcessingStatus: 'completed' }, // Only show fully processed products
+          { source: 'MANUAL' }, // Manually created products
+          { source: 'AG' }, // Products from aggregator
+        ],
       },
       include: {
         images: {
