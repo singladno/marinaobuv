@@ -73,7 +73,14 @@ export async function GET(
       where: { id, createdById: session.user.id },
       include: {
         items: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            price: true,
+            oldPrice: true,
+            sortIndex: true,
+            color: true, // Explicitly select color field
             product: {
               select: {
                 id: true,
@@ -82,6 +89,9 @@ export async function GET(
                 sizes: true,
                 article: true,
                 images: {
+                  where: {
+                    isActive: true,
+                  },
                   orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
                   select: {
                     url: true,
@@ -117,30 +127,88 @@ export async function GET(
 
     const rows = purchase.items.map(item => {
       const allImages = item.product.images || [];
-      // Use the explicitly selected color on the purchase item when available
-      const desiredColor = ((item as any).color || '').toLowerCase();
-      let sameColorImages = allImages;
-      if (desiredColor) {
-        sameColorImages = allImages.filter(
-          img => (img.color || '').toLowerCase() === desiredColor
-        );
-      } else {
-        // Fallback to primary group: either primary image's color group, or no-color images
-        const primaryImage =
-          allImages.find(img => img.isPrimary) || allImages[0];
-        const primaryColor = (primaryImage?.color || '').toLowerCase();
-        if (primaryColor) {
-          sameColorImages = allImages.filter(
-            img => (img.color || '').toLowerCase() === primaryColor
+      // Get the color from the purchase item (explicitly selected in query)
+      const itemColor = item.color;
+      let sameColorImages: typeof allImages = [];
+
+      // Normalize function for color comparison
+      // Handles spaces, case, and common variations
+      const normalizeColor = (color: string | null | undefined): string => {
+        if (!color) return '';
+        // Convert to lowercase, trim, and remove all spaces for comparison
+        // This handles cases like "Вассортименте" vs "в ассортименте"
+        return color.toLowerCase().trim().replace(/\s+/g, '');
+      };
+
+      if (itemColor) {
+        // Purchase item has a color specified - ONLY use images with that exact color
+        // OR images with no color set (null) - since there's no color conflict
+        const normalizedItemColor = normalizeColor(itemColor);
+        sameColorImages = allImages.filter(img => {
+          const imgColor = normalizeColor(img.color);
+          // Match exact color OR no color set (empty string after normalization)
+          const matches = imgColor === normalizedItemColor || imgColor === '';
+
+          // Debug logging for specific articles
+          if (
+            item.product.article === '215126' ||
+            item.product.article === '918391'
+          ) {
+            console.log(
+              `[Export Debug] Article ${item.product.article} - Purchase item color: "${itemColor}" (normalized: "${normalizedItemColor}"), Image color: "${img.color}" (normalized: "${imgColor}"), Matches: ${matches}`
+            );
+          }
+
+          return matches;
+        });
+
+        // If no exact matches found, fall back to images with null colors
+        // This handles cases where purchase item color doesn't match any image colors
+        if (sameColorImages.length === 0) {
+          const nullColorImages = allImages.filter(
+            img => !img.color || normalizeColor(img.color) === ''
           );
-        } else {
-          const noColor = allImages.filter(img => !img.color);
-          if (noColor.length > 0) sameColorImages = noColor;
+          if (nullColorImages.length > 0) {
+            sameColorImages = nullColorImages;
+            // Debug logging
+            if (
+              item.product.article === '215126' ||
+              item.product.article === '918391'
+            ) {
+              console.log(
+                `[Export Debug] Article ${item.product.article} - No exact color match for "${itemColor}", using ${nullColorImages.length} images with null colors`
+              );
+            }
+          } else {
+            // If no null color images either, use all images as last resort
+            // This handles data mismatches where purchase item color doesn't match any images
+            sameColorImages = allImages;
+            if (
+              item.product.article === '215126' ||
+              item.product.article === '918391'
+            ) {
+              console.log(
+                `[Export Debug] Article ${item.product.article} - No exact color match for "${itemColor}" and no null color images, using all ${allImages.length} images as fallback`
+              );
+            }
+          }
         }
-        if (sameColorImages.length === 0 && primaryImage) {
-          sameColorImages = [primaryImage];
+
+        // Debug logging for specific articles
+        if (
+          item.product.article === '215126' ||
+          item.product.article === '918391'
+        ) {
+          console.log(
+            `[Export Debug] Article ${item.product.article} - Total images: ${allImages.length}, Matched images: ${sameColorImages.length}, Purchase item color: "${itemColor}"`
+          );
         }
+      } else {
+        // No color specified on purchase item - use all images
+        // This ensures products without colors on purchase items still get images
+        sameColorImages = allImages;
       }
+
       const imageUrls = sameColorImages
         .map(img => img.url)
         .filter(Boolean)

@@ -12,6 +12,7 @@ import {
   Check,
   X,
   GripVertical,
+  Trash2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
@@ -82,6 +83,7 @@ function PurchaseDetailPageContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedItemForImageModal, setSelectedItemForImageModal] =
     useState<PurchaseItem | null>(null);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   const confirmationModal = useConfirmationModal();
   const { addNotification } = useNotifications();
@@ -456,6 +458,71 @@ function PurchaseDetailPageContent() {
     }
   };
 
+  const handleDeleteItem = async (itemId: string, itemName: string) => {
+    const confirmed = await confirmationModal.showConfirmation({
+      title: 'Удалить товар из закупки?',
+      message: `Вы уверены, что хотите удалить "${itemName}" из закупки?`,
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingItemId(itemId);
+      const response = await fetch(
+        `/api/admin/purchases/${params.id}/items/${itemId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to delete item');
+      }
+
+      // Remove item from state
+      setPurchase(prev => {
+        if (!prev) return null;
+        const updatedItems = prev.items.filter(item => item.id !== itemId);
+
+        // Recalculate indexes for remaining items
+        const itemsWithRecalculatedIndexes = recalculateIndexes(updatedItems);
+
+        // Update indexes in database
+        updateItemIndexes(itemsWithRecalculatedIndexes);
+
+        return {
+          ...prev,
+          items: itemsWithRecalculatedIndexes,
+          _count: {
+            items: updatedItems.length,
+          },
+        };
+      });
+
+      confirmationModal.closeModal();
+      addNotification({
+        type: 'success',
+        title: 'Товар удален',
+        message: 'Товар успешно удален из закупки',
+      });
+    } catch (err) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'Не удалось удалить товар из закупки',
+      });
+    } finally {
+      setDeletingItemId(null);
+      confirmationModal.setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPurchase();
   }, [params.id]);
@@ -567,6 +634,23 @@ function PurchaseDetailPageContent() {
                   isDragging ? 'opacity-20' : ''
                 }`}
               >
+                {/* Delete Button - Top Right */}
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleDeleteItem(item.id, item.name);
+                  }}
+                  disabled={deletingItemId === item.id}
+                  className="absolute right-2 top-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-600 transition-colors hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Удалить товар из закупки"
+                >
+                  {deletingItemId === item.id ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </button>
+
                 <div className="flex gap-4">
                   {/* Left Column: Controls + Image */}
                   <div className="flex-shrink-0">
@@ -787,32 +871,34 @@ function PurchaseDetailPageContent() {
         onApply={handleApplyBulkDescriptions}
         isProcessing={isBulkProcessing}
       />
-      {selectedItemForImageModal && (() => {
-        const normalize = (s?: string | null) => (s || '').trim().toLowerCase();
-        const itemColor = normalize(selectedItemForImageModal.color);
-        const allImages = selectedItemForImageModal.product.images || [];
-        // Filter images to only show the ones matching the item's color
-        const filteredImages = allImages.filter(img =>
-          normalize(img.color) === itemColor
-        );
-        // If no color match, fall back to all images
-        const images = filteredImages.length > 0 ? filteredImages : allImages;
-        const initialIndex = 0; // Always start at first image since we filtered
-        return (
-          <ProductImageModal
-            isOpen={!!selectedItemForImageModal}
-            onClose={() => setSelectedItemForImageModal(null)}
-            images={images.map(img => ({
-              id: img.id,
-              url: img.url,
-              alt: img.color || null,
-              isPrimary: img.isPrimary,
-            }))}
-            productName={selectedItemForImageModal.name}
-            initialIndex={initialIndex}
-          />
-        );
-      })()}
+      {selectedItemForImageModal &&
+        (() => {
+          const normalize = (s?: string | null) =>
+            (s || '').trim().toLowerCase();
+          const itemColor = normalize(selectedItemForImageModal.color);
+          const allImages = selectedItemForImageModal.product.images || [];
+          // Filter images to only show the ones matching the item's color
+          const filteredImages = allImages.filter(
+            img => normalize(img.color) === itemColor
+          );
+          // If no color match, fall back to all images
+          const images = filteredImages.length > 0 ? filteredImages : allImages;
+          const initialIndex = 0; // Always start at first image since we filtered
+          return (
+            <ProductImageModal
+              isOpen={!!selectedItemForImageModal}
+              onClose={() => setSelectedItemForImageModal(null)}
+              images={images.map(img => ({
+                id: img.id,
+                url: img.url,
+                alt: img.color || null,
+                isPrimary: img.isPrimary,
+              }))}
+              productName={selectedItemForImageModal.name}
+              initialIndex={initialIndex}
+            />
+          );
+        })()}
       <ScrollArrows offsetBottomPx={28} showOnMobile />
     </div>
   );
