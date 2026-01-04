@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 
+import { useUser } from '@/contexts/NextAuthUserContext';
+import { getRoleLabel } from '@/app/admin/users/utils';
+
 import { SidebarToggle } from './SidebarToggle';
 
 type AdminSidebarHeaderProps = {
@@ -13,6 +16,10 @@ export function AdminSidebarHeader({
   isCollapsed,
   setIsCollapsed,
 }: AdminSidebarHeaderProps) {
+  const { user } = useUser();
+  const userName = user?.name || user?.email || 'Пользователь';
+  const userRole = user?.role ? getRoleLabel(user.role) : 'Админ';
+
   return (
     <div className="flex items-center justify-between">
       <Link href="/admin" className="flex items-center">
@@ -40,9 +47,14 @@ export function AdminSidebarHeader({
           </svg>
         </div>
         {!isCollapsed && (
-          <span className="ml-3 text-lg font-semibold text-gray-800 dark:text-white">
-            Админ
-          </span>
+          <div className="ml-3 flex flex-col">
+            <span className="text-sm font-semibold text-gray-800 dark:text-white leading-tight">
+              {userName}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+              {userRole}
+            </span>
+          </div>
         )}
       </Link>
 

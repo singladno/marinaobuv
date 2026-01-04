@@ -1,0 +1,2 @@
+-- AlterEnum: Add EXPORT_MANAGER role
+ALTER TYPE "Role" ADD VALUE 'EXPORT_MANAGER';

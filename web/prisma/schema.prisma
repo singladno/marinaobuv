@@ -575,6 +575,7 @@ enum Role {
   PROVIDER
   GRUZCHIK
   CLIENT
+  EXPORT_MANAGER
 }
 
 enum Gender {

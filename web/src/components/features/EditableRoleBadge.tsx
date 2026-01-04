@@ -21,6 +21,7 @@ const roleOptions = [
   { value: 'CLIENT', label: 'Клиент' },
   { value: 'PROVIDER', label: 'Поставщик' },
   { value: 'GRUZCHIK', label: 'Грузчик' },
+  { value: 'EXPORT_MANAGER', label: 'Менеджер экспорта' },
 ];
 
 export function EditableRoleBadge({

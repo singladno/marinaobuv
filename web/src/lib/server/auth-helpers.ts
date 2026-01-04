@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-export type UserRole = 'ADMIN' | 'CLIENT' | 'GRUZCHIK';
+export type UserRole = 'ADMIN' | 'CLIENT' | 'GRUZCHIK' | 'PROVIDER' | 'EXPORT_MANAGER';
 
 export interface AuthenticatedUser {
   id: string;
@@ -120,4 +120,15 @@ export async function hasRole(
 ): Promise<boolean> {
   const auth = await requireAuth(request);
   return auth.user?.role === role;
+}
+
+/**
+ * Helper to check if user has export access (ADMIN or EXPORT_MANAGER)
+ * Usage: const canExport = await hasExportAccess(request);
+ */
+export async function hasExportAccess(request: NextRequest): Promise<boolean> {
+  const auth = await requireAuth(request);
+  if (auth.error) return false;
+  const role = auth.user?.role;
+  return role === 'ADMIN' || role === 'EXPORT_MANAGER';
 }

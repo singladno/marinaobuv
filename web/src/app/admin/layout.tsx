@@ -13,7 +13,9 @@ export default async function AdminLayout({
 }) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || session.user.role !== 'ADMIN') {
+  // Allow ADMIN and EXPORT_MANAGER roles
+  const allowedRoles = ['ADMIN', 'EXPORT_MANAGER'];
+  if (!session?.user || !allowedRoles.includes(session.user.role)) {
     redirect('/');
   }
 

@@ -22,6 +22,8 @@ export default function AdminUsersPage() {
     setRoleFilter,
     page,
     setPage,
+    limit,
+    setLimit,
     totalPages,
     showCreateForm,
     setShowCreateForm,
@@ -72,7 +74,13 @@ export default function AdminUsersPage() {
         />
 
         {/* Pagination */}
-        <UserPagination page={page} totalPages={totalPages} setPage={setPage} />
+        <UserPagination
+          page={page}
+          totalPages={totalPages}
+          limit={limit}
+          setPage={setPage}
+          setLimit={setLimit}
+        />
       </div>
 
       {/* Create User Modal */}

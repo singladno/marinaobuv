@@ -1,0 +1,4 @@
+# Migration: Add EXPORT_MANAGER role
+# This migration adds a new role for users who need access to product export functionality
+# EXPORT_MANAGER role allows access to product export endpoints
+# ADMIN role also has access to these endpoints

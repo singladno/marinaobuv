@@ -39,6 +39,7 @@
     "green:queue:poll": "tsx src/scripts/poll-green-api-queue.ts",
     "webhook:monitor": "tsx src/scripts/webhook-status-monitor.ts",
     "webhook:configure": "tsx src/scripts/configure-webhook.ts",
+    "export:latest": "tsx src/scripts/get-latest-export-urls.ts",
     "lint": "eslint .",
     "lint:eslint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",

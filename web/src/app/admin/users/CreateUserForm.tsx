@@ -112,6 +112,7 @@ export function CreateUserForm({
             <SelectItem value="PROVIDER">Поставщик</SelectItem>
             <SelectItem value="GRUZCHIK">Грузчик</SelectItem>
             <SelectItem value="CLIENT">Клиент</SelectItem>
+            <SelectItem value="EXPORT_MANAGER">Менеджер экспорта</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -27,7 +27,7 @@ if (!isBuildContext) {
 }
 
 // Initialize S3 client for Yandex Object Storage - only if not in build context
-const s3Client =
+export const s3Client =
   !isBuildContext &&
   env.S3_ENDPOINT &&
   env.S3_REGION &&

@@ -3,6 +3,7 @@
 import { useParsingStatus } from '@/hooks/useParsingStatus';
 import {
   CategoriesIcon,
+  ExportIcon,
   OrdersIcon,
   ParsingIcon,
   ProductsIcon,
@@ -32,5 +33,6 @@ export function useAdminNavItems(): AdminNavItem[] {
       isParsingActive,
     },
     { href: '/admin/purchases', label: 'Закупки', icon: <PurchasesIcon /> },
+    { href: '/admin/exports', label: 'Экспорт', icon: <ExportIcon /> },
   ];
 }

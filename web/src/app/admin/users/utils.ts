@@ -4,6 +4,7 @@ export function getRoleLabel(role: string): string {
     PROVIDER: 'Поставщик',
     GRUZCHIK: 'Грузчик',
     CLIENT: 'Клиент',
+    EXPORT_MANAGER: 'Менеджер экспорта',
   };
   return labels[role] || role;
 }

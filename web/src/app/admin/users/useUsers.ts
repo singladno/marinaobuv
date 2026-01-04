@@ -15,6 +15,7 @@ export function useUsers() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -36,7 +37,7 @@ export function useUsers() {
       setLoading(true);
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '10',
+        limit: limit.toString(),
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(roleFilter && { role: roleFilter }),
       });
@@ -57,7 +58,7 @@ export function useUsers() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, roleFilter, addNotification]);
+  }, [page, limit, debouncedSearch, roleFilter, addNotification]);
 
   const fetchProviders = useCallback(async () => {
     try {
@@ -227,6 +228,8 @@ export function useUsers() {
     setRoleFilter,
     page,
     setPage,
+    limit,
+    setLimit,
     totalPages,
     showCreateForm,
     setShowCreateForm,
