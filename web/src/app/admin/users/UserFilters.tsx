@@ -21,7 +21,7 @@ export function UserFilters({
       <SearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Поиск по имени или телефону..."
+        placeholder="Поиск по имени, телефону или email..."
         className="w-full sm:max-w-sm"
       />
       <div className="ml-auto">

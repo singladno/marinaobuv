@@ -59,7 +59,7 @@ export async function PATCH(
     }
 
     // Validate role value
-    const validRoles = ['ADMIN', 'CLIENT', 'PROVIDER', 'GRUZCHIK'];
+    const validRoles = ['ADMIN', 'CLIENT', 'PROVIDER', 'GRUZCHIK', 'EXPORT_MANAGER'];
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }

@@ -69,11 +69,23 @@ export default function ProfileMenuContent({
       <nav className="p-2">
         <MenuItem href="/orders" icon={BoxIcon} label="Заказы" />
         <MenuItem href="/favorites" icon={HeartIcon} label="Избранное" />
-        {user?.role === 'ADMIN' && (
+        {(user?.role === 'ADMIN' || user?.role === 'EXPORT_MANAGER') && (
           <MenuItem
-            href={pathname.startsWith('/admin') ? '/' : '/admin'}
+            href={
+              pathname.startsWith('/admin')
+                ? '/'
+                : user?.role === 'EXPORT_MANAGER'
+                  ? '/admin/exports'
+                  : '/admin'
+            }
             icon={AdminIcon}
-            label={pathname.startsWith('/admin') ? 'Клиентский портал' : 'Админ-панель'}
+            label={
+              pathname.startsWith('/admin')
+                ? 'Клиентский портал'
+                : user?.role === 'EXPORT_MANAGER'
+                  ? 'Панель экспорта'
+                  : 'Админ-панель'
+            }
           />
         )}
         {user?.role === 'GRUZCHIK' && (

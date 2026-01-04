@@ -7,13 +7,20 @@ import { useAdminNavItems } from '@/hooks/useAdminNavItems';
 
 type AdminBottomNavigationProps = {
   className?: string;
+  userRole?: string;
 };
 
 export default function AdminBottomNavigation({
   className = '',
+  userRole,
 }: AdminBottomNavigationProps) {
   const pathname = usePathname();
-  const items = useAdminNavItems();
+  const items = useAdminNavItems(userRole);
+
+  // Don't render navigation until we know the role
+  if (!userRole && items.length === 0) {
+    return null;
+  }
 
   return (
     <div

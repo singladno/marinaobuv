@@ -5,12 +5,19 @@ import { useAdminNavItems } from '@/hooks/useAdminNavItems';
 
 type AdminSidebarNavigationProps = {
   isCollapsed: boolean;
+  userRole?: string;
 };
 
 export function AdminSidebarNavigation({
   isCollapsed,
+  userRole,
 }: AdminSidebarNavigationProps) {
-  const items = useAdminNavItems();
+  const items = useAdminNavItems(userRole);
+
+  // Don't render navigation until we know the role
+  if (!userRole && items.length === 0) {
+    return null;
+  }
 
   return (
     <nav>

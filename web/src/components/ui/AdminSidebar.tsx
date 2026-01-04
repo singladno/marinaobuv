@@ -9,6 +9,7 @@ type AdminSidebarProps = {
   setIsCollapsed: (v: boolean | ((v: boolean) => boolean)) => void;
   isMobileOpen: boolean;
   setIsMobileOpen: (v: boolean | ((v: boolean) => boolean)) => void;
+  userRole?: string;
 };
 
 export default function AdminSidebar({
@@ -16,6 +17,7 @@ export default function AdminSidebar({
   setIsCollapsed,
   isMobileOpen,
   setIsMobileOpen,
+  userRole,
 }: AdminSidebarProps) {
   return (
     <>
@@ -51,7 +53,7 @@ export default function AdminSidebar({
           />
 
           <div className="mt-6 flex flex-1 flex-col justify-between">
-            <AdminSidebarNavigation isCollapsed={isCollapsed} />
+            <AdminSidebarNavigation isCollapsed={isCollapsed} userRole={userRole} />
             <AdminSidebarLogout isCollapsed={isCollapsed} />
           </div>
         </div>

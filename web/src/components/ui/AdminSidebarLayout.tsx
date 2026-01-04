@@ -8,10 +8,12 @@ import AdminBottomNavigation from './AdminBottomNavigation';
 
 type AdminSidebarLayoutProps = {
   children: React.ReactNode;
+  userRole?: string;
 };
 
 export default function AdminSidebarLayout({
   children,
+  userRole,
 }: AdminSidebarLayoutProps) {
   const { isCollapsed, isMobileOpen, toggleMobile, closeMobile, setCollapsed } =
     useSidebarToggle();
@@ -26,6 +28,7 @@ export default function AdminSidebarLayout({
         }
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={closeMobile}
+        userRole={userRole}
       />
 
       {/* Main content area - Right column */}
@@ -44,7 +47,7 @@ export default function AdminSidebarLayout({
         <main className="flex-1 p-4 pb-20 sm:p-6 sm:pb-20 lg:pb-6">{children}</main>
         {/* Spacer for bottom navigation on mobile and tablet */}
         <div className="h-16 lg:hidden" />
-        <AdminBottomNavigation />
+        <AdminBottomNavigation userRole={userRole} />
       </div>
     </>
   );

@@ -40,8 +40,8 @@ export function PortalSwitcher() {
   // Don't render until visible to prevent flash
   if (!isVisible) return null;
 
-  // Show for admin users (both in admin portal and customer portal)
-  if (user?.role !== 'ADMIN') return null;
+  // Show for admin users and export managers (both in admin portal and customer portal)
+  if (user?.role !== 'ADMIN' && user?.role !== 'EXPORT_MANAGER') return null;
 
   // Hide when admin chat or client chat is open
   if (isAdminChatOpen || isClientChatOpen) return null;
@@ -108,7 +108,7 @@ export function PortalSwitcher() {
         {/* Only show Admin Portal if currently in Customer portal */}
         {!pathname.startsWith('/admin') && (
           <Link
-            href="/admin"
+            href={user?.role === 'EXPORT_MANAGER' ? '/admin/exports' : '/admin'}
             onClick={closeMenu}
             className="group flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-gray-700 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-gray-50 sm:px-4 sm:py-3 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
           >
@@ -135,10 +135,10 @@ export function PortalSwitcher() {
             </div>
             <div className="text-left">
               <div className="text-sm font-semibold sm:text-base">
-                Админ панель
+                {user?.role === 'EXPORT_MANAGER' ? 'Панель экспорта' : 'Админ панель'}
               </div>
               <div className="text-xs opacity-80 sm:text-sm">
-                Управление заказами
+                {user?.role === 'EXPORT_MANAGER' ? 'Управление экспортом' : 'Управление заказами'}
               </div>
             </div>
           </Link>

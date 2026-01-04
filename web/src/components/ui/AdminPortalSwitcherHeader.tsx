@@ -20,8 +20,8 @@ export function AdminPortalSwitcherHeader() {
     setIsOpen(false);
   };
 
-  // Show for admin users only
-  if (user?.role !== 'ADMIN') return null;
+  // Show for admin users and export managers
+  if (user?.role !== 'ADMIN' && user?.role !== 'EXPORT_MANAGER') return null;
 
   return (
     <div className="relative">
@@ -71,7 +71,7 @@ export function AdminPortalSwitcherHeader() {
         ) : (
           // Show only Admin portal when currently in customer area
           <Link
-            href="/admin"
+            href={user?.role === 'EXPORT_MANAGER' ? '/admin/exports' : '/admin'}
             onClick={closeMenu}
             className="group flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-gray-700 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-gray-50"
           >
@@ -91,8 +91,12 @@ export function AdminPortalSwitcherHeader() {
               </svg>
             </div>
             <div className="text-left">
-              <div className="text-sm font-semibold">Админ панель</div>
-              <div className="text-xs opacity-80">Управление товарами</div>
+              <div className="text-sm font-semibold">
+                {user?.role === 'EXPORT_MANAGER' ? 'Панель экспорта' : 'Админ панель'}
+              </div>
+              <div className="text-xs opacity-80">
+                {user?.role === 'EXPORT_MANAGER' ? 'Управление экспортом' : 'Управление товарами'}
+              </div>
             </div>
           </Link>
         )}

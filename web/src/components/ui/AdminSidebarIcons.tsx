@@ -134,13 +134,7 @@ export const PurchasesIcon = () => (
     xmlns="http://www.w3.org/2000/svg"
   >
     {/* Circle badge */}
-    <circle
-      cx="12"
-      cy="12"
-      r="8.5"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
+    <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="2" />
     {/* Star */}
     <path
       d="M12 7.5l1.4 2.9 3.2.47-2.3 2.24.54 3.19L12 15.7l-2.84 1.6.54-3.19-2.3-2.24 3.2-.47L12 7.5z"

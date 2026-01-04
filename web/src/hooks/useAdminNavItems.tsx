@@ -1,6 +1,7 @@
 'use client';
 
 import { useParsingStatus } from '@/hooks/useParsingStatus';
+import { useUser } from '@/contexts/NextAuthUserContext';
 import {
   CategoriesIcon,
   ExportIcon,
@@ -18,8 +19,23 @@ export type AdminNavItem = {
   isParsingActive?: boolean;
 };
 
-export function useAdminNavItems(): AdminNavItem[] {
+export function useAdminNavItems(userRole?: string): AdminNavItem[] {
   const { isParsingActive } = useParsingStatus();
+  const { user } = useUser();
+
+  // Use provided role or fallback to user role from context
+  const role = userRole || user?.role;
+
+  // For EXPORT_MANAGER, only show Export menu item
+  if (role === 'EXPORT_MANAGER') {
+    return [{ href: '/admin/exports', label: 'Экспорт', icon: <ExportIcon /> }];
+  }
+
+  // For ADMIN, show all menu items
+  // If role is not yet loaded, show empty array to prevent flickering
+  if (!role) {
+    return [];
+  }
 
   return [
     { href: '/admin/products', label: 'Товары', icon: <ProductsIcon /> },

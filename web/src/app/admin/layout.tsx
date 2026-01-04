@@ -22,7 +22,9 @@ export default async function AdminLayout({
   return (
     <ClientProviders>
       <div className="bg-background text-foreground flex h-screen">
-        <AdminSidebarLayout>{children}</AdminSidebarLayout>
+        <AdminSidebarLayout userRole={session.user.role}>
+          {children}
+        </AdminSidebarLayout>
         <PortalSwitcher />
       </div>
     </ClientProviders>
