@@ -245,11 +245,13 @@ export function useEditProductForm(
       name: formData.name.trim(),
       categoryId: formData.categoryId,
       pricePair: formData.pricePair,
+      buyPrice: formData.buyPrice ?? null,
       material: formData.material.trim(),
       gender: formData.gender,
       season: formData.season,
       description: formData.description.trim(),
       sizes: formData.sizes,
+      providerId: formData.providerId ?? null,
     };
   };
 
