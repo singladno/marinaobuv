@@ -1,7 +1,7 @@
 'use client';
 import { useMemo } from 'react';
 
-import { getColorHex } from '@/utils/colorMapping';
+import ColorIndicator from '@/components/product/ColorIndicator';
 
 type Item = { id: string; color?: string | null };
 
@@ -38,7 +38,6 @@ export default function RemoveColorChooser({
         </div>
         <div className="flex items-center justify-center gap-3">
           {unique.map(item => {
-            const bg = getColorHex(item.color);
             return (
               <button
                 key={item.id + (item.color ?? '')}
@@ -51,11 +50,7 @@ export default function RemoveColorChooser({
                 }}
               >
                 <span className="hover:ring-foreground/10 border-muted inline-flex h-6 w-6 items-center justify-center rounded-full border transition-shadow transition-transform duration-150 hover:scale-105 hover:ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300">
-                  <span
-                    aria-hidden
-                    className="block h-4 w-4 rounded-full"
-                    style={{ backgroundColor: bg }}
-                  />
+                  <ColorIndicator colorName={item.color} size="md" />
                 </span>
                 <span className="text-[10px] text-gray-500 transition-colors duration-150 group-hover:text-gray-700">
                   {item.color ?? 'Цвет'}

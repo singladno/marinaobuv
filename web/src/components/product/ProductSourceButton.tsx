@@ -22,8 +22,7 @@ export function ProductSourceButton({
   if (
     userRole !== 'ADMIN' ||
     !productId ||
-    !sourceMessageIds ||
-    sourceMessageIds.length === 0
+    ((!sourceMessageIds || sourceMessageIds.length === 0) && source !== 'AG')
   ) {
     return null;
   }
@@ -35,7 +34,7 @@ export function ProductSourceButton({
       className="absolute left-2 top-2 z-20 transition-all duration-200 focus:outline-none"
       title="Просмотр источника сообщений"
     >
-      {source === 'WA' ? (
+      {source === 'WA' || source === 'AG' ? (
         <div className="flex h-12 w-12 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
           <Image
             src="/images/whatsapp-icon.png"

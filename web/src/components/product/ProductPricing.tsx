@@ -11,6 +11,7 @@ type Props = {
   boxPrice: number | null;
   quantity: number;
   onQuantityChange: (quantity: number) => void;
+  measurementUnit?: 'PAIRS' | 'PIECES';
 };
 
 export function ProductPricing({
@@ -20,7 +21,10 @@ export function ProductPricing({
   boxPrice,
   quantity,
   onQuantityChange,
+  measurementUnit = 'PAIRS',
 }: Props) {
+  const unitLabel = measurementUnit === 'PIECES' ? 'шт' : 'пар';
+  const perUnitLabel = measurementUnit === 'PIECES' ? 'за штуку' : 'за пару';
   // Merge duplicate sizes to avoid duplicate React keys and show summed counts
   // Then sort them in ascending order
   const mergedSizes = useMemo(() => {
@@ -55,11 +59,11 @@ export function ProductPricing({
       <div className="space-y-2">
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold">{rub(pricePair)}</span>
-          <span className="text-muted-foreground text-sm">за пару</span>
+          <span className="text-muted-foreground text-sm">{perUnitLabel}</span>
         </div>
         {boxPrice != null && packPairs != null && (
           <div className="text-muted-foreground text-sm">
-            {rub(boxPrice)} за коробку ({packPairs} пар)
+            {rub(boxPrice)} за коробку ({packPairs} {unitLabel})
           </div>
         )}
       </div>

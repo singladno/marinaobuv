@@ -245,6 +245,7 @@ export function createProductColumnDefinitions({
                 throw error;
               }
             }}
+            measurementUnit={row.original.measurementUnit}
           />
         );
       },

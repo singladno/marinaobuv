@@ -16,6 +16,7 @@ type Props = {
   productName: string;
   productId?: string;
   sourceMessageIds?: string[] | null;
+  sourceScreenshotUrl?: string | null;
   isActive: boolean;
   source?: 'WA' | 'AG' | 'MANUAL';
   initialSelectedColor?: string | null;
@@ -27,6 +28,7 @@ export default function ProductGalleryWithColors({
   productName,
   productId,
   sourceMessageIds,
+  sourceScreenshotUrl,
   isActive,
   source,
   initialSelectedColor = null,
@@ -90,6 +92,7 @@ export default function ProductGalleryWithColors({
           height={560}
           productId={productId}
           sourceMessageIds={sourceMessageIds}
+          sourceScreenshotUrl={sourceScreenshotUrl}
           isActive={isActive}
           source={source}
         />

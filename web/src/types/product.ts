@@ -35,6 +35,7 @@ export interface Product {
   sourceScreenshotUrl: string | null; // URL of source screenshot for MANUAL products
   sourceScreenshotKey: string | null; // S3 key of source screenshot for MANUAL products
   source: 'WA' | 'AG' | 'MANUAL'; // Source of the product: WA (WhatsApp), AG (aggregator), or MANUAL (manually created)
+  measurementUnit: 'PAIRS' | 'PIECES'; // Unit of measurement: PAIRS (пары) or PIECES (штуки)
   gptRequest: string | null; // GPT request for debugging
   gptResponse: string | null; // GPT response for debugging
 }
@@ -69,6 +70,7 @@ export interface ProductUpdateData {
   isActive?: boolean;
   sizes?: Array<{ size: string; count: number }>;
   providerId?: string | null;
+  measurementUnit?: 'PAIRS' | 'PIECES';
 }
 
 export interface ProductsResponse {

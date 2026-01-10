@@ -27,6 +27,7 @@ type Props = {
   sourceMessageIds?: string[] | null;
   imageUrl?: string; // Primary image URL for cart animations
   isActive: boolean;
+  measurementUnit?: 'PAIRS' | 'PIECES';
 };
 
 export default function ProductDetails(props: Props) {
@@ -103,6 +104,7 @@ export default function ProductDetails(props: Props) {
         boxPrice={boxPrice}
         quantity={quantity}
         onQuantityChange={setQuantity}
+        measurementUnit={props.measurementUnit}
       />
       <Separator />
       {description && (

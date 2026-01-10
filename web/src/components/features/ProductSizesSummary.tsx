@@ -10,6 +10,7 @@ type ProductSizesSummaryProps = {
   canEdit?: boolean;
   isEditing?: boolean;
   onToggleEdit?: () => void;
+  measurementUnit?: 'PAIRS' | 'PIECES';
 };
 
 export function ProductSizesSummary({
@@ -17,7 +18,9 @@ export function ProductSizesSummary({
   canEdit = false,
   isEditing = false,
   onToggleEdit,
+  measurementUnit = 'PAIRS',
 }: ProductSizesSummaryProps) {
+  const unitLabel = measurementUnit === 'PIECES' ? 'шт' : 'пар';
   if (!sizes || sizes.length === 0) {
     return (
       <div className="flex items-center justify-center gap-2">
@@ -55,7 +58,7 @@ export function ProductSizesSummary({
         >
           {item.size}
           {item.count > 1 && (
-            <span className="text-[10px] text-gray-500">×{item.count}</span>
+            <span className="text-[10px] text-gray-500">×{item.count} {unitLabel}</span>
           )}
         </span>
       ))}

@@ -64,6 +64,7 @@ export function EditProductModal({
   const [sourceScreenshotPreview, setSourceScreenshotPreview] = useState<
     string | null
   >(null);
+  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
 
   // Store original images when they're loaded
   useEffect(() => {
@@ -92,8 +93,20 @@ export function EditProductModal({
     if (!productId) {
       setSourceScreenshot(null);
       setSourceScreenshotPreview(null);
+      setExpandedImageUrl(null);
     }
   }, [productId]);
+
+  // Close expanded image on ESC key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && expandedImageUrl) {
+        setExpandedImageUrl(null);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [expandedImageUrl]);
 
   // Mark form as ready once product data is loaded
   useEffect(() => {
@@ -670,19 +683,42 @@ export function EditProductModal({
                   </Text>
                   {existingSourceScreenshotUrl && !sourceScreenshotPreview ? (
                     <div className="relative inline-block">
-                      <Image
-                        src={existingSourceScreenshotUrl}
-                        alt="Existing source screenshot"
-                        width={128}
-                        height={128}
-                        className="h-32 w-auto rounded-lg border object-contain"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setExpandedImageUrl(existingSourceScreenshotUrl)}
+                        className="group relative block cursor-pointer overflow-hidden rounded-lg border-2 border-gray-200 transition-all duration-300 hover:border-purple-400 hover:shadow-lg dark:border-gray-700 dark:hover:border-purple-500"
+                        disabled={isSubmitting || isUpdating}
+                        aria-label="Увеличить скриншот"
+                      >
+                        <Image
+                          src={existingSourceScreenshotUrl}
+                          alt="Existing source screenshot"
+                          width={128}
+                          height={128}
+                          className="h-32 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-300 group-hover:bg-black/10">
+                          <svg
+                            className="h-8 w-8 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
+                            />
+                          </svg>
+                        </div>
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
                           // Optionally delete from server
                         }}
-                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg hover:bg-red-600"
+                        className="absolute -right-2 -top-2 z-10 cursor-pointer rounded-full bg-red-500 p-1.5 text-white shadow-lg transition-all duration-200 hover:bg-red-600 hover:scale-110"
                         disabled={isSubmitting || isUpdating}
                         aria-label="Удалить скриншот"
                         title="Удалить скриншот"
@@ -717,13 +753,36 @@ export function EditProductModal({
                     />
                   ) : (
                     <div className="relative inline-block">
-                      <Image
-                        src={sourceScreenshotPreview}
-                        alt="Source screenshot preview"
-                        width={128}
-                        height={128}
-                        className="h-32 w-auto rounded-lg border object-contain"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setExpandedImageUrl(sourceScreenshotPreview)}
+                        className="group relative block cursor-pointer overflow-hidden rounded-lg border-2 border-gray-200 transition-all duration-300 hover:border-purple-400 hover:shadow-lg dark:border-gray-700 dark:hover:border-purple-500"
+                        disabled={isSubmitting || isUpdating}
+                        aria-label="Увеличить скриншот"
+                      >
+                        <Image
+                          src={sourceScreenshotPreview}
+                          alt="Source screenshot preview"
+                          width={128}
+                          height={128}
+                          className="h-32 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-300 group-hover:bg-black/10">
+                          <svg
+                            className="h-8 w-8 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
+                            />
+                          </svg>
+                        </div>
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -733,7 +792,7 @@ export function EditProductModal({
                           setSourceScreenshot(null);
                           setSourceScreenshotPreview(null);
                         }}
-                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg hover:bg-red-600"
+                        className="absolute -right-2 -top-2 z-10 cursor-pointer rounded-full bg-red-500 p-1.5 text-white shadow-lg transition-all duration-200 hover:bg-red-600 hover:scale-110"
                         disabled={isSubmitting || isUpdating}
                         aria-label="Удалить скриншот"
                         title="Удалить скриншот"
@@ -802,6 +861,54 @@ export function EditProductModal({
           </>
         )}
       </div>
+
+      {/* Expanded Image Modal */}
+      {expandedImageUrl && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-300 ease-out"
+          onClick={() => setExpandedImageUrl(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Увеличенное изображение"
+        >
+          <div className="relative max-h-[95vh] max-w-[95vw] p-4 transition-transform duration-300 ease-out">
+            <button
+              type="button"
+              onClick={() => setExpandedImageUrl(null)}
+              className="absolute -right-2 -top-2 z-10 rounded-full bg-white/10 p-2 text-white backdrop-blur-sm transition-all duration-200 hover:bg-white/20 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50"
+              aria-label="Закрыть"
+            >
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <div
+              className="relative max-h-[95vh] max-w-[95vw]"
+              onClick={e => e.stopPropagation()}
+            >
+              <Image
+                src={expandedImageUrl}
+                alt="Expanded source screenshot"
+                width={1920}
+                height={1080}
+                className="max-h-[95vh] max-w-[95vw] object-contain drop-shadow-2xl"
+                priority
+                unoptimized={expandedImageUrl.startsWith('blob:')}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

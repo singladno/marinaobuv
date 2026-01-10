@@ -5,7 +5,7 @@ import { log } from '@/lib/logger';
 
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { getColorHex } from '@/utils/colorMapping';
+import ColorIndicator from '@/components/product/ColorIndicator';
 
 import FilterPill from './FilterPill';
 
@@ -53,7 +53,6 @@ export default function ColorFilter({
           const colorOptions = data.colors.map((colorName: string) => ({
             name: colorName,
             value: colorName,
-            hex: getColorHex(colorName),
           }));
           setColors(colorOptions);
           log.info('🎨 Colors fetched', { count: colorOptions.length });
@@ -107,10 +106,11 @@ export default function ColorFilter({
               onCheckedChange={() => handleColorToggle(color.value)}
             />
             <div
-              className="h-6 w-6 rounded-full border border-gray-300"
-              style={{ backgroundColor: color.hex }}
+              className="h-6 w-6 rounded-full border border-gray-300 flex items-center justify-center"
               aria-label={`Color ${color.name}`}
-            />
+            >
+              <ColorIndicator colorName={color.name} size="md" />
+            </div>
             <span
               className={`text-sm capitalize ${
                 value.includes(color.value)

@@ -27,10 +27,13 @@ import 'swiper/css/pagination';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
+import { Text } from '@/components/ui/Text';
 import { useUser } from '@/contexts/NextAuthUserContext';
 import { useCategories } from '@/contexts/CategoriesContext';
 import { EditProductModal } from '@/components/admin/EditProductModal';
 import { ProductSourceModal } from './ProductSourceModal';
+import { AggregatorIcon } from '@/components/icons/AggregatorIcon';
 import { UnavailableProductOverlay } from './UnavailableProductOverlay';
 import { VideoThumbnail } from '@/components/ui/VideoThumbnail';
 import {
@@ -54,6 +57,7 @@ interface ProductGalleryProps {
   height?: number; // px height for main image container
   productId?: string;
   sourceMessageIds?: string[] | null;
+  sourceScreenshotUrl?: string | null;
   isActive: boolean;
   source?: 'WA' | 'AG' | 'MANUAL';
 }
@@ -73,11 +77,15 @@ export default function ProductGalleryVertical({
   height = 560,
   productId,
   sourceMessageIds,
+  sourceScreenshotUrl,
   isActive,
   source,
 }: ProductGalleryProps) {
   const { user } = useUser();
   const { categories, loading: categoriesLoading } = useCategories();
+  const [isAgSourceModalOpen, setIsAgSourceModalOpen] = useState(false);
+  const [productData, setProductData] = useState<any>(null);
+  const [loadingProductData, setLoadingProductData] = useState(false);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTogglingActive, setIsTogglingActive] = useState(false);
@@ -769,6 +777,47 @@ export default function ProductGalleryVertical({
                         <div className="absolute left-0 top-1/2 -ml-1 h-2 w-2 -translate-y-1/2 rotate-45 border-b border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"></div>
                       </div>
                     </div>
+                  ) : source === 'AG' ? (
+                    <button
+                      type="button"
+                      onClick={async e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!productId) return;
+
+                        // If we already have the screenshot URL, open modal immediately
+                        if (sourceScreenshotUrl) {
+                          setIsAgSourceModalOpen(true);
+                          return;
+                        }
+
+                        // Otherwise, fetch product data to get screenshot URL
+                        setLoadingProductData(true);
+                        setIsAgSourceModalOpen(true); // Open modal immediately, will show loading state
+                        try {
+                          const response = await fetch(
+                            `/api/admin/products/${productId}`
+                          );
+                          if (response.ok) {
+                            const data = await response.json();
+                            setProductData(data.product);
+                          }
+                        } catch (error) {
+                          console.error(
+                            'Error fetching product data:',
+                            error
+                          );
+                        } finally {
+                          setLoadingProductData(false);
+                        }
+                      }}
+                      className="source-icon-hover-toggle transition-all duration-200 focus:outline-none"
+                      title="Просмотреть исходный скриншот агрегатора"
+                    >
+                      <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                        <AggregatorIcon className="h-full w-full" />
+                      </div>
+                    </button>
                   ) : sourceMessageIds && sourceMessageIds.length > 0 ? (
                     <button
                       type="button"
@@ -1047,7 +1096,48 @@ export default function ProductGalleryVertical({
         {isAdmin && productId && (
           <div className="absolute left-2 top-2 z-20 flex gap-2">
             {/* Source indicator */}
-            {sourceMessageIds && sourceMessageIds.length > 0 && (
+            {source === 'AG' ? (
+              <button
+                type="button"
+                onClick={async e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!productId) return;
+
+                  // If we already have the screenshot URL, open modal immediately
+                  if (sourceScreenshotUrl) {
+                    setIsAgSourceModalOpen(true);
+                    return;
+                  }
+
+                  // Otherwise, fetch product data to get screenshot URL
+                  setLoadingProductData(true);
+                  setIsAgSourceModalOpen(true); // Open modal immediately, will show loading state
+                  try {
+                    const response = await fetch(
+                      `/api/admin/products/${productId}`
+                    );
+                    if (response.ok) {
+                      const data = await response.json();
+                      setProductData(data.product);
+                    }
+                  } catch (error) {
+                    console.error(
+                      'Error fetching product data:',
+                      error
+                    );
+                  } finally {
+                    setLoadingProductData(false);
+                  }
+                }}
+                className="source-icon-hover-toggle transition-all duration-200 focus:outline-none"
+                title="Просмотреть исходный скриншот агрегатора"
+              >
+                <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                  <AggregatorIcon className="h-full w-full" />
+                </div>
+              </button>
+            ) : sourceMessageIds && sourceMessageIds.length > 0 ? (
               <button
                 type="button"
                 onClick={() => setIsSourceModalOpen(true)}
@@ -1074,7 +1164,7 @@ export default function ProductGalleryVertical({
                   </Badge>
                 )}
               </button>
-            )}
+            ) : null}
 
             {/* Edit button */}
             <button
@@ -1212,6 +1302,57 @@ export default function ProductGalleryVertical({
             productId={productId}
             productName={productName}
           />
+          {/* AG Source Screenshot Modal */}
+          {isAgSourceModalOpen && (
+            <Modal
+              isOpen={isAgSourceModalOpen}
+              onClose={() => {
+                setIsAgSourceModalOpen(false);
+                setProductData(null);
+              }}
+              title="Исходный скриншот агрегатора"
+              size="xl"
+              className="md:!max-w-4xl lg:!max-w-5xl [&>div]:!max-h-[85vh] md:[&>div]:!max-h-[90vh]"
+            >
+              <div className="max-h-[calc(85vh-120px)] overflow-y-auto p-6 md:max-h-[calc(90vh-120px)]">
+                {loadingProductData ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border bg-gray-50 p-4">
+                      {(sourceScreenshotUrl ||
+                        productData?.sourceScreenshotUrl) && (
+                        <div className="flex justify-center">
+                          <Image
+                            src={
+                              sourceScreenshotUrl ||
+                              productData?.sourceScreenshotUrl
+                            }
+                            alt="Source screenshot from aggregator"
+                            width={800}
+                            height={600}
+                            className="max-h-[400px] w-auto rounded border object-contain"
+                            onError={e => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      {!sourceScreenshotUrl &&
+                        !productData?.sourceScreenshotUrl && (
+                          <div className="py-4 text-center text-gray-500">
+                            Скриншот источника не найден
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Modal>
+          )}
           {isEditModalOpen && (
             <EditProductModal
               isOpen={isEditModalOpen}

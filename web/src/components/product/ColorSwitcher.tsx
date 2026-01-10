@@ -1,4 +1,4 @@
-import { getColorHex } from '@/utils/colorMapping';
+import ColorIndicator from '@/components/product/ColorIndicator';
 
 type ColorOption = { color: string; imageUrl: string };
 
@@ -30,7 +30,6 @@ export default function ColorSwitcher({
       {options.map((opt, index) => {
         const isSelected =
           selectedColor?.toLowerCase() === opt.color.toLowerCase();
-        const bg = getColorHex(opt.color);
         const isAdded = addedColors.some(
           c => c && c.toLowerCase() === opt.color.toLowerCase()
         );
@@ -53,12 +52,7 @@ export default function ColorSwitcher({
                 : 'border-muted'
             }`}
           >
-            <span
-              aria-hidden
-              className="block h-4 w-4 rounded-full"
-              // eslint-disable-next-line @next/next/no-css-tags
-              style={{ backgroundColor: bg }}
-            />
+            <ColorIndicator colorName={opt.color} size="md" />
             {showAddIndicators && !isAdded && onAddColor && (
               <span
                 className="absolute -bottom-1 -right-1 inline-flex h-4 w-4 translate-x-0.5 translate-y-0.5 items-center justify-center rounded-full bg-white shadow ring-1 ring-muted"

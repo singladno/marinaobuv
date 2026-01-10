@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/CategorySelector';
 import type { FlatAdminCategory, AdminCategoryNode } from '@/types/category';
 import { slugify } from '@/utils/slugify';
+import { CategoryIconSelector, type CategoryIconName } from './CategoryIconSelector';
 
 type Props = {
   isOpen: boolean;
@@ -28,6 +29,7 @@ type FormState = {
   parentId: string | null;
   urlSegment: string;
   isActive: boolean;
+  icon: CategoryIconName;
 };
 
 const initialState: FormState = {
@@ -35,6 +37,7 @@ const initialState: FormState = {
   parentId: null,
   urlSegment: '',
   isActive: true,
+  icon: null,
 };
 
 function generateUrlSegment(
@@ -123,6 +126,7 @@ export function CategoryModal({
           parentId: category.parentId || null,
           urlSegment: category.segment,
           isActive: category.isActive,
+          icon: (category.icon as CategoryIconName) || null,
         });
       } else {
         setForm({
@@ -187,6 +191,7 @@ export function CategoryModal({
             parentId: form.parentId || null,
             urlSegment,
             isActive: form.isActive,
+            icon: !form.parentId ? form.icon : null, // Only save icon for first-level categories
           }),
         });
         const data = await response.json();
@@ -208,6 +213,7 @@ export function CategoryModal({
             parentId: form.parentId || null,
             urlSegment,
             isActive: form.isActive,
+            icon: !form.parentId ? form.icon : null, // Only save icon for first-level categories
           }),
         });
         const data = await response.json();
@@ -323,6 +329,14 @@ export function CategoryModal({
                 </p>
               </div>
             </div>
+
+            {/* Icon selector - only for first-level categories (no parent) */}
+            {!form.parentId && (
+              <CategoryIconSelector
+                value={form.icon}
+                onChange={icon => updateField('icon', icon)}
+              />
+            )}
           </div>
 
           {/* Status Messages */}

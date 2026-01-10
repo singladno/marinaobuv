@@ -6,6 +6,7 @@ export type AdminCategoryNode = {
   parentId: string | null;
   sort: number;
   isActive: boolean;
+  icon?: string | null;
   urlPath: string;
   segment: string;
   directProductCount: number;

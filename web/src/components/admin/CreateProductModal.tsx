@@ -31,6 +31,7 @@ export interface CreateProductData {
   videos?: VideoFile[];
   sourceScreenshot?: ImageFile | null;
   providerId?: string | null;
+  measurementUnit?: 'PAIRS' | 'PIECES';
 }
 
 interface CreateProductModalProps {

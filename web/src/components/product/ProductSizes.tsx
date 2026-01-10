@@ -3,10 +3,14 @@ import { Text } from '@/components/ui/Text';
 
 export default function ProductSizes({
   sizes,
+  measurementUnit = 'PAIRS',
 }: {
   sizes: Array<{ size: string; count: number }>;
+  measurementUnit?: 'PAIRS' | 'PIECES';
 }) {
   if (!sizes.length) return null;
+
+  const unitLabel = measurementUnit === 'PIECES' ? 'шт' : 'пар';
 
   // Sizes are already in the correct format
   const uniqueSizes = sizes;
@@ -23,7 +27,7 @@ export default function ProductSizes({
           >
             <div className="font-medium">{size}</div>
             {count > 1 && (
-              <div className="text-muted mt-1 text-xs">{count} шт</div>
+              <div className="text-muted mt-1 text-xs">{count} {unitLabel}</div>
             )}
           </div>
         ))}

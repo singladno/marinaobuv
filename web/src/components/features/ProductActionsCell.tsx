@@ -104,7 +104,7 @@ export function ProductActionsCell({
                   title={`Просмотреть ${product.sourceMessageIds.length} источник${product.sourceMessageIds.length === 1 ? '' : product.sourceMessageIds.length < 5 ? 'а' : 'ов'}`}
                   aria-label="Просмотреть источник"
                 >
-                  {product.source === 'WA' ? (
+                  {product.source === 'WA' || product.source === 'AG' ? (
                     <Image
                       src="/images/whatsapp-icon.png"
                       alt="WhatsApp"

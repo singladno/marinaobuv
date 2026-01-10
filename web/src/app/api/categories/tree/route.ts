@@ -5,17 +5,41 @@ import { prisma } from '@/lib/server/db';
 export async function GET() {
   try {
     // Fetch ALL active categories once (unlimited depth) and build the tree manually
-    const categories = await prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: [{ parentId: 'asc' }, { sort: 'asc' }],
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        path: true,
-        parentId: true,
-      },
-    });
+    // Try to include icon field, but handle case where it might not exist yet
+    let categories;
+    try {
+      categories = await prisma.category.findMany({
+        where: { isActive: true },
+        orderBy: [{ parentId: 'asc' }, { sort: 'asc' }],
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          path: true,
+          parentId: true,
+          icon: true,
+        },
+      });
+    } catch (error: any) {
+      // If icon field doesn't exist yet, fetch without it
+      if (error?.message?.includes('icon') || error?.message?.includes('Unknown field')) {
+        categories = await prisma.category.findMany({
+          where: { isActive: true },
+          orderBy: [{ parentId: 'asc' }, { sort: 'asc' }],
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            path: true,
+            parentId: true,
+          },
+        });
+        // Add null icon to all categories
+        categories = categories.map((cat: any) => ({ ...cat, icon: null }));
+      } else {
+        throw error;
+      }
+    }
 
     // Compute leaf product counts by category
     const grouped = await prisma.product.groupBy({
@@ -35,6 +59,7 @@ export async function GET() {
       name: string;
       slug: string;
       path: string;
+      icon: string | null;
       children: Node[];
     };
 
@@ -55,6 +80,7 @@ export async function GET() {
       name: c.name,
       slug: c.slug,
       path: c.path,
+      icon: (c as any).icon ?? null,
       children: (childrenByParent.get(c.id) ?? []).map(toNode),
     });
 

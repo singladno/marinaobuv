@@ -37,7 +37,7 @@ export function SizeRow({
 
   return (
     <div
-      className={`grid grid-cols-[minmax(140px,1fr)_120px_44px] gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-colors dark:border-gray-700 dark:bg-gray-800 ${
+      className={`grid grid-cols-[minmax(140px,1fr)_150px_44px] gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-colors dark:border-gray-700 dark:bg-gray-800 ${
         isUpdating
           ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20'
           : 'hover:border-purple-300 hover:bg-purple-50/50 dark:hover:border-purple-700 dark:hover:bg-purple-900/10'

@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       currency = 'RUB',
       isActive = true,
       providerId,
+      measurementUnit = 'PAIRS',
     } = body;
 
     // Validate required fields
@@ -192,6 +193,7 @@ export async function POST(req: NextRequest) {
       sizes: sizes,
       isActive,
       source: 'MANUAL', // Manually created products from admin panel
+      measurementUnit: measurementUnit || 'PAIRS',
       activeUpdatedAt: new Date(),
     };
 
@@ -348,6 +350,7 @@ export async function PATCH(req: NextRequest) {
       'batchProcessingStatus',
       'gptRequest',
       'gptResponse',
+      'measurementUnit',
     ] as any;
 
     const updateData: Record<string, unknown> = {};

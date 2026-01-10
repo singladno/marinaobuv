@@ -632,7 +632,7 @@ function ProductCard({
                         className="source-icon-hover-toggle absolute left-2 top-2 z-20 cursor-pointer transition-all duration-200 focus:outline-none"
                         title="Просмотр источника сообщений"
                       >
-                        {source === 'WA' ? (
+                        {source === 'WA' || source === 'AG' ? (
                           <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
                             <Image
                               src="/images/whatsapp-icon.png"

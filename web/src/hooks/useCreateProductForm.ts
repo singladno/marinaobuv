@@ -13,6 +13,7 @@ const initialFormData: Partial<CreateProductData> = {
   description: '',
   sizes: [],
   providerId: null,
+  measurementUnit: 'PAIRS',
 };
 
 export function useCreateProductForm() {
@@ -74,6 +75,7 @@ export function useCreateProductForm() {
       season: formData.season,
       description: formData.description.trim(),
       sizes: formData.sizes,
+      measurementUnit: formData.measurementUnit || 'PAIRS',
     };
   };
 

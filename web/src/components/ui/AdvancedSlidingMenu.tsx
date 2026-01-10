@@ -13,6 +13,7 @@ import {
 import { FaShoePrints } from 'react-icons/fa';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
+import { CategoryIcon } from '@/components/admin/categories/CategoryIconSelector';
 
 interface MenuItem {
   id: string;
@@ -20,6 +21,7 @@ interface MenuItem {
   href?: string;
   children?: MenuItem[];
   icon?: React.ReactNode;
+  iconName?: string | null;
 }
 
 interface AdvancedSlidingMenuProps {
@@ -63,15 +65,28 @@ async function fetchCatalogData(): Promise<MenuItem[]> {
       id: string;
       name: string;
       path: string;
+      icon: string | null;
       children: any[];
     }>;
-    const mapNode = (n: any, isFirstLevel: boolean = false): MenuItem => ({
-      id: n.id,
-      name: n.name,
-      href: `/catalog/${n.path}`, // Use full database path - single source of truth
-      children: (n.children || []).map((child: any) => mapNode(child, false)),
-      icon: isFirstLevel ? getCategoryIcon(n.name) : undefined,
-    });
+    const mapNode = (n: any, isFirstLevel: boolean = false): MenuItem => {
+      // For first-level items, prioritize saved icon from database
+      // Check if icon exists and is not empty string
+      const hasSavedIcon =
+        isFirstLevel &&
+        n.icon &&
+        typeof n.icon === 'string' &&
+        n.icon.trim() !== '';
+      const savedIcon = hasSavedIcon ? n.icon : null;
+      return {
+        id: n.id,
+        name: n.name,
+        href: `/catalog/${n.path}`, // Use full database path - single source of truth
+        children: (n.children || []).map((child: any) => mapNode(child, false)),
+        iconName: isFirstLevel ? savedIcon : undefined, // Use saved icon name if available
+        // Only use fallback icon if no saved icon exists
+        icon: isFirstLevel && !savedIcon ? getCategoryIcon(n.name) : undefined,
+      };
+    };
     return items.map(item => mapNode(item, true));
   } catch (e) {
     console.error('Failed to fetch catalogData', e);
@@ -85,17 +100,31 @@ export function AdvancedSlidingMenu({
 }: AdvancedSlidingMenuProps) {
   const [root, setRoot] = useState<MenuItem[]>([]);
   const [currentLevel, setCurrentLevel] = useState<MenuItem[]>([]);
-  const [navigationStack, setNavigationStack] = useState<MenuItem[]>([]);
-  const [hoveredItem, setHoveredItem] = useState<MenuItem | null>(null);
-  const [showSubMenu, setShowSubMenu] = useState(false);
-  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchCatalogData().then(items => {
       setRoot(items);
       setCurrentLevel(items);
     });
   }, []);
+  const [navigationStack, setNavigationStack] = useState<MenuItem[]>([]);
+  const [hoveredItem, setHoveredItem] = useState<MenuItem | null>(null);
+  const [showSubMenu, setShowSubMenu] = useState(false);
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Refetch categories when menu opens to get latest icon updates
+  useEffect(() => {
+    if (isOpen) {
+      fetchCatalogData().then(items => {
+        setRoot(items);
+        // Only update currentLevel if we're at root level (not in navigation)
+        if (navigationStack.length === 0) {
+          setCurrentLevel(items);
+        }
+      });
+    }
+  }, [isOpen, navigationStack.length]);
 
   // Reset menu state when closed
   useEffect(() => {
@@ -159,13 +188,13 @@ export function AdvancedSlidingMenu({
   };
 
   const handleItemHover = (item: MenuItem) => {
-    if (item.children && item.children.length > 0) {
-      // Clear any existing timeout
-      if (hoverTimeout) {
-        clearTimeout(hoverTimeout);
-        setHoverTimeout(null);
-      }
+    // Clear any existing timeout
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      setHoverTimeout(null);
+    }
 
+    if (item.children && item.children.length > 0) {
       // If we're in navigation mode (third level), reset to show new subcategory
       if (navigationStack.length > 0) {
         setNavigationStack([]);
@@ -174,6 +203,10 @@ export function AdvancedSlidingMenu({
 
       setHoveredItem(item);
       setShowSubMenu(true);
+    } else {
+      // Item has no children - hide sub-menu
+      setHoveredItem(item);
+      setShowSubMenu(false);
     }
   };
 
@@ -225,19 +258,25 @@ export function AdvancedSlidingMenu({
                 {root.map(item => (
                   <li key={item.id}>
                     <div
-                      className={`flex cursor-pointer items-center justify-between rounded-lg px-4 py-1.5 transition-colors ${
+                      className={`group flex cursor-pointer items-center justify-between rounded-lg px-4 py-1.5 transition-colors ${
                         hoveredItem?.id === item.id
                           ? 'bg-gray-100'
                           : 'hover:bg-gray-100'
                       }`}
                       onMouseEnter={() => handleItemHover(item)}
+                      onClick={() => handleItemClick(item)}
                     >
                       <div className="flex items-center gap-3">
-                        {item.icon && (
-                          <div className="flex items-center justify-center text-gray-600">
+                        {item.iconName ? (
+                          <CategoryIcon
+                            iconName={item.iconName as any}
+                            className="h-5 w-5"
+                          />
+                        ) : item.icon ? (
+                          <div className="flex items-center justify-center text-gray-400 transition-colors group-hover:text-black">
                             {item.icon}
                           </div>
-                        )}
+                        ) : null}
                         <Text as="span" className="text-sm">
                           {item.name}
                         </Text>
@@ -262,7 +301,10 @@ export function AdvancedSlidingMenu({
         {/* Sub Menu (appears on hover or when navigating) */}
         <div
           className={`w-64 border-l bg-white shadow-xl transition-all duration-150 ease-out ${
-            showSubMenu || navigationStack.length > 0
+            (showSubMenu &&
+              hoveredItem?.children &&
+              hoveredItem.children.length > 0) ||
+            navigationStack.length > 0
               ? 'translate-x-0 opacity-100'
               : 'pointer-events-none -translate-x-full opacity-0'
           }`}
@@ -272,7 +314,11 @@ export function AdvancedSlidingMenu({
               clearTimeout(hoverTimeout);
               setHoverTimeout(null);
             }
-            if (navigationStack.length === 0) {
+            if (
+              navigationStack.length === 0 &&
+              hoveredItem?.children &&
+              hoveredItem.children.length > 0
+            ) {
               setShowSubMenu(true);
             }
           }}

@@ -12,6 +12,7 @@ type CategoryRecord = {
   parentId: string | null;
   sort: number;
   isActive: boolean;
+  icon: string | null;
   createdAt: Date;
   updatedAt: Date;
   seoCanonical: string | null;
@@ -31,7 +32,7 @@ type TreeNode = CategoryRecord & {
   children: TreeNode[];
 };
 
-const urlPath = (path: string) => path.replace(/^obuv\/?/, '');
+const urlPath = (path: string) => path;
 const lastSegment = (path: string) => path.split('/').pop() || '';
 
 const capitalizeFirstLetter = (str: string): string => {
@@ -165,6 +166,7 @@ export async function POST(request: NextRequest) {
       urlSegment,
       slug: slugInput,
       isActive = true,
+      icon,
       seoTitle,
       seoDescription,
       seoH1,
@@ -229,6 +231,7 @@ export async function POST(request: NextRequest) {
         path,
         sort: sortValue,
         isActive: Boolean(isActive),
+        icon: !parentId ? icon || null : null, // Only save icon for first-level categories
         seoTitle,
         seoDescription,
         seoH1,

@@ -35,21 +35,52 @@ export default async function ProductPage({
       availabilityCheckedAt: true,
       sizes: true,
       sourceMessageIds: true,
+      sourceScreenshotUrl: true,
       isActive: true,
+      measurementUnit: true,
+      source: true,
       images: {
         where: {
           isActive: true,
         },
         orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
+        select: {
+          url: true,
+          alt: true,
+          color: true,
+        },
       },
       videos: {
         where: {
           isActive: true,
         },
         orderBy: { sort: 'asc' },
+        select: {
+          id: true,
+          url: true,
+          alt: true,
+          sort: true,
+          duration: true,
+        },
       },
-      source: true,
-      category: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          path: true,
+          parentId: true,
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              path: true,
+              parentId: true,
+            },
+          },
+        },
+      },
     },
   });
   if (!product) return notFound();
@@ -121,6 +152,7 @@ export default async function ProductPage({
                   ? (product.sourceMessageIds as string[])
                   : null
               }
+              sourceScreenshotUrl={product.sourceScreenshotUrl}
               isActive={product.isActive}
               source={product.source as any}
               initialSelectedColor={initialColorParam || null}
@@ -152,6 +184,7 @@ export default async function ProductPage({
               }
               imageUrl={images[0]?.url}
               isActive={product.isActive}
+              measurementUnit={product.measurementUnit as 'PAIRS' | 'PIECES'}
             />
           </div>
         </div>

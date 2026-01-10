@@ -4,7 +4,7 @@ import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { slugify } from '@/utils/slugify';
 
-const urlPath = (path: string) => path.replace(/^obuv\/?/, '');
+const urlPath = (path: string) => path;
 const lastSegment = (path: string) => path.split('/').pop() || '';
 
 const capitalizeFirstLetter = (str: string): string => {
@@ -72,6 +72,7 @@ export async function PATCH(
       urlSegment,
       slug: slugInput,
       isActive = true,
+      icon,
       seoTitle,
       seoDescription,
       seoH1,
@@ -165,23 +166,36 @@ export async function PATCH(
       slug = await ensureUniqueSlug(slugBase, categoryId);
     }
 
+    // Build update data object - use unchecked input to allow direct field updates
+    const normalizedParentId =
+      parentId && typeof parentId === 'string' && parentId.trim()
+        ? parentId
+        : null;
+
+    const updateData: any = {
+      name: capitalizeFirstLetter(name),
+      slug,
+      path,
+      sort: existingCategory.sort,
+      isActive: Boolean(isActive),
+      seoNoindex: Boolean(seoNoindex),
+      // Use parentId directly in unchecked input (not relation syntax)
+      parentId: normalizedParentId,
+      // Only save icon for first-level categories (when parentId is null)
+      icon: !normalizedParentId ? icon || null : null,
+    };
+
+    // Only include optional SEO fields if they're provided
+    if (seoTitle !== undefined) updateData.seoTitle = seoTitle;
+    if (seoDescription !== undefined)
+      updateData.seoDescription = seoDescription;
+    if (seoH1 !== undefined) updateData.seoH1 = seoH1;
+    if (seoCanonical !== undefined) updateData.seoCanonical = seoCanonical;
+    if (seoIntroHtml !== undefined) updateData.seoIntroHtml = seoIntroHtml;
+
     const updatedCategory = await prisma.category.update({
       where: { id: categoryId },
-      data: {
-        name: capitalizeFirstLetter(name),
-        parentId,
-        slug,
-        path,
-        // Keep existing sort value when editing
-        sort: existingCategory.sort,
-        isActive: Boolean(isActive),
-        seoTitle,
-        seoDescription,
-        seoH1,
-        seoCanonical,
-        seoIntroHtml,
-        seoNoindex: Boolean(seoNoindex),
-      },
+      data: updateData,
     });
 
     // Calculate product counts
@@ -255,7 +269,8 @@ export async function DELETE(
       return NextResponse.json(
         {
           ok: false,
-          error: 'Нельзя удалить категорию с подкатегориями. Сначала удалите все подкатегории.',
+          error:
+            'Нельзя удалить категорию с подкатегориями. Сначала удалите все подкатегории.',
         },
         { status: 400 }
       );

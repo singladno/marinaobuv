@@ -28,7 +28,7 @@ export function CategoryTreeItem({
   onDelete,
 }: Props) {
   const hasChildren = (node.children || []).length > 0;
-  const [expanded, setExpanded] = React.useState(depth < 2);
+  const [expanded, setExpanded] = React.useState(false);
   const isSelected = node.id === selectedId;
   const needle = searchTerm.trim().toLowerCase();
   const highlight =
@@ -48,6 +48,7 @@ export function CategoryTreeItem({
         highlight={highlight}
         hasChildren={hasChildren}
         expanded={expanded}
+        depth={depth}
         onSelect={() => onSelect(node.id)}
         onToggleExpand={e => {
           e.stopPropagation();

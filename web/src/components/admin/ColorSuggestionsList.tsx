@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 
-import { getColorHex } from '@/utils/colorMapping';
+import ColorIndicator from '@/components/product/ColorIndicator';
 
 interface ColorSuggestionsListProps {
   suggestions: string[];
@@ -37,7 +37,6 @@ export function ColorSuggestionsList({
       className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800"
     >
       {suggestions.map((color, index) => {
-        const colorHex = getColorHex(color);
         return (
           <li
             key={color}
@@ -48,11 +47,9 @@ export function ColorSuggestionsList({
                 : 'hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
-            <span
-              className="h-4 w-4 shrink-0 rounded-full border border-gray-300 dark:border-gray-600"
-              style={{ backgroundColor: colorHex }}
-              aria-hidden="true"
-            />
+            <span className="h-4 w-4 shrink-0 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center">
+              <ColorIndicator colorName={color} size="sm" />
+            </span>
             <span>{color}</span>
           </li>
         );

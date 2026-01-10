@@ -3,6 +3,13 @@
 import { Input } from '@/components/ui/Input';
 import { ProductSizesCell } from '@/components/features/ProductSizesCell';
 import { Text } from '@/components/ui/Text';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/Select';
 
 import type { CreateProductData } from './CreateProductModal';
 import { CreateProductGenderSeasonFields } from './CreateProductGenderSeasonFields';
@@ -99,6 +106,36 @@ export function CreateProductOptionalFields({
         {errors.providerId && (
           <Text variant="caption" className="text-red-500">
             {errors.providerId}
+          </Text>
+        )}
+      </div>
+
+      {/* Measurement Unit */}
+      <div className="space-y-2">
+        <Text variant="body" className="font-medium text-gray-900 dark:text-white">
+          Единица измерения
+        </Text>
+        <Select
+          value={formData.measurementUnit || 'PAIRS'}
+          onValueChange={value => {
+            onFieldChange('measurementUnit', value as 'PAIRS' | 'PIECES');
+            onClearError('measurementUnit');
+          }}
+          disabled={isSubmitting}
+        >
+          <SelectTrigger>
+            <SelectValue>
+              {formData.measurementUnit === 'PIECES' ? 'Штуки' : 'Пары'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="PAIRS">Пары</SelectItem>
+            <SelectItem value="PIECES">Штуки</SelectItem>
+          </SelectContent>
+        </Select>
+        {errors.measurementUnit && (
+          <Text variant="caption" className="text-red-500">
+            {errors.measurementUnit}
           </Text>
         )}
       </div>

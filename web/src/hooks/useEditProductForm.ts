@@ -139,6 +139,7 @@ export function useEditProductForm(
           description: product.description || '',
           sizes: product.sizes || [],
           providerId,
+          measurementUnit: (product as any).measurementUnit || 'PAIRS',
         });
 
         console.log('[useEditProductForm] Form data set:', {
@@ -252,6 +253,7 @@ export function useEditProductForm(
       description: formData.description.trim(),
       sizes: formData.sizes,
       providerId: formData.providerId ?? null,
+      measurementUnit: formData.measurementUnit || 'PAIRS',
     };
   };
 

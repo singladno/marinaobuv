@@ -1,10 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronRightIcon, CheckIcon } from '@heroicons/react/24/outline';
 
 import { Badge } from '@/components/ui/Badge';
 import type { AdminCategoryNode } from '@/types/category';
+import type { CategoryIconName } from './CategoryIconSelector';
+import { CategoryIcon } from './CategoryIconSelector';
 
 import { CategoryTreeItemActions } from './CategoryTreeItemActions';
 
@@ -14,6 +16,7 @@ type Props = {
   highlight: boolean;
   hasChildren: boolean;
   expanded: boolean;
+  depth: number;
   onSelect: () => void;
   onToggleExpand: (e: React.MouseEvent) => void;
   onCreateSubcategory?: (parentId: string) => void;
@@ -27,12 +30,14 @@ export function CategoryTreeItemContent({
   highlight,
   hasChildren,
   expanded,
+  depth,
   onSelect,
   onToggleExpand,
   onCreateSubcategory,
   onEdit,
   onDelete,
 }: Props) {
+  const isFirstLevel = depth === 0;
   return (
     <div
       className={`flex cursor-pointer items-center gap-2 rounded-lg px-1 py-1 transition-colors duration-150 ${
@@ -58,6 +63,15 @@ export function CategoryTreeItemContent({
       )}
       <div className="flex min-w-0 flex-1 flex-col rounded-md px-1 text-left">
         <div className="flex flex-wrap items-center gap-2">
+          {isFirstLevel && node.icon && (
+            <CategoryIcon
+              iconName={node.icon as CategoryIconName}
+              className="h-4 w-4 flex-shrink-0 text-gray-600"
+            />
+          )}
+          {isFirstLevel && isSelected && (
+            <CheckIcon className="h-4 w-4 flex-shrink-0 text-violet-600" />
+          )}
           <span
             className={`min-w-0 break-words text-sm font-medium ${
               highlight ? 'text-violet-700' : 'text-gray-900'

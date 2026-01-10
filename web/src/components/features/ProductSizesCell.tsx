@@ -14,6 +14,7 @@ interface ProductSizesCellProps {
   disabled?: boolean;
   defaultCollapsed?: boolean;
   hideSummary?: boolean;
+  measurementUnit?: 'PAIRS' | 'PIECES';
 }
 
 export function ProductSizesCell({
@@ -22,6 +23,7 @@ export function ProductSizesCell({
   disabled = false,
   defaultCollapsed = false,
   hideSummary = false,
+  measurementUnit = 'PAIRS',
 }: ProductSizesCellProps) {
   const hasSizes = sizes && sizes.length > 0;
 
@@ -111,6 +113,7 @@ export function ProductSizesCell({
             canEdit={canEdit}
             isEditing={isEditing}
             onToggleEdit={() => setIsEditing(prev => !prev)}
+            measurementUnit={measurementUnit}
           />
         </div>
       )}

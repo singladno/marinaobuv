@@ -15,6 +15,7 @@ model Category {
   path           String           @unique
   sort           Int              @default(500)
   isActive       Boolean          @default(true)
+  icon           String?          // Icon name for first-level categories
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   seoCanonical   String?
@@ -61,6 +62,7 @@ model Product {
   gptResponse           String?
   providerId            String?
   source                ProductSource  @default(WA)
+  measurementUnit       MeasurementUnit @default(PAIRS)
   agLabels              Json?
   orderItems            OrderItem[]
   category              Category       @relation(fields: [categoryId], references: [id])
@@ -606,4 +608,9 @@ enum ProductSource {
   WA
   AG
   MANUAL
+}
+
+enum MeasurementUnit {
+  PAIRS
+  PIECES
 }
