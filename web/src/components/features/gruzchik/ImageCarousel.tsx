@@ -18,20 +18,43 @@ interface ImageCarouselProps {
   images: string[];
   alt: string;
   className?: string;
+  orderNumber?: string;
+  productArticle?: string | null;
+  count?: number;
+  itemCode?: string | null;
 }
 
-export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
+export function ImageCarousel({
+  images,
+  alt,
+  className,
+  orderNumber,
+  productArticle,
+  count,
+  itemCode,
+}: ImageCarouselProps) {
   const swiperRef = useRef<SwiperType | null>(null);
+  const modalSwiperRef = useRef<SwiperType | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [modalActiveIndex, setModalActiveIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleImageClick = () => {
+    setModalActiveIndex(activeIndex);
     setIsModalOpen(true);
   };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
   };
+
+  // Sync modal index when modal opens
+  useEffect(() => {
+    if (isModalOpen && modalSwiperRef.current) {
+      setModalActiveIndex(activeIndex);
+      modalSwiperRef.current.slideTo(activeIndex);
+    }
+  }, [isModalOpen, activeIndex]);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -194,17 +217,17 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
       {/* Full Screen Modal */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-white"
           onClick={handleModalClose}
         >
           <div
-            className="relative h-full w-full"
+            className="relative flex h-full w-full flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {/* Close Button */}
             <button
               onClick={handleModalClose}
-              className="absolute right-4 top-4 z-10 h-10 w-10 rounded-full bg-black/50 p-2 text-white transition-all hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white/50"
+              className="absolute right-4 top-4 z-10 h-10 w-10 rounded-full bg-gray-800/80 p-2 text-white transition-all hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500"
               aria-label="Close modal"
             >
               <svg
@@ -222,86 +245,142 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
               </svg>
             </button>
 
-            {/* Full Screen Swiper */}
-            <Swiper
-              modules={[Navigation, Pagination, EffectFade]}
-              spaceBetween={0}
-              slidesPerView={1}
-              loop={true}
-              navigation={{
-                nextEl: '.modal-swiper-button-next',
-                prevEl: '.modal-swiper-button-prev',
-              }}
-              pagination={{
-                clickable: true,
-                bulletClass: 'modal-swiper-pagination-bullet',
-                bulletActiveClass: 'modal-swiper-pagination-bullet-active',
-              }}
-              effect="fade"
-              fadeEffect={{
-                crossFade: true,
-              }}
-              speed={300}
-              initialSlide={activeIndex}
-              className="h-full w-full"
+            {/* Image Section */}
+            <div
+              className="relative flex-shrink-0 overflow-hidden"
+              style={{ height: '70%', maxHeight: '70vh' }}
             >
-              {images.map((image, index) => (
-                <SwiperSlide key={index}>
-                  <div className="flex h-full w-full items-center justify-center p-8">
-                    <Image
-                      src={image}
-                      alt={`${alt} - ${index + 1}`}
-                      width={1200}
-                      height={800}
-                      className="max-h-full max-w-full object-contain"
-                      sizes="100vw"
-                      priority={index === activeIndex}
-                    />
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
+              <Swiper
+                modules={[Navigation, Pagination, EffectFade]}
+                spaceBetween={0}
+                slidesPerView={1}
+                loop={true}
+                navigation={{
+                  nextEl: '.modal-swiper-button-next',
+                  prevEl: '.modal-swiper-button-prev',
+                }}
+                pagination={{
+                  clickable: true,
+                  bulletClass: 'modal-swiper-pagination-bullet',
+                  bulletActiveClass: 'modal-swiper-pagination-bullet-active',
+                }}
+                effect="fade"
+                fadeEffect={{
+                  crossFade: true,
+                }}
+                speed={300}
+                initialSlide={activeIndex}
+                onSwiper={swiper => {
+                  modalSwiperRef.current = swiper;
+                }}
+                onSlideChange={swiper => {
+                  setModalActiveIndex(swiper.realIndex);
+                }}
+                className="h-full w-full"
+              >
+                {images.map((image, index) => (
+                  <SwiperSlide key={index}>
+                    <div className="flex h-full w-full items-center justify-center px-4 pb-2 pt-4">
+                      <Image
+                        src={image}
+                        alt={`${alt} - ${index + 1}`}
+                        width={1200}
+                        height={800}
+                        className="max-h-full max-w-full object-contain"
+                        sizes="100vw"
+                        priority={index === activeIndex}
+                      />
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
 
-            {/* Modal Navigation Buttons */}
-            {images.length > 1 && (
-              <>
-                <button
-                  className="modal-swiper-button-prev absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white transition-all hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white/50"
-                  aria-label="Previous image"
-                >
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              {/* Modal Navigation Buttons - Positioned relative to image section */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    className="modal-swiper-button-prev absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-gray-800/80 p-3 text-white transition-all hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    aria-label="Previous image"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                </button>
-                <button
-                  className="modal-swiper-button-next absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white transition-all hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white/50"
-                  aria-label="Next image"
-                >
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                    <svg
+                      className="h-6 w-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    className="modal-swiper-button-next absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-gray-800/80 p-3 text-white transition-all hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    aria-label="Next image"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </>
+                    <svg
+                      className="h-6 w-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Order Info Section - Right After Image */}
+            {(orderNumber ||
+              productArticle ||
+              count !== undefined ||
+              itemCode) && (
+              <div className="flex flex-1 items-center overflow-y-auto border-t border-gray-200 bg-white px-6 pb-3 pt-2">
+                <div className="grid w-full grid-cols-2 gap-4 text-sm text-gray-900 md:grid-cols-4">
+                  {orderNumber && (
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-600">Заказ:</span>
+                      <span className="text-base font-semibold">
+                        #{orderNumber}
+                      </span>
+                    </div>
+                  )}
+                  {productArticle && (
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-600">
+                        Артикул:
+                      </span>
+                      <span className="text-base font-semibold">
+                        {productArticle}
+                      </span>
+                    </div>
+                  )}
+                  {count !== undefined && (
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-600">Кол-во:</span>
+                      <span className="text-base font-semibold">{count}</span>
+                    </div>
+                  )}
+                  {itemCode && (
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-600">
+                        Позиция:
+                      </span>
+                      <span className="font-mono text-base font-semibold">
+                        {itemCode}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Modal Styles */}
@@ -313,13 +392,13 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
               .modal-swiper-pagination-bullet {
                 width: 12px !important;
                 height: 12px !important;
-                background: rgba(255, 255, 255, 0.5) !important;
+                background: rgba(0, 0, 0, 0.3) !important;
                 opacity: 1 !important;
                 margin: 0 6px !important;
               }
 
               .modal-swiper-pagination-bullet-active {
-                background: white !important;
+                background: rgba(0, 0, 0, 0.8) !important;
               }
 
               .modal-swiper-button-disabled {

@@ -207,7 +207,14 @@ export function OrderItemCard({
 
       <CardContent className="space-y-4 px-3">
         {/* Image Carousel */}
-        <ImageCarousel images={images} alt={item.itemName} />
+        <ImageCarousel
+          images={images}
+          alt={item.itemName}
+          orderNumber={item.orderNumber}
+          productArticle={item.itemArticle}
+          count={item.itemQty}
+          itemCode={item.itemCode}
+        />
 
         {/* Order Info */}
         <div className="space-y-2">

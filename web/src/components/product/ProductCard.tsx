@@ -117,6 +117,8 @@ function ProductCard({
   const [editSortIndexValue, setEditSortIndexValue] = useState('');
   const sortIndexInputRef = useRef<HTMLInputElement>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const [togglingColors, setTogglingColors] = useState<Set<string>>(new Set());
+  const [colorActiveStates, setColorActiveStates] = useState<Map<string, boolean>>(new Map());
 
   // Sync optimistic state with prop when it changes externally
   useEffect(() => {
@@ -371,7 +373,97 @@ function ProductCard({
     }
   };
 
+  const handleColorToggle = async (color: string, isActive: boolean) => {
+    if (!productId || !isAdmin) return;
+
+    // Optimistic update
+    setTogglingColors(prev => new Set(prev).add(color));
+    setColorActiveStates(prev => {
+      const newMap = new Map(prev);
+      newMap.set(color, isActive);
+      return newMap;
+    });
+
+    try {
+      const response = await fetch(
+        `/api/admin/products/${productId}/colors/${encodeURIComponent(color)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ isActive }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update color activation');
+      }
+
+      // Trigger product update callback to refresh data
+      onProductUpdated?.();
+    } catch (error) {
+      console.error('Error toggling color:', error);
+      // Revert optimistic update on error
+      setColorActiveStates(prev => {
+        const newMap = new Map(prev);
+        newMap.set(color, !isActive);
+        return newMap;
+      });
+    } finally {
+      setTogglingColors(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(color);
+        return newSet;
+      });
+    }
+  };
+
   const isAdmin = user?.role === 'ADMIN';
+
+  // Fetch color active states on mount and when productId changes
+  useEffect(() => {
+    if (!productId || !isAdmin || colorOptions.length === 0) return;
+
+    // Fetch product with images to get color active states
+    const fetchColorStates = async () => {
+      try {
+        const response = await fetch(`/api/admin/products/${productId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const states = new Map<string, boolean>();
+          // Group images by color and check if any are active
+          const colorGroups = new Map<string, boolean>();
+          (data.product?.images || []).forEach((img: any) => {
+            if (img.color) {
+              const colorKey = img.color.toLowerCase();
+              if (!colorGroups.has(colorKey)) {
+                colorGroups.set(colorKey, false);
+              }
+              if (img.isActive) {
+                colorGroups.set(colorKey, true);
+              }
+            }
+          });
+          colorGroups.forEach((isActive, color) => {
+            // Find the original color name (case-sensitive)
+            const originalColor = colorOptions.find(
+              opt => opt.color.toLowerCase() === color
+            )?.color;
+            if (originalColor) {
+              states.set(originalColor, isActive);
+            }
+          });
+          setColorActiveStates(states);
+        }
+      } catch (error) {
+        console.error('Error fetching color states:', error);
+      }
+    };
+
+    fetchColorStates();
+  }, [productId, isAdmin, colorOptions]);
+
   const isInactive = !optimisticIsActive;
 
   return (
@@ -696,7 +788,10 @@ function ProductCard({
             </div>
             <div className="relative z-30">
               <ColorSwitcher
-                options={colorOptions}
+                options={colorOptions.map(opt => ({
+                  ...opt,
+                  isActive: colorActiveStates.get(opt.color) ?? true,
+                }))}
                 selectedColor={selectedColor || colorOptions[0]?.color || null}
                 onSelect={setSelectedColor}
                 addedColors={isInPurchase ? addedColors : []}
@@ -712,6 +807,10 @@ function ProductCard({
                     setIsAdding(false);
                   }
                 }}
+                isAdmin={isAdmin}
+                productId={productId}
+                onColorToggle={handleColorToggle}
+                togglingColors={togglingColors}
               />
             </div>
           </div>
