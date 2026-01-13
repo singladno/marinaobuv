@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { getStandardColors, normalizeToStandardColor } from '@/lib/constants/colors';
+
+/**
+ * Convert color to title case (first letter uppercase, rest lowercase)
+ */
+function toTitleCase(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get unique colors from product images for the specified category
-    const colors = await prisma.productImage.findMany({
+    const images = await prisma.productImage.findMany({
       where: {
         color: {
           not: null,
@@ -59,14 +67,25 @@ export async function GET(request: NextRequest) {
       select: {
         color: true,
       },
-      distinct: ['color'],
     });
 
-    // Extract unique colors and filter out null values
-    const uniqueColors = colors
-      .map(c => c.color)
-      .filter((color): color is string => color !== null)
-      .sort();
+    // Normalize all colors to standard colors and collect unique ones
+    const normalizedColorsSet = new Set<string>();
+
+    for (const image of images) {
+      if (!image.color) continue;
+
+      // Normalize to standard color
+      const normalized = normalizeToStandardColor(image.color);
+      if (normalized) {
+        normalizedColorsSet.add(normalized);
+      }
+    }
+
+    // Convert to array, sort, and format to title case for display
+    const uniqueColors = Array.from(normalizedColorsSet)
+      .sort()
+      .map(color => toTitleCase(color));
 
     return NextResponse.json({ colors: uniqueColors });
   } catch (error) {

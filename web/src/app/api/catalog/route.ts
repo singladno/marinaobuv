@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { normalizeToStandardColor } from '@/lib/constants/colors';
 
 /**
  * Recursively get all descendant category IDs from a parent category
@@ -119,15 +120,22 @@ export async function GET(request: NextRequest) {
 
     // Color filter - find products where the primary image color matches the selected color
     if (colors.length > 0) {
-      where.images = {
-        some: {
-          isPrimary: true,
-          color: {
-            in: colors,
-            mode: 'insensitive',
+      // Normalize colors to standard colors and filter out invalid ones
+      const normalizedColors = colors
+        .map(color => normalizeToStandardColor(color))
+        .filter((color): color is NonNullable<typeof color> => color !== null);
+
+      if (normalizedColors.length > 0) {
+        where.images = {
+          some: {
+            isPrimary: true,
+            color: {
+              in: normalizedColors,
+              mode: 'insensitive',
+            },
           },
-        },
-      };
+        };
+      }
     }
 
     // Stock filter (if needed - you might want to add stock tracking)

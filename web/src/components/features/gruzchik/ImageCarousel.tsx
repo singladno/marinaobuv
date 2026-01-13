@@ -22,6 +22,7 @@ interface ImageCarouselProps {
   productArticle?: string | null;
   count?: number;
   itemCode?: string | null;
+  sizes?: any;
 }
 
 export function ImageCarousel({
@@ -32,6 +33,7 @@ export function ImageCarousel({
   productArticle,
   count,
   itemCode,
+  sizes,
 }: ImageCarouselProps) {
   const swiperRef = useRef<SwiperType | null>(null);
   const modalSwiperRef = useRef<SwiperType | null>(null);
@@ -342,8 +344,9 @@ export function ImageCarousel({
             {(orderNumber ||
               productArticle ||
               count !== undefined ||
-              itemCode) && (
-              <div className="flex flex-1 items-center overflow-y-auto border-t border-gray-200 bg-white px-6 pb-3 pt-2">
+              itemCode ||
+              sizes) && (
+              <div className="flex flex-1 flex-col overflow-y-auto border-t border-gray-200 bg-white px-6 pb-3 pt-2">
                 <div className="grid w-full grid-cols-2 gap-4 text-sm text-gray-900 md:grid-cols-4">
                   {orderNumber && (
                     <div className="flex flex-col">
@@ -380,6 +383,39 @@ export function ImageCarousel({
                     </div>
                   )}
                 </div>
+                {/* Sizes Section */}
+                {sizes && (
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <div className="mb-2">
+                      <span className="text-sm font-medium text-gray-600">
+                        Размеры:
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.isArray(sizes) ? (
+                        sizes.map((sizeItem: any, index: number) => (
+                          <div
+                            key={index}
+                            className="flex aspect-square w-12 flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-sm"
+                          >
+                            <span className="font-medium text-gray-900">
+                              {sizeItem.size || sizeItem}
+                            </span>
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+                              {sizeItem.count || 1}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm">
+                          <span className="font-medium text-gray-900">
+                            {JSON.stringify(sizes)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -25,6 +25,7 @@ import {
   mapSeason,
   generateArticleNumber,
 } from '@/lib/services/product-creation-mappers';
+import { normalizeToStandardColor } from '@/lib/constants/colors';
 
 interface PlaywrightResult {
   html: string;
@@ -485,17 +486,21 @@ export async function POST(req: NextRequest) {
     // Map colors to uploaded images
     // Use color from main vision analysis as fallback for first image if per-image analysis returns null
     const mainAnalysisColor = analysisResult.color || null;
+    // Normalize main analysis color to standard color
+    const normalizedMainColor = mainAnalysisColor
+      ? normalizeToStandardColor(mainAnalysisColor)
+      : null;
 
     for (let i = 0; i < uploadedImages.length; i++) {
-      // Use per-image color if available
+      // Use per-image color if available (already normalized by PerImageColorService)
       let finalColor = null;
       if (i < colorResults.length) {
         finalColor = colorResults[i].color;
       }
 
       // Use main analysis color as fallback for first image if per-image analysis returns null
-      if (!finalColor && i === 0 && mainAnalysisColor) {
-        finalColor = mainAnalysisColor;
+      if (!finalColor && i === 0 && normalizedMainColor) {
+        finalColor = normalizedMainColor;
       }
 
       uploadedImages[i].color = finalColor;

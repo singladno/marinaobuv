@@ -18,6 +18,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "migrate:run": "tsx src/scripts/run-migrations.ts",
+    "migrate:colors": "tsx src/scripts/migrate-colors-to-standard.ts",
     "migrate:validate": "../scripts/validate-migrations.sh",
     "migrate:robust": "../scripts/robust-migration-system.sh",
     "prisma:reset": "prisma migrate reset --force",

@@ -1,5 +1,5 @@
 import { prisma } from '../db-node';
-import { normalizeColorToRussian } from '@/lib/utils/color-normalization';
+import { normalizeToStandardColor } from '@/lib/constants/colors';
 
 export interface ImageColorMapping {
   imageUrl: string;
@@ -123,8 +123,8 @@ export class FixedColorMappingService {
       }
 
       if (detectedColor) {
-        // Normalize color to Russian lowercase
-        const normalizedColor = normalizeColorToRussian(detectedColor);
+        // Normalize color to standard color
+        const normalizedColor = normalizeToStandardColor(detectedColor);
 
         await prisma.productImage.update({
           where: { id: image.id },

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon, StarIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
-import { ColorAutocomplete } from './ColorAutocomplete';
+import { ColorSelect } from './ColorSelect';
 import type { ImageFile } from './ProductImageUpload';
 
 interface ProductImageWithColorProps {
@@ -86,8 +86,8 @@ export function ProductImageWithColor({
 
       {!isDeleted && (
         <div className="space-y-1">
-          <ColorAutocomplete
-            value={image.color}
+          <ColorSelect
+            value={image.color || ''}
             onChange={color => {
               onColorChange(image.id, color);
             }}

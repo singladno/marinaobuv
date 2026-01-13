@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { normalizeToStandardColor } from '@/lib/constants/colors';
 
 export async function PATCH(
   request: NextRequest,
@@ -29,7 +30,10 @@ export async function PATCH(
       allowedFields.sort = updateData.sort;
     }
     if ('color' in updateData) {
-      allowedFields.color = updateData.color;
+      // Normalize color to standard color
+      allowedFields.color = updateData.color
+        ? normalizeToStandardColor(updateData.color)
+        : null;
     }
 
     // If isPrimary is being set to true, unset it for all other images of the same product

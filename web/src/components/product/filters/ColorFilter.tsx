@@ -50,9 +50,10 @@ export default function ColorFilter({
         const data = await response.json();
 
         if (data.colors) {
+          // Store lowercase value (matches database) but display title case
           const colorOptions = data.colors.map((colorName: string) => ({
-            name: colorName,
-            value: colorName,
+            name: colorName, // Display name (title case)
+            value: colorName.toLowerCase(), // Store value (lowercase, matches database)
           }));
           setColors(colorOptions);
           log.info('🎨 Colors fetched', { count: colorOptions.length });
@@ -112,7 +113,7 @@ export default function ColorFilter({
               <ColorIndicator colorName={color.name} size="md" />
             </div>
             <span
-              className={`text-sm capitalize ${
+              className={`text-sm ${
                 value.includes(color.value)
                   ? 'font-medium text-purple-700'
                   : 'text-gray-800'

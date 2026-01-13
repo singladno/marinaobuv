@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { getStandardColors, normalizeToStandardColor } from '@/lib/constants/colors';
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,34 +13,17 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q') || '';
 
-    // Get distinct color values from product images
-    const images = await prisma.productImage.findMany({
-      where: {
-        color: {
-          not: null,
-          ...(query
-            ? {
-                contains: query,
-                mode: 'insensitive' as const,
-              }
-            : {}),
-        },
-      },
-      select: {
-        color: true,
-      },
-      distinct: ['color'],
-      take: 20,
-      orderBy: {
-        color: 'asc',
-      },
-    });
+    // Get all standard colors
+    const standardColors = getStandardColors();
 
-    const colors = images
-      .map(img => img.color)
-      .filter((color): color is string => color !== null && color.trim() !== '');
+    // Filter by query if provided
+    const filteredColors = query
+      ? standardColors.filter(color =>
+          color.toLowerCase().includes(query.toLowerCase())
+        )
+      : standardColors;
 
-    return NextResponse.json({ colors });
+    return NextResponse.json({ colors: filteredColors });
   } catch (error) {
     console.error('Error fetching colors:', error);
     return NextResponse.json(

@@ -216,7 +216,7 @@ export const SelectContent = React.forwardRef<
         return; // Don't close if clicking on an item
       }
 
-      // Check if click is inside SelectContent or SelectTrigger
+      // Check if click is inside SelectContent (including search input)
       const isInsideContent = target.closest('[data-select-content]');
       const isInsideTrigger = triggerRef?.current?.contains(target);
 
@@ -226,19 +226,15 @@ export const SelectContent = React.forwardRef<
     };
 
     if (isOpen) {
-      // Use bubble phase (not capture) so SelectItem clicks process first
-      // Add a small delay to ensure SelectItem onClick fires before this
-      const timeoutId = setTimeout(() => {
-        document.addEventListener('click', handleClickOutside);
-      }, 10);
+      // Use capture phase to catch clicks before they bubble
+      document.addEventListener('mousedown', handleClickOutside, true);
       return () => {
-        clearTimeout(timeoutId);
-        document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener('mousedown', handleClickOutside, true);
       };
     }
   }, [isOpen, setIsOpen, triggerRef]);
 
-  React.useEffect(() => {
+  const updatePosition = React.useCallback(() => {
     if (isOpen && triggerRef?.current && mounted) {
       const trigger = triggerRef.current;
       const rect = trigger.getBoundingClientRect();
@@ -261,6 +257,29 @@ export const SelectContent = React.forwardRef<
     }
   }, [isOpen, triggerRef, mounted, preferredPlacement]);
 
+  React.useEffect(() => {
+    updatePosition();
+  }, [updatePosition]);
+
+  // Update position on scroll and resize
+  React.useEffect(() => {
+    if (isOpen) {
+      const handleScroll = () => {
+        updatePosition();
+      };
+      const handleResize = () => {
+        updatePosition();
+      };
+
+      window.addEventListener('scroll', handleScroll, true);
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('scroll', handleScroll, true);
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, [isOpen, updatePosition]);
+
   if (!isOpen || !mounted) return null;
 
   const content = (
@@ -280,6 +299,8 @@ export const SelectContent = React.forwardRef<
         top: position.top,
         left: position.left,
         width: position.width,
+        minWidth: position.width,
+        maxWidth: position.width,
         transform:
           placement === 'top'
             ? 'translateY(calc(-100% - 6px))'
@@ -289,9 +310,10 @@ export const SelectContent = React.forwardRef<
     >
       <div
         className={cn(
-          'max-h-[320px] overflow-auto p-1',
+          'max-h-[320px] overflow-auto overflow-x-hidden p-1',
           placement === 'top' && ''
         )}
+        style={{ width: '100%', minWidth: 0 }}
       >
         {children}
       </div>
@@ -373,7 +395,7 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
       <div
         ref={ref}
         className={cn(
-          'relative flex w-full cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm outline-none',
+          'relative flex w-full min-w-0 cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm outline-none',
           'hover:bg-gray-100 dark:hover:bg-gray-700',
           isSelected &&
             'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300',

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getObjectKey, getPublicUrl, uploadImage } from '@/lib/storage';
+import { normalizeToStandardColor } from '@/lib/constants/colors';
 
 export async function POST(
   req: NextRequest,
@@ -59,14 +60,17 @@ export async function POST(
     // Get public URL
     const publicUrl = getPublicUrl(key);
 
+    // Normalize color to standard color
+    const normalizedColor = color ? normalizeToStandardColor(color) : null;
+
     // Create product image record
     const created = await prisma.productImage.create({
       data: {
         productId: id,
         url: publicUrl,
         key,
-        alt: color || `Product image ${sort + 1}`,
-        color: color || null,
+        alt: normalizedColor || `Product image ${sort + 1}`,
+        color: normalizedColor,
         sort,
         isPrimary,
       },

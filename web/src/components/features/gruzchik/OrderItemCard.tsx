@@ -214,6 +214,7 @@ export function OrderItemCard({
           productArticle={item.itemArticle}
           count={item.itemQty}
           itemCode={item.itemCode}
+          sizes={item.sizes}
         />
 
         {/* Order Info */}

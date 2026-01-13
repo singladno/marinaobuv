@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import {
   XMarkIcon,
   StarIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 
-import { ColorAutocomplete } from './ColorAutocomplete';
+import { ColorSelect } from './ColorSelect';
 import type { ImageFile } from './ProductImageUpload';
 
 interface ProductImageColorGroupProps {
@@ -32,11 +31,6 @@ export function ProductImageColorGroup({
   const activeImages = images.filter(img => !img.isDeleted);
   const primaryImage = activeImages.find(img => img.isPrimary);
   const hasPrimary = !!primaryImage;
-
-  // Track temporary color values while editing (to prevent regrouping on every keystroke)
-  const [editingColors, setEditingColors] = useState<Map<string, string>>(
-    new Map()
-  );
 
   return (
     <div className="space-y-3 rounded-xl border-2 border-purple-100 bg-purple-50/30 p-4 dark:border-purple-900/30 dark:bg-purple-950/20">
@@ -132,44 +126,14 @@ export function ProductImageColorGroup({
 
               {!isDeleted && (
                 <div className="space-y-1">
-                  <ColorAutocomplete
+                  <ColorSelect
                     key={`${image.id}-${image.color || ''}`}
-                    value={editingColors.get(image.id) ?? image.color ?? ''}
-                    onChange={newColor => {
-                      // Update temporary value for display (doesn't trigger regrouping)
-                      setEditingColors(prev =>
-                        new Map(prev).set(image.id, newColor)
-                      );
-                    }}
-                    onSelect={selectedColor => {
+                    value={image.color || ''}
+                    onChange={selectedColor => {
                       // Immediately commit when selecting from dropdown
-                      // Keep the value in editingColors temporarily to ensure input shows correct value
-                      // It will be cleared on blur
                       if (selectedColor !== image.color) {
                         onColorChange(image.id, selectedColor);
                       }
-                      // Clear editingColors after a brief delay to allow state to update
-                      setTimeout(() => {
-                        setEditingColors(prev => {
-                          const newMap = new Map(prev);
-                          newMap.delete(image.id);
-                          return newMap;
-                        });
-                      }, 100);
-                    }}
-                    onBlur={() => {
-                      // Commit the color change on blur (triggers regrouping)
-                      const finalColor =
-                        editingColors.get(image.id) ?? image.color ?? '';
-                      if (finalColor !== (image.color || '')) {
-                        onColorChange(image.id, finalColor);
-                      }
-                      // Clear the temporary value
-                      setEditingColors(prev => {
-                        const newMap = new Map(prev);
-                        newMap.delete(image.id);
-                        return newMap;
-                      });
                     }}
                     disabled={disabled}
                     error={!image.color?.trim() ? 'Цвет обязателен' : undefined}

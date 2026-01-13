@@ -1,7 +1,10 @@
 /**
  * Service for analyzing individual images to detect colors
  */
-import { normalizeColorToRussian } from '@/lib/utils/color-normalization';
+import {
+  normalizeToStandardColor,
+  getStandardColors,
+} from '@/lib/constants/colors';
 import { Groq } from 'groq-sdk';
 import { getGroqConfig } from '@/lib/groq-proxy-config';
 import { groqChatCompletion } from './groq-api-wrapper';
@@ -173,9 +176,13 @@ EXAMPLES (any product type):
 - Brown leather item with silver details → "коричневый" (main material)
 - Gray accessory with black trim → "серый" (main color)
 
-Use ONLY Russian color names in lowercase: "черный", "белый", "бежевый", "синий", "красный", "коричневый", "серый", "зелёный", "розовый", "фиолетовый", "бордовый", "желтый", "оранжевый", "магнета", "фуксия".
+Use ONLY these standard Russian color names in lowercase: ${getStandardColors().join(', ')}.
 
-CRITICAL: NEVER use English color names like "black", "white", "red", "blue" - ONLY Russian names in lowercase.
+CRITICAL:
+- NEVER use English color names like "black", "white", "red", "blue" - ONLY Russian names in lowercase
+- NEVER use compound colors like "синий с желтым" - only specify the MAIN color
+- If the product has multiple colors, use "разноцветный"
+- If the color doesn't match any standard color, return null
 
 Return STRICT JSON with this shape:
   { "images": [ { "color": "черный" | null }, ... ] }
@@ -318,8 +325,8 @@ Return STRICT JSON with this shape:
                   ? imageResult.color.trim()
                   : null;
 
-              // Normalize color to Russian lowercase
-              const normalizedColor = normalizeColorToRussian(rawColor);
+              // Normalize color to standard color
+              const normalizedColor = normalizeToStandardColor(rawColor);
 
               colorResults[originalIdx] = {
                 url: imageUrls[originalIdx],

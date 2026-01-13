@@ -6,7 +6,7 @@ import {
 } from './product-creation-mappers';
 import { AnalysisValidationService } from './analysis-validation-service';
 import { DeduplicationService } from './deduplication-service';
-import { normalizeColorToRussian } from '@/lib/utils/color-normalization';
+import { normalizeToStandardColor } from '@/lib/constants/colors';
 import {
   getOrCreateProvider,
   extractProviderFromSenderName,
@@ -296,7 +296,7 @@ export class SimpleProductService {
       ) {
         const firstImage = result.images[0];
         if (firstImage.color) {
-          const normalizedColor = normalizeColorToRussian(firstImage.color);
+          const normalizedColor = normalizeToStandardColor(firstImage.color);
           if (normalizedColor) {
             detectedColors.push(normalizedColor);
             console.log(
