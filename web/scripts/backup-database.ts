@@ -1,5 +1,12 @@
 #!/usr/bin/env tsx
 
+// Load environment variables from .env file
+import dotenv from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env file
+dotenv.config({ path: resolve('.env'), override: false });
+
 import { execSync } from 'child_process';
 import { writeFileSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { join } from 'path';

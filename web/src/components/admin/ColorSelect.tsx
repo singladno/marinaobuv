@@ -128,7 +128,6 @@ export function ColorSelect({
         value={value ? value.toLowerCase() : ''}
         onValueChange={handleValueChange}
         disabled={disabled}
-        required={required}
       >
         <SelectTrigger
           className={`text-sm ${error ? 'border-red-500' : ''}`}
