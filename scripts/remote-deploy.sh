@@ -495,8 +495,9 @@ pm2 status
 # Database connectivity health check
 echo "🔍 Testing database connectivity..."
 cd web
-echo "   Running: ./prisma-server.sh npx prisma db pull --print"
-DB_HEALTH_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
+# Use a simple query instead of db pull to avoid schema output
+echo "   Running: ./prisma-server.sh npx prisma db execute --stdin (testing connection)"
+DB_HEALTH_OUTPUT=$(echo "SELECT 1;" | ./prisma-server.sh npx prisma db execute --stdin 2>&1)
 DB_HEALTH_EXIT=$?
 if [ $DB_HEALTH_EXIT -eq 0 ]; then
   echo "✅ Database connectivity verified"
@@ -520,7 +521,8 @@ else
   # Test connection again
   cd web
   echo "   Retesting database connection after auth fix..."
-  DB_RETEST_OUTPUT=$(./prisma-server.sh npx prisma db pull --print 2>&1)
+  # Use a simple query instead of db pull to avoid schema output
+  DB_RETEST_OUTPUT=$(echo "SELECT 1;" | ./prisma-server.sh npx prisma db execute --stdin 2>&1)
   DB_RETEST_EXIT=$?
   if [ $DB_RETEST_EXIT -eq 0 ]; then
     echo "✅ Database connection restored"
@@ -820,3 +822,6 @@ fi
 
 echo "🏁 Script execution completed successfully!"
 sync 2>/dev/null || true
+
+# Explicitly exit to prevent any log tailing
+exit 0
