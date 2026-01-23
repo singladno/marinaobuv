@@ -273,19 +273,33 @@ export function OrderItemCard({
           {item.sizes && (
             <div className="flex flex-wrap justify-center gap-2">
               {Array.isArray(item.sizes) ? (
-                item.sizes.map((size: any, index: number) => (
-                  <div
-                    key={index}
-                    className="flex aspect-square w-12 flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-sm"
-                  >
-                    <span className="font-medium text-gray-900">
-                      {size.size || size}
-                    </span>
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
-                      {size.count || 1}
-                    </span>
-                  </div>
-                ))
+                item.sizes.map((size: any, index: number) => {
+                  // Handle object format: {size: '36', count: 2}
+                  const sizeValue =
+                    typeof size === 'object' && size !== null && 'size' in size
+                      ? size.size
+                      : typeof size === 'string' || typeof size === 'number'
+                        ? String(size)
+                        : '—';
+                  const countValue =
+                    typeof size === 'object' && size !== null && 'count' in size
+                      ? size.count
+                      : 1;
+
+                  return (
+                    <div
+                      key={index}
+                      className="flex aspect-square w-12 flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-sm"
+                    >
+                      <span className="font-medium text-gray-900">
+                        {sizeValue}
+                      </span>
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+                        {countValue}
+                      </span>
+                    </div>
+                  );
+                })
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm">
                   <span className="font-medium text-gray-900">

@@ -349,19 +349,33 @@ export default function OrderDetailsPage() {
     if (Array.isArray(sizes)) {
       return (
         <div className="flex gap-1 overflow-x-auto">
-          {sizes.map((size: any, index: number) => (
-            <div
-              key={index}
-              className="flex aspect-square w-8 flex-shrink-0 flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-xs"
-            >
-              <span className="font-medium text-gray-900">
-                {size.size || size}
-              </span>
-              <span className="flex h-3 w-3 items-center justify-center rounded-full bg-purple-100 text-[10px] font-medium text-purple-700">
-                {size.count || 1}
-              </span>
-            </div>
-          ))}
+          {sizes.map((size: any, index: number) => {
+            // Handle object format: {size: '36', count: 2}
+            const sizeValue =
+              typeof size === 'object' && size !== null && 'size' in size
+                ? size.size
+                : typeof size === 'string' || typeof size === 'number'
+                  ? String(size)
+                  : '—';
+            const countValue =
+              typeof size === 'object' && size !== null && 'count' in size
+                ? size.count
+                : 1;
+
+            return (
+              <div
+                key={index}
+                className="flex aspect-square w-8 flex-shrink-0 flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-xs"
+              >
+                <span className="font-medium text-gray-900">
+                  {sizeValue}
+                </span>
+                <span className="flex h-3 w-3 items-center justify-center rounded-full bg-purple-100 text-[10px] font-medium text-purple-700">
+                  {countValue}
+                </span>
+              </div>
+            );
+          })}
         </div>
       );
     }
