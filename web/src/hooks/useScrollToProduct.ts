@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 interface UseScrollToProductOptions {
   loading: boolean;
@@ -19,10 +19,13 @@ export function useScrollToProduct({
   targetPath,
 }: UseScrollToProductOptions) {
   const pathname = usePathname();
+  const router = useRouter();
   const targetProductIdRef = useRef<string | null>(null);
   const scrollCompletedRef = useRef(false);
   const maxScrollAttemptsRef = useRef(0);
   const lastCheckedProductsLengthRef = useRef(0);
+  const urlRestoredRef = useRef(false);
+  const [urlCheckTrigger, setUrlCheckTrigger] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
 
   // Scroll to product when returning from product page
@@ -73,15 +76,20 @@ export function useScrollToProduct({
         return;
       }
 
-      // Parse referrer to get the path (this is the page we were on when we clicked the product)
+      // Parse referrer to get the path and query params (this is the page we were on when we clicked the product)
+      let referrerUrl: URL;
       let referrerPath: string;
+      let referrerSearch: string;
       try {
-        const referrerUrl = referrer.startsWith('http')
+        referrerUrl = referrer.startsWith('http')
           ? new URL(referrer)
           : new URL(referrer, window.location.origin);
         referrerPath = referrerUrl.pathname;
+        referrerSearch = referrerUrl.search;
       } catch {
-        referrerPath = referrer.split('?')[0];
+        const [path, search] = referrer.split('?');
+        referrerPath = path;
+        referrerSearch = search ? `?${search}` : '';
       }
 
       // Check if current path matches target path pattern
@@ -92,9 +100,37 @@ export function useScrollToProduct({
           : targetPath.test(currentPathWithSearch);
 
       // Only proceed if we're on the target page
-      // The referrer check is just for validation - we want to scroll if we're back on the page we came from
       if (!pathMatches) {
         // Not on target page, don't scroll
+        return;
+      }
+
+      // If we're on the target page but URL doesn't match referrer (different query params),
+      // restore the referrer URL to get back to the correct page
+      const referrerPathWithSearch = referrerPath + referrerSearch;
+      const currentPathOnly = currentUrlObj.pathname;
+      const referrerPathOnly = referrerPath;
+
+      // Check if pathname matches and if we need to restore query params
+      if (currentPathOnly === referrerPathOnly && currentUrlObj.search !== referrerSearch && !urlRestoredRef.current) {
+        // Path matches but query params don't - restore the referrer URL
+        urlRestoredRef.current = true;
+        router.replace(referrerPathWithSearch);
+        // Trigger a re-check after a short delay to allow navigation to complete
+        setTimeout(() => {
+          setUrlCheckTrigger(prev => prev + 1);
+        }, 100);
+        // Return early to let the navigation complete, then this effect will run again
+        return;
+      }
+
+      // If we just restored the URL, wait for it to take effect
+      // The URL should match now, so we can proceed
+      if (urlRestoredRef.current && currentUrlObj.search === referrerSearch) {
+        // URL has been restored successfully, reset the flag and proceed
+        urlRestoredRef.current = false;
+      } else if (urlRestoredRef.current && currentUrlObj.search !== referrerSearch) {
+        // Still waiting for URL to be restored, return early
         return;
       }
 
@@ -136,6 +172,7 @@ export function useScrollToProduct({
         targetProductIdRef.current = null;
         maxScrollAttemptsRef.current = 0;
         lastCheckedProductsLengthRef.current = 0;
+        urlRestoredRef.current = false;
       } else {
         // Product not found in current products
         // Check if we've already checked this set of products
@@ -161,6 +198,7 @@ export function useScrollToProduct({
             targetProductIdRef.current = null;
             maxScrollAttemptsRef.current = 0;
             lastCheckedProductsLengthRef.current = 0;
+            urlRestoredRef.current = false;
           }
         }
         // If we've already checked this set and product still not found,
@@ -175,6 +213,7 @@ export function useScrollToProduct({
       targetProductIdRef.current = null;
       maxScrollAttemptsRef.current = 0;
       lastCheckedProductsLengthRef.current = 0;
+      urlRestoredRef.current = false;
     }
   }, [
     loading,
@@ -184,6 +223,8 @@ export function useScrollToProduct({
     loadMore,
     pathname,
     targetPath,
+    router,
+    urlCheckTrigger,
   ]);
 
   // Reset scroll state when pathname changes, but only if we're not on a product page
@@ -201,6 +242,7 @@ export function useScrollToProduct({
       targetProductIdRef.current = null;
       maxScrollAttemptsRef.current = 0;
       lastCheckedProductsLengthRef.current = 0;
+      urlRestoredRef.current = false;
     }
   }, [pathname]);
 

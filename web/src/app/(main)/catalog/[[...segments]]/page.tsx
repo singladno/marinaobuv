@@ -158,10 +158,17 @@ function CatalogPageContent() {
     if (restored) fetchCategory();
   }, [categoryPath, restored]);
 
-  // Load saved filters and merge with URL params ONLY ONCE before initial fetch
+  // Load saved filters and merge with URL params
+  // This runs on mount and when pathname changes, but we also need to react to searchParams changes
+  // to handle URL restorations (e.g., from useScrollToProduct)
   useEffect(() => {
-    if (!pathname || initMergedRef.current) return;
-    initMergedRef.current = true;
+    if (!pathname) return;
+
+    // Only load persisted filters on first mount or pathname change
+    if (!initMergedRef.current) {
+      initMergedRef.current = true;
+    }
+
     const saved = loadPersistedCatalogFilters(pathname);
 
     const pageParam = parseInt(searchParams.get('page') || '1', 10);
@@ -176,12 +183,22 @@ function CatalogPageContent() {
     };
 
     if (searchParam) setSearchQuery(searchParam);
-    setSavedFilters(merged);
-    savedFiltersRef.current = merged;
-    setCanPersist(true);
-    setRestored(true);
+
+    // Only update if the merged filters are different from current saved filters
+    // This prevents unnecessary updates when URL is restored to the same values
+    const mergedKey = JSON.stringify(merged);
+    const currentKey = savedFiltersRef.current
+      ? JSON.stringify(savedFiltersRef.current)
+      : '';
+
+    if (mergedKey !== currentKey) {
+      setSavedFilters(merged);
+      savedFiltersRef.current = merged;
+      setCanPersist(true);
+      setRestored(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, setSearchQuery]);
+  }, [pathname, searchParams, setSearchQuery]);
 
   // Persist filters whenever they change, scoped by current pathname
   usePersistCatalogFilters(
@@ -199,12 +216,12 @@ function CatalogPageContent() {
     { enabled: canPersist }
   );
 
-  // React to URL page/pageSize changes after initial fetch
+  // React to URL page/pageSize changes
+  // This handles URL changes that happen after the initial load (e.g., from useScrollToProduct restoring URL)
   const prevSearchParamsRef = useRef<string>('');
   useEffect(() => {
-    // Skip during initial load
-    if (!restored || !initialFetchDone) {
-      // Store initial searchParams to compare later
+    // Store initial searchParams to compare later if not restored yet
+    if (!restored) {
       prevSearchParamsRef.current = searchParams.toString();
       return;
     }
@@ -216,11 +233,28 @@ function CatalogPageContent() {
 
     const pageParam = parseInt(searchParams.get('page') || '1', 10);
     const pageSizeParam = parseInt(
-      searchParams.get('pageSize') || String(filters.pageSize),
+      searchParams.get('pageSize') || String(filters.pageSize || 20),
       10
     );
+
+    // Only update if the URL params differ from current filters
+    // This handles both initial load and URL restorations
     if (pageParam !== filters.page || pageSizeParam !== filters.pageSize) {
-      handleFiltersChange({ page: pageParam, pageSize: pageSizeParam });
+      // Always update savedFiltersRef to keep it in sync
+      const updated = {
+        ...(savedFiltersRef.current || {}),
+        page: pageParam,
+        pageSize: pageSizeParam,
+      };
+      savedFiltersRef.current = updated;
+      setSavedFilters(updated);
+
+      // If initial fetch hasn't been done yet, the category fetch effect will use the updated savedFiltersRef
+      // If initial fetch is done, trigger a new fetch immediately
+      if (initialFetchDone) {
+        handleFiltersChange({ page: pageParam, pageSize: pageSizeParam });
+      }
+      // Otherwise, wait for the category fetch effect to trigger the initial fetch with updated filters
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

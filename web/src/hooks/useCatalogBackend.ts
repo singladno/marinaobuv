@@ -166,17 +166,18 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
   // Handle filter changes
   const handleFiltersChange = useCallback(
     (newFilters: Partial<CatalogFilters>) => {
-      // Decide whether to reset page to 1 based on which filters changed
-      const affectsResultSet =
-        'search' in newFilters ||
-        'categoryId' in newFilters ||
-        'minPrice' in newFilters ||
-        'maxPrice' in newFilters ||
-        'colors' in newFilters ||
-        'inStock' in newFilters ||
-        'sortBy' in newFilters;
+      // Check if filters that affect the result set have actually CHANGED
+      // Only reset page to 1 if these filters actually changed, not just if they're present in newFilters
+      const resultSetFiltersChanged =
+        ('search' in newFilters && newFilters.search !== filters.search) ||
+        ('categoryId' in newFilters && newFilters.categoryId !== filters.categoryId) ||
+        ('minPrice' in newFilters && newFilters.minPrice !== filters.minPrice) ||
+        ('maxPrice' in newFilters && newFilters.maxPrice !== filters.maxPrice) ||
+        ('colors' in newFilters && JSON.stringify(newFilters.colors) !== JSON.stringify(filters.colors)) ||
+        ('inStock' in newFilters && newFilters.inStock !== filters.inStock) ||
+        ('sortBy' in newFilters && newFilters.sortBy !== filters.sortBy);
 
-      const nextPage = affectsResultSet
+      const nextPage = resultSetFiltersChanged
         ? 1
         : newFilters.page !== undefined
           ? newFilters.page
