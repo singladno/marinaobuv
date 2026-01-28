@@ -161,6 +161,13 @@ const schema = z
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_CHAT_IDS: z.string().optional(),
     TELEGRAM_NOTIFICATIONS_ENABLED: z.string().optional(),
+    // Telegram Parser
+    TELEGRAM_CHANNEL_ID: z.string().optional(), // Channel username (e.g., @channelname) or ID
+    // Telegram User Account (for MTProto - direct channel access)
+    TELEGRAM_API_ID: z.string().optional(), // Get from https://my.telegram.org/apps
+    TELEGRAM_API_HASH: z.string().optional(), // Get from https://my.telegram.org/apps
+    TELEGRAM_PHONE: z.string().optional(), // Your phone number (e.g., +1234567890)
+    TELEGRAM_SESSION_STRING: z.string().optional(), // Session string (auto-generated after first auth)
   })
   .refine(
     data => isBuildContext || data.YC_IAM_TOKEN || data.YC_API_KEY,
@@ -249,6 +256,13 @@ const raw = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_IDS: process.env.TELEGRAM_CHAT_IDS,
   TELEGRAM_NOTIFICATIONS_ENABLED: process.env.TELEGRAM_NOTIFICATIONS_ENABLED,
+  // Telegram Parser
+  TELEGRAM_CHANNEL_ID: process.env.TELEGRAM_CHANNEL_ID,
+  // Telegram User Account (for MTProto)
+  TELEGRAM_API_ID: process.env.TELEGRAM_API_ID,
+  TELEGRAM_API_HASH: process.env.TELEGRAM_API_HASH,
+  TELEGRAM_PHONE: process.env.TELEGRAM_PHONE,
+  TELEGRAM_SESSION_STRING: process.env.TELEGRAM_SESSION_STRING,
 };
 
 const parsed = schema.safeParse(raw);

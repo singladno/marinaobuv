@@ -114,23 +114,28 @@ model ProductVideo {
 }
 
 model Provider {
-  id            String            @id @default(cuid())
-  name          String            @unique
-  phone         String?
-  place         String?
-  link          String?
-  location      String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  products      Product[]
-  users         User[]
-  draftProducts WaDraftProduct[]
-  messages      WhatsAppMessage[]
+  id               String            @id @default(cuid())
+  name             String            @unique
+  phone            String?
+  place            String?
+  link             String?
+  location         String?
+  telegramUsername String?
+  telegramId       BigInt?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  products         Product[]
+  users            User[]
+  draftProducts    WaDraftProduct[]
+  messages         WhatsAppMessage[]
+  telegramMessages TelegramMessage[]
 
   @@index([name])
   @@index([phone])
   @@index([place])
   @@index([link])
+  @@index([telegramUsername])
+  @@index([telegramId])
 }
 
 model WaDraftProduct {
@@ -233,6 +238,38 @@ model WhatsAppMessage {
   @@index([fromMe])
   @@index([chatId])
   @@index([timestamp])
+  @@index([providerId])
+}
+
+model TelegramMessage {
+  id             String    @id @default(cuid())
+  tgMessageId    BigInt    @unique
+  chatId         String?
+  fromId         BigInt?
+  fromUsername   String?
+  fromFirstName  String?
+  fromLastName   String?
+  type           String?   // 'photo', 'text', 'document', etc.
+  text           String?
+  caption        String?
+  mediaUrl       String?
+  mediaFileId    String?
+  mediaWidth     Int?
+  mediaHeight    Int?
+  mediaMimeType  String?
+  mediaFileSize  Int?
+  providerId     String?
+  processed      Boolean   @default(false)
+  rawPayload     Json
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  provider       Provider? @relation(fields: [providerId], references: [id])
+
+  @@index([createdAt])
+  @@index([fromId])
+  @@index([fromUsername])
+  @@index([chatId])
+  @@index([processed])
   @@index([providerId])
 }
 
@@ -608,6 +645,7 @@ enum ProductSource {
   WA
   AG
   MANUAL
+  TG
 }
 
 enum MeasurementUnit {

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 
 import { formatCreatedAt, formatTimestamp } from '@/utils/dateFormatting';
+import { isValidImageUrl } from '@/lib/image-security';
 
 interface SourceMessage {
   id: string;
@@ -47,8 +48,11 @@ export function SourceMessageItem({ message }: SourceMessageItemProps) {
         <div className="mb-2 whitespace-pre-wrap text-sm">{message.text}</div>
       )}
 
-      {(message.type === 'image' || message.type === 'imageMessage') &&
-        message.mediaUrl && (
+      {(message.type === 'image' ||
+        message.type === 'imageMessage' ||
+        message.type === 'photo') &&
+        message.mediaUrl &&
+        isValidImageUrl(message.mediaUrl) && (
           <div className="mt-2">
             <Image
               src={message.mediaUrl}
@@ -57,6 +61,10 @@ export function SourceMessageItem({ message }: SourceMessageItemProps) {
               height={192}
               className="max-h-48 max-w-full rounded border object-contain"
               loading="lazy"
+              onError={e => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
             />
             {message.mediaMimeType && (
               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -74,7 +82,8 @@ export function SourceMessageItem({ message }: SourceMessageItemProps) {
 
       {message.type &&
         message.type !== 'image' &&
-        message.type !== 'imageMessage' && (
+        message.type !== 'imageMessage' &&
+        message.type !== 'photo' && (
           <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
             Тип: {message.type}
           </div>

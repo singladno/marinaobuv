@@ -97,6 +97,15 @@ export function ProductMobileCard({
                         className="h-8 w-8 rounded"
                         unoptimized
                       />
+                    ) : product.source === 'TG' ? (
+                      <Image
+                        src="/images/telegram-icon.png"
+                        alt="Telegram"
+                        width={18}
+                        height={18}
+                        className="h-4 w-4 rounded"
+                        unoptimized
+                      />
                     ) : (
                       <MessageSquare className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                     )}

@@ -128,6 +128,7 @@ export default function ProductDetails(props: Props) {
         gender={gender}
         season={season}
         packPairs={packPairs}
+        measurementUnit={props.measurementUnit}
       />
     </div>
   );

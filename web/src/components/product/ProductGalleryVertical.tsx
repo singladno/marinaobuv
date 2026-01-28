@@ -41,6 +41,7 @@ import {
   type ReactPlayerInstance,
 } from './ProductVideoPlayer';
 import { cn } from '@/lib/utils';
+import { isValidImageUrl } from '@/lib/image-security';
 
 type Video = {
   id: string;
@@ -59,7 +60,7 @@ interface ProductGalleryProps {
   sourceMessageIds?: string[] | null;
   sourceScreenshotUrl?: string | null;
   isActive: boolean;
-  source?: 'WA' | 'AG' | 'MANUAL';
+  source?: 'WA' | 'AG' | 'MANUAL' | 'TG';
 }
 
 type MediaItem = {
@@ -108,6 +109,8 @@ export default function ProductGalleryVertical({
 
   // Combine videos and images: videos first, then images
   // Videos don't have a poster - VideoThumbnail will show a placeholder with play icon
+  // Filter out invalid placeholder URLs (e.g., "telegram_photo_1013")
+  const validImages = (images || []).filter(img => isValidImageUrl(img.url));
   const mediaItems: MediaItem[] = [
     ...(videos || []).map(v => ({
       type: 'video' as const,
@@ -116,7 +119,7 @@ export default function ProductGalleryVertical({
       id: v.id,
       poster: undefined, // No poster - VideoThumbnail will show placeholder
     })),
-    ...(images || []).map(img => ({
+    ...validImages.map(img => ({
       type: 'image' as const,
       url: img.url,
       alt: img.alt,
@@ -803,10 +806,7 @@ export default function ProductGalleryVertical({
                             setProductData(data.product);
                           }
                         } catch (error) {
-                          console.error(
-                            'Error fetching product data:',
-                            error
-                          );
+                          console.error('Error fetching product data:', error);
                         } finally {
                           setLoadingProductData(false);
                         }
@@ -832,6 +832,17 @@ export default function ProductGalleryVertical({
                             alt="WhatsApp"
                             width={48}
                             height={48}
+                            className="h-full w-full rounded"
+                            unoptimized
+                          />
+                        </div>
+                      ) : source === 'TG' ? (
+                        <div className="flex h-6 w-6 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                          <Image
+                            src="/images/telegram-icon.png"
+                            alt="Telegram"
+                            width={24}
+                            height={24}
                             className="h-full w-full rounded"
                             unoptimized
                           />
@@ -1122,10 +1133,7 @@ export default function ProductGalleryVertical({
                       setProductData(data.product);
                     }
                   } catch (error) {
-                    console.error(
-                      'Error fetching product data:',
-                      error
-                    );
+                    console.error('Error fetching product data:', error);
                   } finally {
                     setLoadingProductData(false);
                   }
@@ -1151,6 +1159,17 @@ export default function ProductGalleryVertical({
                       alt="WhatsApp"
                       width={48}
                       height={48}
+                      className="h-full w-full rounded"
+                      unoptimized
+                    />
+                  </div>
+                ) : source === 'TG' ? (
+                  <div className="flex h-6 w-6 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                    <Image
+                      src="/images/telegram-icon.png"
+                      alt="Telegram"
+                      width={24}
+                      height={24}
                       className="h-full w-full rounded"
                       unoptimized
                     />

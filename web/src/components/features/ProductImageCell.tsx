@@ -3,6 +3,7 @@ import * as React from 'react';
 
 import type { Product } from '@/types/product';
 import { ProductImageModal } from './ProductImageModal';
+import { isValidImageUrl } from '@/lib/image-security';
 
 interface ProductImageCellProps {
   product: Product;
@@ -13,10 +14,14 @@ export function ProductImageCell({ product }: ProductImageCellProps) {
   const primaryImage =
     product.images?.find(img => img.isPrimary) || product.images?.[0];
 
+  const validPrimaryImage = primaryImage && isValidImageUrl(primaryImage.url)
+    ? primaryImage
+    : null;
+
   return (
     <div className="flex items-center space-x-3">
       <div className="h-12 w-12 flex-shrink-0">
-        {primaryImage ? (
+        {validPrimaryImage ? (
           <button
             type="button"
             onClick={() => setIsOpen(true)}
@@ -24,8 +29,8 @@ export function ProductImageCell({ product }: ProductImageCellProps) {
             className="block"
           >
             <Image
-              src={primaryImage.url}
-              alt={primaryImage.alt || product.name}
+              src={validPrimaryImage.url}
+              alt={validPrimaryImage.alt || product.name}
               width={48}
               height={48}
               className="h-12 w-12 rounded object-cover"

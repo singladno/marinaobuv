@@ -8,7 +8,7 @@ interface ProductSourceButtonProps {
   userRole?: string;
   productId?: string;
   sourceMessageIds?: string[] | null;
-  source?: 'WA' | 'AG' | 'MANUAL';
+  source?: 'WA' | 'AG' | 'MANUAL' | 'TG';
   onSourceClick: () => void;
 }
 
@@ -41,6 +41,17 @@ export function ProductSourceButton({
             alt="WhatsApp"
             width={48}
             height={48}
+            className="h-full w-full rounded"
+            unoptimized
+          />
+        </div>
+      ) : source === 'TG' ? (
+        <div className="flex h-6 w-6 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+          <Image
+            src="/images/telegram-icon.png"
+            alt="Telegram"
+            width={24}
+            height={24}
             className="h-full w-full rounded"
             unoptimized
           />

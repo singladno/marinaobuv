@@ -1,12 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const parserId = searchParams.get('parserId');
+
+  // Build where clause for parser filtering
+  const parserWhere: any = {};
+  if (parserId) {
+    if (parserId === 'wa') {
+      parserWhere.reason = { contains: 'Groq' };
+    } else if (parserId === 'tg') {
+      parserWhere.reason = { contains: 'Telegram' };
+    }
+  }
   try {
     // Get current running parsers
     const runningParsers = await prisma.parsingHistory.findMany({
-      where: { status: 'running' },
+      where: {
+        status: 'running',
+        ...parserWhere,
+      },
       orderBy: { startedAt: 'desc' },
       select: {
         id: true,
@@ -18,13 +33,19 @@ export async function GET() {
 
     // Get latest completed parsing
     const latestCompleted = await prisma.parsingHistory.findFirst({
-      where: { status: 'completed' },
+      where: {
+        status: 'completed',
+        ...parserWhere,
+      },
       orderBy: { completedAt: 'desc' },
     });
 
     // Get latest failed parsing
     const latestFailed = await prisma.parsingHistory.findFirst({
-      where: { status: 'failed' },
+      where: {
+        status: 'failed',
+        ...parserWhere,
+      },
       orderBy: { completedAt: 'desc' },
     });
 
@@ -35,6 +56,7 @@ export async function GET() {
       where: {
         startedAt: { gte: twentyFourHoursAgo },
         status: 'completed',
+        ...parserWhere,
       },
       _sum: {
         messagesRead: true,
@@ -52,6 +74,7 @@ export async function GET() {
       where: {
         startedAt: { gte: sevenDaysAgo },
         status: 'completed',
+        ...parserWhere,
       },
       _sum: {
         messagesRead: true,

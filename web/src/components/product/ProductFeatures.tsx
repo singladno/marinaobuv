@@ -9,6 +9,7 @@ type Props = {
   gender?: keyof typeof genderRu | null;
   season?: keyof typeof seasonRu | null;
   packPairs: number | null;
+  measurementUnit?: 'PAIRS' | 'PIECES';
 };
 
 export function ProductFeatures({
@@ -16,6 +17,7 @@ export function ProductFeatures({
   gender,
   season,
   packPairs,
+  measurementUnit,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -64,7 +66,11 @@ export function ProductFeatures({
               <Package className="h-4 w-4 text-orange-600" />
             </div>
             <div>
-              <p className="text-muted-foreground text-xs">Пар в коробке</p>
+              <p className="text-muted-foreground text-xs">
+                {measurementUnit === 'PIECES'
+                  ? 'Штук в коробке'
+                  : 'Пар в коробке'}
+              </p>
               <p className="text-sm font-medium">{packPairs}</p>
             </div>
           </div>

@@ -22,6 +22,7 @@ import { usePurchase } from '@/contexts/PurchaseContext';
 import { useAllCategories } from '@/hooks/useAllCategories';
 import { cn } from '@/lib/utils';
 import { rub } from '@/lib/format';
+import { isValidImageUrl } from '@/lib/image-security';
 
 // Function to get relative time in Russian
 function getRelativeTime(dateString: string): string {
@@ -75,7 +76,7 @@ type Props = {
   colorOptions?: Array<{ color: string; imageUrl: string }>;
   productId?: string; // Add productId for source button
   activeUpdatedAt?: string; // Add activeUpdatedAt for availability display
-  source?: 'WA' | 'AG' | 'MANUAL'; // Product source: WA (WhatsApp), AG (aggregator), or MANUAL (manually created)
+  source?: 'WA' | 'AG' | 'MANUAL' | 'TG'; // Product source: WA (WhatsApp), AG (aggregator), TG (Telegram), or MANUAL (manually created)
   sourceScreenshotUrl?: string | null; // Source screenshot URL for AG and MANUAL products
   isActive?: boolean; // Product active status
   onProductUpdated?: (updatedProduct?: any) => void; // Callback when product is updated
@@ -148,9 +149,11 @@ function ProductCard({
       const found = colorOptions.find(
         o => o.color?.toLowerCase() === effectiveColor.toLowerCase()
       );
-      if (found?.imageUrl) return found.imageUrl;
+      if (found?.imageUrl && isValidImageUrl(found.imageUrl)) {
+        return found.imageUrl;
+      }
     }
-    return imageUrl || null;
+    return isValidImageUrl(imageUrl) ? imageUrl : null;
   }, [selectedColor, colorOptions, imageUrl]);
   const hasImage = displayImageUrl && displayImageUrl.trim() !== '';
   const computedPairPrice = useMemo(() => pricePair ?? null, [pricePair]);
@@ -729,6 +732,17 @@ function ProductCard({
                             <Image
                               src="/images/whatsapp-icon.png"
                               alt="WhatsApp"
+                              width={36}
+                              height={36}
+                              className="h-full w-full rounded"
+                              unoptimized
+                            />
+                          </div>
+                        ) : source === 'TG' ? (
+                          <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
+                            <Image
+                              src="/images/telegram-icon.png"
+                              alt="Telegram"
                               width={36}
                               height={36}
                               className="h-full w-full rounded"

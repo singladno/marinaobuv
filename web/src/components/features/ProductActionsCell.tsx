@@ -113,6 +113,15 @@ export function ProductActionsCell({
                       className="h-8 w-8 rounded transition-transform duration-200 group-hover:scale-110"
                       unoptimized
                     />
+                  ) : product.source === 'TG' ? (
+                    <Image
+                      src="/images/telegram-icon.png"
+                      alt="Telegram"
+                      width={18}
+                      height={18}
+                      className="h-4 w-4 rounded transition-transform duration-200 group-hover:scale-110"
+                      unoptimized
+                    />
                   ) : (
                     <MessageSquare className="h-4 w-4" />
                   )}

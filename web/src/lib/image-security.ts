@@ -129,3 +129,34 @@ export async function validateImageUrl(url: string): Promise<boolean> {
 export function getFallbackImageUrl(): string {
   return '/images/placeholder.jpg';
 }
+
+/**
+ * Validate if an image URL is valid for Next.js Image component
+ * Next.js Image requires either a relative path starting with "/" or an absolute URL (http:// or https://)
+ * This filters out invalid placeholder URLs like "telegram_photo_1013"
+ */
+export function isValidImageUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return false;
+  }
+
+  const trimmed = url.trim();
+
+  // Check if it's a relative path starting with "/"
+  if (trimmed.startsWith('/')) {
+    return true;
+  }
+
+  // Check if it's an absolute URL (http:// or https://)
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      new URL(trimmed);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Invalid format (e.g., "telegram_photo_1013")
+  return false;
+}

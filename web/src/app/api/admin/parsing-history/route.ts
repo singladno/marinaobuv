@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status');
+    const parserId = searchParams.get('parserId');
 
     const skip = (page - 1) * limit;
 
@@ -15,6 +16,15 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     if (status && status !== 'all') {
       where.status = status;
+    }
+
+    // Filter by parser type using reason field
+    if (parserId) {
+      if (parserId === 'wa') {
+        where.reason = { contains: 'Groq' };
+      } else if (parserId === 'tg') {
+        where.reason = { contains: 'Telegram' };
+      }
     }
 
     // Get parsing history with pagination
