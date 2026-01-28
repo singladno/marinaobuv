@@ -828,7 +828,7 @@ export class TelegramParser {
         savedMessages.push({
           id: existing.id,
           tgMessageId: existing.tgMessageId,
-          fromId: existing.fromId,
+          fromId: existing.fromId ? Number(existing.fromId) : null,
           fromUsername: existing.fromUsername,
           fromFirstName: existing.fromFirstName,
           text: existing.text,
@@ -902,7 +902,7 @@ export class TelegramParser {
       savedMessages.push({
         id: saved.id,
         tgMessageId: saved.tgMessageId,
-        fromId: saved.fromId,
+        fromId: saved.fromId ? Number(saved.fromId) : null,
         fromUsername: saved.fromUsername,
         fromFirstName: saved.fromFirstName,
         text: saved.text,

@@ -119,7 +119,9 @@ function ProductCard({
   const sortIndexInputRef = useRef<HTMLInputElement>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
   const [togglingColors, setTogglingColors] = useState<Set<string>>(new Set());
-  const [colorActiveStates, setColorActiveStates] = useState<Map<string, boolean>>(new Map());
+  const [colorActiveStates, setColorActiveStates] = useState<
+    Map<string, boolean>
+  >(new Map());
 
   // Sync optimistic state with prop when it changes externally
   useEffect(() => {
@@ -727,7 +729,7 @@ function ProductCard({
                         className="source-icon-hover-toggle absolute left-2 top-2 z-20 cursor-pointer transition-all duration-200 focus:outline-none"
                         title="Просмотр источника сообщений"
                       >
-                        {source === 'WA' || source === 'AG' ? (
+                        {source === 'WA' ? (
                           <div className="flex h-9 w-9 cursor-pointer items-center justify-center rounded transition-all duration-200 hover:scale-110 hover:opacity-90 focus:outline-none">
                             <Image
                               src="/images/whatsapp-icon.png"
