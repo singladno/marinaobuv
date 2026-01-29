@@ -827,6 +827,7 @@ function ProductCard({
                 productId={productId}
                 onColorToggle={handleColorToggle}
                 togglingColors={togglingColors}
+                isPurchaseMode={isPurchaseMode}
               />
             </div>
           </div>

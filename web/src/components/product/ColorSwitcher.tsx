@@ -15,6 +15,7 @@ type Props = {
   productId?: string;
   onColorToggle?: (color: string, isActive: boolean) => void;
   togglingColors?: Set<string>;
+  isPurchaseMode?: boolean;
 };
 
 export default function ColorSwitcher({
@@ -29,6 +30,7 @@ export default function ColorSwitcher({
   productId,
   onColorToggle,
   togglingColors = new Set(),
+  isPurchaseMode = false,
 }: Props) {
   if (!options || options.length <= 1) return null;
 
@@ -110,7 +112,7 @@ export default function ColorSwitcher({
               )}
             </button>
             {/* Admin toggle switch - TV style, same as main product toggle */}
-            {isAdmin && productId && (
+            {isAdmin && productId && !isPurchaseMode && (
               <div className="absolute -top-3 -right-1 z-10">
                 {isToggling ? (
                   <div className="flex h-5 w-5 items-center justify-center">

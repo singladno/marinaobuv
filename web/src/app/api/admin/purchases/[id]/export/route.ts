@@ -13,7 +13,7 @@ function escapeCsvValue(value: unknown): string {
   return needsQuotes ? `"${escaped}"` : escaped;
 }
 
-function formatSizes(value: unknown): string {
+function formatSizes(value: unknown, measurementUnit?: 'PAIRS' | 'PIECES'): string {
   if (value === null || value === undefined) return '';
   try {
     // Array of objects like [{size: '36', count: 1}]
@@ -24,6 +24,18 @@ function formatSizes(value: unknown): string {
           item => typeof item === 'object' && item && 'size' in (item as any)
         )
       ) {
+        // If measurement unit is PIECES (штука), format as repeated "1" for each count
+        if (measurementUnit === 'PIECES') {
+          const result: string[] = [];
+          for (const v of value as Array<{ size: string; count?: number }>) {
+            const count = v.count || 1;
+            for (let i = 0; i < count; i++) {
+              result.push('1');
+            }
+          }
+          return result.join(', ');
+        }
+        // For PAIRS, use the original format
         return (value as Array<{ size: string; count?: number }>)
           .map(v => String(v.size))
           .join(',');
@@ -88,6 +100,7 @@ export async function GET(
                 material: true,
                 sizes: true,
                 article: true,
+                measurementUnit: true,
                 images: {
                   where: {
                     isActive: true,
@@ -214,7 +227,7 @@ export async function GET(
         .filter(Boolean)
         .join(',');
       const sizesValue = item.product.sizes
-        ? formatSizes(item.product.sizes)
+        ? formatSizes(item.product.sizes, item.product.measurementUnit as 'PAIRS' | 'PIECES' | undefined)
         : '';
       return [
         item.name,
