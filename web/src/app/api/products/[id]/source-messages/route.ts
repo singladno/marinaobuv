@@ -60,9 +60,14 @@ export async function GET(
               },
             },
           },
-          orderBy: {
-            createdAt: 'asc',
-          },
+          orderBy: [
+            {
+              date: 'asc',
+            },
+            {
+              createdAt: 'asc', // Fallback if date is null
+            },
+          ],
         });
 
         // Get product images (S3 URLs) to match with photo messages
@@ -103,7 +108,9 @@ export async function GET(
             fromName: message.fromFirstName || message.fromUsername || null,
             type: message.type,
             text: message.text || message.caption,
-            timestamp: message.createdAt.getTime(),
+            timestamp: message.date
+              ? Number(message.date)
+              : message.createdAt.getTime() / 1000, // Use Telegram date, fallback to createdAt (convert to seconds)
             mediaUrl: mediaUrl,
             mediaMimeType: message.mediaMimeType,
             mediaWidth: message.mediaWidth,

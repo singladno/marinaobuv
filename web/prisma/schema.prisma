@@ -261,11 +261,13 @@ model TelegramMessage {
   providerId     String?
   processed      Boolean   @default(false)
   rawPayload     Json
+  date           BigInt?   // Original Telegram message timestamp (Unix timestamp in seconds)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   provider       Provider? @relation(fields: [providerId], references: [id])
 
   @@index([createdAt])
+  @@index([date])
   @@index([fromId])
   @@index([fromUsername])
   @@index([chatId])

@@ -1,0 +1,2 @@
+# Migration: Add date field to TelegramMessage
+migration = "add_telegram_message_date"

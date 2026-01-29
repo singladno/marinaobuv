@@ -880,6 +880,10 @@ export class TelegramParser {
         mediaUrl = `telegram_photo_${msg.message_id}`;
       }
 
+      // Use the actual Telegram message date, not the database createdAt
+      const messageDate =
+        (msg as any).date || msg.date || Math.floor(Date.now() / 1000);
+
       // Save message to database
       const saved = await this.prisma.telegramMessage.create({
         data: {
@@ -899,12 +903,9 @@ export class TelegramParser {
           mediaMimeType: msg.document?.mime_type || null,
           mediaFileSize: msg.document?.file_size || null,
           rawPayload: msg as any,
+          date: BigInt(Math.floor(messageDate)),
         },
       });
-
-      // Use the actual Telegram message date, not the database createdAt
-      const messageDate =
-        (msg as any).date || msg.date || saved.createdAt.getTime() / 1000;
 
       savedMessages.push({
         id: saved.id,
