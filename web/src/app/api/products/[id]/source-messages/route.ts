@@ -93,8 +93,13 @@ export async function GET(
 
           return {
             id: message.id,
-            tgMessageId: message.tgMessageId,
-            from: message.fromUsername || message.fromId?.toString() || null,
+            tgMessageId: message.tgMessageId
+              ? message.tgMessageId.toString()
+              : null,
+            from:
+              message.fromUsername ||
+              (message.fromId ? message.fromId.toString() : null) ||
+              null,
             fromName: message.fromFirstName || message.fromUsername || null,
             type: message.type,
             text: message.text || message.caption,

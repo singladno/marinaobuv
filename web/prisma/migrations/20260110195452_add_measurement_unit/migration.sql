@@ -11,3 +11,4 @@ UPDATE "Product" SET "measurementUnit" = 'PAIRS' WHERE "measurementUnit" IS NULL
 
 
 
+
