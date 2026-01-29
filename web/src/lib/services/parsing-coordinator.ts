@@ -66,7 +66,7 @@ export class ParsingCoordinator {
     if (request.type === 'manual') {
       return this.handleManualRequest(request, runningProcesses);
     } else {
-      return this.handleCronRequest(runningProcesses);
+      return this.handleCronRequest(runningProcesses, request.reason);
     }
   }
 
@@ -117,7 +117,8 @@ export class ParsingCoordinator {
    * Handle cron parsing requests
    */
   private static async handleCronRequest(
-    runningProcesses: any[]
+    runningProcesses: any[],
+    currentReason?: string
   ): Promise<ParsingGuardResult> {
     const processInfo = runningProcesses.map(p => ({
       id: p.id,
@@ -138,12 +139,31 @@ export class ParsingCoordinator {
       };
     }
 
-    // Cron should not override other cron processes
-    const cronProcess = runningProcesses.find(p => p.triggeredBy === 'cron');
-    if (cronProcess) {
+    // Cron should not override other cron processes of the SAME type
+    // BUT: Allow different parser types to run simultaneously (Telegram vs Groq)
+    const isCurrentTelegram = currentReason?.includes('Telegram');
+
+    // Find cron processes of the same type
+    const sameTypeCronProcess = runningProcesses.find(p => {
+      if (p.triggeredBy !== 'cron') return false;
+
+      const isRunningTelegram = p.reason?.includes('Telegram');
+      const isRunningGroq = p.reason?.includes('Groq') || p.reason?.includes('WhatsApp');
+
+      // If current is Telegram, block only if another Telegram is running
+      if (isCurrentTelegram && isRunningTelegram) return true;
+
+      // If current is Groq, block only if another Groq is running
+      if (!isCurrentTelegram && isRunningGroq) return true;
+
+      // Different parser types can run simultaneously
+      return false;
+    });
+
+    if (sameTypeCronProcess) {
       return {
         canProceed: false,
-        reason: 'Cron parsing already in progress. Skipping this run.',
+        reason: `${isCurrentTelegram ? 'Telegram' : 'Groq'} parser already in progress. Skipping this run.`,
         runningProcesses: processInfo,
       };
     }
