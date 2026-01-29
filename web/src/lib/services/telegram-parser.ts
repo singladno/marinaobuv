@@ -121,6 +121,8 @@ export class TelegramParser {
     }>
   ): TelegramMessageGroup[] {
     const groups: TelegramMessageGroup[] = [];
+    // Messages should already be sorted by createdAt before being passed here
+    // But we sort again by date to ensure correct order
     const sortedMessages = [...messages].sort((a, b) => a.date - b.date);
     const processedMessageIds = new Set<string>();
     const GROUP_TIMEOUT = 60 * 1000; // 60 seconds
@@ -824,7 +826,8 @@ export class TelegramParser {
       });
 
       if (existing) {
-        // Use existing message
+        // Use existing message - use createdAt for date to maintain chronological order
+        // createdAt reflects when the message was received/saved, which should match Telegram order
         savedMessages.push({
           id: existing.id,
           tgMessageId: existing.tgMessageId,
@@ -899,6 +902,10 @@ export class TelegramParser {
         },
       });
 
+      // Use the actual Telegram message date, not the database createdAt
+      const messageDate =
+        (msg as any).date || msg.date || saved.createdAt.getTime() / 1000;
+
       savedMessages.push({
         id: saved.id,
         tgMessageId: saved.tgMessageId,
@@ -909,7 +916,7 @@ export class TelegramParser {
         caption: saved.caption,
         mediaUrl: saved.mediaUrl,
         type: saved.type,
-        date: saved.createdAt.getTime() / 1000,
+        date: messageDate,
         tgMessageIdBigInt: saved.tgMessageId, // Store for re-downloading images
       });
     }
@@ -934,6 +941,14 @@ export class TelegramParser {
       console.log('[Telegram Parser] No unprocessed messages found');
       return { messagesRead: savedMessages.length, productsCreated: 0 };
     }
+
+    // Sort messages by date (chronological order) before grouping
+    // This ensures messages are processed in the correct order
+    messagesToProcess.sort((a, b) => a.date - b.date);
+
+    console.log(
+      `[Telegram Parser] Messages sorted by date. First message date: ${new Date(messagesToProcess[0]?.date * 1000).toISOString()}, Last: ${new Date(messagesToProcess[messagesToProcess.length - 1]?.date * 1000).toISOString()}`
+    );
 
     // Debug: Log message types
     console.log(
