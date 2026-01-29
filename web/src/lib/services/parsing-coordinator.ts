@@ -148,7 +148,8 @@ export class ParsingCoordinator {
       if (p.triggeredBy !== 'cron') return false;
 
       const isRunningTelegram = p.reason?.includes('Telegram');
-      const isRunningGroq = p.reason?.includes('Groq') || p.reason?.includes('WhatsApp');
+      const isRunningGroq =
+        p.reason?.includes('Groq') || p.reason?.includes('WhatsApp');
 
       // If current is Telegram, block only if another Telegram is running
       if (isCurrentTelegram && isRunningTelegram) return true;

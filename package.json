@@ -64,6 +64,7 @@
     "server:telegram:logs:recent": "ssh -l ubuntu 130.193.56.134 'tail -n 50 /var/www/marinaobuv/web/logs/telegram-parser.log | grep -E \"(Starting|Created|Error|✅|❌|📊|📨|📤|📥)\" | tail -20'",
     "server:telegram:cleanup-stuck": "ssh -l ubuntu 130.193.56.134 'curl -X POST http://localhost:3000/api/admin/cleanup-stuck-parsing'",
     "server:telegram:run": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && NODE_ENV=production npx tsx src/scripts/telegram-parser-cron.ts'",
+    "server:telegram:migrate": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && export $(grep -v \"^#\" .env | xargs) && npx prisma migrate deploy'",
     "telegram:run": "cd web && npx tsx src/scripts/telegram-parser-cron.ts",
     "telegram:test": "cd web && npx tsx scripts/test-telegram-parser.ts",
     "server:cron:list": "ssh -l ubuntu 130.193.56.134 'crontab -l'",

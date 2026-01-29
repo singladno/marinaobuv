@@ -818,9 +818,9 @@ export class TelegramParser {
     }> = [];
 
     for (const msg of telegramMessages) {
-      // Check if message already exists
+      // Check if message already exists (convert to BigInt for lookup)
       const existing = await this.prisma.telegramMessage.findUnique({
-        where: { tgMessageId: msg.message_id },
+        where: { tgMessageId: BigInt(msg.message_id) },
       });
 
       if (existing) {
@@ -880,9 +880,9 @@ export class TelegramParser {
       // Save message to database
       const saved = await this.prisma.telegramMessage.create({
         data: {
-          tgMessageId: msg.message_id,
+          tgMessageId: BigInt(msg.message_id),
           chatId: msg.chat.id.toString(),
-          fromId: msg.from?.id || null,
+          fromId: msg.from?.id ? BigInt(msg.from.id) : null,
           fromUsername: msg.from?.username || null,
           fromFirstName: msg.from?.first_name || null,
           fromLastName: msg.from?.last_name || null,
