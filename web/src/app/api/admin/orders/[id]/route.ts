@@ -29,6 +29,9 @@ export async function GET(
               in: Array.from(validProductIdSet),
             },
           },
+          orderBy: {
+            createdAt: 'desc',
+          },
           include: {
             product: {
               select: {

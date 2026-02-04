@@ -19,6 +19,7 @@ import { OrderItemChat } from './OrderItemChat';
 import { SourceMessagesModal } from './SourceMessagesModal';
 import { AvailabilityControl } from './AvailabilityControl';
 import { PurchaseControl } from './PurchaseControl';
+import { ChatImagesPreview } from './ChatImagesPreview';
 import { cn } from '@/lib/utils';
 
 export interface OrderItemData {
@@ -345,26 +346,30 @@ export function OrderItemCard({
         )}
 
         {/* Actions */}
-        <div className="flex space-x-3 border-t border-gray-100 pt-2">
-          <Button
-            onClick={handleChatOpen}
-            className="flex flex-1 items-center justify-center space-x-2 bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-            size="sm"
-          >
-            <MessageSquare className="h-4 w-4" />
-            <span>Комментарий</span>
-          </Button>
-          {item.source && (
+        <div className="space-y-2 border-t border-gray-100 pt-2">
+          <div className="flex space-x-3">
             <Button
-              onClick={handleSourceOpen}
-              variant="outline"
-              className="flex flex-1 items-center justify-center space-x-2 border-gray-300 hover:bg-gray-50"
+              onClick={handleChatOpen}
+              className="flex flex-1 items-center justify-center space-x-2 bg-blue-600 text-white shadow-sm hover:bg-blue-700"
               size="sm"
             >
-              <ExternalLink className="h-4 w-4" />
-              <span>Источник</span>
+              <MessageSquare className="h-4 w-4" />
+              <span>Комментарий</span>
             </Button>
-          )}
+            {item.source && (
+              <Button
+                onClick={handleSourceOpen}
+                variant="outline"
+                className="flex flex-1 items-center justify-center space-x-2 border-gray-300 hover:bg-gray-50"
+                size="sm"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>Источник</span>
+              </Button>
+            )}
+          </div>
+          {/* Chat Images Preview */}
+          <ChatImagesPreview itemId={item.itemId} />
         </div>
       </CardContent>
     </Card>

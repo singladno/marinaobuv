@@ -6,6 +6,7 @@ import { X, Filter, Check, Tag } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Switch } from '@/components/ui/Switch';
 import {
   Select,
   SelectContent,
@@ -186,6 +187,26 @@ export function GruzchikFilterModal({
                   <Check className="h-4 w-4 text-blue-600" />
                 )}
               </button>
+            </div>
+          </div>
+
+          {/* Show Images Toggle */}
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-gray-900">
+              Отображение
+            </h3>
+            <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2">
+              <label
+                htmlFor="show-images"
+                className="cursor-pointer text-sm font-medium text-gray-700"
+              >
+                Показывать картинки из чата
+              </label>
+              <Switch
+                id="show-images"
+                checked={filters.showImages}
+                onCheckedChange={checked => updateFilter('showImages', checked)}
+              />
             </div>
           </div>
 

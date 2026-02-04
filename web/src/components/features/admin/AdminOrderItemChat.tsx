@@ -28,6 +28,8 @@ import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/NextAuthUserContext';
 import { useAdminChat } from '@/contexts/AdminChatContext';
 import { AdminPortalSwitcherHeader } from '@/components/ui/AdminPortalSwitcherHeader';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 
 interface ChatMessage {
   id: string;
@@ -89,6 +91,9 @@ export function AdminOrderItemChat({
     string | null
   >(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Confirmation modal for message deletion
+  const confirmationModal = useConfirmationModal();
   const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
   const [mediaViewerItems, setMediaViewerItems] = useState<
     {
@@ -435,18 +440,42 @@ export function AdminOrderItemChat({
       if (response.ok) {
         setMessages(prev => prev.filter(msg => msg.id !== messageId));
         setDeleteConfirmMessage(null);
+        confirmationModal.closeModal();
       } else {
-        console.error('Failed to delete message');
+        const errorData = await response.json();
+        console.error('Failed to delete message:', errorData.error);
+        confirmationModal.setLoading(false);
+        alert(`Ошибка: ${errorData.error || 'Не удалось удалить сообщение'}`);
       }
     } catch (error) {
       console.error('Failed to delete message:', error);
+      confirmationModal.setLoading(false);
+      alert(
+        `Ошибка: ${error instanceof Error ? error.message : 'Не удалось удалить сообщение'}`
+      );
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleDeleteClick = (messageId: string) => {
-    setDeleteConfirmMessage(messageId);
+  const handleDeleteClick = async (messageId: string) => {
+    const confirmed = await confirmationModal.showConfirmation({
+      title: 'Удалить сообщение?',
+      message: 'Вы уверены, что хотите удалить это сообщение? Это действие нельзя отменить.',
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      confirmationModal.setLoading(true);
+      await handleDeleteMessage(messageId);
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      confirmationModal.setLoading(false);
+    }
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -686,6 +715,19 @@ export function AdminOrderItemChat({
           />
         )}
       </div>
+
+      {/* Confirmation Modal for Message Deletion */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={confirmationModal.handleCancel}
+        onConfirm={confirmationModal.handleConfirm}
+        title={confirmationModal.options.title}
+        message={confirmationModal.options.message}
+        confirmText={confirmationModal.options.confirmText}
+        cancelText={confirmationModal.options.cancelText}
+        variant={confirmationModal.options.variant}
+        isLoading={confirmationModal.isLoading}
+      />
     </>
   );
 }

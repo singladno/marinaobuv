@@ -15,6 +15,7 @@ export interface GruzchikFilters {
   providerId: string | null; // For backward compatibility with availability page
   providerIds: string[]; // For multi-select in purchase page
   clientId: string | null;
+  showImages: boolean; // Show images from chat
 }
 
 interface GruzchikFilterContextType {
@@ -41,12 +42,25 @@ const defaultFilters: GruzchikFilters = {
   providerId: null,
   providerIds: [],
   clientId: null,
+  showImages: false,
 };
 
 export function GruzchikFilterProvider({
   children,
 }: GruzchikFilterProviderProps) {
-  const [filters, setFilters] = useState<GruzchikFilters>(defaultFilters);
+  // Load showImages preference from localStorage
+  const [filters, setFilters] = useState<GruzchikFilters>(() => {
+    const savedShowImages = localStorage.getItem('gruzchik-show-images');
+    return {
+      ...defaultFilters,
+      showImages: savedShowImages === 'true',
+    };
+  });
+
+  // Save showImages preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('gruzchik-show-images', String(filters.showImages));
+  }, [filters.showImages]);
 
   const updateFilter = useCallback(
     <K extends keyof GruzchikFilters>(key: K, value: GruzchikFilters[K]) => {

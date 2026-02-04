@@ -17,6 +17,8 @@ import {
   ExternalLink,
   Building2,
   Phone,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
@@ -33,6 +35,7 @@ import { FeedbackStatusIconsCompact } from '@/components/features/admin/Feedback
 import { MessagePreviewCompact } from '@/components/features/admin/MessagePreview';
 import { AdminReplacementModal } from '@/components/features/admin/AdminReplacementModal';
 import { ProductImageModal } from '@/components/features/ProductImageModal';
+import { AddProductsToOrderModal } from '@/components/features/admin/AddProductsToOrderModal';
 import { cn } from '@/lib/utils';
 import { formatOrderNumber } from '@/utils/orderNumberUtils';
 import {
@@ -43,6 +46,8 @@ import {
   SelectValue,
 } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 
 interface OrderItem {
   id: string;
@@ -177,6 +182,7 @@ export default function OrderDetailsPage() {
     productName: string;
     initialIndex: number;
   } | null>(null);
+  const [addProductsModalOpen, setAddProductsModalOpen] = useState(false);
   const [gruzchiks, setGruzchiks] = useState<
     Array<{ id: string; name: string | null; phone: string | null }>
   >([]);
@@ -193,6 +199,9 @@ export default function OrderDetailsPage() {
   // Get unread counts for all items in this order
   const { getUnreadCount, refetch: refetchUnreadCounts } =
     useAdminOrderUnreadCounts(orderId);
+
+  // Confirmation modal for item deletion
+  const confirmationModal = useConfirmationModal();
 
   // Load showImages preference from localStorage
   useEffect(() => {
@@ -584,6 +593,45 @@ export default function OrderDetailsPage() {
     }
   };
 
+  const handleDeleteItem = async (itemId: string, itemName: string) => {
+    const confirmed = await confirmationModal.showConfirmation({
+      title: 'Удалить товар из заказа?',
+      message: `Вы уверены, что хотите удалить "${itemName}" из заказа? Это действие нельзя отменить.`,
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      confirmationModal.setLoading(true);
+      const response = await fetch(`/api/admin/order-items/${itemId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete item');
+      }
+
+      // Refresh order data
+      const orderResponse = await fetch(`/api/admin/orders/${orderId}`);
+      if (orderResponse.ok) {
+        const orderData = await orderResponse.json();
+        setOrder(orderData.order);
+      }
+
+      confirmationModal.closeModal();
+    } catch (error) {
+      console.error('Failed to delete order item:', error);
+      confirmationModal.setLoading(false);
+      alert(
+        `Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+      );
+    }
+  };
+
   const handleImageClick = (item: OrderItem, imageIndex: number = 0) => {
     if (item.product.images && item.product.images.length > 0) {
       // Normalize color strings for comparison (trim and lowercase)
@@ -862,6 +910,15 @@ export default function OrderDetailsPage() {
               Товары в заказе
             </h2>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <Button
+                onClick={() => setAddProductsModalOpen(true)}
+                variant="primary"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Добавить товары
+              </Button>
               <div className="flex items-center gap-2">
                 <Checkbox
                   ref={checkboxInputRef}
@@ -1313,6 +1370,14 @@ export default function OrderDetailsPage() {
                                 <RefreshCw className="h-4 w-4" />
                                 <span>Предложить замену</span>
                               </Button>
+                              <Button
+                                onClick={() => handleDeleteItem(item.id, item.name)}
+                                variant="outline"
+                                size="sm"
+                                className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -1688,6 +1753,15 @@ export default function OrderDetailsPage() {
                                     <RefreshCw className="h-3 w-3" />
                                     <span className="text-xs">Замена</span>
                                   </Button>
+                                  <Button
+                                    onClick={() => handleDeleteItem(item.id, item.name)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20"
+                                    title="Удалить товар из заказа"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -1756,6 +1830,34 @@ export default function OrderDetailsPage() {
           initialIndex={selectedItemImages.initialIndex}
         />
       )}
+
+      {/* Confirmation Modal for Item Deletion */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={confirmationModal.handleCancel}
+        onConfirm={confirmationModal.handleConfirm}
+        title={confirmationModal.options.title}
+        message={confirmationModal.options.message}
+        confirmText={confirmationModal.options.confirmText}
+        cancelText={confirmationModal.options.cancelText}
+        variant={confirmationModal.options.variant}
+        isLoading={confirmationModal.isLoading}
+      />
+
+      {/* Add Products Modal */}
+      <AddProductsToOrderModal
+        isOpen={addProductsModalOpen}
+        onClose={() => setAddProductsModalOpen(false)}
+        orderId={orderId}
+        onProductAdded={async () => {
+          // Refresh order data
+          const orderResponse = await fetch(`/api/admin/orders/${orderId}`);
+          if (orderResponse.ok) {
+            const orderData = await orderResponse.json();
+            setOrder(orderData.order);
+          }
+        }}
+      />
     </div>
   );
 }
