@@ -44,7 +44,7 @@ export default function AdminSidebarLayout({
         {/* Mobile header removed - using bottom navigation only */}
 
         {/* Main content - Allow scrolling; add bottom padding for mobile bottom nav */}
-        <main className="flex-1 p-4 pb-20 sm:p-6 sm:pb-20 lg:pb-6">{children}</main>
+        <main className="flex-1 p-0 pb-20 sm:p-6 sm:pb-20 lg:pb-6">{children}</main>
         {/* Spacer for bottom navigation on mobile and tablet */}
         <div className="h-16 lg:hidden" />
         <AdminBottomNavigation userRole={userRole} />

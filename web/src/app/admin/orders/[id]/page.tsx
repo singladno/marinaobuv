@@ -747,7 +747,7 @@ export default function OrderDetailsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="flex h-full flex-col space-y-6 px-4 py-4 sm:px-6 sm:py-8">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
@@ -903,8 +903,8 @@ export default function OrderDetailsPage() {
       </div>
 
       {/* Order Items */}
-      <Card className="border border-gray-200 shadow-sm dark:border-gray-700">
-        <CardHeader className="border-b border-gray-200 dark:border-gray-700">
+      <Card className="mx-0 border-0 shadow-none md:mx-0 md:border md:border-gray-200 md:rounded-xl md:shadow-sm dark:md:border-gray-700">
+        <CardHeader className="border-b border-gray-200 px-4 py-3 sm:p-6 dark:border-gray-700">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Товары в заказе
@@ -968,7 +968,10 @@ export default function OrderDetailsPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent
+          className="!p-0"
+          style={{ padding: 0 } as React.CSSProperties}
+        >
           {(() => {
             // Filter items based on selected filters
             const filteredItems = order.items.filter(item => {
@@ -995,7 +998,7 @@ export default function OrderDetailsPage() {
               <>
                 {/* Mobile Card View */}
                 <div className="block md:hidden">
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <div className="space-y-1">
                     {filteredItems.length === 0 ? (
                       <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                         Нет товаров, соответствующих выбранным фильтрам
@@ -1005,7 +1008,7 @@ export default function OrderDetailsPage() {
                         <div
                           key={item.id}
                           className={cn(
-                            'bg-white px-4 py-4 dark:bg-gray-800',
+                            'bg-white px-4 py-3 dark:bg-gray-800',
                             (order.status === 'Куплен' ||
                               item.isPurchased === true) &&
                               'bg-green-50 dark:bg-green-950/20',
@@ -1017,9 +1020,9 @@ export default function OrderDetailsPage() {
                               'bg-orange-50 dark:bg-orange-950/20'
                           )}
                         >
-                          <div className="space-y-4">
+                          <div className="space-y-3 sm:space-y-4">
                             {/* Item Header */}
-                            <div className="flex items-start gap-3">
+                            <div className="flex items-start gap-2 sm:gap-3">
                               {/* Images - show 2 images side by side, filtered by ordered color */}
                               <div className="flex shrink-0 gap-1">
                                 {(() => {
@@ -1131,8 +1134,8 @@ export default function OrderDetailsPage() {
                               </div>
 
                               {/* Item Info */}
-                              <div className="min-w-0 flex-1">
-                                <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-white">
+                              <div className="min-w-0 flex-1 space-y-1.5">
+                                <h3 className="text-sm font-semibold leading-tight text-gray-900 dark:text-white">
                                   <Link
                                     href={{
                                       pathname: `/product/${item.product.slug}`,
@@ -1142,32 +1145,30 @@ export default function OrderDetailsPage() {
                                     }}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="group inline-flex items-center gap-1.5 transition-colors hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                                    className="group inline-flex items-start gap-1.5 transition-colors hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                                   >
-                                    <span>{item.name}</span>
-                                    <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                                    <span className="break-words">{item.name}</span>
+                                    <ExternalLink className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
                                   </Link>
                                 </h3>
-                                {item.itemCode && (
-                                  <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Код: {item.itemCode}
-                                  </div>
-                                )}
-                                {item.product.article && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    Артикул: {item.product.article}
-                                  </div>
-                                )}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-600 dark:text-gray-400">
+                                  {item.itemCode && (
+                                    <span>Код: {item.itemCode}</span>
+                                  )}
+                                  {item.product.article && (
+                                    <span>Артикул: {item.product.article}</span>
+                                  )}
+                                </div>
                                 {item.product.provider && (
-                                  <div className="space-y-1.5">
+                                  <div className="space-y-1 pt-0.5">
                                     <div className="flex items-center gap-1.5">
-                                      <Building2 className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+                                      <Building2 className="h-3 w-3 shrink-0 text-blue-600 dark:text-blue-400" />
                                       <span className="text-xs text-gray-700 dark:text-gray-300">
-                                        Поставщик: {item.product.provider.name}
+                                        {item.product.provider.name}
                                       </span>
                                     </div>
                                     {item.product.provider.phone && (
-                                      <div className="flex items-center gap-1.5 pl-5">
+                                      <div className="flex items-center gap-1.5">
                                         <Phone className="h-3 w-3 shrink-0 text-gray-400 dark:text-gray-500" />
                                         <span className="text-xs text-gray-600 dark:text-gray-400">
                                           {item.product.provider.phone}
@@ -1176,9 +1177,9 @@ export default function OrderDetailsPage() {
                                     )}
                                     {(item.product.provider.place ||
                                       item.product.provider.location) && (
-                                      <div className="flex items-start gap-1.5 pl-5">
+                                      <div className="flex items-start gap-1.5">
                                         <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-gray-400 dark:text-gray-500" />
-                                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                                        <span className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
                                           {[
                                             item.product.provider.place,
                                             item.product.provider.location,

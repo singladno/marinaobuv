@@ -538,7 +538,7 @@ export function AdminOrderItemChat({
 
       {/* Chat container */}
       <div
-        className="fixed inset-0 z-50 flex w-screen overflow-hidden bg-black bg-opacity-50"
+        className="fixed inset-0 z-[60] flex w-screen overflow-hidden bg-black bg-opacity-50 lg:z-50"
         // eslint-disable-next-line react/no-unknown-property
         style={{
           height: isKeyboardOpen
@@ -622,7 +622,9 @@ export function AdminOrderItemChat({
           <div
             className={cn(
               'flex-shrink-0 border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800',
-              isKeyboardOpen ? 'p-2 pb-1' : 'p-4 pb-4', // Ensure proper padding in normal mode
+              isKeyboardOpen
+                ? 'p-2 pb-1'
+                : 'p-4 pb-20 lg:pb-4', // Add bottom padding on mobile (80px) to account for bottom navigation (64px = h-16), normal padding on desktop
               isAndroidChrome && !isKeyboardOpen && 'mobile-chat-input' // Add safe area handling for Android Chrome
             )}
           >
