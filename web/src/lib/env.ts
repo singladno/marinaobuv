@@ -107,8 +107,19 @@ const schema = z
         return parsed;
       }),
 
-    // Target Group Chat ID for Processing
+    // Target Group Chat ID for Processing (legacy single group)
     TARGET_GROUP_ID: z.string().optional(),
+    // WhatsApp chat IDs to save messages from and process (comma-separated). If set, overrides TARGET_GROUP_ID for multi-chat support.
+    WA_CHAT_IDS: z
+      .string()
+      .optional()
+      .transform(val => {
+        if (!val || typeof val !== 'string') return undefined;
+        return val
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+      }),
 
     // Message Fetch Configuration - REMOVED: Messages now saved via webhooks
 
@@ -226,8 +237,9 @@ const raw = {
   IMAGE_DOWNLOAD_CONCURRENCY: process.env.IMAGE_DOWNLOAD_CONCURRENCY,
   GROUPING_MAX_MESSAGES_PER_CALL: process.env.GROUPING_MAX_MESSAGES_PER_CALL,
 
-  // Target Group Chat ID for Processing
+  // Target Group Chat ID for Processing (legacy)
   TARGET_GROUP_ID: process.env.TARGET_GROUP_ID,
+  WA_CHAT_IDS: process.env.WA_CHAT_IDS,
 
   // Message Fetch Configuration
 
@@ -276,3 +288,10 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+/** WhatsApp chat IDs to save/process: WA_CHAT_IDS if set, else [TARGET_GROUP_ID], else []. */
+export function getWaChatIds(): string[] {
+  if (env.WA_CHAT_IDS && env.WA_CHAT_IDS.length > 0) return env.WA_CHAT_IDS;
+  if (env.TARGET_GROUP_ID) return [env.TARGET_GROUP_ID];
+  return [];
+}

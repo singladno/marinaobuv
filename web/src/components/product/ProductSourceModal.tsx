@@ -38,12 +38,15 @@ export function ProductSourceModal({
   productName,
 }: ProductSourceModalProps) {
   const [messages, setMessages] = useState<SourceMessage[]>([]);
+  const [sourceChatLabel, setSourceChatLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && productId) {
       fetchSourceMessages();
+    } else {
+      setSourceChatLabel(null);
     }
   }, [isOpen, productId]);
 
@@ -51,6 +54,7 @@ export function ProductSourceModal({
     try {
       setLoading(true);
       setError(null);
+      setSourceChatLabel(null);
 
       const response = await fetch(
         `/api/products/${productId}/source-messages`
@@ -59,6 +63,7 @@ export function ProductSourceModal({
 
       if (response.ok && data.success) {
         setMessages(data.messages || []);
+        setSourceChatLabel(data.sourceChatLabel ?? null);
       } else {
         setError(data.error || 'Failed to fetch source messages');
       }
@@ -69,11 +74,13 @@ export function ProductSourceModal({
     }
   };
 
+  const modalTitle = `Источник: ${sourceChatLabel ?? productName}`;
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Источник: ${productName}`}
+      title={modalTitle}
       size="xl"
       zIndex="z-[60]"
     >

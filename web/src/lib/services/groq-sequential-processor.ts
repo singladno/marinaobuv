@@ -1347,8 +1347,13 @@ export class GroqSequentialProcessor {
               alt: `Product image ${i + 1}`,
               sort: i,
               isPrimary: i === 0,
+              messageId: message.id,
             });
-            // Image uploaded successfully
+            // Persist S3 key on the message so source-messages API can serve stable URLs
+            await this.prisma.whatsAppMessage.update({
+              where: { id: message.id },
+              data: { mediaS3Key: s3Key },
+            });
           } else {
             console.error(`❌ Failed to upload image ${i + 1} to S3`);
           }

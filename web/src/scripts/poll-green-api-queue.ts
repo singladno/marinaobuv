@@ -3,7 +3,7 @@
 // Load env first
 import '../scripts/load-env';
 import { prisma } from '../lib/db-node';
-import { env } from '../lib/env';
+import { env, getWaChatIds } from '../lib/env';
 
 type IncomingWebhook = {
   receiptId: number;
@@ -51,6 +51,15 @@ async function saveMessageFromWebhook(webhook: IncomingWebhook): Promise<void> {
   const chatId = senderData.chatId || b.chatId || null;
   const from = senderData.sender || null;
   const fromName = senderData.senderName || null;
+  const chatName =
+    (senderData.chatName && String(senderData.chatName).trim()) ||
+    (b.chatName && String(b.chatName).trim()) ||
+    null;
+
+  const allowedChatIds = getWaChatIds();
+  if (!chatId || allowedChatIds.length === 0 || !allowedChatIds.includes(chatId)) {
+    return;
+  }
 
   // idempotent save
   const existing = await prisma.whatsAppMessage.findUnique({
@@ -74,6 +83,14 @@ async function saveMessageFromWebhook(webhook: IncomingWebhook): Promise<void> {
       rawPayload: b,
     },
   });
+
+  if (chatName) {
+    await prisma.whatsAppChat.upsert({
+      where: { chatId },
+      create: { chatId, name: chatName },
+      update: { name: chatName },
+    });
+  }
 }
 
 async function main() {

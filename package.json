@@ -22,6 +22,8 @@
     "deploy:local": "./scripts/local-deploy.sh",
     "setup:local": "./scripts/setup-local-env.sh",
     "parse:groq": "cd web && tsx src/scripts/groq-sequential-cron.ts",
+    "list:wa-chats": "cd web && npx tsx scripts/list-wa-chats.ts",
+    "backfill:wa-chat-names": "cd web && npx tsx scripts/backfill-wa-chat-names.ts",
     "test:color-fix": "cd web && tsx src/scripts/test-color-fix.ts",
     "health": "curl -s http://localhost:3000/api/health || echo 'Application not responding'",
     "prisma": "cd web && ./load-env.sh npx prisma studio",

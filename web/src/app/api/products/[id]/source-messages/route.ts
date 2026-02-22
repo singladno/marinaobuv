@@ -3,6 +3,14 @@ import { ProductSource } from '@prisma/client';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { getPublicUrl } from '@/lib/storage';
+
+function formatWhatsAppChatLabel(chatId: string | null): string | null {
+  if (!chatId || typeof chatId !== 'string') return null;
+  if (chatId.endsWith('@g.us')) return `Группа ${chatId.replace('@g.us', '')}`;
+  if (chatId.endsWith('@c.us')) return `Чат ${chatId.replace('@c.us', '')}`;
+  return chatId;
+}
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -117,12 +125,20 @@ export async function GET(
             mediaHeight: message.mediaHeight,
             createdAt: message.createdAt,
             provider: message.provider,
+            chatId: message.chatId,
           };
         });
+
+        const firstTgChatId = sourceMessages[0]?.chatId ?? null;
+        const sourceChatLabel = firstTgChatId
+          ? `Чат ${firstTgChatId}`
+          : null;
 
         return NextResponse.json({
           success: true,
           messages: formattedMessages,
+          sourceChatId: firstTgChatId,
+          sourceChatLabel,
           product: {
             id: product.id,
             name: product.name,
@@ -152,7 +168,8 @@ export async function GET(
           ],
         });
 
-        // Format the messages for the frontend
+        // Format the messages for the frontend.
+        // Prefer S3/CDN URL when we have mediaS3Key (stable); Green API mediaUrl often 404s when expired.
         const formattedMessages = sourceMessages.map(message => ({
           id: message.id,
           waMessageId: message.waMessageId,
@@ -161,17 +178,34 @@ export async function GET(
           type: message.type,
           text: message.text,
           timestamp: message.timestamp ? Number(message.timestamp) : null,
-          mediaUrl: message.mediaUrl,
+          mediaUrl:
+            message.mediaS3Key
+              ? getPublicUrl(message.mediaS3Key)
+              : message.mediaUrl,
           mediaMimeType: message.mediaMimeType,
           mediaWidth: message.mediaWidth,
           mediaHeight: message.mediaHeight,
           createdAt: message.createdAt,
           provider: message.provider,
+          chatId: message.chatId,
         }));
+
+        const firstChatId = sourceMessages[0]?.chatId ?? null;
+        let sourceChatLabel: string | null = null;
+        if (firstChatId) {
+          const chat = await prisma.whatsAppChat.findUnique({
+            where: { chatId: firstChatId },
+            select: { name: true },
+          });
+          sourceChatLabel =
+            (chat?.name && chat.name.trim()) || formatWhatsAppChatLabel(firstChatId);
+        }
 
         return NextResponse.json({
           success: true,
           messages: formattedMessages,
+          sourceChatId: firstChatId,
+          sourceChatLabel,
           product: {
             id: product.id,
             name: product.name,

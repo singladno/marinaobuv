@@ -38,6 +38,8 @@
     "messages:clean": "tsx src/scripts/clean-messages.ts",
     "messages:clear": "tsx src/scripts/clear-messages.ts",
     "green:queue:poll": "tsx src/scripts/poll-green-api-queue.ts",
+    "list:wa-chats": "tsx scripts/list-wa-chats.ts",
+    "backfill:wa-chat-names": "tsx scripts/backfill-wa-chat-names.ts",
     "webhook:monitor": "tsx src/scripts/webhook-status-monitor.ts",
     "webhook:configure": "tsx src/scripts/configure-webhook.ts",
     "export:latest": "tsx src/scripts/get-latest-export-urls.ts",

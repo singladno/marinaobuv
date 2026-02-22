@@ -8,7 +8,7 @@
 import './load-env';
 import { prisma } from '../lib/db-node';
 import { ParsingProgressService } from '../lib/services/parsing-progress-service';
-import { env } from '../lib/env';
+import { env, getWaChatIds } from '../lib/env';
 import { greenApiFetcher } from '../lib/green-api-fetcher';
 import { extractNormalizedPhone } from '../lib/utils/whatsapp-phone-extractor';
 
@@ -76,13 +76,12 @@ async function main() {
     process.exit(1);
   }
 
-  if (!env.TARGET_GROUP_ID) {
-    console.error('❌ TARGET_GROUP_ID not configured!');
+  const allowedChatIds = getWaChatIds();
+  if (allowedChatIds.length === 0) {
+    console.error('❌ No WA chats configured (set WA_CHAT_IDS or TARGET_GROUP_ID)');
     process.exit(1);
   }
-
-  const chatId = env.TARGET_GROUP_ID;
-  console.log(`🎯 Target group: ${chatId}`);
+  console.log(`🎯 Target chat(s): ${allowedChatIds.join(', ')}`);
 
   try {
     // ONE API CALL GETS EVERYTHING!
@@ -129,10 +128,12 @@ async function main() {
       );
     }
 
-    // Filter messages by target group ID
-    const messages = allMessages.filter((msg: any) => msg.chatId === chatId);
+    // Filter messages to allowed chat IDs only
+    const messages = allMessages.filter((msg: any) =>
+      msg.chatId && allowedChatIds.includes(msg.chatId)
+    );
     console.log(
-      `🎯 Filtered to ${messages.length} messages from target group: ${chatId}`
+      `🎯 Filtered to ${messages.length} messages from ${allowedChatIds.length} chat(s)`
     );
 
     // Update parsing progress with messages fetched (if PARSING_HISTORY_ID provided)

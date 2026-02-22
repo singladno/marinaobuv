@@ -2,7 +2,7 @@ import { GroqSequentialProcessor } from '../lib/services/groq-sequential-process
 import { fetchExtendedBatch } from '../lib/utils/batch-extender';
 import { ParsingCoordinator } from '../lib/services/parsing-coordinator';
 import { ParsingProgressService } from '../lib/services/parsing-progress-service';
-import { env } from '../lib/env';
+import { env, getWaChatIds } from '../lib/env';
 import { scriptPrisma as prisma } from '../lib/script-db';
 import { initializeTokenLogger, closeTokenLogger } from '../lib/utils/groq-token-logger';
 import fs from 'node:fs';
@@ -191,30 +191,9 @@ async function main() {
     progressService = new ParsingProgressService();
     progressService.setParsingHistoryId(parsingHistoryId);
 
-    const batchSize = env.PROCESSING_BATCH_SIZE;
-    const hoursBack = env.MESSAGE_PROCESSING_HOURS;
-    const processor = new GroqSequentialProcessor(prisma, progressService);
-    let cycleCount = 0;
-    let totalUnprocessed = 0;
-
-    // Calculate the cutoff time for messages (N hours back from now)
-    const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-
-    // Get initial count of unprocessed messages from the last N hours
-    const initialCount = await prisma.whatsAppMessage.count({
-      where: {
-        processed: false,
-        type: { in: ['imageMessage', 'extendedTextMessage', 'textMessage'] },
-        chatId: env.TARGET_GROUP_ID,
-        createdAt: {
-          gte: cutoffTime, // Only messages from the last N hours
-        },
-      },
-    });
-
-    if (initialCount === 0) {
-      console.log('✅ No unprocessed messages found');
-      // Update progress and mark as completed
+    const chatIds = getWaChatIds();
+    if (chatIds.length === 0) {
+      console.log('⏸️ No WA chat IDs configured (set WA_CHAT_IDS or TARGET_GROUP_ID)');
       if (progressService) {
         await progressService.updateProgress({
           status: 'completed',
@@ -225,133 +204,116 @@ async function main() {
       return;
     }
 
-    totalUnprocessed = initialCount;
-    console.log(
-      `📊 Found ${totalUnprocessed} unprocessed messages from the last ${hoursBack} hours to process`
-    );
+    const batchSize = env.PROCESSING_BATCH_SIZE;
+    const hoursBack = env.MESSAGE_PROCESSING_HOURS;
+    const processor = new GroqSequentialProcessor(prisma, progressService);
+    const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+    let cycleCount = 0;
+    let totalUnprocessed = 0;
 
-    // Continue processing until no more unprocessed messages
-    let currentOffset = 0;
-
-    while (true) {
-      // Check if we're shutting down
-      if (isShuttingDown) {
-        console.log('🛑 Shutdown requested, stopping processing...');
-        break;
-      }
-
-      cycleCount++;
-      console.log(`\n🔄 Starting processing cycle ${cycleCount}...`);
-
-      // Get extended batch of unprocessed messages with offset to prevent overlap
-      const extendedBatch = await fetchExtendedBatch(
-        batchSize,
-        env.TARGET_GROUP_ID,
-        currentOffset,
-        hoursBack
-      );
-
-      if (extendedBatch.totalCount === 0) {
-        console.log('✅ No more unprocessed messages found');
-        break;
-      }
+    // Process each chat in order: first all messages from chat 1, then chat 2, etc.
+    for (let chatIndex = 0; chatIndex < chatIds.length; chatIndex++) {
+      const currentChatId = chatIds[chatIndex];
+      if (isShuttingDown) break;
 
       console.log(
-        `📊 Processing ${extendedBatch.totalCount} messages ` +
-          `(batch size: ${batchSize}, extended: +${extendedBatch.extendedCount}, offset: ${currentOffset})`
+        `\n📂 Chat ${chatIndex + 1}/${chatIds.length}: ${currentChatId} (last ${hoursBack}h)`
       );
 
-      // Process the entire extended batch as one unit
-      const messageIds = extendedBatch.messageIds;
-      let cycleProcessed = 0;
+      const initialCount = await prisma.whatsAppMessage.count({
+        where: {
+          processed: false,
+          type: { in: ['imageMessage', 'extendedTextMessage', 'textMessage'] },
+          chatId: currentChatId,
+          createdAt: { gte: cutoffTime },
+        },
+      });
 
-      console.log(
-        `🔄 Processing batch ${cycleCount} ` +
-          `(${messageIds.length} messages: offset ${currentOffset} to ${currentOffset + messageIds.length})`
-      );
+      if (initialCount === 0) {
+        console.log(`   No unprocessed messages for this chat, skipping.`);
+        continue;
+      }
 
-      try {
-        // Check if we're shutting down before processing
-        if (isShuttingDown) {
-          console.log('🛑 Shutdown requested, skipping batch processing...');
+      totalUnprocessed += initialCount;
+      console.log(`   Found ${initialCount} unprocessed messages for this chat.`);
+
+      let currentOffset = 0;
+      let chatProcessed = 0;
+
+      while (true) {
+        if (isShuttingDown) break;
+
+        cycleCount++;
+        console.log(`\n🔄 Processing cycle ${cycleCount} (chat: ${currentChatId})...`);
+
+        const extendedBatch = await fetchExtendedBatch(
+          batchSize,
+          currentChatId,
+          currentOffset,
+          hoursBack
+        );
+
+        if (extendedBatch.totalCount === 0) {
+          console.log(`   No more unprocessed messages for this chat.`);
           break;
         }
 
-        const result = await processor.processMessagesToProducts(messageIds);
+        const messageIds = extendedBatch.messageIds;
+        let cycleProcessed = 0;
 
-        if (result.anyProcessed) {
-          console.log(`✅ Batch processed successfully`);
-          cycleProcessed += messageIds.length;
-          totalProductsCreated += result.productsCreated || 0; // Add to cumulative total
-        } else {
-          console.log(`⚠️ No products created from this batch`);
+        console.log(
+          `   Batch: ${extendedBatch.totalCount} messages (extended: +${extendedBatch.extendedCount}, offset: ${currentOffset})`
+        );
+
+        try {
+          if (isShuttingDown) break;
+
+          const result = await processor.processMessagesToProducts(messageIds);
+
+          if (result.anyProcessed) {
+            cycleProcessed = messageIds.length;
+            totalProductsCreated += result.productsCreated || 0;
+          }
+          totalProcessed += cycleProcessed;
+          chatProcessed += cycleProcessed;
+          if (progressService && !isShuttingDown) {
+            await progressService.updateProgress({
+              messagesRead: totalProcessed,
+              productsCreated: totalProductsCreated,
+            });
+          }
+        } catch (error) {
+          console.error(`❌ Error processing batch:`, error);
+          if (
+            error instanceof Error &&
+            error.message.includes('json_validate_failed')
+          ) {
+            console.log(`   Groq JSON validation error - batch will be retried later`);
+          }
         }
 
-        // Update progress after each batch with cumulative totals
-        if (progressService && !isShuttingDown) {
-          const currentTotalMessages = totalProcessed + cycleProcessed;
-          await progressService.updateProgress({
-            messagesRead: currentTotalMessages,
-            productsCreated: totalProductsCreated, // Use cumulative total
-          });
+        currentOffset =
+          extendedBatch.nextOffset ?? currentOffset + messageIds.length;
+
+        console.log(
+          `   Progress for this chat: ${chatProcessed} processed, next offset: ${currentOffset}`
+        );
+
+        if (!isShuttingDown) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
-      } catch (error) {
-        console.error(`❌ Error processing batch:`, error);
-
-        // Check if it's a JSON validation error from Groq
-        if (
-          error instanceof Error &&
-          error.message.includes('json_validate_failed')
-        ) {
-          console.log(
-            `🔄 Groq JSON validation error - this batch will be skipped and retried later`
-          );
-          console.log(
-            `📝 Error details: ${error.message.substring(0, 200)}...`
-          );
-        }
-
-        // Continue with next batch even if this one fails
-        // Don't increment cycleProcessed for failed batches
-      }
-
-      // Update offset for next batch to prevent overlap
-      currentOffset =
-        extendedBatch.nextOffset || currentOffset + messageIds.length;
-
-      totalProcessed += cycleProcessed;
-      const remaining = totalUnprocessed - totalProcessed;
-      const progressPercent = Math.round(
-        (totalProcessed / totalUnprocessed) * 100
-      );
-
-      console.log(
-        `📊 Cycle ${cycleCount} completed: ${cycleProcessed} messages processed`
-      );
-      console.log(
-        `📊 Progress: ${totalProcessed}/${totalUnprocessed} (${progressPercent}%) - ${remaining} remaining`
-      );
-      console.log(`📊 Next offset: ${currentOffset}`);
-
-      // Small delay between cycles to avoid overwhelming the system
-      if (!isShuttingDown) {
-        console.log('⏳ Waiting 2 seconds before next cycle...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
     if (isShuttingDown) {
       console.log(`🛑 Processing stopped due to shutdown signal`);
-      // Status will be updated by the shutdown handler
     } else {
-      console.log(`✅ Completed processing all available messages`);
-
-      // Mark parsing as completed
+      console.log(`✅ Completed processing all chats`);
       if (progressService) {
         await progressService.updateProgress({
           status: 'completed',
           messagesRead: totalProcessed,
-          productsCreated: totalProductsCreated, // Use the actual cumulative total
+          productsCreated: totalProductsCreated,
         });
       }
     }
@@ -359,7 +321,7 @@ async function main() {
     console.log(`🎉 Groq Sequential Processing completed!`);
     console.log(`📊 Total cycles: ${cycleCount}`);
     console.log(
-      `📊 Total messages processed: ${totalProcessed}/${totalUnprocessed} (${Math.round((totalProcessed / totalUnprocessed) * 100)}%)`
+      `📊 Total messages processed: ${totalProcessed}${totalUnprocessed ? ` / ${totalUnprocessed}` : ''}`
     );
     console.log(`📊 Total products created: ${totalProductsCreated}`);
   } catch (error) {

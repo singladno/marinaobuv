@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db-node';
-import { env } from '../../../../lib/env';
+import { getWaChatIds } from '../../../../lib/env';
 import { extractNormalizedPhone } from '../../../../lib/utils/whatsapp-phone-extractor';
 
 /**
@@ -45,9 +45,9 @@ async function handleIncomingMessage(payload: any) {
     return;
   }
 
-  // Filter messages to only process our target group
-  if (chatId !== env.TARGET_GROUP_ID) {
-    // Reduced logging for non-target groups
+  // Only save messages from configured chat IDs (WA_CHAT_IDS or TARGET_GROUP_ID)
+  const allowedChatIds = getWaChatIds();
+  if (allowedChatIds.length === 0 || !allowedChatIds.includes(chatId)) {
     return;
   }
 
@@ -92,6 +92,8 @@ async function handleIncomingMessage(payload: any) {
   const rawFrom = senderData?.sender || null;
   const from = extractNormalizedPhone(rawFrom);
   const fromName = senderData?.senderName || null;
+  const chatName =
+    (senderData?.chatName && String(senderData.chatName).trim()) || null;
 
   try {
     // Check if message already exists
@@ -121,6 +123,14 @@ async function handleIncomingMessage(payload: any) {
         rawPayload: payload,
       },
     });
+
+    if (chatName) {
+      await prisma.whatsAppChat.upsert({
+        where: { chatId },
+        create: { chatId, name: chatName },
+        update: { name: chatName },
+      });
+    }
 
     console.log(
       `✅ Successfully saved webhook message ${idMessage}${mediaUrl ? ` with media: ${mediaUrl}` : ''}`
