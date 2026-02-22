@@ -72,11 +72,13 @@ async function main() {
   // Setup file logging first
   const { logStream, originalLog, originalError } = setupFileLogging();
 
-  // Declare variables outside try block so they're accessible in catch
+  // Declare variables outside try block so they're accessible in catch and shutdown
   let progressService: ParsingProgressService | null = null;
   let isShuttingDown = false;
   let totalProcessed = 0;
   let totalProductsCreated = 0;
+  let currentChatProcessed = 0;
+  let currentChatProductsCreated = 0;
 
   try {
     console.log('🚀 Starting Groq Sequential Processing Cron Job...');
@@ -107,8 +109,8 @@ async function main() {
         await progressService.updateProgress({
           status: 'failed',
           errorMessage: `Process terminated by ${signal} signal`,
-          messagesRead: totalProcessed,
-          productsCreated: totalProductsCreated,
+          messagesRead: currentChatProcessed,
+          productsCreated: currentChatProductsCreated,
         });
         console.log('✅ Parsing status updated successfully');
       }
@@ -141,8 +143,8 @@ async function main() {
         await progressService.updateProgress({
           status: 'failed',
           errorMessage: `Uncaught exception: ${error.message}`,
-          messagesRead: totalProcessed,
-          productsCreated: totalProductsCreated,
+          messagesRead: currentChatProcessed,
+          productsCreated: currentChatProductsCreated,
         });
       } catch (updateError) {
         console.error('❌ Failed to update parsing status:', updateError);
@@ -159,8 +161,8 @@ async function main() {
         await progressService.updateProgress({
           status: 'failed',
           errorMessage: `Unhandled rejection: ${reason}`,
-          messagesRead: totalProcessed,
-          productsCreated: totalProductsCreated,
+          messagesRead: currentChatProcessed,
+          productsCreated: currentChatProductsCreated,
         });
       } catch (updateError) {
         console.error('❌ Failed to update parsing status:', updateError);
@@ -180,38 +182,19 @@ async function main() {
       return;
     }
 
-    // Create parsing history record
-    const parsingHistoryId = await ParsingCoordinator.createParsingHistory(
-      'cron',
-      'Groq sequential processing cron job'
-    );
-    console.log(`📊 Created parsing history record: ${parsingHistoryId}`);
-
-    // Initialize progress service
-    progressService = new ParsingProgressService();
-    progressService.setParsingHistoryId(parsingHistoryId);
-
     const chatIds = getWaChatIds();
     if (chatIds.length === 0) {
       console.log('⏸️ No WA chat IDs configured (set WA_CHAT_IDS or TARGET_GROUP_ID)');
-      if (progressService) {
-        await progressService.updateProgress({
-          status: 'completed',
-          messagesRead: 0,
-          productsCreated: 0,
-        });
-      }
       return;
     }
 
     const batchSize = env.PROCESSING_BATCH_SIZE;
     const hoursBack = env.MESSAGE_PROCESSING_HOURS;
-    const processor = new GroqSequentialProcessor(prisma, progressService);
     const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
     let cycleCount = 0;
     let totalUnprocessed = 0;
 
-    // Process each chat in order: first all messages from chat 1, then chat 2, etc.
+    // Process each chat in order; one ParsingHistory record per chat (with sourceId) for per-chat admin pages
     for (let chatIndex = 0; chatIndex < chatIds.length; chatIndex++) {
       const currentChatId = chatIds[chatIndex];
       if (isShuttingDown) break;
@@ -237,70 +220,109 @@ async function main() {
       totalUnprocessed += initialCount;
       console.log(`   Found ${initialCount} unprocessed messages for this chat.`);
 
+      // One parsing history record per chat (sourceId = currentChatId) for admin per-chat detail pages
+      const parsingHistoryId = await ParsingCoordinator.createParsingHistory(
+        'cron',
+        'Groq sequential processing cron job',
+        currentChatId
+      );
+      console.log(`📊 Created parsing history record for chat: ${parsingHistoryId}`);
+
+      progressService = new ParsingProgressService();
+      progressService.setParsingHistoryId(parsingHistoryId);
+
+      const processor = new GroqSequentialProcessor(prisma, progressService);
       let currentOffset = 0;
       let chatProcessed = 0;
+      let chatProductsCreated = 0;
+      currentChatProcessed = 0;
+      currentChatProductsCreated = 0;
 
-      while (true) {
-        if (isShuttingDown) break;
-
-        cycleCount++;
-        console.log(`\n🔄 Processing cycle ${cycleCount} (chat: ${currentChatId})...`);
-
-        const extendedBatch = await fetchExtendedBatch(
-          batchSize,
-          currentChatId,
-          currentOffset,
-          hoursBack
-        );
-
-        if (extendedBatch.totalCount === 0) {
-          console.log(`   No more unprocessed messages for this chat.`);
-          break;
-        }
-
-        const messageIds = extendedBatch.messageIds;
-        let cycleProcessed = 0;
-
-        console.log(
-          `   Batch: ${extendedBatch.totalCount} messages (extended: +${extendedBatch.extendedCount}, offset: ${currentOffset})`
-        );
-
-        try {
+      try {
+        while (true) {
           if (isShuttingDown) break;
 
-          const result = await processor.processMessagesToProducts(messageIds);
+          cycleCount++;
+          console.log(`\n🔄 Processing cycle ${cycleCount} (chat: ${currentChatId})...`);
 
-          if (result.anyProcessed) {
-            cycleProcessed = messageIds.length;
-            totalProductsCreated += result.productsCreated || 0;
+          const extendedBatch = await fetchExtendedBatch(
+            batchSize,
+            currentChatId,
+            currentOffset,
+            hoursBack
+          );
+
+          if (extendedBatch.totalCount === 0) {
+            console.log(`   No more unprocessed messages for this chat.`);
+            break;
           }
-          totalProcessed += cycleProcessed;
-          chatProcessed += cycleProcessed;
-          if (progressService && !isShuttingDown) {
-            await progressService.updateProgress({
-              messagesRead: totalProcessed,
-              productsCreated: totalProductsCreated,
-            });
+
+          const messageIds = extendedBatch.messageIds;
+          let cycleProcessed = 0;
+
+          console.log(
+            `   Batch: ${extendedBatch.totalCount} messages (extended: +${extendedBatch.extendedCount}, offset: ${currentOffset})`
+          );
+
+          try {
+            if (isShuttingDown) break;
+
+            const result = await processor.processMessagesToProducts(messageIds);
+
+            if (result.anyProcessed) {
+              cycleProcessed = messageIds.length;
+              const created = result.productsCreated || 0;
+              totalProductsCreated += created;
+              chatProductsCreated += created;
+            }
+            totalProcessed += cycleProcessed;
+            chatProcessed += cycleProcessed;
+            currentChatProcessed = chatProcessed;
+            currentChatProductsCreated = chatProductsCreated;
+            if (progressService && !isShuttingDown) {
+              await progressService.updateProgress({
+                messagesRead: chatProcessed,
+                productsCreated: chatProductsCreated,
+              });
+            }
+          } catch (error) {
+            console.error(`❌ Error processing batch:`, error);
+            if (
+              error instanceof Error &&
+              error.message.includes('json_validate_failed')
+            ) {
+              console.log(`   Groq JSON validation error - batch will be retried later`);
+            }
           }
-        } catch (error) {
-          console.error(`❌ Error processing batch:`, error);
-          if (
-            error instanceof Error &&
-            error.message.includes('json_validate_failed')
-          ) {
-            console.log(`   Groq JSON validation error - batch will be retried later`);
+
+          currentOffset =
+            extendedBatch.nextOffset ?? currentOffset + messageIds.length;
+
+          console.log(
+            `   Progress for this chat: ${chatProcessed} processed, next offset: ${currentOffset}`
+          );
+
+          if (!isShuttingDown) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         }
 
-        currentOffset =
-          extendedBatch.nextOffset ?? currentOffset + messageIds.length;
-
-        console.log(
-          `   Progress for this chat: ${chatProcessed} processed, next offset: ${currentOffset}`
-        );
-
-        if (!isShuttingDown) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!isShuttingDown && progressService) {
+          await progressService.updateProgress({
+            status: 'completed',
+            messagesRead: chatProcessed,
+            productsCreated: chatProductsCreated,
+          });
+        }
+      } catch (chatError) {
+        console.error(`❌ Error processing chat ${currentChatId}:`, chatError);
+        if (progressService) {
+          await progressService.updateProgress({
+            status: 'failed',
+            errorMessage: chatError instanceof Error ? chatError.message : 'Unknown error',
+            messagesRead: chatProcessed,
+            productsCreated: chatProductsCreated,
+          });
         }
       }
     }
@@ -309,13 +331,6 @@ async function main() {
       console.log(`🛑 Processing stopped due to shutdown signal`);
     } else {
       console.log(`✅ Completed processing all chats`);
-      if (progressService) {
-        await progressService.updateProgress({
-          status: 'completed',
-          messagesRead: totalProcessed,
-          productsCreated: totalProductsCreated,
-        });
-      }
     }
 
     console.log(`🎉 Groq Sequential Processing completed!`);
@@ -327,15 +342,15 @@ async function main() {
   } catch (error) {
     console.error('❌ Error in Groq Sequential Processing:', error);
 
-    // Mark parsing as failed
+    // Mark current chat's parsing as failed
     if (progressService) {
       try {
         await progressService.updateProgress({
           status: 'failed',
           errorMessage:
             error instanceof Error ? error.message : 'Unknown error',
-          messagesRead: totalProcessed,
-          productsCreated: totalProductsCreated,
+          messagesRead: currentChatProcessed,
+          productsCreated: currentChatProductsCreated,
         });
       } catch (progressError) {
         console.error('❌ Failed to update parsing progress:', progressError);

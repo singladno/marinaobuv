@@ -489,11 +489,14 @@ model ParsingHistory {
   updatedAt       DateTime  @updatedAt
   triggeredBy     String?
   reason          String?
+  /// For WA: chat id (e.g. 123456789@g.us). For TG: channel id or null. Enables per-chat history and filtering.
+  sourceId        String?
 
   @@index([startedAt])
   @@index([status])
   @@index([createdAt])
   @@index([triggeredBy])
+  @@index([sourceId])
 }
 
 model MigrationHistory {

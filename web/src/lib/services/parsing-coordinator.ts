@@ -173,11 +173,13 @@ export class ParsingCoordinator {
   }
 
   /**
-   * Create a parsing history record with proper metadata
+   * Create a parsing history record with proper metadata.
+   * @param sourceId - For WA: chat id (e.g. 123456789@g.us). For TG: channel id or null.
    */
   static async createParsingHistory(
     type: 'manual' | 'cron',
-    reason?: string
+    reason?: string,
+    sourceId?: string | null
   ): Promise<string> {
     const parsingHistory = await prisma.parsingHistory.create({
       data: {
@@ -187,6 +189,7 @@ export class ParsingCoordinator {
         productsCreated: 0,
         triggeredBy: type,
         reason: reason || null,
+        sourceId: sourceId ?? null,
       },
     });
 

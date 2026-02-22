@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
@@ -164,7 +164,9 @@ const createParsingHistoryColumns = (): ColumnDef<ParsingHistoryItem>[] => [
 export default function ParserDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const parserId = params?.parserId as string;
+  const sourceId = searchParams?.get('sourceId') ?? undefined;
 
   const [parsingHistory, setParsingHistory] = useState<ParsingHistoryItem[]>(
     []
@@ -177,17 +179,29 @@ export default function ParserDetailPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [pagination, setPagination] = useState<any>(null);
+  const [waChatName, setWaChatName] = useState<string | null>(null);
 
-  const parserName = parserNames[parserId] || parserId;
+  const parserName = sourceId
+    ? (waChatName !== null ? `WhatsApp — ${waChatName}` : `WhatsApp — ${sourceId.length > 30 ? `${sourceId.slice(0, 27)}…` : sourceId}`)
+    : (parserNames[parserId] || parserId);
+
+  const historyUrl = (page: number, status: string) => {
+    const params = new URLSearchParams({ page: String(page), limit: '20', status, parserId });
+    if (sourceId) params.set('sourceId', sourceId);
+    return `/api/admin/parsing-history?${params.toString()}`;
+  };
+  const statusUrl = () => {
+    const params = new URLSearchParams({ parserId });
+    if (sourceId) params.set('sourceId', sourceId);
+    return `/api/admin/parsing-status?${params.toString()}`;
+  };
 
   const fetchParsingHistory = async (
     page: number = 1,
     status: string = 'all'
   ) => {
     try {
-      const response = await fetch(
-        `/api/admin/parsing-history?page=${page}&limit=20&status=${status}&parserId=${parserId}`
-      );
+      const response = await fetch(historyUrl(page, status));
       const data: ParsingHistoryResponse = await response.json();
 
       if (response.ok) {
@@ -203,7 +217,7 @@ export default function ParserDetailPage() {
 
   const fetchParsingStatus = async () => {
     try {
-      const response = await fetch(`/api/admin/parsing-status?parserId=${parserId}`);
+      const response = await fetch(statusUrl());
       const data: ParsingStatus = await response.json();
 
       if (response.ok) {
@@ -215,6 +229,23 @@ export default function ParserDetailPage() {
       setError('Network error');
     }
   };
+
+  // Resolve WA chat display name when viewing a specific chat
+  useEffect(() => {
+    if (parserId !== 'wa' || !sourceId) {
+      setWaChatName(null);
+      return;
+    }
+    let cancelled = false;
+    const chatId = decodeURIComponent(sourceId);
+    fetch(`/api/admin/wa-chat-name?chatId=${encodeURIComponent(chatId)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!cancelled && data?.name) setWaChatName(data.name);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [parserId, sourceId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -231,7 +262,7 @@ export default function ParserDetailPage() {
     // Refresh status every 5 seconds for real-time updates
     const interval = setInterval(fetchParsingStatus, 5000);
     return () => clearInterval(interval);
-  }, [currentPage, statusFilter, parserId]);
+  }, [currentPage, statusFilter, parserId, sourceId]);
 
   if (loading) {
     return (

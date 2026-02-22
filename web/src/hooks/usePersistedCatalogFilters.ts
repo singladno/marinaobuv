@@ -12,6 +12,7 @@ type PersistableCatalogFilters = {
   inStock: boolean;
   page: number;
   pageSize: number;
+  sourceIds?: string[];
   // categoryId is controlled by the page via category path; don't persist/restore it here
 };
 
@@ -44,6 +45,7 @@ export function loadPersistedCatalogFilters(
       inStock: Boolean(parsed.inStock),
       page: Number.isFinite(parsed.page) ? parsed.page : 1,
       pageSize: Number.isFinite(parsed.pageSize) ? parsed.pageSize : 20,
+      sourceIds: Array.isArray(parsed.sourceIds) ? parsed.sourceIds : [],
     };
   } catch {
     return null;
@@ -75,6 +77,7 @@ export function usePersistCatalogFilters(
       inStock: filters.inStock,
       page: filters.page,
       pageSize: filters.pageSize,
+      sourceIds: filters.sourceIds,
     };
     try {
       window.localStorage.setItem(
@@ -95,5 +98,6 @@ export function usePersistCatalogFilters(
     filters.inStock,
     filters.page,
     filters.pageSize,
+    filters.sourceIds,
   ]);
 }

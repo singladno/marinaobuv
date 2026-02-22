@@ -9,7 +9,7 @@
  */
 
 import '../src/scripts/load-env';
-import { env } from '../src/lib/env';
+import { env, getWaChatIds } from '../src/lib/env';
 import { prisma } from '../src/lib/db-node';
 
 const baseUrl =
@@ -43,14 +43,15 @@ async function main() {
     process.exit(1);
   }
 
-  const chatIds = await prisma.whatsAppMessage.findMany({
+  const fromDb = await prisma.whatsAppMessage.findMany({
     where: { chatId: { not: null } },
     select: { chatId: true },
     distinct: ['chatId'],
   });
-  const ids = [...new Set(chatIds.map((r) => r.chatId).filter(Boolean))] as string[];
+  const fromEnv = getWaChatIds();
+  const ids = [...new Set([...fromDb.map((r) => r.chatId).filter(Boolean), ...fromEnv])] as string[];
   const groups = ids.filter((id) => id.endsWith('@g.us'));
-  console.log(`Found ${groups.length} group chat(s) to backfill.\n`);
+  console.log(`Found ${groups.length} group chat(s) to backfill (DB + WA_CHAT_IDS).\n`);
 
   let updated = 0;
   let skipped = 0;

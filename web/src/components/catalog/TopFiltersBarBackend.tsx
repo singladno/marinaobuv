@@ -1,12 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import ColorFilter from '@/components/product/filters/ColorFilter';
 import PriceControl from '@/components/product/filters/PriceControl';
 import { SortControl } from '@/components/catalog/SortControl';
 import CategoryNavigationControl from '@/components/catalog/CategoryNavigationControl';
 import CategoryFilterControl from '@/components/catalog/CategoryFilterControl';
+import { SourceFilterControl } from '@/components/catalog/SourceFilterControl';
+import { useUser } from '@/contexts/NextAuthUserContext';
+import type { CatalogSourceItem } from '@/app/api/catalog/sources/route';
 
 interface CatalogFilters {
   search: string;
@@ -18,6 +21,7 @@ interface CatalogFilters {
   inStock: boolean;
   page: number;
   pageSize: number;
+  sourceIds?: string[];
 }
 
 type TopFiltersBarBackendProps = {
@@ -74,6 +78,20 @@ export default function TopFiltersBarBackend({
     []
   );
 
+  const { user } = useUser();
+  const [sources, setSources] = useState<CatalogSourceItem[]>([]);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+    setSourcesLoading(true);
+    fetch('/api/catalog/sources')
+      .then((res) => res.ok ? res.json() : { sources: [] })
+      .then((data) => setSources(data.sources ?? []))
+      .catch(() => setSources([]))
+      .finally(() => setSourcesLoading(false));
+  }, [user?.role]);
+
   const hasActive = useMemo(() => {
     // Check if there are any user-applied filters (excluding the base category context)
     const hasUserAppliedFilters =
@@ -81,7 +99,8 @@ export default function TopFiltersBarBackend({
       (filters.maxPrice !== undefined && filters.maxPrice < 100000) ||
       filters.colors.length > 0 ||
       filters.inStock ||
-      filters.search.length > 0;
+      filters.search.length > 0 ||
+      (filters.sourceIds && filters.sourceIds.length > 0);
 
     // Also check if there are selected subcategories that differ from the current path
     const hasSubcategorySelection = selectedSubcategories.length > 0;
@@ -129,6 +148,10 @@ export default function TopFiltersBarBackend({
       updatedFilters.sortBy = newFilters.sortBy;
     }
 
+    if (newFilters.sourceIds !== undefined) {
+      updatedFilters.sourceIds = newFilters.sourceIds;
+    }
+
     onChange(updatedFilters);
   };
 
@@ -138,6 +161,15 @@ export default function TopFiltersBarBackend({
       <SortControl
         value={filters.sortBy}
         onChange={sortBy => onChange && onChange({ sortBy })}
+      />
+
+      {/* Admin-only: source filter (one or multiple sources with icon + chat name) */}
+      <SourceFilterControl
+        value={filters.sourceIds ?? []}
+        sources={sources}
+        onChange={sourceIds => onChange && onChange({ sourceIds, page: 1 })}
+        onClear={() => onChange && onChange({ sourceIds: [], page: 1 })}
+        loading={sourcesLoading}
       />
 
       {/* Category Navigation Control - Subcategories of current category */}

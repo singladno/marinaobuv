@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status');
     const parserId = searchParams.get('parserId');
+    const sourceId = searchParams.get('sourceId') ?? undefined;
 
     const skip = (page - 1) * limit;
 
@@ -18,10 +19,11 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    // Filter by parser type using reason field
+    // Filter by parser type using reason field (and optional sourceId for WA per-chat)
     if (parserId) {
       if (parserId === 'wa') {
         where.reason = { contains: 'Groq' };
+        if (sourceId) where.sourceId = sourceId;
       } else if (parserId === 'tg') {
         where.reason = { contains: 'Telegram' };
       }

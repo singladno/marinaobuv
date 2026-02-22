@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
     const inStock = searchParams.get('inStock') === 'true';
+    const sourceIds =
+      searchParams.get('sourceIds')?.split(',').filter(Boolean) ?? [];
 
     // Get session for search history using NextAuth
     const auth = await requireAuth(request);
@@ -70,6 +72,54 @@ export async function GET(request: NextRequest) {
     // Admin users can see both active and inactive products
     if (auth.user?.role !== 'ADMIN') {
       where.isActive = true;
+    }
+
+    // Admin-only: filter by source (one or multiple)
+    if (
+      auth.user?.role === 'ADMIN' &&
+      sourceIds.length > 0
+    ) {
+      const allowedIds: string[] = [];
+      if (sourceIds.includes('AG')) {
+        const ag = await prisma.product.findMany({
+          where: { source: 'AG' },
+          select: { id: true },
+        });
+        allowedIds.push(...ag.map(p => p.id));
+      }
+      if (sourceIds.includes('MANUAL')) {
+        const manual = await prisma.product.findMany({
+          where: { source: 'MANUAL' },
+          select: { id: true },
+        });
+        allowedIds.push(...manual.map(p => p.id));
+      }
+      const waSourceIds = sourceIds.filter(s => s.startsWith('WA:'));
+      for (const sid of waSourceIds) {
+        const chatId = sid.slice(3);
+        const rows = await prisma.$queryRaw<{ id: string }[]>`
+          SELECT p.id FROM "Product" p, jsonb_array_elements_text(COALESCE(p."sourceMessageIds", '[]'::jsonb)) AS mid
+          INNER JOIN "WhatsAppMessage" w ON w.id = mid
+          WHERE p.source = 'WA' AND w."chatId" = ${chatId}
+        `;
+        allowedIds.push(...rows.map(r => r.id));
+      }
+      const tgSourceIds = sourceIds.filter(s => s.startsWith('TG:'));
+      for (const sid of tgSourceIds) {
+        const chatId = sid.slice(3);
+        const rows = await prisma.$queryRaw<{ id: string }[]>`
+          SELECT p.id FROM "Product" p, jsonb_array_elements_text(COALESCE(p."sourceMessageIds", '[]'::jsonb)) AS mid
+          INNER JOIN "TelegramMessage" t ON t.id = mid
+          WHERE p.source = 'TG' AND t."chatId" = ${chatId}
+        `;
+        allowedIds.push(...rows.map(r => r.id));
+      }
+      const uniqueIds = [...new Set(allowedIds)];
+      if (uniqueIds.length > 0) {
+        where.id = { in: uniqueIds };
+      } else {
+        where.id = { in: ['__none__'] };
+      }
     }
 
     // Search functionality - case insensitive for Cyrillic and Latin characters
@@ -310,6 +360,7 @@ export async function GET(request: NextRequest) {
         maxPrice,
         colors,
         inStock,
+        ...(auth.user?.role === 'ADMIN' && { sourceIds }),
       },
     });
   } catch (error) {

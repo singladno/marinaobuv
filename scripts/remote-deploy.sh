@@ -198,7 +198,7 @@ echo "🔧 Checking for failed migrations and resolving conflicts..."
 ./prisma-server.sh npx prisma migrate resolve --applied 20250120000004_add_order_item_sequence 2>/dev/null || echo "Migration already resolved or doesn't exist"
 ./prisma-server.sh npx prisma migrate resolve --applied 20250916211900_init 2>/dev/null || echo "Migration already resolved or doesn't exist"
 
-# Try to run migrations
+# Try to run migrations (includes ParsingHistory.sourceId for admin parsing per-chat)
 if ./prisma-server.sh npx prisma migrate deploy; then
   echo "✅ Database migrations completed successfully"
 else

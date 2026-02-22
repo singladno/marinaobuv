@@ -174,12 +174,17 @@ function CatalogPageContent() {
     const pageParam = parseInt(searchParams.get('page') || '1', 10);
     const pageSizeParam = parseInt(searchParams.get('pageSize') || '20', 10);
     const searchParam = searchParams.get('search');
+    const sourceIdsParam = searchParams.get('sourceIds');
+    const sourceIds = sourceIdsParam
+      ? sourceIdsParam.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined;
 
     const merged = {
       ...(saved || {}),
       page: pageParam,
       pageSize: pageSizeParam,
       ...(searchParam && { search: searchParam }),
+      ...(sourceIds && sourceIds.length > 0 && { sourceIds }),
     };
 
     if (searchParam) setSearchQuery(searchParam);
@@ -212,6 +217,7 @@ function CatalogPageContent() {
       inStock: filters.inStock,
       page: filters.page,
       pageSize: filters.pageSize,
+      sourceIds: filters.sourceIds,
     },
     { enabled: canPersist }
   );

@@ -5,12 +5,14 @@ import { prisma } from '@/lib/server/db';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const parserId = searchParams.get('parserId');
+  const sourceId = searchParams.get('sourceId') ?? undefined;
 
-  // Build where clause for parser filtering
+  // Build where clause for parser filtering (and optional sourceId for WA per-chat)
   const parserWhere: any = {};
   if (parserId) {
     if (parserId === 'wa') {
       parserWhere.reason = { contains: 'Groq' };
+      if (sourceId) parserWhere.sourceId = sourceId;
     } else if (parserId === 'tg') {
       parserWhere.reason = { contains: 'Telegram' };
     }

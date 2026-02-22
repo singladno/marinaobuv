@@ -49,11 +49,16 @@ export function parseFilters(searchParams: URLSearchParams): CatalogFilters {
   };
 }
 
+type QueryStringFilters = CatalogFilters & {
+  categoryId?: string;
+  sourceIds?: string[];
+};
+
 export function buildQueryString(
-  next: Partial<CatalogFilters> & { categoryId?: string },
-  prev?: CatalogFilters & { categoryId?: string }
+  next: Partial<QueryStringFilters>,
+  prev?: Partial<QueryStringFilters>
 ): string {
-  const merged: CatalogFilters & { categoryId?: string } = {
+  const merged: QueryStringFilters = {
     sizes: next.sizes ?? prev?.sizes,
     priceFrom: next.priceFrom ?? prev?.priceFrom ?? null,
     priceTo: next.priceTo ?? prev?.priceTo ?? null,
@@ -61,6 +66,7 @@ export function buildQueryString(
     page: next.page ?? prev?.page ?? 1,
     pageSize: next.pageSize ?? prev?.pageSize ?? 24,
     categoryId: next.categoryId ?? prev?.categoryId,
+    sourceIds: next.sourceIds ?? prev?.sourceIds,
   };
 
   const params = new URLSearchParams();
@@ -76,6 +82,8 @@ export function buildQueryString(
   if (merged.pageSize && merged.pageSize !== 24)
     params.set('pageSize', String(merged.pageSize));
   if (merged.categoryId) params.set('categoryId', merged.categoryId);
+  if (merged.sourceIds && merged.sourceIds.length > 0)
+    params.set('sourceIds', merged.sourceIds.join(','));
 
   const qs = params.toString();
   return qs ? `?${qs}` : '';

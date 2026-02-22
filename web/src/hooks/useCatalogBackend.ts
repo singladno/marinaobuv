@@ -14,6 +14,8 @@ interface CatalogFilters {
   inStock: boolean;
   page: number;
   pageSize: number;
+  /** Admin-only: filter by source ids (e.g. WA:chatId, TG:chatId, AG, MANUAL) */
+  sourceIds?: string[];
 }
 
 interface CatalogResponse {
@@ -60,12 +62,15 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
     inStock: options?.initialFilters?.inStock ?? false,
     page: options?.initialFilters?.page ?? 1,
     pageSize: options?.initialFilters?.pageSize ?? 20,
+    sourceIds: options?.initialFilters?.sourceIds ?? [],
   });
 
   // De-duplication guards (avoid duplicate fetches under StrictMode or identical requests)
   const inFlightKeyRef = useRef<string | null>(null);
   const lastSuccessKeyRef = useRef<string | null>(null);
   const isOptimisticUpdateRef = useRef(false);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
 
   // Fetch products from backend
   function makeRequestKey(obj: CatalogFilters) {
@@ -86,8 +91,14 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         return;
       }
 
-      const currentFilters = { ...filters, ...newFilters };
+      // Merge with latest filters (ref) so we always use current categoryId etc. when caller passes partial update (e.g. only sourceIds + page)
+      const currentFilters = { ...filtersRef.current, ...newFilters };
       const requestKey = makeRequestKey(currentFilters);
+
+      // When user changes source filter, always refetch (don't skip due to dedup)
+      if (newFilters && 'sourceIds' in newFilters) {
+        lastSuccessKeyRef.current = null;
+      }
 
       // Skip if identical request is already in flight or just succeeded
       if (
@@ -118,6 +129,12 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         if (currentFilters.colors.length > 0)
           searchParams.set('colors', currentFilters.colors.join(','));
         if (currentFilters.inStock) searchParams.set('inStock', 'true');
+        if (
+          currentFilters.sourceIds &&
+          currentFilters.sourceIds.length > 0
+        ) {
+          searchParams.set('sourceIds', currentFilters.sourceIds.join(','));
+        }
         searchParams.set('page', currentFilters.page.toString());
         searchParams.set('pageSize', currentFilters.pageSize.toString());
 
@@ -175,7 +192,8 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         ('maxPrice' in newFilters && newFilters.maxPrice !== filters.maxPrice) ||
         ('colors' in newFilters && JSON.stringify(newFilters.colors) !== JSON.stringify(filters.colors)) ||
         ('inStock' in newFilters && newFilters.inStock !== filters.inStock) ||
-        ('sortBy' in newFilters && newFilters.sortBy !== filters.sortBy);
+        ('sortBy' in newFilters && newFilters.sortBy !== filters.sortBy) ||
+        ('sourceIds' in newFilters && JSON.stringify(newFilters.sourceIds ?? []) !== JSON.stringify(filters.sourceIds ?? []));
 
       const nextPage = resultSetFiltersChanged
         ? 1
@@ -223,6 +241,7 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
       inStock: false,
       page: 1,
       pageSize: 20,
+      sourceIds: [],
     };
     setFilters(clearedFilters);
     fetchProducts(clearedFilters);

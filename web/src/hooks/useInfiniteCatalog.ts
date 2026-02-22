@@ -11,6 +11,8 @@ interface CatalogFilters {
   inStock: boolean;
   page: number;
   pageSize: number;
+  /** Admin-only: filter by source ids (e.g. WA:chatId, TG:chatId, AG, MANUAL) */
+  sourceIds?: string[];
 }
 
 interface CatalogResponse {
@@ -90,6 +92,7 @@ export function useInfiniteCatalog(
     inStock: false,
     page: 1,
     pageSize: 20, // Aligned with backend default
+    sourceIds: [],
   });
 
   // Use refs to track if we've already made initial requests
@@ -143,10 +146,16 @@ export function useInfiniteCatalog(
         sortBy: updatedFilters.sortBy,
         minPrice: updatedFilters.minPrice,
         maxPrice: updatedFilters.maxPrice,
-        colors: updatedFilters.colors.sort(),
+        colors: (updatedFilters.colors ?? []).sort(),
         inStock: updatedFilters.inStock,
+        sourceIds: (updatedFilters.sourceIds ?? []).sort(),
         append,
       });
+
+      // When user changes source filter, always refetch (don't skip due to dedup)
+      if (newFilters && 'sourceIds' in newFilters) {
+        lastRequestKeyRef.current = null;
+      }
 
       // Prevent duplicate requests - check if same request is in flight or just completed
       if (
@@ -195,9 +204,15 @@ export function useInfiniteCatalog(
           searchParams.set('minPrice', updatedFilters.minPrice.toString());
         if (updatedFilters.maxPrice !== undefined)
           searchParams.set('maxPrice', updatedFilters.maxPrice.toString());
-        if (updatedFilters.colors.length > 0)
-          searchParams.set('colors', updatedFilters.colors.join(','));
+        if ((updatedFilters.colors ?? []).length > 0)
+          searchParams.set('colors', (updatedFilters.colors ?? []).join(','));
         if (updatedFilters.inStock) searchParams.set('inStock', 'true');
+        if (
+          updatedFilters.sourceIds &&
+          updatedFilters.sourceIds.length > 0
+        ) {
+          searchParams.set('sourceIds', updatedFilters.sourceIds.join(','));
+        }
         searchParams.set('page', updatedFilters.page.toString());
         searchParams.set('pageSize', updatedFilters.pageSize.toString());
 
@@ -277,11 +292,14 @@ export function useInfiniteCatalog(
   // Handle filter changes
   const handleFiltersChange = useCallback(
     (newFilters: Partial<CatalogFilters>) => {
-      const updatedFilters = { ...filters, ...newFilters, page: 1 };
+      const updatedFilters = { ...currentFiltersRef.current, ...newFilters };
+      if (newFilters?.sourceIds !== undefined) {
+        updatedFilters.page = 1;
+      }
       setFilters(updatedFilters);
       fetchProducts(updatedFilters, false);
     },
-    [filters, fetchProducts]
+    [fetchProducts]
   );
 
   // Handle sorting
@@ -304,10 +322,11 @@ export function useInfiniteCatalog(
       inStock: false,
       page: 1,
       pageSize: 20,
+      sourceIds: [],
     };
     setFilters(clearedFilters);
     fetchProducts(clearedFilters, false);
-  }, [initialCategoryId]);
+  }, [initialCategoryId, fetchProducts]);
 
   // Handle search query changes
   useEffect(() => {
