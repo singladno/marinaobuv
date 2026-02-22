@@ -10,9 +10,12 @@ import { extractNormalizedPhone } from '../../../../lib/utils/whatsapp-phone-ext
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
-    // Reduced logging to prevent main thread clutter
+    const typeWebhook = payload?.typeWebhook ?? 'unknown';
+    const chatId = payload?.senderData?.chatId ?? 'unknown';
+    // ASCII line for log grep (server logs)
+    console.log(`[WA webhook] type=${typeWebhook} chatId=${chatId}`);
     console.log(
-      `🔔 Webhook: ${payload.typeWebhook} from ${payload.senderData?.chatId || 'unknown'}`
+      `🔔 Webhook: ${typeWebhook} from ${chatId}`
     );
 
     // Check if this is an incoming message
@@ -48,6 +51,9 @@ async function handleIncomingMessage(payload: any) {
   // Only save messages from configured chat IDs (WA_CHAT_IDS or TARGET_GROUP_ID)
   const allowedChatIds = getWaChatIds();
   if (allowedChatIds.length === 0 || !allowedChatIds.includes(chatId)) {
+    console.log(
+      `Webhook: skipped (chat ${chatId} not in WA_CHAT_IDS or no chats configured)`
+    );
     return;
   }
 
@@ -132,6 +138,7 @@ async function handleIncomingMessage(payload: any) {
       });
     }
 
+    console.log(`[WA webhook] saved message id=${idMessage}`);
     console.log(
       `✅ Successfully saved webhook message ${idMessage}${mediaUrl ? ` with media: ${mediaUrl}` : ''}`
     );
