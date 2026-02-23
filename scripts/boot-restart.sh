@@ -52,19 +52,29 @@ fi
 
 cd /var/www/marinaobuv
 
-# 3) PM2: run single instance and disable prisma-studio
-log "Reloading PM2 with ecosystem.config.js"
-pm2 startOrReload ecosystem.config.js --env production --update-env || pm2 start ecosystem.config.js --env production
-
-# Scale to exactly 1 instance to avoid overload and delete studio if exists
-pm2 scale marinaobuv 1 || true
-pm2 delete prisma-studio || true
+# 3) PM2: start app so nginx has an upstream (prevents 502 after VM reboot)
+# Prefer blue-green (marinaobuv-blue on 3000) if that config exists; else single app on 3000
+if [ -f "ecosystem-blue-green.config.js" ]; then
+  log "Starting blue-green: marinaobuv-blue on port 3000 (nginx will proxy to 3000)"
+  pm2 delete marinaobuv-green 2>/dev/null || true
+  pm2 startOrReload ecosystem-blue-green.config.js --only marinaobuv-blue --env production --update-env || \
+    pm2 start ecosystem-blue-green.config.js --only marinaobuv-blue --env production
+else
+  log "Reloading PM2 with ecosystem.config.js"
+  pm2 startOrReload ecosystem.config.js --env production --update-env || pm2 start ecosystem.config.js --env production
+  pm2 scale marinaobuv 1 || true
+fi
+pm2 delete prisma-studio 2>/dev/null || true
 
 # Note: Groq proxy runs on separate serverspace server (31.44.2.216)
 log "Note: Groq proxy server runs on separate serverspace server"
 log "Proxy connectivity will be tested via nginx configuration"
 
 pm2 save || true
+
+# Ensure PM2 resurrect on reboot (idempotent; prevents 502 after VM restart)
+log "Ensuring PM2 startup on boot (resurrect saved processes)"
+sudo env PATH="$PATH" pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
 
 # 4) Nginx: ensure proxy to localhost:3000 and fix configuration
 log "Fixing nginx configuration..."
@@ -182,7 +192,7 @@ done
 
 log "Boot recovery script completed"
 
-# 9) Ensure this script runs on every reboot (idempotent systemd unit)
+# 10) Ensure this script runs on every reboot (prevents 502 after VM restart)
 UNIT_FILE="/etc/systemd/system/marinaobuv-boot.service"
 if [ ! -f "$UNIT_FILE" ]; then
   log "Installing systemd unit to auto-run this script on reboot"
@@ -204,10 +214,9 @@ RemainAfterExit=yes
 [Install]
 WantedBy=multi-user.target
 EOF
-  sudo systemctl daemon-reload || true
-  sudo systemctl enable marinaobuv-boot.service || true
 fi
-
+sudo systemctl daemon-reload 2>/dev/null || true
+sudo systemctl enable marinaobuv-boot.service 2>/dev/null || true
 log "Systemd unit installed/enabled. Done."
 
 

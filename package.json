@@ -55,6 +55,7 @@
     "server:prisma": "./scripts/start-prisma-studio.sh",
     "server:env": "ssh -l ubuntu 130.193.56.134 'echo \"--- /var/www/marinaobuv/web/.env ---\"; sed -n \"1,240p\" /var/www/marinaobuv/web/.env'",
     "server:restart": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && pm2 reload marinaobuv --update-env'",
+    "server:fix-502": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && bash scripts/boot-restart.sh'",
     "server:deploy:fast": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && ./scripts/server-fast-deploy.sh'",
     "server:db:fix": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && export DATABASE_URL=\"$(grep DATABASE_URL web/.env | cut -d= -f2-)\" && ./scripts/fix-database-auth.sh'",
     "server:reload:all": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv && pm2 startOrReload ecosystem.config.js --env production --update-env && pm2 save'",
