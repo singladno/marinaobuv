@@ -227,7 +227,8 @@ export class WebhookStatusMonitor {
 
       // Send Telegram notification if enabled
       if (this.notificationConfig.enabled) {
-        const notificationMessage = `${this.notificationConfig.message}\n\nDetails: ${status.errorMessage}\nTime: ${status.lastCheck.toISOString()}`;
+        const dashboardUrl = 'https://console.green-api.com/instanceList/';
+        const notificationMessage = `${this.notificationConfig.message}\n\nDetails: ${status.errorMessage}\nTime: ${status.lastCheck.toISOString()}\n\n🔗 Connect instance: ${dashboardUrl}`;
         await this.sendNotification(notificationMessage);
       }
     } else {
