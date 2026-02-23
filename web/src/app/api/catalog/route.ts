@@ -94,12 +94,20 @@ export async function GET(request: NextRequest) {
         });
         allowedIds.push(...manual.map(p => p.id));
       }
+      // Only expand sourceMessageIds when it's a JSON array; non-array values would make jsonb_array_elements_text throw.
+      // Use LATERAL + explicit alias so JOIN is unambiguous.
       const waSourceIds = sourceIds.filter(s => s.startsWith('WA:'));
       for (const sid of waSourceIds) {
         const chatId = sid.slice(3);
         const rows = await prisma.$queryRaw<{ id: string }[]>`
-          SELECT p.id FROM "Product" p, jsonb_array_elements_text(COALESCE(p."sourceMessageIds", '[]'::jsonb)) AS mid
-          INNER JOIN "WhatsAppMessage" w ON w.id = mid
+          SELECT DISTINCT p.id FROM "Product" p
+          CROSS JOIN LATERAL jsonb_array_elements_text(
+            CASE WHEN jsonb_typeof(COALESCE(p."sourceMessageIds", '[]'::jsonb)) = 'array'
+                 THEN COALESCE(p."sourceMessageIds", '[]'::jsonb)
+                 ELSE '[]'::jsonb
+            END
+          ) AS msg_id
+          INNER JOIN "WhatsAppMessage" w ON w.id = msg_id
           WHERE p.source = 'WA' AND w."chatId" = ${chatId}
         `;
         allowedIds.push(...rows.map(r => r.id));
@@ -108,8 +116,14 @@ export async function GET(request: NextRequest) {
       for (const sid of tgSourceIds) {
         const chatId = sid.slice(3);
         const rows = await prisma.$queryRaw<{ id: string }[]>`
-          SELECT p.id FROM "Product" p, jsonb_array_elements_text(COALESCE(p."sourceMessageIds", '[]'::jsonb)) AS mid
-          INNER JOIN "TelegramMessage" t ON t.id = mid
+          SELECT DISTINCT p.id FROM "Product" p
+          CROSS JOIN LATERAL jsonb_array_elements_text(
+            CASE WHEN jsonb_typeof(COALESCE(p."sourceMessageIds", '[]'::jsonb)) = 'array'
+                 THEN COALESCE(p."sourceMessageIds", '[]'::jsonb)
+                 ELSE '[]'::jsonb
+            END
+          ) AS msg_id
+          INNER JOIN "TelegramMessage" t ON t.id = msg_id
           WHERE p.source = 'TG' AND t."chatId" = ${chatId}
         `;
         allowedIds.push(...rows.map(r => r.id));
@@ -364,8 +378,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    console.error('[catalog] GET error:', error);
+    const message = error instanceof Error ? error.message : 'Ошибка при получении каталога';
     return NextResponse.json(
-      { error: 'Ошибка при получении каталога' },
+      { error: 'Ошибка при получении каталога', details: process.env.NODE_ENV === 'development' ? message : undefined },
       { status: 500 }
     );
   }

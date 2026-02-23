@@ -79,6 +79,7 @@
     "server:memory": "ssh -l ubuntu 130.193.56.134 'free -h'",
     "server:space": "ssh -l ubuntu 130.193.56.134 'echo \"=== Disk Usage ===\" && df -h && echo \"=== Memory Usage ===\" && free -h && echo \"=== Project Size ===\" && du -sh /var/www/marinaobuv && echo \"=== Node Modules Size ===\" && du -sh /var/www/marinaobuv/web/node_modules && echo \"=== Backups Size ===\" && du -sh /var/www/marinaobuv/web/backups'",
     "parser:run": "cd web && npx tsx src/scripts/groq-sequential-cron.ts",
+    "backfill:parsing-history-wa": "cd web && npx tsx src/scripts/backfill-parsing-history-wa.ts",
     "parser:logs": "cd web && tail -f logs/groq-sequential.log",
     "parser:logs:history": "cd web && tail -n 100 logs/groq-sequential.log",
     "webhook:configure": "ssh -l ubuntu 130.193.56.134 'cd /var/www/marinaobuv/web && npx tsx src/scripts/configure-webhook.ts'",

@@ -53,15 +53,18 @@ fi
 cd /var/www/marinaobuv
 
 # 3) PM2: start app so nginx has an upstream (prevents 502 after VM reboot)
-# Prefer blue-green (marinaobuv-blue on 3000) if that config exists; else single app on 3000
+# Avoid EADDRINUSE: stop any app that might be on 3000 (from PM2 resurrect or previous boot)
+# so only one process is started (either blue-green blue or single marinaobuv).
+log "Stopping any existing app on port 3000 to avoid EADDRINUSE"
+pm2 delete marinaobuv marinaobuv-blue marinaobuv-green 2>/dev/null || true
+sleep 1
+
 if [ -f "ecosystem-blue-green.config.js" ]; then
   log "Starting blue-green: marinaobuv-blue on port 3000 (nginx will proxy to 3000)"
-  pm2 delete marinaobuv-green 2>/dev/null || true
-  pm2 startOrReload ecosystem-blue-green.config.js --only marinaobuv-blue --env production --update-env || \
-    pm2 start ecosystem-blue-green.config.js --only marinaobuv-blue --env production
+  pm2 start ecosystem-blue-green.config.js --only marinaobuv-blue --env production
 else
   log "Reloading PM2 with ecosystem.config.js"
-  pm2 startOrReload ecosystem.config.js --env production --update-env || pm2 start ecosystem.config.js --env production
+  pm2 start ecosystem.config.js --env production
   pm2 scale marinaobuv 1 || true
 fi
 pm2 delete prisma-studio 2>/dev/null || true

@@ -706,12 +706,12 @@ echo "🔍 Verifying webhook status monitor configuration..."
 cd web
 
 # Check if Telegram environment variables are set (warn if not, but don't fail)
-if grep -q "TELEGRAM_BOT_TOKEN" .env 2>/dev/null && grep -q "TELEGRAM_CHAT_IDS" .env 2>/dev/null; then
+if grep -q "TELEGRAM_BOT_TOKEN" .env 2>/dev/null && grep -q "TELEGRAM_ALERT_CHAT_IDS" .env 2>/dev/null; then
   TELEGRAM_TOKEN=$(grep "^TELEGRAM_BOT_TOKEN=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
-  TELEGRAM_CHAT_IDS=$(grep "^TELEGRAM_CHAT_IDS=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
+  TELEGRAM_ALERT_CHAT_IDS=$(grep "^TELEGRAM_ALERT_CHAT_IDS=" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | xargs)
 
   if [ -n "$TELEGRAM_TOKEN" ] && [ "$TELEGRAM_TOKEN" != "your_telegram_bot_token" ] && \
-     [ -n "$TELEGRAM_CHAT_IDS" ] && [ "$TELEGRAM_CHAT_IDS" != "123456789" ]; then
+     [ -n "$TELEGRAM_ALERT_CHAT_IDS" ] && [ "$TELEGRAM_ALERT_CHAT_IDS" != "123456789" ]; then
     echo "✅ Telegram configuration found in .env"
 
     # Test webhook monitor script (dry run - just check it can load)
@@ -723,7 +723,7 @@ if grep -q "TELEGRAM_BOT_TOKEN" .env 2>/dev/null && grep -q "TELEGRAM_CHAT_IDS" 
     fi
   else
     echo "⚠️ Telegram environment variables are set but appear to be placeholder values"
-    echo "   Please update TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS in web/.env"
+    echo "   Please update TELEGRAM_BOT_TOKEN and TELEGRAM_ALERT_CHAT_IDS in web/.env"
     echo "   See web/TELEGRAM_SETUP.md for setup instructions"
   fi
 else

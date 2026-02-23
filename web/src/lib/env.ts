@@ -168,9 +168,9 @@ const schema = z
     WEBHOOK_NOTIFICATION_NUMBERS: z.string().optional(),
     WEBHOOK_NOTIFICATION_MESSAGE: z.string().optional(),
 
-    // Telegram Notifications (fallback when WhatsApp is not authorized)
+    // Telegram Notifications (Green API webhook alerts; comma-separated list of chat IDs)
     TELEGRAM_BOT_TOKEN: z.string().optional(),
-    TELEGRAM_CHAT_IDS: z.string().optional(),
+    TELEGRAM_ALERT_CHAT_IDS: z.string().optional(), // e.g. "123456789" or "123456789,987654321"
     TELEGRAM_NOTIFICATIONS_ENABLED: z.string().optional(),
     // Telegram Parser
     TELEGRAM_CHANNEL_ID: z.string().optional(), // Channel username (e.g., @channelname) or ID
@@ -266,7 +266,7 @@ const raw = {
 
   // Telegram Notifications
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_IDS: process.env.TELEGRAM_CHAT_IDS,
+  TELEGRAM_ALERT_CHAT_IDS: process.env.TELEGRAM_ALERT_CHAT_IDS,
   TELEGRAM_NOTIFICATIONS_ENABLED: process.env.TELEGRAM_NOTIFICATIONS_ENABLED,
   // Telegram Parser
   TELEGRAM_CHANNEL_ID: process.env.TELEGRAM_CHANNEL_ID,

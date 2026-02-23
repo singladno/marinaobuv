@@ -194,7 +194,8 @@ async function main() {
     let cycleCount = 0;
     let totalUnprocessed = 0;
 
-    // Process each chat in order; one ParsingHistory record per chat (with sourceId) for per-chat admin pages
+    // Process each chat in order; one ParsingHistory record per chat (with sourceId) for per-chat admin pages.
+    // We always create a record for each chat so admin parsing pages show an entry for every group, even when 0 messages were processed.
     for (let chatIndex = 0; chatIndex < chatIds.length; chatIndex++) {
       const currentChatId = chatIds[chatIndex];
       if (isShuttingDown) break;
@@ -212,15 +213,7 @@ async function main() {
         },
       });
 
-      if (initialCount === 0) {
-        console.log(`   No unprocessed messages for this chat, skipping.`);
-        continue;
-      }
-
-      totalUnprocessed += initialCount;
-      console.log(`   Found ${initialCount} unprocessed messages for this chat.`);
-
-      // One parsing history record per chat (sourceId = currentChatId) for admin per-chat detail pages
+      // Always create a parsing history record for this chat so admin has an entry per group
       const parsingHistoryId = await ParsingCoordinator.createParsingHistory(
         'cron',
         'Groq sequential processing cron job',
@@ -230,6 +223,19 @@ async function main() {
 
       progressService = new ParsingProgressService();
       progressService.setParsingHistoryId(parsingHistoryId);
+
+      if (initialCount === 0) {
+        console.log(`   No unprocessed messages for this chat, marking run as completed (0/0).`);
+        await progressService.updateProgress({
+          status: 'completed',
+          messagesRead: 0,
+          productsCreated: 0,
+        });
+        continue;
+      }
+
+      totalUnprocessed += initialCount;
+      console.log(`   Found ${initialCount} unprocessed messages for this chat.`);
 
       const processor = new GroqSequentialProcessor(prisma, progressService);
       let currentOffset = 0;

@@ -17,7 +17,8 @@ export class TelegramNotifier {
 
   constructor() {
     const botToken = env.TELEGRAM_BOT_TOKEN;
-    const chatIdsStr = env.TELEGRAM_CHAT_IDS || '';
+    // TELEGRAM_ALERT_CHAT_IDS: comma-separated list of Telegram chat IDs for webhook alerts
+    const chatIdsStr = env.TELEGRAM_ALERT_CHAT_IDS || '';
     const enabled = env.TELEGRAM_NOTIFICATIONS_ENABLED === 'true';
 
     this.config = {

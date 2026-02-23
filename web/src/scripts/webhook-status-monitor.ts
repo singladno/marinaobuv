@@ -161,7 +161,7 @@ export class WebhookStatusMonitor {
 
     if (!telegramNotifier.isConfigured()) {
       console.error(
-        '❌ Telegram notifications not configured. Please set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS environment variables.'
+        '❌ Telegram notifications not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_ALERT_CHAT_IDS (comma-separated list of chat IDs) in .env'
       );
       return;
     }
@@ -212,7 +212,7 @@ export class WebhookStatusMonitor {
     } else {
       console.log('⚠️ Telegram notifications not configured');
       console.log(
-        '   Please set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_IDS environment variables'
+        '   Set TELEGRAM_BOT_TOKEN and TELEGRAM_ALERT_CHAT_IDS (comma-separated list) in .env'
       );
     }
 
