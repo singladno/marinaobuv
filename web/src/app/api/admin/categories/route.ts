@@ -13,6 +13,7 @@ type CategoryRecord = {
   sort: number;
   isActive: boolean;
   icon: string | null;
+  legacySectionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   seoCanonical: string | null;
@@ -129,6 +130,26 @@ export async function GET(request: NextRequest) {
     const [categories, productGroups] = await Promise.all([
       prisma.category.findMany({
         orderBy: [{ parentId: 'asc' }, { sort: 'asc' }, { createdAt: 'asc' }],
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          path: true,
+          parentId: true,
+          sort: true,
+          isActive: true,
+          icon: true,
+          legacySectionId: true,
+          createdAt: true,
+          updatedAt: true,
+          seoCanonical: true,
+          seoDescription: true,
+          seoH1: true,
+          seoIntroHtml: true,
+          seoNoindex: true,
+          seoTitle: true,
+          seoUpdatedAt: true,
+        },
       }),
       prisma.product.groupBy({
         by: ['categoryId'],

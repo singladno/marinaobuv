@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { useAdminCategories } from '@/hooks/useAdminCategories';
 import { useCategoryDelete } from '@/hooks/useCategoryDelete';
@@ -12,9 +13,31 @@ import { CategoryDetailsPanel } from './CategoryDetailsPanel';
 import { CategoryModal } from './CategoryModal';
 import { CategoryDeleteModal } from './CategoryDeleteModal';
 
+const CATEGORY_ID_PARAM = 'id';
+
 export function AdminCategoriesPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { tree, flat, loading, error, reload } = useAdminCategories();
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [selectedId, setSelectedIdState] = React.useState<string | null>(null);
+
+  const setSelectedId = React.useCallback(
+    (id: string | null) => {
+      setSelectedIdState(id);
+      const path = '/admin/categories';
+      if (id) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set(CATEGORY_ID_PARAM, id);
+        router.replace(`${path}?${params.toString()}`, { scroll: false });
+      } else {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete(CATEGORY_ID_PARAM);
+        const qs = params.toString();
+        router.replace(qs ? `${path}?${qs}` : path, { scroll: false });
+      }
+    },
+    [router, searchParams]
+  );
 
   const {
     deleteModalOpen,
@@ -38,11 +61,15 @@ export function AdminCategoriesPageContent() {
 
   React.useEffect(() => {
     if (loading || tree.length === 0) return;
-    setSelectedId(prev => {
+    const idFromUrl = searchParams.get(CATEGORY_ID_PARAM);
+    const validFromUrl =
+      idFromUrl && flat.some(item => item.id === idFromUrl) ? idFromUrl : null;
+    setSelectedIdState(prev => {
+      if (validFromUrl) return validFromUrl;
       if (prev && flat.some(item => item.id === prev)) return prev;
       return tree[0]?.id ?? null;
     });
-  }, [loading, tree, flat]);
+  }, [loading, tree, flat, searchParams]);
 
   const selected = React.useMemo<FlatAdminCategory | null>(() => {
     if (!selectedId) return null;

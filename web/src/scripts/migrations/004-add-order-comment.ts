@@ -6,7 +6,7 @@ export async function up() {
   console.log('Adding comment field to Order table...');
 
   await prisma.$executeRaw`
-    ALTER TABLE "Order" ADD COLUMN "comment" TEXT;
+    ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "comment" TEXT;
   `;
 
   console.log('✅ Added comment field to Order table');

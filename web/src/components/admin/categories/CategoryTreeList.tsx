@@ -10,6 +10,8 @@ type Props = {
   onSelect: (id: string) => void;
   searchTerm: string;
   depth?: number;
+  expandedIds: Set<string>;
+  onToggleExpand: (id: string) => void;
   onCreateSubcategory?: (parentId: string) => void;
   onEdit?: (category: AdminCategoryNode) => void;
   onDelete?: (category: AdminCategoryNode) => void;
@@ -21,6 +23,8 @@ export function CategoryTreeList({
   onSelect,
   searchTerm,
   depth = 0,
+  expandedIds,
+  onToggleExpand,
   onCreateSubcategory,
   onEdit,
   onDelete,
@@ -35,6 +39,8 @@ export function CategoryTreeList({
           selectedId={selectedId}
           onSelect={onSelect}
           searchTerm={searchTerm}
+          expandedIds={expandedIds}
+          onToggleExpand={onToggleExpand}
           onCreateSubcategory={onCreateSubcategory}
           onEdit={onEdit}
           onDelete={onDelete}

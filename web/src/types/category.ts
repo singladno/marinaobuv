@@ -7,6 +7,7 @@ export type AdminCategoryNode = {
   sort: number;
   isActive: boolean;
   icon?: string | null;
+  legacySectionId?: string | null;
   urlPath: string;
   segment: string;
   directProductCount: number;
@@ -23,4 +24,5 @@ export type AdminCategoryNode = {
 
 export type FlatAdminCategory = AdminCategoryNode & {
   depth: number;
+  isLeaf?: boolean;
 };

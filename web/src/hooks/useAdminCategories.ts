@@ -10,7 +10,7 @@ const flatten = (
   depth = 0
 ): FlatAdminCategory[] => {
   return nodes.flatMap(node => [
-    { ...node, depth },
+    { ...node, depth, isLeaf: (node.children?.length ?? 0) === 0 },
     ...flatten(node.children || [], depth + 1),
   ]);
 };

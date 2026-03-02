@@ -23,6 +23,20 @@ type Props = {
   onDelete?: (category: AdminCategoryNode) => void;
 };
 
+/** Returns ids of nodes that must be expanded to reveal the node with targetId (ancestors only). */
+function getAncestorIds(
+  nodes: AdminCategoryNode[],
+  targetId: string,
+  path: string[] = []
+): string[] | null {
+  for (const node of nodes) {
+    if (node.id === targetId) return path;
+    const found = getAncestorIds(node.children ?? [], targetId, [...path, node.id]);
+    if (found) return found;
+  }
+  return null;
+}
+
 const filterTree = (
   nodes: AdminCategoryNode[],
   term: string
@@ -57,10 +71,29 @@ export function CategoryTreePanel({
   onDelete,
 }: Props) {
   const [search, setSearch] = React.useState('');
+  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => new Set());
+
   const filtered = React.useMemo(
     () => filterTree(tree, search),
     [tree, search]
   );
+
+  React.useEffect(() => {
+    if (!selectedId || tree.length === 0) return;
+    const ancestorIds = getAncestorIds(tree, selectedId);
+    if (ancestorIds?.length) {
+      setExpandedIds(prev => new Set([...prev, ...ancestorIds]));
+    }
+  }, [selectedId, tree]);
+
+  const handleToggleExpand = React.useCallback((id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   return (
     <Card className="h-full w-full min-w-0">
@@ -127,6 +160,8 @@ export function CategoryTreePanel({
               selectedId={selectedId}
               onSelect={onSelect}
               searchTerm={search}
+              expandedIds={expandedIds}
+              onToggleExpand={handleToggleExpand}
               onCreateSubcategory={onCreateSubcategory}
               onEdit={onEdit}
               onDelete={onDelete}

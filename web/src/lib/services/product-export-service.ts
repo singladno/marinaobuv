@@ -102,6 +102,7 @@ async function exportToCsv(products: any[], outputPath: string): Promise<void> {
     'Название',
     'Артикул',
     'Категория',
+    'sectionid',
     'Цена (руб.)',
     'Валюта',
     'Материал',
@@ -128,11 +129,16 @@ async function exportToCsv(products: any[], outputPath: string): Promise<void> {
       ? `${process.env.NEXT_PUBLIC_SITE_URL || ''}/products/${product.slug}`
       : '';
 
+    const sectionId =
+      (product.category as { legacySectionId?: string | null })?.legacySectionId ??
+      '';
+
     return [
       product.id,
       product.name,
       product.article || '',
       categoryPath,
+      sectionId,
       Number(product.pricePair),
       product.currency || 'RUB',
       product.material || '',
@@ -180,6 +186,10 @@ async function exportToXml(products: any[], outputPath: string): Promise<void> {
       `    <article>${escapeXmlValue(product.article || '')}</article>`
     );
     xmlLines.push(`    <category>${escapeXmlValue(categoryPath)}</category>`);
+    const sectionId =
+      (product.category as { legacySectionId?: string | null })?.legacySectionId ??
+      '';
+    xmlLines.push(`    <sectionid>${escapeXmlValue(sectionId)}</sectionid>`);
     xmlLines.push(`    <price>${Number(product.pricePair)}</price>`);
     xmlLines.push(
       `    <currency>${escapeXmlValue(product.currency || 'RUB')}</currency>`
@@ -255,22 +265,38 @@ export async function exportProducts(
     });
   }
 
-  // Fetch products with related data
+  // Fetch products with related data.
+  // Use select (not include) to exclude gptRequest/gptResponse — they can be huge
+  // and cause "Failed to convert rust String into napi string" in Prisma.
   const products = await prisma.product.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      article: true,
+      pricePair: true,
+      currency: true,
+      material: true,
+      gender: true,
+      season: true,
+      description: true,
+      sizes: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
       category: {
         select: {
           id: true,
           name: true,
           path: true,
+          legacySectionId: true,
         },
       },
       images: {
-        where: {
-          isActive: true,
-        },
+        where: { isActive: true },
         orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
+        select: { id: true, url: true },
       },
     },
     orderBy: { createdAt: 'desc' },

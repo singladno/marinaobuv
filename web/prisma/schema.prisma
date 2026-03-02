@@ -8,27 +8,28 @@ datasource db {
 }
 
 model Category {
-  id             String           @id @default(cuid())
-  parentId       String?
-  name           String
-  slug           String           @unique
-  path           String           @unique
-  sort           Int              @default(500)
-  isActive       Boolean          @default(true)
-  icon           String?          // Icon name for first-level categories
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  seoCanonical   String?
-  seoDescription String?
-  seoH1          String?
-  seoIntroHtml   String?
-  seoNoindex     Boolean          @default(false)
-  seoTitle       String?
-  seoUpdatedAt   DateTime?        @default(now())
-  parent         Category?        @relation("CatToParent", fields: [parentId], references: [id])
-  children       Category[]       @relation("CatToParent")
-  products       Product[]
-  draftProducts  WaDraftProduct[]
+  id                String           @id @default(cuid())
+  parentId          String?
+  name              String
+  slug              String           @unique
+  path              String           @unique
+  sort              Int              @default(500)
+  isActive          Boolean          @default(true)
+  icon              String?          // Icon name for first-level categories
+  legacySectionId   String?          // ID раздела на старом портале (for leaf categories, used in exports)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  seoCanonical      String?
+  seoDescription    String?
+  seoH1             String?
+  seoIntroHtml      String?
+  seoNoindex        Boolean          @default(false)
+  seoTitle          String?
+  seoUpdatedAt      DateTime?        @default(now())
+  parent            Category?        @relation("CatToParent", fields: [parentId], references: [id])
+  children          Category[]       @relation("CatToParent")
+  products          Product[]
+  draftProducts     WaDraftProduct[]
 
   @@index([parentId])
 }

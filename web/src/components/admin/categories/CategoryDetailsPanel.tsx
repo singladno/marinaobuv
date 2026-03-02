@@ -8,6 +8,7 @@ import { useCategoryToggle } from '@/hooks/useCategoryToggle';
 import type { FlatAdminCategory } from '@/types/category';
 
 import { CategoryDetailsInfo } from './CategoryDetailsInfo';
+import { CategoryDetailsLegacySectionId } from './CategoryDetailsLegacySectionId';
 import { CategoryDetailsSeo } from './CategoryDetailsSeo';
 import { CategoryDetailsHeader } from './CategoryDetailsHeader';
 import { CategoryDetailsToggle } from './CategoryDetailsToggle';
@@ -68,6 +69,10 @@ export function CategoryDetailsPanel({
       </CardHeader>
       <CardContent className="space-y-4 p-6 pt-2 text-sm text-gray-700">
         <CategoryDetailsInfo category={category} />
+        <CategoryDetailsLegacySectionId
+          category={category}
+          onSaved={onReload}
+        />
         <CategoryDetailsSeo category={category} />
         <CategoryDetailsToggle
           category={category}

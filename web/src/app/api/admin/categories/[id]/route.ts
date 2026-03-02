@@ -73,6 +73,7 @@ export async function PATCH(
       slug: slugInput,
       isActive = true,
       icon,
+      legacySectionId,
       seoTitle,
       seoDescription,
       seoH1,
@@ -192,6 +193,11 @@ export async function PATCH(
     if (seoH1 !== undefined) updateData.seoH1 = seoH1;
     if (seoCanonical !== undefined) updateData.seoCanonical = seoCanonical;
     if (seoIntroHtml !== undefined) updateData.seoIntroHtml = seoIntroHtml;
+    if (legacySectionId !== undefined)
+      updateData.legacySectionId =
+        legacySectionId === null || legacySectionId === ''
+          ? null
+          : String(legacySectionId).trim();
 
     const updatedCategory = await prisma.category.update({
       where: { id: categoryId },

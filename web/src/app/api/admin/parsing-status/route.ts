@@ -5,7 +5,16 @@ import { prisma } from '@/lib/server/db';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const parserId = searchParams.get('parserId');
-  const sourceId = searchParams.get('sourceId') ?? undefined;
+  let sourceId = searchParams.get('sourceId') ?? undefined;
+
+  // Normalize WA sourceId: URL may have %40 (encoded @) from double-encoding; DB stores canonical form with @
+  if (parserId === 'wa' && sourceId) {
+    try {
+      sourceId = decodeURIComponent(sourceId);
+    } catch {
+      // keep as-is if invalid
+    }
+  }
 
   // Build where clause for parser filtering (and optional sourceId for WA per-chat)
   const parserWhere: any = {};

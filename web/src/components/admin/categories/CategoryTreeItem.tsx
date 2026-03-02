@@ -12,6 +12,8 @@ type Props = {
   selectedId: string | null;
   onSelect: (id: string) => void;
   searchTerm: string;
+  expandedIds: Set<string>;
+  onToggleExpand: (id: string) => void;
   onCreateSubcategory?: (parentId: string) => void;
   onEdit?: (category: AdminCategoryNode) => void;
   onDelete?: (category: AdminCategoryNode) => void;
@@ -23,25 +25,33 @@ export function CategoryTreeItem({
   selectedId,
   onSelect,
   searchTerm,
+  expandedIds,
+  onToggleExpand,
   onCreateSubcategory,
   onEdit,
   onDelete,
 }: Props) {
   const hasChildren = (node.children || []).length > 0;
-  const [expanded, setExpanded] = React.useState(false);
-  const isSelected = node.id === selectedId;
   const needle = searchTerm.trim().toLowerCase();
+  const expanded =
+    expandedIds.has(node.id) || (needle.length > 0 && hasChildren);
+  const isSelected = node.id === selectedId;
   const highlight =
     needle.length > 0 &&
     (node.name.toLowerCase().includes(needle) ||
       node.urlPath.toLowerCase().includes(needle));
 
+  const rowRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    if (needle.length > 0) setExpanded(true);
-  }, [needle]);
+    if (!isSelected || !rowRef.current) return;
+    const t = requestAnimationFrame(() => {
+      rowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(t);
+  }, [isSelected]);
 
   return (
-    <div>
+    <div ref={rowRef}>
       <CategoryTreeItemContent
         node={node}
         isSelected={isSelected}
@@ -52,7 +62,7 @@ export function CategoryTreeItem({
         onSelect={() => onSelect(node.id)}
         onToggleExpand={e => {
           e.stopPropagation();
-          setExpanded(prev => !prev);
+          onToggleExpand(node.id);
         }}
         onCreateSubcategory={onCreateSubcategory}
         onEdit={onEdit}
@@ -62,17 +72,19 @@ export function CategoryTreeItem({
         <div className="ml-5 border-l border-gray-100 pl-2">
           <div className="space-y-1">
             {node.children.map(child => (
-              <CategoryTreeItem
-                key={child.id}
-                node={child}
-                depth={depth + 1}
-                selectedId={selectedId}
-                onSelect={onSelect}
-                searchTerm={searchTerm}
-                onCreateSubcategory={onCreateSubcategory}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
+            <CategoryTreeItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              searchTerm={searchTerm}
+              expandedIds={expandedIds}
+              onToggleExpand={onToggleExpand}
+              onCreateSubcategory={onCreateSubcategory}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
             ))}
           </div>
         </div>
