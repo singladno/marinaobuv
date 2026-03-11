@@ -371,7 +371,7 @@ export async function POST(req: NextRequest) {
     const analysisResponse = await groqChatCompletion(
       groq,
       {
-        model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+        model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
         messages: [
           {
             role: 'system',
@@ -583,7 +583,7 @@ export async function POST(req: NextRequest) {
         const categoryResponse = await groqChatCompletion(
           categoryGroq,
           {
-            model: 'meta-llama/llama-4-maverick-17b-128e-instruct', // Same model as WA parser
+            model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b', // Same model as WA parser
             messages: [
               {
                 role: 'system',
