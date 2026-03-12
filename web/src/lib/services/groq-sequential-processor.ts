@@ -1451,7 +1451,7 @@ export class GroqSequentialProcessor {
           const response = await groqChatCompletion(
             groq,
             {
-              model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+              model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
               messages: [
                 {
                   role: 'system',
@@ -1488,7 +1488,7 @@ export class GroqSequentialProcessor {
           if ('usage' in response && response.usage) {
             getTokenLogger().log(
               'image-analysis',
-              process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+              process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
               response.usage,
               {
                 productId,
@@ -1563,7 +1563,7 @@ export class GroqSequentialProcessor {
           const categoryResponse = await groqChatCompletion(
             groq,
             {
-              model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+              model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
               messages: [
                 {
                   role: 'system',
@@ -1595,7 +1595,7 @@ export class GroqSequentialProcessor {
           if ('usage' in categoryResponse && categoryResponse.usage) {
             getTokenLogger().log(
               'category-analysis',
-              process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+              process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
               categoryResponse.usage,
               {
                 productId,

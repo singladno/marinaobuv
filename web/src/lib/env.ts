@@ -75,7 +75,7 @@ const schema = z
 
     // Groq API
     GROQ_API_KEY: z.string().optional(),
-    // Vision/image analysis model (default: openai/gpt-oss-120b; was meta-llama/llama-4-maverick-17b-128e-instruct, decommissioned)
+    // Vision/image analysis model (default: meta-llama/llama-4-scout-17b-16e-instruct; must support image input)
     GROQ_VISION_MODEL: z.string().optional(),
 
     // Concurrency tuning (optional)
