@@ -367,7 +367,7 @@ export async function POST(req: NextRequest) {
       'image', // Placeholder - actual image is in base64 below
       parsedData.textInfo
     );
-
+    // # for commit
     const analysisResponse = await groqChatCompletion(
       groq,
       {
