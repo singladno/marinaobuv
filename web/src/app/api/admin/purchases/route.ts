@@ -1,7 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+
+const CACHE_TAG = 'admin-purchases';
+const CACHE_REVALIDATE_SEC = 20;
+
+async function getPurchasesForUser(userId: string) {
+  return prisma.purchase.findMany({
+    where: { createdById: userId },
+    include: {
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              pricePair: true,
+              images: {
+                where: { isPrimary: true },
+                take: 1,
+                select: { id: true, url: true, alt: true },
+              },
+            },
+          },
+        },
+        orderBy: { sortIndex: 'asc' },
+      },
+      _count: {
+        select: { items: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,30 +45,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    const purchases = await prisma.purchase.findMany({
-      where: {
-        createdById: session.user.id,
-      },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: {
-                images: {
-                  where: { isPrimary: true },
-                  take: 1,
-                },
-              },
-            },
-          },
-          orderBy: { sortIndex: 'asc' },
-        },
-        _count: {
-          select: { items: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const purchases = await unstable_cache(
+      () => getPurchasesForUser(session.user!.id),
+      [CACHE_TAG, session.user.id],
+      { revalidate: CACHE_REVALIDATE_SEC, tags: [CACHE_TAG, `admin-purchases-${session.user.id}`] }
+    )();
 
     return NextResponse.json(purchases);
   } catch (error) {
@@ -76,6 +91,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    revalidateTag(`admin-purchases-${session.user.id}`);
     return NextResponse.json(purchase, { status: 201 });
   } catch (error) {
     console.error('Error creating purchase:', error);
