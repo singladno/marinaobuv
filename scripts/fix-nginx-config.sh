@@ -31,20 +31,37 @@ print_error() {
 
 print_status "🔧 Fixing nginx configuration..."
 
-# Backup existing nginx configuration
-if [ -f "/etc/nginx/conf.d/marinaobuv.conf" ]; then
-    print_status "Backing up existing nginx configuration..."
-    sudo cp /etc/nginx/conf.d/marinaobuv.conf /etc/nginx/conf.d/marinaobuv.conf.backup.$(date +%Y%m%d_%H%M%S) || true
-fi
+# Repo root (parent of scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+NGINX_CONF_SRC="$REPO_ROOT/nginx/conf.d"
 
-# Create proper nginx configuration
-print_status "Creating proper nginx configuration..."
-sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
+# Prefer repo nginx configs so deploy-from-push keeps client_max_body_size and HTTPS in sync
+if [ -f "$NGINX_CONF_SRC/marinaobuv.conf" ]; then
+    print_status "Using nginx configs from repo ($NGINX_CONF_SRC)..."
+    for f in "$NGINX_CONF_SRC"/*.conf; do
+        [ -f "$f" ] || continue
+        name="$(basename "$f")"
+        if [ -f "/etc/nginx/conf.d/$name" ]; then
+            sudo cp "/etc/nginx/conf.d/$name" "/etc/nginx/conf.d/${name}.backup.$(date +%Y%m%d_%H%M%S)" || true
+        fi
+        sudo cp "$f" "/etc/nginx/conf.d/$name"
+        print_status "  -> $name"
+    done
+else
+    # Fallback: embedded config (e.g. script run outside repo)
+    print_status "Repo nginx configs not found, using embedded configuration..."
+    if [ -f "/etc/nginx/conf.d/marinaobuv.conf" ]; then
+        sudo cp /etc/nginx/conf.d/marinaobuv.conf /etc/nginx/conf.d/marinaobuv.conf.backup.$(date +%Y%m%d_%H%M%S) || true
+    fi
+    sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
 # HTTP server configuration for MarinaObuv
 server {
     listen 80;
     server_name marina-obuv.ru www.marina-obuv.ru;
-    
+
+    client_max_body_size 20M;
+
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -92,6 +109,7 @@ server {
     }
 }
 EOF
+fi
 
 # Test nginx configuration
 print_status "Testing nginx configuration..."

@@ -136,6 +136,8 @@ server {
     listen 80;
     server_name marina-obuv.ru www.marina-obuv.ru;
 
+    client_max_body_size 20M;
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;

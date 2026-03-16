@@ -96,7 +96,9 @@ else
 server {
     listen 80;
     server_name marina-obuv.ru www.marina-obuv.ru;
-    
+
+    client_max_body_size 20M;
+
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
