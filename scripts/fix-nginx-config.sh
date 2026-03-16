@@ -31,30 +31,15 @@ print_error() {
 
 print_status "🔧 Fixing nginx configuration..."
 
-# Repo root (parent of scripts/)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
-NGINX_CONF_SRC="$REPO_ROOT/nginx/conf.d"
+# Backup existing HTTP config only; do not overwrite HTTPS or other conf.d files
+if [ -f "/etc/nginx/conf.d/marinaobuv.conf" ]; then
+    print_status "Backing up existing nginx configuration..."
+    sudo cp /etc/nginx/conf.d/marinaobuv.conf /etc/nginx/conf.d/marinaobuv.conf.backup.$(date +%Y%m%d_%H%M%S) || true
+fi
 
-# Prefer repo nginx configs so deploy-from-push keeps client_max_body_size and HTTPS in sync
-if [ -f "$NGINX_CONF_SRC/marinaobuv.conf" ]; then
-    print_status "Using nginx configs from repo ($NGINX_CONF_SRC)..."
-    for f in "$NGINX_CONF_SRC"/*.conf; do
-        [ -f "$f" ] || continue
-        name="$(basename "$f")"
-        if [ -f "/etc/nginx/conf.d/$name" ]; then
-            sudo cp "/etc/nginx/conf.d/$name" "/etc/nginx/conf.d/${name}.backup.$(date +%Y%m%d_%H%M%S)" || true
-        fi
-        sudo cp "$f" "/etc/nginx/conf.d/$name"
-        print_status "  -> $name"
-    done
-else
-    # Fallback: embedded config (e.g. script run outside repo)
-    print_status "Repo nginx configs not found, using embedded configuration..."
-    if [ -f "/etc/nginx/conf.d/marinaobuv.conf" ]; then
-        sudo cp /etc/nginx/conf.d/marinaobuv.conf /etc/nginx/conf.d/marinaobuv.conf.backup.$(date +%Y%m%d_%H%M%S) || true
-    fi
-    sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
+# Write only the HTTP server block to marinaobuv.conf (HTTPS managed manually on server)
+print_status "Creating nginx configuration (HTTP only)..."
+sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
 # HTTP server configuration for MarinaObuv
 server {
     listen 80;
@@ -67,7 +52,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     # Main application
     location / {
         proxy_pass http://localhost:3000;
@@ -83,7 +68,7 @@ server {
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
     }
-    
+
     # API routes
     location /api/ {
         proxy_pass http://localhost:3000;
@@ -93,7 +78,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     # Static files with caching
     location /_next/static/ {
         proxy_pass http://localhost:3000;
@@ -101,7 +86,7 @@ server {
         add_header Cache-Control "public, immutable";
         expires 1y;
     }
-    
+
     # Health check
     location /health {
         proxy_pass http://localhost:3000/api/health;
@@ -109,7 +94,6 @@ server {
     }
 }
 EOF
-fi
 
 # Test nginx configuration
 print_status "Testing nginx configuration..."
