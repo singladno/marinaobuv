@@ -170,9 +170,13 @@ server {
 }
 EOF
 
-  # Always use Let's Encrypt certificate paths; CI ensures certbot deploys them
+  # Prefer Let's Encrypt; fallback to server's existing cert (e.g. /etc/ssl/certs/marinaobuv.ru.crt)
   local CERT_PATH="/etc/letsencrypt/live/marina-obuv.ru/fullchain.pem"
   local KEY_PATH="/etc/letsencrypt/live/marina-obuv.ru/privkey.pem"
+  if [ ! -f "$CERT_PATH" ] && [ -f /etc/ssl/certs/marinaobuv.ru.crt ]; then
+    CERT_PATH="/etc/ssl/certs/marinaobuv.ru.crt"
+    KEY_PATH="/etc/ssl/private/marinaobuv.ru.key"
+  fi
 
   # Update nginx HTTPS configuration to point to the new deployment (with proper certs)
   sudo tee /etc/nginx/sites-available/marinaobuv-https > /dev/null << EOF
@@ -224,8 +228,93 @@ server {
 }
 EOF
 
-  # Ensure symlink is present
+  # Ensure symlink is present (for nginx setups that include sites-enabled)
   sudo ln -sf /etc/nginx/sites-available/marinaobuv-https /etc/nginx/sites-enabled/
+
+  # Also write HTTPS to conf.d so it wins when nginx only includes conf.d/*.conf (same port as HTTP)
+  # Otherwise our fix-nginx-config copy leaves conf.d/marinaobuv-https.conf with port 3000 → 502 when app is on 3001
+  sudo tee /etc/nginx/conf.d/marinaobuv-https.conf > /dev/null << CONFDEOF
+# HTTPS server - port set by blue-green switch_nginx_traffic
+server {
+    listen 443 ssl http2;
+    server_name marina-obuv.ru www.marina-obuv.ru;
+
+    client_max_body_size 20M;
+
+    ssl_certificate ${CERT_PATH};
+    ssl_certificate_key ${KEY_PATH};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    location / {
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+
+    location /api/ {
+        limit_req zone=api burst=80 nodelay;
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /login {
+        limit_req zone=login burst=5 nodelay;
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /_next/static/ {
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_valid 200 1y;
+        add_header Cache-Control "public, immutable";
+        expires 1y;
+        proxy_buffering off;
+    }
+
+    location /_next/image {
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /health {
+        proxy_pass http://localhost:${target_port}/api/health;
+        access_log off;
+    }
+}
+CONFDEOF
 
     # Test nginx configuration
     if sudo nginx -t; then
