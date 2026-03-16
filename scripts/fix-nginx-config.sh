@@ -35,17 +35,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 NGINX_CONF_SRC="$REPO_ROOT/nginx/conf.d"
 STAMP="$(date +%Y%m%d_%H%M%S)"
-# Only these files: server configs for PM2 (localhost:3000). Do NOT copy marinaobuv-http.conf (Docker upstream "web").
-DEPLOY_CONFS="marinaobuv.conf marinaobuv-https.conf"
+# Copy only HTTP config from repo. Do NOT copy marinaobuv-https.conf (repo has self-signed paths; server may have Let's Encrypt from certbot).
+# HTTPS config is written by blue-green-deploy.sh with LE paths when available.
+DEPLOY_CONFS="marinaobuv.conf"
 
-if [ -f "$NGINX_CONF_SRC/marinaobuv.conf" ] && [ -f "$NGINX_CONF_SRC/marinaobuv-https.conf" ]; then
-    print_status "Deploying nginx configs from repo (HTTP + HTTPS only; excluding Docker marinaobuv-http.conf)..."
+if [ -f "$NGINX_CONF_SRC/marinaobuv.conf" ]; then
+    print_status "Deploying HTTP nginx config from repo (HTTPS left to blue-green / certbot on server)..."
     # Remove Docker-only config if present (uses upstream "web", breaks PM2 server)
     if [ -f /etc/nginx/conf.d/marinaobuv-http.conf ]; then
         sudo rm -f /etc/nginx/conf.d/marinaobuv-http.conf
         print_status "  removed marinaobuv-http.conf (Docker-only, not used here)"
     fi
-    # Backup and copy each file
+    # Backup and copy HTTP config only
     for name in $DEPLOY_CONFS; do
         if [ -f "/etc/nginx/conf.d/$name" ]; then
             sudo cp "/etc/nginx/conf.d/$name" "/etc/nginx/conf.d/${name}.backup.$STAMP" || true

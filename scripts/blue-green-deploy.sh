@@ -173,15 +173,16 @@ server {
 }
 EOF
 
-  # Prefer Let's Encrypt; fallback to server's existing cert (e.g. /etc/ssl/certs/marinaobuv.ru.crt)
+  # Use Let's Encrypt only; never overwrite HTTPS config with self-signed (breaks browser trust after deploy)
   local CERT_PATH="/etc/letsencrypt/live/marina-obuv.ru/fullchain.pem"
   local KEY_PATH="/etc/letsencrypt/live/marina-obuv.ru/privkey.pem"
-  if [ ! -f "$CERT_PATH" ] && [ -f /etc/ssl/certs/marinaobuv.ru.crt ]; then
-    CERT_PATH="/etc/ssl/certs/marinaobuv.ru.crt"
-    KEY_PATH="/etc/ssl/private/marinaobuv.ru.key"
+  local USE_LE=0
+  if [ -f "$CERT_PATH" ] && [ -f "$KEY_PATH" ]; then
+    USE_LE=1
   fi
 
   # Update nginx HTTPS configuration to point to the new deployment (with proper certs)
+  if [ "$USE_LE" = "1" ]; then
   sudo tee /etc/nginx/sites-available/marinaobuv-https > /dev/null << EOF
 server {
     listen 443 ssl http2;
@@ -230,12 +231,15 @@ server {
     }
 }
 EOF
+  fi
+  # When USE_LE=0 we leave sites-available as-is (certbot or existing config keeps valid cert)
 
   # Ensure symlink is present (for nginx setups that include sites-enabled)
   sudo ln -sf /etc/nginx/sites-available/marinaobuv-https /etc/nginx/sites-enabled/
 
+  # conf.d/marinaobuv-https.conf: either write full config with LE cert, or only update proxy port (keep existing cert)
+  if [ "$USE_LE" = "1" ]; then
   # Also write HTTPS to conf.d so it wins when nginx only includes conf.d/*.conf (same port as HTTP)
-  # Otherwise our fix-nginx-config copy leaves conf.d/marinaobuv-https.conf with port 3000 → 502 when app is on 3001
   sudo tee /etc/nginx/conf.d/marinaobuv-https.conf > /dev/null << CONFDEOF
 # HTTPS server - port set by blue-green switch_nginx_traffic
 server {
@@ -321,6 +325,13 @@ server {
     }
 }
 CONFDEOF
+  else
+    # Let's Encrypt not found: do not overwrite cert. Only update proxy port in existing conf.d HTTPS config.
+    if [ -f /etc/nginx/conf.d/marinaobuv-https.conf ]; then
+      sudo sed -i "s|proxy_pass http://localhost:[0-9]*|proxy_pass http://localhost:${target_port}|g" /etc/nginx/conf.d/marinaobuv-https.conf
+      echo "✅ Updated only proxy port to ${target_port} in conf.d HTTPS config (cert unchanged)"
+    fi
+  fi
 
     # Test nginx configuration
     if sudo nginx -t; then
