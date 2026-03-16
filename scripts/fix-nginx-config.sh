@@ -31,15 +31,48 @@ print_error() {
 
 print_status "🔧 Fixing nginx configuration..."
 
-# Backup existing HTTP config only; do not overwrite HTTPS or other conf.d files
-if [ -f "/etc/nginx/conf.d/marinaobuv.conf" ]; then
-    print_status "Backing up existing nginx configuration..."
-    sudo cp /etc/nginx/conf.d/marinaobuv.conf /etc/nginx/conf.d/marinaobuv.conf.backup.$(date +%Y%m%d_%H%M%S) || true
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+NGINX_CONF_SRC="$REPO_ROOT/nginx/conf.d"
+STAMP="$(date +%Y%m%d_%H%M%S)"
+# Only these files: server configs for PM2 (localhost:3000). Do NOT copy marinaobuv-http.conf (Docker upstream "web").
+DEPLOY_CONFS="marinaobuv.conf marinaobuv-https.conf"
 
-# Write only the HTTP server block to marinaobuv.conf (HTTPS managed manually on server)
-print_status "Creating nginx configuration (HTTP only)..."
-sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
+if [ -f "$NGINX_CONF_SRC/marinaobuv.conf" ] && [ -f "$NGINX_CONF_SRC/marinaobuv-https.conf" ]; then
+    print_status "Deploying nginx configs from repo (HTTP + HTTPS only; excluding Docker marinaobuv-http.conf)..."
+    # Remove Docker-only config if present (uses upstream "web", breaks PM2 server)
+    if [ -f /etc/nginx/conf.d/marinaobuv-http.conf ]; then
+        sudo rm -f /etc/nginx/conf.d/marinaobuv-http.conf
+        print_status "  removed marinaobuv-http.conf (Docker-only, not used here)"
+    fi
+    # Backup and copy each file
+    for name in $DEPLOY_CONFS; do
+        if [ -f "/etc/nginx/conf.d/$name" ]; then
+            sudo cp "/etc/nginx/conf.d/$name" "/etc/nginx/conf.d/${name}.backup.$STAMP" || true
+        fi
+        sudo cp "$NGINX_CONF_SRC/$name" "/etc/nginx/conf.d/$name"
+        print_status "  -> $name"
+    done
+
+    print_status "Testing nginx configuration..."
+    if ! sudo nginx -t 2>/dev/null; then
+        print_error "Nginx configuration test failed after copy - rolling back to keep site up"
+        for name in $DEPLOY_CONFS; do
+            if [ -f "/etc/nginx/conf.d/${name}.backup.$STAMP" ]; then
+                sudo mv "/etc/nginx/conf.d/${name}.backup.$STAMP" "/etc/nginx/conf.d/$name"
+                print_status "  restored $name"
+            fi
+        done
+        sudo systemctl reload nginx 2>/dev/null || true
+        print_error "Deploy nginx config aborted. Fix repo config and redeploy, or fix nginx on server manually."
+        exit 1
+    fi
+else
+    print_status "Repo nginx configs not found - writing HTTP-only fallback to marinaobuv.conf..."
+    if [ -f "/etc/nginx/conf.d/marinaobuv.conf" ]; then
+        sudo cp /etc/nginx/conf.d/marinaobuv.conf /etc/nginx/conf.d/marinaobuv.conf.backup.$STAMP || true
+    fi
+    sudo tee /etc/nginx/conf.d/marinaobuv.conf > /dev/null << 'EOF'
 # HTTP server configuration for MarinaObuv
 server {
     listen 80;
@@ -94,17 +127,17 @@ server {
     }
 }
 EOF
-
-# Test nginx configuration
-print_status "Testing nginx configuration..."
-if sudo nginx -t; then
-    print_success "Nginx configuration test passed"
-else
-    print_error "Nginx configuration test failed"
-    exit 1
+    print_status "Testing nginx configuration..."
+    if ! sudo nginx -t; then
+        if [ -f "/etc/nginx/conf.d/marinaobuv.conf.backup.$STAMP" ]; then
+            sudo mv "/etc/nginx/conf.d/marinaobuv.conf.backup.$STAMP" /etc/nginx/conf.d/marinaobuv.conf
+            sudo systemctl reload nginx 2>/dev/null || true
+        fi
+        print_error "Nginx configuration test failed"
+        exit 1
+    fi
 fi
 
-# Reload nginx
 print_status "Reloading nginx..."
 if sudo systemctl reload nginx; then
     print_success "Nginx reloaded successfully"
