@@ -26,6 +26,7 @@ import {
   generateArticleNumber,
 } from '@/lib/services/product-creation-mappers';
 import { normalizeToStandardColor } from '@/lib/constants/colors';
+import { detectMulticolorPackWithGroq } from '@/lib/services/multicolor-pack-detection';
 
 interface PlaywrightResult {
   html: string;
@@ -471,16 +472,35 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Extract colors for each image
-    const colorService = new PerImageColorService();
+    // Classify multicolor pack (LLM) — if true, skip per-image color vision
+    const textForMulticolorPack = [
+      parsedData.textInfo || '',
+      typeof analysisResult?.description === 'string'
+        ? analysisResult.description
+        : '',
+    ].join('\n');
+    const isMulticolorPack = await detectMulticolorPackWithGroq(
+      groq,
+      textForMulticolorPack,
+      `aggregator-multicolor-pack-${Date.now()}`
+    );
+
     const imageUrls = uploadedImages.map(img => img.url);
 
     let colorResults: ImageColorResult[];
-    try {
-      colorResults = await colorService.analyzeImageColors(imageUrls);
-    } catch (colorError) {
-      // Continue with empty results
-      colorResults = [];
+    if (isMulticolorPack) {
+      const mc = normalizeToStandardColor('разноцветный') ?? 'разноцветный';
+      colorResults = imageUrls.map(url => ({ url, color: mc }));
+      console.log(
+        `🎨 Aggregator: multicolor pack (LLM) — skipped per-image color analysis, using ${mc}`
+      );
+    } else {
+      const colorService = new PerImageColorService();
+      try {
+        colorResults = await colorService.analyzeImageColors(imageUrls);
+      } catch (colorError) {
+        colorResults = [];
+      }
     }
 
     // Map colors to uploaded images

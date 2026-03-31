@@ -209,6 +209,17 @@ export class SimpleProductService {
       `✅ Analysis result has required data - updating product ${product.id}`
     );
 
+    const waMulticolorPack = analysisResult.multicolorPack === true;
+    const mergedAgLabels =
+      product.agLabels &&
+      typeof product.agLabels === 'object' &&
+      !Array.isArray(product.agLabels)
+        ? {
+            ...(product.agLabels as Record<string, unknown>),
+            waMulticolorPack,
+          }
+        : { waMulticolorPack };
+
     // NOTE: Category will be determined from image analysis (which also returns categoryId)
     // Text analysis doesn't provide categoryId, so we keep the temporary category for now
     const productName = analysisResult.name || 'Untitled Product';
@@ -249,6 +260,7 @@ export class SimpleProductService {
         // Store GPT debug data
         gptRequest: gptRequest || null,
         gptResponse: gptResponse || null,
+        agLabels: mergedAgLabels as any,
       } as any,
     });
 

@@ -36,6 +36,9 @@ import {
   GENDER_EXTRACTION_SYSTEM_PROMPT,
   GENDER_EXTRACTION_USER_PROMPT,
 } from '../prompts/gender-extraction-prompts';
+import { normalizeToStandardColor } from '../constants/colors';
+import { readWaMulticolorPackFromAgLabels } from './multicolor-pack-detection';
+import { sumSizeCounts } from '../utils/pack-pairs-from-text';
 
 export class GroqSequentialProcessor {
   private groq: Groq | null = null;
@@ -1136,9 +1139,14 @@ export class GroqSequentialProcessor {
           `✅ Using extracted sizes (${extractedSizes.sizes.length} sizes) for product ${productId}`
         );
         analysisResult.sizes = extractedSizes.sizes;
-        if (extractedSizes.packPairs !== null) {
-          analysisResult.packPairs = extractedSizes.packPairs;
+        const sumCounts = sumSizeCounts(extractedSizes.sizes);
+        const gptPackPairs = extractedSizes.packPairs;
+        if (gptPackPairs !== null && gptPackPairs !== sumCounts) {
+          console.warn(
+            `[sizes] GPT packPairs (${gptPackPairs}) ≠ sum(counts)=${sumCounts} for ${productId} — using sum(counts) as pack total`
+          );
         }
+        analysisResult.packPairs = sumCounts;
       }
 
       // Check if analysis has minimum required data (price and sizes)
@@ -1435,10 +1443,24 @@ export class GroqSequentialProcessor {
       return;
     }
 
+    const productForMulticolor = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { agLabels: true },
+    });
+    const waMulticolorPack = readWaMulticolorPackFromAgLabels(
+      productForMulticolor?.agLabels
+    );
+    if (waMulticolorPack) {
+      console.log(
+        `🎨 Multicolor pack (text analysis): running full image analysis for ${productId}; per-image colors will be unified to разноцветный (same card as non-multicolor for name/description/category)`
+      );
+    }
+
     try {
       const analysisResults = [];
 
-      // Process each image individually with Groq vision models (without category tree)
+      // Process each image with Groq vision (name, description, category inputs, etc.).
+      // Multicolor: vision output still used for everything except the final stored color (overridden below).
       for (let i = 0; i < imageUrls.length; i++) {
         const imageUrl = imageUrls[i];
         console.log(
@@ -1666,10 +1688,21 @@ export class GroqSequentialProcessor {
       }
 
       // Extract proper color mappings from analysis results
-      const colorMappings =
+      let colorMappings =
         this.colorMappingService.extractColorMappingsFromAnalysis(
           analysisResults
         );
+
+      if (waMulticolorPack && analysisResults.length > 0) {
+        const mc = normalizeToStandardColor('разноцветный') ?? 'разноцветный';
+        colorMappings = colorMappings.map(m => ({
+          ...m,
+          color: mc,
+        }));
+        console.log(
+          `🎨 Multicolor pack — overriding vision colors with "${mc}" for all mapped images`
+        );
+      }
 
       console.log(
         `🎨 Extracted color mappings for product ${productId}:`,
@@ -1689,11 +1722,21 @@ export class GroqSequentialProcessor {
         return;
       }
 
-      // Update product with proper color mapping
       await this.colorMappingService.updateProductImagesWithColorMapping(
         productId,
         colorMappings
       );
+
+      if (waMulticolorPack) {
+        const mc = normalizeToStandardColor('разноцветный') ?? 'разноцветный';
+        const updated = await this.prisma.productImage.updateMany({
+          where: { productId },
+          data: { color: mc },
+        });
+        console.log(
+          `🎨 Multicolor pack: ensured all ${updated.count} images "${mc}" (single product card)`
+        );
+      }
 
       // Update product with comprehensive image analysis results (including category validation)
       await this.batchProductService.updateProductWithImageAnalysis(
