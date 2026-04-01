@@ -144,8 +144,22 @@ server {
         proxy_send_timeout 60s;
     }
 
-    # API routes
+    # API routes — admin first (higher limit); requires zone=admin_api in nginx.conf
+    location /api/admin/ {
+        limit_req zone=admin_api burst=300 nodelay;
+        proxy_pass http://localhost:$target_port;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 120s;
+    }
+
     location /api/ {
+        limit_req zone=api burst=80 nodelay;
         proxy_pass http://localhost:$target_port;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
@@ -214,8 +228,19 @@ server {
         proxy_send_timeout 60s;
     }
 
-    # API routes
+    # API routes — admin first (higher limit)
+    location /api/admin/ {
+        limit_req zone=admin_api burst=300 nodelay;
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
     location /api/ {
+        limit_req zone=api burst=80 nodelay;
         proxy_pass http://localhost:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
@@ -272,6 +297,19 @@ server {
         proxy_read_timeout 86400;
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
+    }
+
+    location /api/admin/ {
+        limit_req zone=admin_api burst=300 nodelay;
+        proxy_pass http://localhost:${target_port};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 120s;
     }
 
     location /api/ {

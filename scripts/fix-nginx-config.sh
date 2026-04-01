@@ -55,6 +55,16 @@ if [ -f "$NGINX_CONF_SRC/marinaobuv.conf" ]; then
         print_status "  -> $name"
     done
 
+    # marinaobuv-https.conf uses zone=admin_api for /api/admin/ — ensure main nginx.conf defines it
+    if [ -f /etc/nginx/nginx.conf ] && ! sudo grep -q 'zone=admin_api' /etc/nginx/nginx.conf 2>/dev/null; then
+        print_status "Adding admin_api limit_req_zone to /etc/nginx/nginx.conf (required for /api/admin/)..."
+        if sudo grep -q 'limit_req_zone.*zone=api:10m' /etc/nginx/nginx.conf 2>/dev/null; then
+            sudo sed -i '/limit_req_zone.*zone=api:10m/a\    limit_req_zone $binary_remote_addr zone=admin_api:10m rate=120r/s;' /etc/nginx/nginx.conf
+        else
+            print_warning "Could not find api limit_req_zone line — add admin_api zone manually or sync nginx/nginx.conf from repo"
+        fi
+    fi
+
     print_status "Testing nginx configuration..."
     if ! sudo nginx -t 2>/dev/null; then
         print_error "Nginx configuration test failed after copy - rolling back to keep site up"

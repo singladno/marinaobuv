@@ -301,7 +301,7 @@ if [ -f "/etc/nginx/nginx.conf" ]; then
   echo "   grep exit code: $GREP_EXIT, result: $HAS_RATE_LIMIT"
   if [ "$HAS_RATE_LIMIT" = "no" ]; then
     echo "   Adding rate limiting zones..."
-    sudo sed -i '/http {/a\    # Rate limiting zones\n    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n    limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;' /etc/nginx/nginx.conf 2>&1 || echo "⚠️ Failed to add rate limiting zones (may already exist)"
+    sudo sed -i '/http {/a\    # Rate limiting zones\n    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n    limit_req_zone $binary_remote_addr zone=admin_api:10m rate=120r/s;\n    limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;' /etc/nginx/nginx.conf 2>&1 || echo "⚠️ Failed to add rate limiting zones (may already exist)"
     SED_EXIT=$?
     echo "   sed exit code: $SED_EXIT"
   else
