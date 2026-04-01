@@ -259,8 +259,8 @@ EOF
   fi
   # When USE_LE=0 we leave sites-available as-is (certbot or existing config keeps valid cert)
 
-  # Ensure symlink is present (for nginx setups that include sites-enabled)
-  sudo ln -sf /etc/nginx/sites-available/marinaobuv-https /etc/nginx/sites-enabled/
+  # HTTPS is served from conf.d/marinaobuv-https.conf only. Do NOT symlink sites-available →
+  # sites-enabled or nginx logs "conflicting server name" and ignores one vhost.
 
   # conf.d/marinaobuv-https.conf: either write full config with LE cert, or only update proxy port (keep existing cert)
   if [ "$USE_LE" = "1" ]; then
