@@ -6,6 +6,7 @@ import { getProductById, getProducts } from './product-service';
 import { productInclude } from './product-includes';
 import { slugify } from '@/utils/slugify';
 import { generateArticleNumber } from '@/lib/services/product-creation-mappers';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ products, pagination });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    logRequestError(req, '/api/admin/products', error, 'Error fetching products:');
     return NextResponse.json(
       { error: 'Failed to fetch products' },
       { status: 500 }
@@ -285,7 +286,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ product }, { status: 201 });
   } catch (error) {
-    console.error('Error creating product:', error);
+    logRequestError(req, '/api/admin/products', error, 'Error creating product:');
 
     // Handle Prisma unique constraint errors
     if ((error as any).code === 'P2002') {
@@ -485,7 +486,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ product: updatedProduct });
   } catch (error) {
-    console.error('Error updating product:', error);
+    logRequestError(req, '/api/admin/products', error, 'Error updating product:');
     return NextResponse.json(
       { error: 'Failed to update product' },
       { status: 500 }
@@ -528,7 +529,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting product:', error);
+    logRequestError(req, '/api/admin/products', error, 'Error deleting product:');
     return NextResponse.json(
       { error: 'Failed to delete product' },
       { status: 500 }

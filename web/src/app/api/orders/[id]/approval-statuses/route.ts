@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -65,7 +66,7 @@ export async function GET(
 
     return NextResponse.json({ approvalStatuses });
   } catch (error) {
-    console.error('Failed to get approval statuses:', error);
+    logRequestError(request, '/api/orders/[id]/approval-statuses', error, 'Failed to get approval statuses:');
     return NextResponse.json(
       { error: 'Failed to get approval statuses' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 interface OrderItemData {
   itemId: string;
   hasMessages: boolean;
@@ -171,7 +172,7 @@ export async function GET(
       approvalStatuses: approvalStatusesMap,
     });
   } catch (error) {
-    console.error('Failed to get order data:', error);
+    logRequestError(request, '/api/orders/[id]/order-data', error, 'Failed to get order data:');
     return NextResponse.json(
       { error: 'Failed to get order data' },
       { status: 500 }

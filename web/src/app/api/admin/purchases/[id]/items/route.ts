@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { formatPurchaseDescription } from '@/utils/purchaseDescriptionFormatter';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(
   request: NextRequest,
@@ -117,7 +118,7 @@ export async function POST(
 
     return NextResponse.json(purchaseItem, { status: 201 });
   } catch (error) {
-    console.error('Error adding item to purchase:', error);
+    logRequestError(request, '/api/admin/purchases/[id]/items', error, 'Error adding item to purchase:');
     return NextResponse.json(
       { error: 'Failed to add item to purchase' },
       { status: 500 }

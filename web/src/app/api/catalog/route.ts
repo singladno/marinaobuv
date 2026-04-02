@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { normalizeToStandardColor } from '@/lib/constants/colors';
+import { logRequestError } from '@/lib/server/request-logging';
 
 /**
  * Recursively get all descendant category IDs from a parent category
@@ -378,7 +379,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[catalog] GET error:', error);
+    logRequestError(request, '/api/catalog', error, '[catalog] GET error:');
     const message = error instanceof Error ? error.message : 'Ошибка при получении каталога';
     return NextResponse.json(
       { error: 'Ошибка при получении каталога', details: process.env.NODE_ENV === 'development' ? message : undefined },

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logger } from '@/lib/server/logger';
+import { logRequestError } from '@/lib/server/request-logging';
 
 // Helper function to recalculate order total when items are refused
 async function recalculateOrderTotal(orderId: string) {
@@ -33,7 +35,10 @@ async function recalculateOrderTotal(orderId: string) {
       },
     });
   } catch (error) {
-    console.error('Failed to recalculate order total:', error);
+    logger.error(
+      { err: error, route: '/api/order-items/[itemId]/feedback' },
+      'Failed to recalculate order total:'
+    );
   }
 }
 export async function POST(
@@ -126,7 +131,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Failed to create feedback:', error);
+    logRequestError(request, '/api/order-items/[itemId]/feedback', error, 'Failed to create feedback:');
     return NextResponse.json(
       { error: 'Failed to create feedback' },
       { status: 500 }
@@ -192,7 +197,7 @@ export async function GET(
       })),
     });
   } catch (error) {
-    console.error('Failed to fetch feedback:', error);
+    logRequestError(request, '/api/order-items/[itemId]/feedback', error, 'Failed to fetch feedback:');
     return NextResponse.json(
       { error: 'Failed to fetch feedback' },
       { status: 500 }

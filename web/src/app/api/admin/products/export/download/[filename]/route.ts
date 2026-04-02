@@ -5,6 +5,7 @@ import path from 'path';
 
 import { authOptions } from '@/lib/auth';
 import { publicUrl } from '@/lib/s3u';
+import { logRequestError } from '@/lib/server/request-logging';
 
 // Helper function to check if user has export access
 function hasExportAccess(role: string): boolean {
@@ -63,7 +64,7 @@ export async function GET(
       message: 'File is available in S3 storage',
     });
   } catch (error) {
-    console.error('Error downloading export:', error);
+    logRequestError(request, '/api/admin/products/export/download/[filename]', error, 'Error downloading export:');
     return NextResponse.json(
       {
         error: 'Failed to download export',

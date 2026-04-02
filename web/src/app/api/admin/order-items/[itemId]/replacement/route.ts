@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -183,7 +184,7 @@ export async function POST(
       });
       console.log('Replacement chat message created');
     } catch (messageError) {
-      console.error('Failed to create replacement chat message:', messageError);
+      logRequestError(request, '/api/admin/order-items/[itemId]/replacement', messageError, 'Failed to create replacement chat message:');
       // Don't fail the whole operation if message creation fails
     }
 
@@ -201,7 +202,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Failed to create replacement:', error);
+    logRequestError(request, '/api/admin/order-items/[itemId]/replacement', error, 'Failed to create replacement:');
     return NextResponse.json(
       { error: 'Failed to create replacement' },
       { status: 500 }
@@ -293,7 +294,7 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error('Failed to update replacement:', error);
+    logRequestError(request, '/api/admin/order-items/[itemId]/replacement', error, 'Failed to update replacement:');
     return NextResponse.json(
       { error: 'Failed to update replacement' },
       { status: 500 }
@@ -350,7 +351,7 @@ export async function DELETE(
       message: 'Replacement deleted successfully',
     });
   } catch (error) {
-    console.error('Failed to delete replacement:', error);
+    logRequestError(request, '/api/admin/order-items/[itemId]/replacement', error, 'Failed to delete replacement:');
     return NextResponse.json(
       { error: 'Failed to delete replacement' },
       { status: 500 }
@@ -425,7 +426,7 @@ export async function GET(
       })),
     });
   } catch (error) {
-    console.error('Failed to fetch replacements:', error);
+    logRequestError(request, '/api/admin/order-items/[itemId]/replacement', error, 'Failed to fetch replacements:');
     return NextResponse.json(
       { error: 'Failed to fetch replacements' },
       { status: 500 }

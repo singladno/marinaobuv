@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { generateItemCode } from '@/lib/itemCodeGenerator';
+import { logRequestError } from '@/lib/server/request-logging';
 
 function getBoxPriceFromPair(pricePair: any, sizes: any): number {
   const price = Number(pricePair) || 0;
@@ -151,7 +152,7 @@ export async function POST(
 
     return NextResponse.json(orderItem, { status: 201 });
   } catch (error) {
-    console.error('Error adding item to order:', error);
+    logRequestError(request, '/api/admin/orders/[id]/items', error, 'Error adding item to order:');
     return NextResponse.json(
       { error: 'Не удалось добавить товар в заказ' },
       { status: 500 }

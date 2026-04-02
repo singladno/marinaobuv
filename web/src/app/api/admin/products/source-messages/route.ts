@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db-node';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       count: messages.length,
     });
   } catch (error) {
-    console.error('Error fetching source messages:', error);
+    logRequestError(request, '/api/admin/products/source-messages', error, 'Error fetching source messages:');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

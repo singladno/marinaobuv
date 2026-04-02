@@ -3,6 +3,7 @@ import { hash } from 'bcryptjs';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PATCH(
   request: NextRequest,
@@ -54,7 +55,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating user password:', error);
+    logRequestError(request, '/api/admin/users/[id]/password', error, 'Error updating user password:');
     return NextResponse.json(
       { error: 'Ошибка при обновлении пароля пользователя' },
       { status: 500 }

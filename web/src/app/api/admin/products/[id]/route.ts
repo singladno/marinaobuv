@@ -4,6 +4,7 @@ import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getProductById } from '../product-service';
 import { productInclude } from '../product-includes';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
   req: NextRequest,
@@ -25,7 +26,7 @@ export async function GET(
 
     return NextResponse.json({ product });
   } catch (error) {
-    console.error('Error fetching product:', error);
+    logRequestError(req, '/api/admin/products/[id]', error, 'Error fetching product:');
     return NextResponse.json(
       { error: 'Failed to fetch product' },
       { status: 500 }

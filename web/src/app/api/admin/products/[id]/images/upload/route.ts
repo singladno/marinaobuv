@@ -4,6 +4,7 @@ import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getObjectKey, getPublicUrl, uploadImage } from '@/lib/storage';
 import { normalizeToStandardColor } from '@/lib/constants/colors';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(
   req: NextRequest,
@@ -78,7 +79,7 @@ export async function POST(
 
     return NextResponse.json({ image: created }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading product image:', error);
+    logRequestError(req, '/api/admin/products/[id]/images/upload', error, 'Error uploading product image:');
     return NextResponse.json(
       { error: 'Failed to upload image' },
       { status: 500 }

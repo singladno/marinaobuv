@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching parsing history:', error);
+    logRequestError(request, '/api/admin/parsing-history', error, 'Error fetching parsing history:');
     return NextResponse.json(
       { error: 'Failed to fetch parsing history' },
       { status: 500 }

@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+const REQUEST_ID_HEADER = 'x-request-id';
+
+function withRequestId(request: NextRequest): NextResponse {
+  const existing = request.headers.get(REQUEST_ID_HEADER);
+  const requestId =
+    existing && existing.trim() !== '' ? existing.trim() : crypto.randomUUID();
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(REQUEST_ID_HEADER, requestId);
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+  response.headers.set(REQUEST_ID_HEADER, requestId);
+  return response;
+}
+
 // Define protected routes and their required roles
 const protectedRoutes = {
   '/admin': ['ADMIN'],
@@ -47,19 +64,19 @@ export async function middleware(request: NextRequest) {
 
   // Skip middleware for API routes that are public
   if (pathname.startsWith('/api/') && isPublicRoute(pathname)) {
-    return NextResponse.next();
+    return withRequestId(request);
   }
 
   // Skip middleware for public routes
   if (isPublicRoute(pathname)) {
-    return NextResponse.next();
+    return withRequestId(request);
   }
 
   // Check if route requires authentication
   const requiredRoles = getRequiredRoles(pathname);
 
   if (!requiredRoles) {
-    return NextResponse.next();
+    return withRequestId(request);
   }
 
   try {
@@ -67,17 +84,25 @@ export async function middleware(request: NextRequest) {
     const token = await getToken({ req: request });
 
     if (token && requiredRoles.includes(token.role as string)) {
-      return NextResponse.next();
+      return withRequestId(request);
     }
 
     // No valid authentication - redirect to home
     const redirectUrl = new URL('/', request.url);
-    return NextResponse.redirect(redirectUrl);
+    const res = NextResponse.redirect(redirectUrl);
+    const requestId =
+      request.headers.get(REQUEST_ID_HEADER)?.trim() || crypto.randomUUID();
+    res.headers.set(REQUEST_ID_HEADER, requestId);
+    return res;
   } catch (error) {
-    // Error getting token - redirect to home
+    // Edge runtime: cannot use Pino here — keep console for auth failures
     console.error('Middleware auth error:', error);
     const redirectUrl = new URL('/', request.url);
-    return NextResponse.redirect(redirectUrl);
+    const res = NextResponse.redirect(redirectUrl);
+    const requestId =
+      request.headers.get(REQUEST_ID_HEADER)?.trim() || crypto.randomUUID();
+    res.headers.set(REQUEST_ID_HEADER, requestId);
+    return res;
   }
 }
 

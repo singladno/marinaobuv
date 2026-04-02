@@ -52,6 +52,7 @@ function computeRemotePatterns() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['pino', 'thread-stream'],
   images: {
     remotePatterns: computeRemotePatterns(),
     formats: ['image/avif', 'image/webp'],

@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 function escapeCsvValue(value: unknown): string {
   const stringValue =
@@ -274,7 +275,7 @@ export async function GET(
 
     return new NextResponse(xlsxArrayBuffer, { headers });
   } catch (error) {
-    console.error('Error exporting purchase:', error);
+    logRequestError(_request, '/api/admin/purchases/[id]/export', error, 'Error exporting purchase:');
     return NextResponse.json(
       { error: 'Failed to export purchase' },
       { status: 500 }

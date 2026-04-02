@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
   request: NextRequest,
@@ -60,7 +61,7 @@ export async function GET(
       totalPages: Math.ceil(totalReviews / limit),
     });
   } catch (error) {
-    console.error('Error fetching reviews:', error);
+    logRequestError(request, '/api/products/[id]/reviews', error, 'Error fetching reviews:');
     return NextResponse.json(
       { error: 'Failed to fetch reviews' },
       { status: 500 }
@@ -117,7 +118,7 @@ export async function POST(
 
     return NextResponse.json(review, { status: 201 });
   } catch (error) {
-    console.error('Error creating review:', error);
+    logRequestError(request, '/api/products/[id]/reviews', error, 'Error creating review:');
     return NextResponse.json(
       { error: 'Failed to create review' },
       { status: 500 }

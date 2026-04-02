@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth';
 import { emailService } from '@/lib/server/email';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(req: NextRequest) {
   try {
@@ -239,10 +240,7 @@ export async function POST(req: NextRequest) {
           `✅ Email notification sent for order ${order.orderNumber} status change to ${status}`
         );
       } catch (error) {
-        console.error(
-          `❌ Failed to send email notification for order ${order.orderNumber}:`,
-          error
-        );
+        logRequestError(req, '/api/admin/orders', error, `❌ Failed to send email notification for order ${order.orderNumber}:`);
         // Don't fail the request if email fails
       }
     }

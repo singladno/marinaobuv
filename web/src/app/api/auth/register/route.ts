@@ -3,6 +3,7 @@ import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/server/db';
 import { emailService } from '@/lib/server/email';
 import { env } from '@/lib/env';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(req: NextRequest) {
   try {
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
       try {
         await emailService.sendWelcomeEmail(email, name);
       } catch (error) {
-        console.error('Failed to send welcome email:', error);
+        logRequestError(req, '/api/auth/register', error, 'Failed to send welcome email:');
         // Don't fail registration if email fails
       }
     }
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    logRequestError(req, '/api/auth/register', error, 'Registration error:');
     return NextResponse.json(
       { error: 'Внутренняя ошибка сервера' },
       { status: 500 }

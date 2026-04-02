@@ -8,6 +8,7 @@ import { requireRole } from '@/lib/auth';
 //   updateDraftImagesWithS3Urls,
 // } from '@/lib/draft-approval-image-processor';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(req: NextRequest) {
   try {
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
 
         results.push({ draftId: d.id });
       } catch (err: unknown) {
-        console.error(`❌ Error processing draft ${d.id}:`, err);
+        logRequestError(req, '/api/admin/drafts/approve', err, `❌ Error processing draft ${d.id}:`);
 
         results.push({
           draftId: d.id,

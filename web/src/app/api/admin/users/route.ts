@@ -4,6 +4,7 @@ import { hash } from 'bcryptjs';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { normalizePhoneToE164 } from '@/lib/server/sms';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(request: NextRequest) {
   try {
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
+    logRequestError(request, '/api/admin/users', error, 'Error fetching users:');
     return NextResponse.json(
       { error: 'Ошибка при получении пользователей' },
       { status: 500 }
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(userWithoutPassword, { status: 201 });
   } catch (error) {
-    console.error('Error creating user:', error);
+    logRequestError(request, '/api/admin/users', error, 'Error creating user:');
     return NextResponse.json(
       { error: 'Ошибка при создании пользователя' },
       { status: 500 }

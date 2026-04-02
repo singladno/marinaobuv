@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 export async function GET() {
   try {
@@ -111,7 +112,10 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, items });
   } catch (error) {
-    console.error('Categories tree API error:', error);
+    logger.error(
+      { err: error, route: '/api/categories/tree' },
+      'Categories tree API error:'
+    );
     return NextResponse.json(
       {
         ok: false,

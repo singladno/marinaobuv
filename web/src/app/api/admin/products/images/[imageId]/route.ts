@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { normalizeToStandardColor } from '@/lib/constants/colors';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PATCH(
   request: NextRequest,
@@ -61,7 +62,7 @@ export async function PATCH(
     });
     return NextResponse.json({ image: updated });
   } catch (error) {
-    console.error('Failed to update product image', error);
+    logRequestError(request, '/api/admin/products/images/[imageId]', error, 'Failed to update product image');
     return NextResponse.json(
       { error: 'Failed to update product image' },
       { status: 500 }
@@ -89,7 +90,7 @@ export async function DELETE(
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('Failed to delete product image', error);
+    logRequestError(request, '/api/admin/products/images/[imageId]', error, 'Failed to delete product image');
     return NextResponse.json(
       { error: 'Failed to delete product image' },
       { status: 500 }

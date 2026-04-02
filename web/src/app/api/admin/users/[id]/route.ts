@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
   request: NextRequest,
@@ -34,7 +35,7 @@ export async function GET(
 
     return NextResponse.json(userWithoutPassword);
   } catch (error) {
-    console.error('Error fetching user:', error);
+    logRequestError(request, '/api/admin/users/[id]', error, 'Error fetching user:');
     return NextResponse.json(
       { error: 'Failed to fetch user' },
       { status: 500 }
@@ -90,7 +91,7 @@ export async function PATCH(
 
     return NextResponse.json(userWithoutPassword);
   } catch (error) {
-    console.error('Error updating user role:', error);
+    logRequestError(request, '/api/admin/users/[id]', error, 'Error updating user role:');
     return NextResponse.json(
       { error: 'Failed to update user role' },
       { status: 500 }

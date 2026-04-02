@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 
 function formatWhatsAppChatLabel(chatId: string): string {
   if (chatId.endsWith('@g.us')) return `Группа ${chatId.replace('@g.us', '')}`;
@@ -126,7 +127,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ sources: items });
   } catch (e) {
-    console.error('Catalog sources error:', e);
+    logRequestError(request, '/api/catalog/sources', e, 'Catalog sources error:');
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Unknown error' },
       { status: 500 }

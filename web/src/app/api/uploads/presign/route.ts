@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getObjectKey, getPublicUrl, presignPut } from '@/lib/storage';
+import { logRequestError } from '@/lib/server/request-logging';
 
 const BodySchema = z.object({
   productId: z.string().min(1),
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       fields: { productId, isPrimary: isPrimary ?? false, sort: sort ?? 0 },
     });
   } catch (e: unknown) {
-    console.error('presign error', e);
+    logRequestError(req, '/api/uploads/presign', e, 'presign error');
     return NextResponse.json(
       { ok: false, error: 'Internal error' },
       { status: 500 }

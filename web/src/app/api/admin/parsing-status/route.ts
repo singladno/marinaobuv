@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { getRequestLogger } from '@/lib/server/request-logging';
 
 export async function GET(request: NextRequest) {
+  const log = getRequestLogger(request);
   const { searchParams } = new URL(request.url);
   const parserId = searchParams.get('parserId');
   let sourceId = searchParams.get('sourceId') ?? undefined;
@@ -115,7 +117,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching parsing status:', error);
+    log.error(
+      { err: error, route: '/api/admin/parsing-status' },
+      'fetch_parsing_status_failed'
+    );
     return NextResponse.json(
       { error: 'Failed to fetch parsing status' },
       { status: 500 }

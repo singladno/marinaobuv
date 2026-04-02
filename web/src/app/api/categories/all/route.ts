@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 export async function GET() {
   try {
@@ -60,7 +61,10 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, items });
   } catch (error) {
-    console.error('All categories API error:', error);
+    logger.error(
+      { err: error, route: '/api/categories/all' },
+      'All categories API error:'
+    );
     return NextResponse.json(
       {
         ok: false,

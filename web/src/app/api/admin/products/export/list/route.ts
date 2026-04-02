@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth';
 import { publicUrl } from '@/lib/s3u';
 import { env } from '@/lib/env';
 import { s3Client } from '@/lib/s3u';
+import { logRequestError } from '@/lib/server/request-logging';
 
 interface ExportFile {
   filename: string;
@@ -136,7 +137,7 @@ export async function GET(request: NextRequest) {
 
         console.log(`✅ Processed ${exportsMap.size} export files from S3`);
       } catch (s3Error) {
-        console.error('❌ Error listing S3 exports:', s3Error);
+        logRequestError(request, '/api/admin/products/export/list', s3Error, '❌ Error listing S3 exports:');
         // Continue with local files if S3 fails
       }
     } else {
@@ -264,7 +265,7 @@ export async function GET(request: NextRequest) {
       count: groupedExports.length,
     });
   } catch (error) {
-    console.error('Error listing exports:', error);
+    logRequestError(request, '/api/admin/products/export/list', error, 'Error listing exports:');
     return NextResponse.json(
       {
         error: 'Failed to list exports',

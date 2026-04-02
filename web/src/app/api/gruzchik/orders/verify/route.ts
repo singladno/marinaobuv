@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(req: NextRequest) {
   try {
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
       order: updatedOrder,
     });
   } catch (error) {
-    console.error('Failed to verify order:', error);
+    logRequestError(req, '/api/gruzchik/orders/verify', error, 'Failed to verify order:');
     return NextResponse.json(
       { error: 'Failed to verify order' },
       { status: 500 }

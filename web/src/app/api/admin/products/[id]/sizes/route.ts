@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -78,7 +79,7 @@ export async function PATCH(
 
     return NextResponse.json({ product: updatedProduct });
   } catch (error) {
-    console.error('Error updating product sizes:', error);
+    logRequestError(req, '/api/admin/products/[id]/sizes', error, 'Error updating product sizes:');
     return NextResponse.json(
       { error: 'Failed to update product sizes' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getWaChatIds } from '@/lib/env';
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 export type ParserType = 'wa' | 'tg';
 
@@ -78,7 +79,10 @@ export async function GET() {
 
     return NextResponse.json({ parsers });
   } catch (error) {
-    console.error('Error fetching parsers list:', error);
+    logger.error(
+      { err: error, route: '/api/admin/parsers' },
+      'Error fetching parsers list:'
+    );
     return NextResponse.json(
       { error: 'Failed to fetch parsers' },
       { status: 500 }

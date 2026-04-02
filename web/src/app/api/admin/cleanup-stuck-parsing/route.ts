@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 export async function POST() {
   try {
-    console.log('🧹 Starting cleanup of stuck parsing processes...');
+    logger.info('cleanup_stuck_parsing_start');
 
     // Find parsing processes that have been running for more than 1 hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -25,7 +26,10 @@ export async function POST() {
       });
     }
 
-    console.log(`🔍 Found ${stuckRecords.length} stuck parsing processes`);
+    logger.info(
+      { count: stuckRecords.length },
+      'cleanup_stuck_parsing_found'
+    );
 
     // Clean up stuck processes
     for (const record of stuckRecords) {
@@ -54,8 +58,9 @@ export async function POST() {
       });
     }
 
-    console.log(
-      `🎉 Successfully cleaned up ${stuckRecords.length} stuck parsing processes`
+    logger.info(
+      { cleanedCount: stuckRecords.length },
+      'cleanup_stuck_parsing_done'
     );
 
     return NextResponse.json({
@@ -64,7 +69,10 @@ export async function POST() {
       cleanedCount: stuckRecords.length,
     });
   } catch (error) {
-    console.error('❌ Error during cleanup:', error);
+    logger.error(
+      { err: error, route: '/api/admin/cleanup-stuck-parsing' },
+      'Error during cleanup'
+    );
     return NextResponse.json(
       {
         success: false,

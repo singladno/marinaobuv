@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string; messageId: string }> }
@@ -85,7 +86,7 @@ export async function PATCH(
       message: transformedMessage,
     });
   } catch (error) {
-    console.error('Failed to edit message:', error);
+    logRequestError(request, '/api/gruzchik/order-items/[itemId]/messages/[messageId]', error, 'Failed to edit message:');
     return NextResponse.json(
       {
         success: false,
@@ -147,7 +148,7 @@ export async function DELETE(
       success: true,
     });
   } catch (error) {
-    console.error('Failed to delete message:', error);
+    logRequestError(request, '/api/gruzchik/order-items/[itemId]/messages/[messageId]', error, 'Failed to delete message:');
     return NextResponse.json(
       {
         success: false,

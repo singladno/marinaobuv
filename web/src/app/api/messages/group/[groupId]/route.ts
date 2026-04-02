@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
   request: Request,
@@ -93,7 +94,7 @@ export async function GET(
       messages,
     });
   } catch (error) {
-    console.error('Failed to fetch group messages:', error);
+    logRequestError(request, '/api/messages/group/[groupId]', error, 'Failed to fetch group messages:');
     return NextResponse.json(
       {
         success: false,

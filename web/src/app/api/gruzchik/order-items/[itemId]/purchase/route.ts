@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PATCH(
   request: NextRequest,
@@ -66,7 +67,7 @@ export async function PATCH(
       item: updatedItem,
     });
   } catch (error) {
-    console.error('Error updating item purchase status:', error);
+    logRequestError(request, '/api/gruzchik/order-items/[itemId]/purchase', error, 'Error updating item purchase status:');
     return NextResponse.json(
       { error: 'Failed to update item purchase status' },
       { status: 500 }

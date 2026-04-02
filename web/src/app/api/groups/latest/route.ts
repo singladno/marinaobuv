@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 export async function GET() {
   try {
@@ -58,7 +59,10 @@ export async function GET() {
       groups: groupList,
     });
   } catch (error) {
-    console.error('Failed to fetch recent groups:', error);
+    logger.error(
+      { err: error, route: '/api/groups/latest' },
+      'Failed to fetch recent groups:'
+    );
     return NextResponse.json(
       {
         success: false,

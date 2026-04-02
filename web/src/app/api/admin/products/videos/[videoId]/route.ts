@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PATCH(
   req: NextRequest,
@@ -38,7 +39,7 @@ export async function PATCH(
 
     return NextResponse.json({ video: updated }, { status: 200 });
   } catch (error) {
-    console.error('Error updating product video:', error);
+    logRequestError(req, '/api/admin/products/videos/[videoId]', error, 'Error updating product video:');
     return NextResponse.json(
       { error: 'Failed to update video' },
       { status: 500 }

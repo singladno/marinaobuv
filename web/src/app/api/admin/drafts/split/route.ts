@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAuth } from '@/lib/server/auth';
 import { splitDraft } from '@/lib/services/draft-split-service';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
       data: result,
     });
   } catch (error) {
-    console.error('Error splitting draft:', error);
+    logRequestError(request, '/api/admin/drafts/split', error, 'Error splitting draft:');
 
     if (error instanceof Error) {
       if (error.message === 'Draft not found') {

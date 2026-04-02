@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -49,7 +50,7 @@ export async function POST(
       message: 'Товар успешно одобрен',
     });
   } catch (error) {
-    console.error('Failed to approve item:', error);
+    logRequestError(request, '/api/order-items/[itemId]/approve', error, 'Failed to approve item:');
     return NextResponse.json(
       { error: 'Ошибка при одобрении товара' },
       { status: 500 }

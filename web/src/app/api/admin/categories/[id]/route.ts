@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { slugify } from '@/utils/slugify';
+import { logRequestError } from '@/lib/server/request-logging';
 
 const urlPath = (path: string) => path;
 const lastSegment = (path: string) => path.split('/').pop() || '';
@@ -221,7 +222,7 @@ export async function PATCH(
       },
     });
   } catch (error: any) {
-    console.error('[admin/categories][PATCH] Failed:', error);
+    logRequestError(request, '/api/admin/categories/[id]', error, '[admin/categories][PATCH] Failed:');
 
     if (error?.code === 'P2002') {
       const field = error?.meta?.target?.includes('slug')
@@ -307,7 +308,7 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {
-    console.error('[admin/categories][DELETE] Failed:', error);
+    logRequestError(request, '/api/admin/categories/[id]', error, '[admin/categories][DELETE] Failed:');
 
     // Handle foreign key constraint errors
     if (error?.code === 'P2003') {

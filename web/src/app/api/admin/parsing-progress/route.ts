@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 interface ParsingProgressUpdate {
   parsingHistoryId: string;
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
       data: updatedRecord,
     });
   } catch (error) {
-    console.error('❌ Error updating parsing progress:', error);
+    logRequestError(request, '/api/admin/parsing-progress', error, '❌ Error updating parsing progress:');
     return NextResponse.json(
       {
         success: false,
@@ -143,7 +144,7 @@ export async function GET(request: NextRequest) {
       data: record,
     });
   } catch (error) {
-    console.error('❌ Error fetching parsing progress:', error);
+    logRequestError(request, '/api/admin/parsing-progress', error, '❌ Error fetching parsing progress:');
     return NextResponse.json(
       {
         success: false,

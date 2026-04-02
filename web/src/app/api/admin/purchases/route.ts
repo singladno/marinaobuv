@@ -3,6 +3,7 @@ import { unstable_cache, revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 const CACHE_TAG = 'admin-purchases';
 const CACHE_REVALIDATE_SEC = 20;
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(purchases);
   } catch (error) {
-    console.error('Error fetching purchases:', error);
+    logRequestError(request, '/api/admin/purchases', error, 'Error fetching purchases:');
     return NextResponse.json(
       { error: 'Ошибка при получении закупок' },
       { status: 500 }
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     revalidateTag(`admin-purchases-${session.user.id}`);
     return NextResponse.json(purchase, { status: 201 });
   } catch (error) {
-    console.error('Error creating purchase:', error);
+    logRequestError(request, '/api/admin/purchases', error, 'Error creating purchase:');
     return NextResponse.json(
       { error: 'Ошибка при создании закупки' },
       { status: 500 }

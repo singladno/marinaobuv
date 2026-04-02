@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PATCH(
   request: NextRequest,
@@ -66,7 +67,7 @@ export async function PATCH(
       item: updatedItem,
     });
   } catch (error) {
-    console.error('Error updating item availability:', error);
+    logRequestError(request, '/api/gruzchik/order-items/[itemId]/availability', error, 'Error updating item availability:');
     return NextResponse.json(
       { error: 'Failed to update item availability' },
       { status: 500 }

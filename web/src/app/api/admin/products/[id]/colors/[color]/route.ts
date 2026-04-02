@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 /**
  * PATCH /api/admin/products/[id]/colors/[color]
@@ -95,7 +96,7 @@ export async function PATCH(
       message: `Updated ${result.count} image(s) for color "${color}"`,
     });
   } catch (error) {
-    console.error('Error updating color activation:', error);
+    logRequestError(req, '/api/admin/products/[id]/colors/[color]', error, 'Error updating color activation:');
     return NextResponse.json(
       { error: 'Failed to update color activation' },
       { status: 500 }

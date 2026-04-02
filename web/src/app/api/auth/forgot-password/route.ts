@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { emailService } from '@/lib/server/email';
 import crypto from 'crypto';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!emailSent) {
-      console.error('Failed to send password reset email to:', email);
+      logRequestError(request, '/api/auth/forgot-password', email, 'Failed to send password reset email to:');
       // Don't fail the request, just log the error
     }
 
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
         'Если пользователь с таким email существует, инструкции по восстановлению пароля будут отправлены',
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logRequestError(request, '/api/auth/forgot-password', error, 'Forgot password error:');
     return NextResponse.json(
       { error: 'Внутренняя ошибка сервера' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -67,7 +68,7 @@ export async function GET(
       itemsWithoutMessagesCount: itemIds.length - itemsWithMessages.length,
     });
   } catch (error) {
-    console.error('Failed to get items with messages:', error);
+    logRequestError(request, '/api/orders/[id]/items-with-messages', error, 'Failed to get items with messages:');
     return NextResponse.json(
       { error: 'Failed to get items with messages' },
       { status: 500 }

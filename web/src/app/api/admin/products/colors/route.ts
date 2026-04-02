@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getStandardColors, normalizeToStandardColor } from '@/lib/constants/colors';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ colors: filteredColors });
   } catch (error) {
-    console.error('Error fetching colors:', error);
+    logRequestError(req, '/api/admin/products/colors', error, 'Error fetching colors:');
     return NextResponse.json(
       { error: 'Failed to fetch colors' },
       { status: 500 }

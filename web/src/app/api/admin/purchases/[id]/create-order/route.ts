@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { generateOrderNumber } from '@/lib/order-number-generator';
 import { generateItemCode } from '@/lib/itemCodeGenerator';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(
   request: NextRequest,
@@ -156,7 +157,7 @@ export async function POST(
 
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
-    console.error('Error creating order from purchase:', error);
+    logRequestError(request, '/api/admin/purchases/[id]/create-order', error, 'Error creating order from purchase:');
     return NextResponse.json(
       { error: 'Failed to create order from purchase' },
       { status: 500 }

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
-  _: Request,
+  request: Request,
   ctx: { params: Promise<{ slug: string }> }
 ) {
   try {
@@ -35,7 +36,7 @@ export async function GET(
 
     return NextResponse.json({ product });
   } catch (error) {
-    console.error('Error fetching product:', error);
+    logRequestError(request, '/api/products/by-slug/[slug]', error, 'Error fetching product:');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

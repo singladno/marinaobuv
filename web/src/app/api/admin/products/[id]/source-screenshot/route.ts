@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getObjectKey, getPublicUrl, uploadImage } from '@/lib/storage';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(
   req: NextRequest,
@@ -73,7 +74,7 @@ export async function POST(
       screenshotKey: key,
     }, { status: 200 });
   } catch (error) {
-    console.error('Error uploading source screenshot:', error);
+    logRequestError(req, '/api/admin/products/[id]/source-screenshot', error, 'Error uploading source screenshot:');
     return NextResponse.json(
       { error: 'Failed to upload source screenshot' },
       { status: 500 }

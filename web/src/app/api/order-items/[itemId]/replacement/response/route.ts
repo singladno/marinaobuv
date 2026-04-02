@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -86,7 +87,7 @@ export async function POST(
         },
       });
     } catch (messageError) {
-      console.error('Failed to create response chat message:', messageError);
+      logRequestError(request, '/api/order-items/[itemId]/replacement/response', messageError, 'Failed to create response chat message:');
       // Don't fail the whole operation if message creation fails
     }
 
@@ -105,7 +106,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Failed to respond to replacement:', error);
+    logRequestError(request, '/api/order-items/[itemId]/replacement/response', error, 'Failed to respond to replacement:');
     return NextResponse.json(
       { error: 'Failed to respond to replacement' },
       { status: 500 }

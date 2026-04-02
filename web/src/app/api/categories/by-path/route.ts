@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 // Use the actual category name from the database
 // No need for complex generation - just use what's stored in the database
@@ -563,7 +564,7 @@ export async function GET(request: NextRequest) {
       parentCategory,
     });
   } catch (error) {
-    console.error('Category by path API error:', error);
+    logRequestError(request, '/api/categories/by-path', error, 'Category by path API error:');
     return NextResponse.json(
       {
         ok: false,

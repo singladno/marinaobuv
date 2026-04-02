@@ -4,6 +4,7 @@ import { ProductSource } from '@prisma/client';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getPublicUrl } from '@/lib/storage';
+import { logRequestError } from '@/lib/server/request-logging';
 
 function formatWhatsAppChatLabel(chatId: string | null): string | null {
   if (!chatId || typeof chatId !== 'string') return null;
@@ -222,7 +223,7 @@ export async function GET(
       message: 'No source messages found for this product',
     });
   } catch (error) {
-    console.error('Failed to fetch source messages:', error);
+    logRequestError(request, '/api/products/[id]/source-messages', error, 'Failed to fetch source messages:');
     return NextResponse.json(
       {
         success: false,

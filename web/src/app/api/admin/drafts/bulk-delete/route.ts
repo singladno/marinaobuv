@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
       count: updated.count,
     });
   } catch (error) {
-    console.error('Error bulk deleting drafts:', error);
+    logRequestError(req, '/api/admin/drafts/bulk-delete', error, 'Error bulk deleting drafts:');
     return NextResponse.json(
       { error: 'Failed to delete drafts' },
       { status: 500 }

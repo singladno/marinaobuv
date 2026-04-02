@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function DELETE(
   request: NextRequest,
@@ -67,7 +68,7 @@ export async function DELETE(
       message: 'Order item deleted successfully',
     });
   } catch (error) {
-    console.error('Failed to delete order item:', error);
+    logRequestError(request, '/api/admin/order-items/[itemId]', error, 'Failed to delete order item:');
     return NextResponse.json(
       {
         success: false,

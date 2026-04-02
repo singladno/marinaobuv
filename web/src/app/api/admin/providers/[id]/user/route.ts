@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
   request: NextRequest,
@@ -32,7 +33,7 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error('Error fetching user for provider:', error);
+    logRequestError(request, '/api/admin/providers/[id]/user', error, 'Error fetching user for provider:');
     return NextResponse.json(
       { error: 'Failed to fetch user' },
       { status: 500 }

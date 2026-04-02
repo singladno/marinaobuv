@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
   request: Request,
@@ -28,7 +29,7 @@ export async function GET(
 
     return NextResponse.json({ ok: true, ...category });
   } catch (error) {
-    console.error('Category API error:', error);
+    logRequestError(request, '/api/categories/[id]', error, 'Category API error:');
     return NextResponse.json(
       {
         ok: false,

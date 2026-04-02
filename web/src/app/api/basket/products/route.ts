@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
       const body = await request.json();
       slugs = body.slugs || [];
     } catch (jsonError) {
-      console.error('JSON parsing error:', jsonError);
+      logRequestError(request, '/api/basket/products', jsonError, 'JSON parsing error:');
       return NextResponse.json({ products: [] });
     }
 
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ products: transformedProducts });
   } catch (error) {
-    console.error('Error fetching basket products:', error);
+    logRequestError(request, '/api/basket/products', error, 'Error fetching basket products:');
     return NextResponse.json(
       { error: 'Failed to fetch basket products' },
       { status: 500 }

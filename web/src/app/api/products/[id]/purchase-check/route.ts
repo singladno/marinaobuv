@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -42,7 +43,7 @@ export async function GET(
       purchaseDate: hasPurchased?.createdAt,
     });
   } catch (error) {
-    console.error('Error checking purchase:', error);
+    logRequestError(request, '/api/products/[id]/purchase-check', error, 'Error checking purchase:');
     return NextResponse.json(
       { error: 'Failed to check purchase status' },
       { status: 500 }

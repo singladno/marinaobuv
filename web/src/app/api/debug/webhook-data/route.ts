@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 export async function GET() {
   try {
@@ -34,7 +35,10 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error('Failed to fetch webhook data:', error);
+    logger.error(
+      { err: error, route: '/api/debug/webhook-data' },
+      'Failed to fetch webhook data:'
+    );
     return NextResponse.json(
       {
         success: false,

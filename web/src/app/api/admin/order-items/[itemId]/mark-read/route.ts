@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -48,7 +49,7 @@ export async function POST(
       markedAsRead: unreadMessages.length,
     });
   } catch (error) {
-    console.error('Failed to mark messages as read:', error);
+    logRequestError(request, '/api/admin/order-items/[itemId]/mark-read', error, 'Failed to mark messages as read:');
     return NextResponse.json(
       { error: 'Failed to mark messages as read' },
       { status: 500 }

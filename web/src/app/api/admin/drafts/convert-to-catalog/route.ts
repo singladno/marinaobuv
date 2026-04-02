@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 
 import { convertDraftToProduct } from './conversion-service';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
         const product = await convertDraftToProduct(normalizedDraft);
         results.push({ draftId: draft.id, productId: product.id });
       } catch (err: unknown) {
-        console.error(`  ❌ Failed to convert draft ${draft.id}:`, err);
+        logRequestError(req, '/api/admin/drafts/convert-to-catalog', err, `  ❌ Failed to convert draft ${draft.id}:`);
         results.push({
           draftId: draft.id,
           error:
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error in convert-to-catalog:', error);
+    logRequestError(req, '/api/admin/drafts/convert-to-catalog', error, 'Error in convert-to-catalog:');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

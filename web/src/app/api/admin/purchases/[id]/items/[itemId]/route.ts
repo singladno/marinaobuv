@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PUT(
   request: NextRequest,
@@ -60,7 +61,7 @@ export async function PUT(
 
     return NextResponse.json(purchaseItem);
   } catch (error) {
-    console.error('Error updating purchase item:', error);
+    logRequestError(request, '/api/admin/purchases/[id]/items/[itemId]', error, 'Error updating purchase item:');
     return NextResponse.json(
       { error: 'Failed to update purchase item' },
       { status: 500 }
@@ -104,7 +105,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting purchase item:', error);
+    logRequestError(request, '/api/admin/purchases/[id]/items/[itemId]', error, 'Error deleting purchase item:');
     return NextResponse.json(
       { error: 'Failed to delete purchase item' },
       { status: 500 }

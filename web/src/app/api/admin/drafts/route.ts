@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 
 import { getDraftById, getDrafts } from './draft-service';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching drafts:', error);
+    logRequestError(req, '/api/admin/drafts', error, 'Error fetching drafts:');
     return NextResponse.json(
       { error: 'Failed to fetch drafts' },
       { status: 500 }
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ draft });
   } catch (error) {
-    console.error('Error fetching draft:', error);
+    logRequestError(req, '/api/admin/drafts', error, 'Error fetching draft:');
     return NextResponse.json(
       { error: 'Failed to fetch draft' },
       { status: 500 }

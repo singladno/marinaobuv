@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -77,7 +78,7 @@ export async function GET(
 
     return NextResponse.json({ unreadCounts });
   } catch (error) {
-    console.error('Failed to get unread counts for order:', error);
+    logRequestError(request, '/api/admin/orders/[id]/unread-counts', error, 'Failed to get unread counts for order:');
     return NextResponse.json(
       { error: 'Failed to get unread counts' },
       { status: 500 }

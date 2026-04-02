@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 function formatWaChatLabel(chatId: string): string {
   if (chatId.endsWith('@g.us')) return `Группа ${chatId.replace('@g.us', '')}`;
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       (chat?.name && chat.name.trim()) || formatWaChatLabel(chatId);
     return NextResponse.json({ name });
   } catch (error) {
-    console.error('Error fetching WA chat name:', error);
+    logRequestError(request, '/api/admin/wa-chat-name', error, 'Error fetching WA chat name:');
     return NextResponse.json(
       { name: formatWaChatLabel(chatId) },
       { status: 200 }

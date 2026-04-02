@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 export async function GET() {
   try {
@@ -23,7 +24,10 @@ export async function GET() {
       messages,
     });
   } catch (error) {
-    console.error('Failed to fetch messages:', error);
+    logger.error(
+      { err: error, route: '/api/messages' },
+      'Failed to fetch messages:'
+    );
     return NextResponse.json(
       {
         success: false,

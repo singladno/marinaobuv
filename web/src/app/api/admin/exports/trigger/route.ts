@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
+import { logRequestError } from '@/lib/server/request-logging';
 import {
   exportProducts,
   saveLastExportDate,
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
       throw error;
     }
   } catch (error) {
-    console.error('Error triggering export:', error);
+    logRequestError(request, '/api/admin/exports/trigger', error, 'Error triggering export:');
     return NextResponse.json(
       {
         error: 'Failed to trigger export',

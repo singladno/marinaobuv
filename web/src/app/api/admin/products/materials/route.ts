@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(req: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ materials });
   } catch (error) {
-    console.error('Error fetching materials:', error);
+    logRequestError(req, '/api/admin/products/materials', error, 'Error fetching materials:');
     return NextResponse.json(
       { error: 'Failed to fetch materials' },
       { status: 500 }

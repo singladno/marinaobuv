@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 export async function GET() {
   try {
@@ -71,7 +72,10 @@ export async function GET() {
 
     return NextResponse.json({ products: transformedProducts });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    logger.error(
+      { err: error, route: '/api/products' },
+      'Error fetching products:'
+    );
     return NextResponse.json(
       { error: 'Failed to fetch products' },
       { status: 500 }

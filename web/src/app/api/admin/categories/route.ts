@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { slugify } from '@/utils/slugify';
+import { logRequestError } from '@/lib/server/request-logging';
 
 type CategoryRecord = {
   id: string;
@@ -167,7 +168,7 @@ export async function GET(request: NextRequest) {
     const tree = buildTree(categories, productCounts);
     return NextResponse.json({ ok: true, items: tree });
   } catch (error) {
-    console.error('[admin/categories][GET] Failed:', error);
+    logRequestError(request, '/api/admin/categories', error, '[admin/categories][GET] Failed:');
     return NextResponse.json(
       { ok: false, error: 'Не удалось загрузить категории' },
       { status: 500 }
@@ -274,7 +275,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('[admin/categories][POST] Failed:', error);
+    logRequestError(request, '/api/admin/categories', error, '[admin/categories][POST] Failed:');
 
     if (error?.code === 'P2002') {
       const field = error?.meta?.target?.includes('slug')

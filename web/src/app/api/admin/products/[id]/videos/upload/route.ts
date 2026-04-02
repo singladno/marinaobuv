@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getObjectKey, getPublicUrl, uploadImage } from '@/lib/storage';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(
   req: NextRequest,
@@ -75,7 +76,7 @@ export async function POST(
 
     return NextResponse.json({ video: created }, { status: 201 });
   } catch (error) {
-    console.error('Error uploading product video:', error);
+    logRequestError(req, '/api/admin/products/[id]/videos/upload', error, 'Error uploading product video:');
     return NextResponse.json(
       { error: 'Failed to upload video' },
       { status: 500 }

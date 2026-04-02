@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
+import { getRequestLogger } from '@/lib/server/request-logging';
+
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request: Request) {
+  const log = getRequestLogger(request);
   try {
     // Test database connectivity
     await prisma.$queryRaw`SELECT 1`;
@@ -18,7 +21,10 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Database health check failed:', error);
+    log.error(
+      { err: error, route: '/api/health' },
+      'database_health_check_failed'
+    );
 
     return NextResponse.json(
       {

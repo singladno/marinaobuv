@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
   _request: NextRequest,
@@ -118,7 +119,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error debugging export:', error);
+    logRequestError(_request, '/api/admin/purchases/[id]/debug-export', error, 'Error debugging export:');
     return NextResponse.json(
       { error: 'Failed to debug export', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }

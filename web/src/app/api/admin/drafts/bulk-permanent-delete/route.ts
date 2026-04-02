@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
       count: deleted.count,
     });
   } catch (error) {
-    console.error('Error permanently deleting drafts:', error);
+    logRequestError(req, '/api/admin/drafts/bulk-permanent-delete', error, 'Error permanently deleting drafts:');
     return NextResponse.json(
       { error: 'Failed to permanently delete drafts' },
       { status: 500 }

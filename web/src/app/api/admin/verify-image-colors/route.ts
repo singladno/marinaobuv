@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -97,7 +98,7 @@ export async function GET(_request: NextRequest) {
       sampleProducts,
     });
   } catch (error) {
-    console.error('Error verifying image colors:', error);
+    logRequestError(_request, '/api/admin/verify-image-colors', error, 'Error verifying image colors:');
     return NextResponse.json(
       { error: 'Failed to verify image colors' },
       { status: 500 }

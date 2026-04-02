@@ -3,6 +3,7 @@ import { Groq } from 'groq-sdk';
 
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getGroqConfig } from '@/lib/groq-proxy-config';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function POST(req: NextRequest) {
   try {
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
     try {
       quoteData = JSON.parse(rawContent);
     } catch (error) {
-      console.error('[meditation] Failed to parse JSON:', error);
+      logRequestError(req, '/api/admin/meditation', error, '[meditation] Failed to parse JSON:');
       return NextResponse.json(
         {
           error: 'Не удалось обработать ответ от сервера',
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error generating meditation message:', error);
+    logRequestError(req, '/api/admin/meditation', error, 'Error generating meditation message:');
     return NextResponse.json(
       {
         error:

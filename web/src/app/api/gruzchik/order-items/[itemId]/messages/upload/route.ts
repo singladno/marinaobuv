@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -136,7 +137,7 @@ export async function POST(
       message: transformedMessage,
     });
   } catch (error) {
-    console.error('Failed to upload file:', error);
+    logRequestError(request, '/api/gruzchik/order-items/[itemId]/messages/upload', error, 'Failed to upload file:');
     return NextResponse.json(
       {
         success: false,

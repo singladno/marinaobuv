@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -60,7 +61,7 @@ export async function GET(
       totalMessages,
     });
   } catch (error) {
-    console.error('Failed to get unread message count:', error);
+    logRequestError(request, '/api/order-items/[itemId]/unread-count', error, 'Failed to get unread message count:');
     return NextResponse.json(
       { error: 'Failed to get unread message count' },
       { status: 500 }

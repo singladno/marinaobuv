@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { getStandardColors, normalizeToStandardColor } from '@/lib/constants/colors';
+import { logRequestError } from '@/lib/server/request-logging';
 
 /**
  * Convert color to title case (first letter uppercase, rest lowercase)
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ colors: uniqueColors });
   } catch (error) {
-    console.error('Error fetching colors:', error);
+    logRequestError(request, '/api/colors', error, 'Error fetching colors:');
     return NextResponse.json(
       { error: 'Ошибка при получении цветов' },
       { status: 500 }

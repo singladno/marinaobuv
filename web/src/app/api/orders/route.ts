@@ -8,6 +8,7 @@ import {
 } from '@/lib/orders/orderValidation';
 import { createOrder, getOrders } from '@/lib/services/order-creation-service';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     const orders = await getOrders(auth.user.id);
     return NextResponse.json({ orders });
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    logRequestError(request, '/api/orders', error, 'Error fetching orders:');
     return NextResponse.json(
       { error: 'Внутренняя ошибка сервера' },
       { status: 500 }
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       order,
     });
   } catch (error) {
-    console.error('Error creating order:', error);
+    logRequestError(request, '/api/orders', error, 'Error creating order:');
 
     const { status, message } = handleOrderCreationError(error);
     return NextResponse.json({ error: message }, { status });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logRequestError } from '@/lib/server/request-logging';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -71,7 +72,7 @@ export async function GET(
       itemId,
     });
   } catch (error) {
-    console.error('Failed to fetch order item messages:', error);
+    logRequestError(request, '/api/admin/order-items/[itemId]/messages', error, 'Failed to fetch order item messages:');
     return NextResponse.json(
       {
         success: false,
@@ -159,7 +160,7 @@ export async function POST(
       message: transformedMessage,
     });
   } catch (error) {
-    console.error('Failed to send order item message:', error);
+    logRequestError(request, '/api/admin/order-items/[itemId]/messages', error, 'Failed to send order item message:');
     return NextResponse.json(
       {
         success: false,

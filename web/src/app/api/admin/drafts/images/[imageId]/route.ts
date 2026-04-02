@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PATCH(
   request: NextRequest,
@@ -27,7 +28,7 @@ export async function PATCH(
       image: updatedImage,
     });
   } catch (error) {
-    console.error('Error updating image status:', error);
+    logRequestError(request, '/api/admin/drafts/images/[imageId]', error, 'Error updating image status:');
     return NextResponse.json(
       { error: 'Failed to update image status' },
       { status: 500 }

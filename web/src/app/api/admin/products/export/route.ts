@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { authOptions } from '@/lib/auth';
+import { logRequestError } from '@/lib/server/request-logging';
 import {
   exportProducts,
   getLastExportDate,
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
       exportedAt: result.exportedAt,
     });
   } catch (error) {
-    console.error('Error exporting products:', error);
+    logRequestError(request, '/api/admin/products/export', error, 'Error exporting products:');
     return NextResponse.json(
       {
         error: 'Failed to export products',

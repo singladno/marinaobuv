@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(providers);
   } catch (error) {
-    console.error('Error fetching providers:', error);
+    logRequestError(req, '/api/admin/providers', error, 'Error fetching providers:');
     return NextResponse.json(
       { error: 'Failed to fetch providers' },
       { status: 500 }
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(provider, { status: 201 });
   } catch (error) {
-    console.error('Error creating provider:', error);
+    logRequestError(req, '/api/admin/providers', error, 'Error creating provider:');
 
     // Handle Prisma unique constraint errors
     if ((error as any).code === 'P2002') {
