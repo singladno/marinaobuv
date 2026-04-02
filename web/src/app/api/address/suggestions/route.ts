@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addressGeocodingService } from '@/lib/services/address-geocoding-service';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logDebug } from '@/lib/server/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,11 @@ export async function POST(request: NextRequest) {
     const suggestions =
       await addressGeocodingService.getAddressSuggestions(query);
 
-    console.log(`Address suggestions for "${query}":`, suggestions.length, 'results');
+    logDebug(
+      `Address suggestions for "${query}"`,
+      suggestions.length,
+      'results'
+    );
 
     return NextResponse.json({ success: true, suggestions }, { status: 200 });
   } catch (error) {

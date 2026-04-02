@@ -4,6 +4,7 @@
  */
 
 import { env } from './env';
+import { logger, logError, logServerError } from '@/lib/server/logger';
 import type {
   GreenApiMessage,
   GreenApiChatHistoryResponse,
@@ -39,7 +40,7 @@ export class GreenApiFetcher {
   ): Promise<GreenApiMessage[]> {
     const url = `${this.baseUrl}/waInstance${this.instanceId}/getChatHistory/${this.token}`;
 
-    console.log(
+    logger.debug(
       `[Green API] Fetching chat history for ${params.chatId} (count: ${params.count || 50})`
     );
 
@@ -65,24 +66,24 @@ export class GreenApiFetcher {
 
       // Green API getChatHistory returns the messages directly or wrapped in a data array
       if (Array.isArray(data)) {
-        console.log(
+        logger.debug(
           `[Green API] Retrieved ${data.length} messages from ${params.chatId}`
         );
         return data;
       } else if (data.data && Array.isArray(data.data)) {
-        console.log(
+        logger.debug(
           `[Green API] Retrieved ${data.data.length} messages from ${params.chatId}`
         );
         return data.data;
       } else {
-        console.error(
+        logError(
           'Green API getChatHistory response:',
           JSON.stringify(data, null, 2)
         );
         throw new Error(`Green API error: Unexpected response format`);
       }
     } catch (error) {
-      console.error(`[Green API] Error fetching chat history:`, error);
+      logServerError(`[Green API] Error fetching chat history:`, error);
       throw error;
     }
   }
@@ -93,7 +94,7 @@ export class GreenApiFetcher {
   async getMessage(params: GreenApiGetMessageParams): Promise<GreenApiMessage> {
     const url = `${this.baseUrl}/waInstance${this.instanceId}/getMessage/${this.token}`;
 
-    console.log(
+    logger.debug(
       `[Green API] Fetching message ${params.idMessage} from ${params.chatId}`
     );
 
@@ -119,17 +120,17 @@ export class GreenApiFetcher {
 
       // Green API getMessage returns the message directly
       if (data.idMessage) {
-        console.log(`[Green API] Retrieved message ${params.idMessage}`);
+        logger.debug(`[Green API] Retrieved message ${params.idMessage}`);
         return data;
       } else {
-        console.error(
+        logError(
           'Green API getMessage response:',
           JSON.stringify(data, null, 2)
         );
         throw new Error(`Green API error: Message not found`);
       }
     } catch (error) {
-      console.error(`[Green API] Error fetching message:`, error);
+      logServerError(`[Green API] Error fetching message:`, error);
       throw error;
     }
   }
@@ -140,7 +141,7 @@ export class GreenApiFetcher {
   async getSettings(): Promise<Record<string, any>> {
     const url = `${this.baseUrl}/waInstance${this.instanceId}/getSettings/${this.token}`;
 
-    console.log(`[Green API] Fetching settings`);
+    logger.debug(`[Green API] Fetching settings`);
 
     try {
       const response = await fetch(url, {
@@ -159,10 +160,10 @@ export class GreenApiFetcher {
       const data = await response.json();
 
       // Green API getSettings returns the settings directly, not wrapped in a result object
-      console.log(`[Green API] Retrieved settings`);
+      logger.debug(`[Green API] Retrieved settings`);
       return data;
     } catch (error) {
-      console.error(`[Green API] Error fetching settings:`, error);
+      logServerError(`[Green API] Error fetching settings:`, error);
       throw error;
     }
   }
@@ -173,7 +174,7 @@ export class GreenApiFetcher {
   async setSettings(params: GreenApiSetSettingsParams): Promise<boolean> {
     const url = `${this.baseUrl}/waInstance${this.instanceId}/setSettings/${this.token}`;
 
-    console.log(`[Green API] Setting instance settings`);
+    logger.debug(`[Green API] Setting instance settings`);
 
     try {
       const response = await fetch(url, {
@@ -194,17 +195,17 @@ export class GreenApiFetcher {
 
       // Green API setSettings returns {"saveSettings": true} on success
       if (data.saveSettings === true) {
-        console.log(`[Green API] Settings updated successfully`);
+        logger.debug(`[Green API] Settings updated successfully`);
         return true;
       } else {
-        console.error(
+        logError(
           'Green API setSettings response:',
           JSON.stringify(data, null, 2)
         );
         throw new Error(`Green API error: Settings not saved`);
       }
     } catch (error) {
-      console.error(`[Green API] Error setting settings:`, error);
+      logServerError(`[Green API] Error setting settings:`, error);
       throw error;
     }
   }
@@ -213,7 +214,7 @@ export class GreenApiFetcher {
    * Enable required settings for message fetching
    */
   async enableMessageFetching(): Promise<boolean> {
-    console.log(`[Green API] Enabling message fetching settings...`);
+    logger.debug(`[Green API] Enabling message fetching settings...`);
 
     const settings = {
       incomingWebhook: true,
@@ -245,10 +246,10 @@ export class GreenApiFetcher {
         setting => settings[setting] === 'yes'
       );
 
-      console.log(`[Green API] Instance ready: ${isReady}`);
+      logger.debug(`[Green API] Instance ready: ${isReady}`);
       return isReady;
     } catch (error) {
-      console.error(`[Green API] Error checking readiness:`, error);
+      logServerError(`[Green API] Error checking readiness:`, error);
       return false;
     }
   }
@@ -262,7 +263,7 @@ export class GreenApiFetcher {
     hoursAgo: number,
     maxMessages: number = 1000
   ): Promise<GreenApiMessage[]> {
-    console.log(
+    logger.debug(
       `[Green API] Fetching messages from group: ${chatId} (time filter: ${new Date(hoursAgo * 1000).toISOString()})`
     );
 
@@ -274,20 +275,20 @@ export class GreenApiFetcher {
       });
 
       if (messages.length === 0) {
-        console.log(`[Green API] No messages found`);
+        logger.debug(`[Green API] No messages found`);
         return [];
       }
 
       // Filter messages by time
       const recentMessages = messages.filter(msg => msg.timestamp >= hoursAgo);
 
-      console.log(
+      logger.debug(
         `[Green API] Fetched ${messages.length} total messages, ${recentMessages.length} within time filter`
       );
 
       return recentMessages;
     } catch (error) {
-      console.error(`[Green API] Error fetching messages:`, error);
+      logServerError(`[Green API] Error fetching messages:`, error);
       return [];
     }
   }
@@ -303,7 +304,7 @@ export class GreenApiFetcher {
       maxMessages?: number;
     }
   ): Promise<GreenApiMessage[]> {
-    console.log(
+    logger.debug(
       `[Green API] Fetching messages from group: ${chatId} (limit: ${limit})`
     );
 
@@ -336,7 +337,7 @@ export class GreenApiFetcher {
 
         allMessages.push(...newMessages);
 
-        console.log(
+        logger.debug(
           `[Green API] Fetched ${messages.length} messages, ${newMessages.length} new (total: ${allMessages.length})`
         );
 
@@ -350,12 +351,12 @@ export class GreenApiFetcher {
           hasMore = false;
         }
       } catch (error) {
-        console.error(`[Green API] Error fetching messages:`, error);
+        logServerError(`[Green API] Error fetching messages:`, error);
         hasMore = false;
       }
     }
 
-    console.log(`[Green API] Total messages fetched: ${allMessages.length}`);
+    logger.debug(`[Green API] Total messages fetched: ${allMessages.length}`);
     return allMessages;
   }
 
@@ -368,7 +369,7 @@ export class GreenApiFetcher {
   ): Promise<string | null> {
     const url = `${this.baseUrl}/waInstance${this.instanceId}/downloadFile/${this.token}`;
 
-    console.log(`[Green API] Downloading file for message ${messageId}`);
+    logger.debug(`[Green API] Downloading file for message ${messageId}`);
 
     try {
       const response = await fetch(url, {
@@ -391,17 +392,17 @@ export class GreenApiFetcher {
       const data = await response.json();
 
       if (data.downloadUrl) {
-        console.log(`[Green API] Downloaded file URL: ${data.downloadUrl}`);
+        logger.debug(`[Green API] Downloaded file URL: ${data.downloadUrl}`);
         return data.downloadUrl;
       } else if (data.url) {
-        console.log(`[Green API] Downloaded file URL: ${data.url}`);
+        logger.debug(`[Green API] Downloaded file URL: ${data.url}`);
         return data.url;
       } else {
-        console.log(`[Green API] No download URL in response:`, data);
+        logger.debug(`[Green API] No download URL in response:`, data);
         return null;
       }
     } catch (error) {
-      console.error(`[Green API] Error downloading file:`, error);
+      logServerError(`[Green API] Error downloading file:`, error);
       return null;
     }
   }

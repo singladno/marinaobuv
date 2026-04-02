@@ -3,6 +3,7 @@ import { prisma } from '../db-node';
 import { getGroqConfig } from '../groq-proxy-config';
 import { getTokenLogger } from '../utils/groq-token-logger';
 import { env } from '../env';
+import { logDebug, logger, logServerError } from '@/lib/server/logger';
 import {
   GROUPING_SYSTEM_PROMPT,
   GROUPING_USER_PROMPT,
@@ -63,7 +64,7 @@ export class GroqGroupingService {
     }
 
     // Otherwise, split into batches
-    console.log(
+    logger.debug(
       `📊 Grouping ${messages.length} messages in batches of ${maxPerCall} with Groq...`
     );
 
@@ -79,7 +80,7 @@ export class GroqGroupingService {
     // Process in batches
     for (let i = 0; i < sortedMessages.length; i += maxPerCall) {
       const batch = sortedMessages.slice(i, i + maxPerCall);
-      console.log(
+      logger.debug(
         `📦 Processing batch ${Math.floor(i / maxPerCall) + 1}/${Math.ceil(sortedMessages.length / maxPerCall)} (${batch.length} messages)`
       );
 
@@ -87,7 +88,7 @@ export class GroqGroupingService {
       allGroups.push(...batchGroups);
     }
 
-    console.log(
+    logger.debug(
       `✅ Total: ${allGroups.length} groups from ${messages.length} messages across ${Math.ceil(sortedMessages.length / maxPerCall)} batches`
     );
 
@@ -139,11 +140,11 @@ export class GroqGroupingService {
       const result = JSON.parse(response.choices[0].message.content || '{}');
 
       if (!result.groups || !Array.isArray(result.groups)) {
-        console.log('❌ Invalid grouping response from Groq');
+        logger.debug('❌ Invalid grouping response from Groq');
         return [];
       }
 
-      console.log(
+      logger.debug(
         `✅ Groq grouped ${messages.length} messages into ${result.groups.length} groups`
       );
 
@@ -158,7 +159,7 @@ export class GroqGroupingService {
 
       return processedGroups;
     } catch (error) {
-      console.error('❌ Error grouping messages with Groq:', error);
+      logServerError('❌ Error grouping messages with Groq:', error);
       return [];
     }
   }
@@ -187,7 +188,7 @@ export class GroqGroupingService {
     const batch = messages.slice(0, maxPerCall);
 
     try {
-      console.log(
+      logger.debug(
         `📊 Grouping ${messages.length} messages with Groq (model: ${this.textModel})...`
       );
 
@@ -231,7 +232,7 @@ export class GroqGroupingService {
       const result = JSON.parse(response.choices[0].message.content || '{}');
 
       if (!result.groups || !Array.isArray(result.groups)) {
-        console.log('❌ Invalid grouping response from Groq');
+        logger.debug('❌ Invalid grouping response from Groq');
         return {
           groups: [],
           debugInfo: {
@@ -243,14 +244,14 @@ export class GroqGroupingService {
         };
       }
 
-      console.log(
+      logger.debug(
         `✅ Groq grouped ${batch.length} messages into ${result.groups.length} groups`
       );
 
       // Post-process groups: split if text is followed by image, then filter invalid groups
       const processedGroups = await this.postProcessGroups(result.groups, batch);
 
-      console.log(
+      logger.debug(
         `🔧 Post-processing: ${result.groups.length} → ${processedGroups.length} groups`
       );
 
@@ -272,7 +273,7 @@ export class GroqGroupingService {
 
       return { groups: allGroups, debugInfo };
     } catch (error) {
-      console.error('❌ Error grouping messages with Groq:', error);
+      logServerError('❌ Error grouping messages with Groq:', error);
       return {
         groups: [],
         debugInfo: {
@@ -301,7 +302,7 @@ export class GroqGroupingService {
     const isValid = uniqueSenders.size === 1;
 
     if (!isValid) {
-      console.log(
+      logger.debug(
         `  ❌ Author validation failed: ${uniqueSenders.size} different senders (${Array.from(uniqueSenders).join(', ')})`
       );
     }
@@ -344,7 +345,7 @@ export class GroqGroupingService {
       const gapSeconds = (currTime - prevTime) / 1000;
 
       if (gapSeconds > maxGapSeconds) {
-        console.log(
+        logger.debug(
           `  ❌ Timestamp gap validation failed: ${gapSeconds.toFixed(1)}s gap between messages (max ${maxGapSeconds}s allowed${allSameAuthor ? ' for same author' : ''})`
         );
         return false;
@@ -402,7 +403,7 @@ export class GroqGroupingService {
       }
     }
 
-    console.log(
+    logger.debug(
       `  🔍 Sequence types: ${types.join('')}, changes: ${typeChanges}`
     );
 
@@ -431,11 +432,11 @@ export class GroqGroupingService {
         : isCommonValidPattern
           ? 'common valid pattern (IT*/TI*)'
           : '';
-      console.log(
+      logger.debug(
         `  ✅ Sequence validation: ${isValid} (allowed 2 changes for ${reason})`
       );
     } else {
-      console.log(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
+      logger.debug(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
     }
 
     return isValid;
@@ -545,7 +546,7 @@ export class GroqGroupingService {
       });
 
       const sequenceStr = messageTypes.join('');
-      console.log(
+      logger.debug(
         `  🔍 Processing group ${group.groupId}: sequence=${sequenceStr}, messages=${sortedMessages.length}`
       );
 
@@ -565,14 +566,14 @@ export class GroqGroupingService {
 
       // Only split if group has the "images → text" pattern
       if (!hasImageThenTextPattern) {
-        console.log(
+        logger.debug(
           `     - No "images → text" pattern found, keeping original group`
         );
         splitGroups.push(group);
         continue;
       }
 
-      console.log(
+      logger.debug(
         `     - Has "images → text" pattern, checking for split points`
       );
 
@@ -586,7 +587,7 @@ export class GroqGroupingService {
         // Split if text is followed by image (T → I)
         if ((current === 'T' || current === 'B') && next === 'I') {
           splitPoints.push(i + 1); // Split after current message
-          console.log(
+          logger.debug(
             `     - Found split point at index ${i + 1} (${current} → ${next})`
           );
         }
@@ -594,12 +595,12 @@ export class GroqGroupingService {
 
       // If no split points, keep original group
       if (splitPoints.length === 0) {
-        console.log(`     - No split points found, keeping original group`);
+        logger.debug(`     - No split points found, keeping original group`);
         splitGroups.push(group);
         continue;
       }
 
-      console.log(
+      logger.debug(
         `     - Splitting into ${splitPoints.length + 1} groups at positions: ${splitPoints.join(', ')}`
       );
 
@@ -622,7 +623,7 @@ export class GroqGroupingService {
             productContext: group.productContext,
             confidence: group.confidence,
           });
-          console.log(
+          logger.debug(
             `     - Created split group ${group.groupId}-split-${splitCount}: sequence=${newGroupSequence}, messages=${newGroupMessageIds.length}`
           );
           splitCount++;
@@ -645,7 +646,7 @@ export class GroqGroupingService {
             productContext: group.productContext,
             confidence: group.confidence,
           });
-          console.log(
+          logger.debug(
             `     - Created split group ${group.groupId}-split-${splitCount}: sequence=${remainingSequence}, messages=${remainingMessageIds.length}`
           );
         }
@@ -660,7 +661,7 @@ export class GroqGroupingService {
         .filter(Boolean) as any[];
 
       if (groupMessages.length === 0) {
-        console.log(
+        logger.debug(
           `  🗑️ Filtering out group ${group.groupId}: no messages found`
         );
         continue;
@@ -734,7 +735,7 @@ export class GroqGroupingService {
                   msg.text.trim().length > 0)
               );
             });
-          console.log(
+          logger.debug(
             `  🔄 Recovered ${recoveredTextMessages.length} text messages for image-only group ${group.groupId}`
           );
           // Re-check validity after recovery
@@ -747,23 +748,23 @@ export class GroqGroupingService {
 
       // Log detailed information
       if (!isValid) {
-        console.log(`  🗑️ Filtering out group ${group.groupId}:`);
-        console.log(`     - Message count: ${sortedGroupMessages.length}`);
-        console.log(`     - Sequence: ${messageTypes.join('')}`);
-        console.log(
+        logger.debug(`  🗑️ Filtering out group ${group.groupId}:`);
+        logger.debug(`     - Message count: ${sortedGroupMessages.length}`);
+        logger.debug(`     - Sequence: ${messageTypes.join('')}`);
+        logger.debug(
           `     - Text messages: ${textMessages.length} (hasText=${hasText})`
         );
-        console.log(
+        logger.debug(
           `     - Image messages: ${imageMessages.length} (hasImage=${hasImage})`
         );
-        console.log(
+        logger.debug(
           `     - Message types: ${sortedGroupMessages.map(m => m.type).join(', ')}`
         );
-        console.log(
+        logger.debug(
           `     - Message IDs: ${group.messageIds.slice(0, 5).join(', ')}${group.messageIds.length > 5 ? '...' : ''}`
         );
       } else {
-        console.log(
+        logger.debug(
           `  ✅ Keeping group ${group.groupId}: sequence=${messageTypes.join('')}, text=${textMessages.length}, images=${imageMessages.length}`
         );
         validGroups.push(group);
@@ -873,15 +874,15 @@ export class GroqGroupingService {
         timestamp: new Date().toISOString(),
       };
 
-      console.log(
+      logger.debug(
         `🔍 Stored grouping debug info for ${messages.length} messages`
       );
 
       // Store in a temporary table or log file for now
       // TODO: Create a proper debug table if needed
-      console.log('Debug data:', JSON.stringify(debugData, null, 2));
+      logDebug('Debug data', JSON.stringify(debugData, null, 2));
     } catch (error) {
-      console.error('❌ Error storing grouping debug info:', error);
+      logServerError('❌ Error storing grouping debug info:', error);
     }
   }
 }

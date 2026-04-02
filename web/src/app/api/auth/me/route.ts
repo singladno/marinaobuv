@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { logger } from '@/lib/server/logger';
+
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if (auth.error) {
     return auth.error;
   }
 
-  console.log('🔍 Looking up user with ID:', auth.user.id);
+  logger.debug({ userId: auth.user.id }, 'auth/me lookup');
 
   // Get full user data from database
   const user = await prisma.user.findUnique({
@@ -23,10 +25,15 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  console.log('🔍 Database user found:', user);
+  if (user) {
+    logger.debug(
+      { userId: user.id, role: user.role },
+      'auth/me user loaded'
+    );
+  }
 
   if (!user) {
-    console.log('❌ User not found in database with ID:', auth.user.id);
+    logger.debug({ userId: auth.user.id }, 'auth/me user not in database');
     return NextResponse.json(
       { error: 'Пользователь не найден' },
       { status: 401 }

@@ -15,6 +15,7 @@ import { getCategoryTree, type CategoryNode } from '../catalog-categories';
 import { getGroqConfig } from '../groq-proxy-config';
 import { getTokenLogger } from '../utils/groq-token-logger';
 import Groq from 'groq-sdk';
+import { logger, logServerError } from '@/lib/server/logger';
 
 export interface CreateInactiveProductParams {
   messageIds: string[];
@@ -63,8 +64,8 @@ export class SimpleProductService {
     const processedCheck =
       await this.deduplicationService.checkMessagesAlreadyProcessed(messageIds);
     if (processedCheck.isDuplicate) {
-      console.log(`⚠️  Messages already processed: ${processedCheck.reason}`);
-      console.log(
+      logger.debug(`⚠️  Messages already processed: ${processedCheck.reason}`);
+      logger.debug(
         `🔄 Skipping product creation for message group: ${messageIds.join(', ')}`
       );
 
@@ -136,7 +137,7 @@ export class SimpleProductService {
       },
     });
 
-    console.log(`✅ Created inactive product ${product.id}`);
+    logger.debug(`✅ Created inactive product ${product.id}`);
 
     return {
       productId: product.id,
@@ -157,7 +158,7 @@ export class SimpleProductService {
     });
 
     if (!product) {
-      console.error(`❌ Product not found: ${productId}`);
+      logger.error(`❌ Product not found: ${productId}`);
       return;
     }
 
@@ -173,16 +174,16 @@ export class SimpleProductService {
       analysisResult.sizes.length > 0;
 
     if (!hasPrice || !hasSizes) {
-      console.log(
+      logger.debug(
         `❌ Analysis result missing required data - skipping product creation`
       );
-      console.log(
+      logger.debug(
         `   Price: ${hasPrice ? '✅' : '❌'} (${analysisResult.price})`
       );
-      console.log(
+      logger.debug(
         `   Sizes: ${hasSizes ? '✅' : '❌'} (${JSON.stringify(analysisResult.sizes)})`
       );
-      console.log(`🗑️ Deleting product ${product.id} - required data missing`);
+      logger.debug(`🗑️ Deleting product ${product.id} - required data missing`);
 
       // Delete the product entirely since it doesn't have required data
       await prisma.product.delete({
@@ -205,7 +206,7 @@ export class SimpleProductService {
       );
     }
 
-    console.log(
+    logger.debug(
       `✅ Analysis result has required data - updating product ${product.id}`
     );
 
@@ -231,13 +232,13 @@ export class SimpleProductService {
       try {
         // mapSeason handles values like "SPRING/SUMMER" by checking if string includes season name
         normalizedSeason = mapSeason(analysisResult.season);
-        console.log(
+        logger.debug(
           `✅ Normalized season "${analysisResult.season}" → "${normalizedSeason}" for product ${product.id}`
         );
       } catch (error) {
-        console.warn(
-          `⚠️ Failed to normalize season "${analysisResult.season}" for product ${product.id}, setting to null:`,
-          error
+        logger.warn(
+          { err: error, season: analysisResult.season, productId: product.id },
+          'Failed to normalize season for product'
         );
         normalizedSeason = null;
       }
@@ -264,7 +265,7 @@ export class SimpleProductService {
       } as any,
     });
 
-    console.log(
+    logger.debug(
       `✅ Updated product ${product.id} with analysis results, name: "${productName}" (category will be set from image analysis)`
     );
   }
@@ -282,23 +283,25 @@ export class SimpleProductService {
     });
 
     if (!product) {
-      console.error(`❌ Product not found: ${productId}`);
+      logger.error(`❌ Product not found: ${productId}`);
       return;
     }
 
-    console.log(
-      `🎨 Processing color results for product ${productId}:`,
-      colorResults
+    logger.debug(
+      { productId, colorResults },
+      '🎨 Processing color results'
     );
 
     // Extract colors from color results - each result should have one color
     const detectedColors: string[] = [];
 
-    console.log('🔍 Debugging color results structure:');
-    console.log('Color results:', JSON.stringify(colorResults, null, 2));
+    logger.debug(
+      { colorResults },
+      'Debugging color results structure'
+    );
 
     for (const result of colorResults) {
-      console.log('Processing result:', JSON.stringify(result, null, 2));
+      logger.debug({ result }, 'Processing color result row');
 
       // Each result should have a single color in the images array
       if (
@@ -311,23 +314,23 @@ export class SimpleProductService {
           const normalizedColor = normalizeToStandardColor(firstImage.color);
           if (normalizedColor) {
             detectedColors.push(normalizedColor);
-            console.log(
+            logger.debug(
               `  ✅ Extracted color: ${firstImage.color} → ${normalizedColor}`
             );
           } else {
-            console.log(
+            logger.debug(
               `  ⚠️  No valid color after normalization: ${firstImage.color}`
             );
           }
         } else {
-          console.log(`  ⚠️  No color in first image:`, firstImage);
+          logger.debug({ firstImage }, 'No color in first image');
         }
       } else {
-        console.log(`  ❌ No valid images array in result:`, result);
+        logger.debug({ result }, 'No valid images array in result row');
       }
     }
 
-    console.log(`🎨 Detected colors:`, detectedColors);
+    logger.debug({ colors: detectedColors }, '🎨 Detected colors');
 
     // Update product images with detected colors in order
     let updatedCount = 0;
@@ -348,7 +351,7 @@ export class SimpleProductService {
         data: { color: color },
       });
       updatedCount++;
-      console.log(
+      logger.debug(
         `  ✅ Updated image ${image.id} (sort: ${image.sort}) with color: ${color}`
       );
     }
@@ -362,7 +365,7 @@ export class SimpleProductService {
       },
     });
 
-    console.log(
+    logger.debug(
       `✅ Updated product ${product.id} with color results: ${updatedCount} images updated`
     );
   }
@@ -380,13 +383,13 @@ export class SimpleProductService {
     });
 
     if (!product) {
-      console.error(`❌ Product not found: ${productId}`);
+      logger.error(`❌ Product not found: ${productId}`);
       return;
     }
 
-    console.log(
-      `🎨 Processing image analysis results for product ${productId}:`,
-      analysisResults
+    logger.debug(
+      { productId, analysisResults },
+      '🎨 Processing image analysis results'
     );
 
     // Process category selection from analysis results
@@ -407,16 +410,16 @@ export class SimpleProductService {
           // Only use if it's a leaf category (no children) or if it's not "Обувь"
           if (category.children.length === 0 && category.name !== 'Обувь') {
             selectedCategoryId = firstAnalysis.categoryId;
-            console.log(
+            logger.debug(
               `✅ Selected category from image analysis: ${category.name} (${category.id})`
             );
           } else {
-            console.log(
+            logger.debug(
               `⚠️ Category from image analysis is not deepest level or is "Обувь": ${category.name}, will determine from product name`
             );
           }
         } else {
-          console.log(
+          logger.debug(
             `⚠️ Invalid category ID from image analysis: ${firstAnalysis.categoryId}, will determine from product name`
           );
         }
@@ -430,7 +433,7 @@ export class SimpleProductService {
           ? product.name
           : analysisResults[0]?.name || 'Untitled Product';
       selectedCategoryId = await this.determineCategoryFromName(productName);
-      console.log(
+      logger.debug(
         `✅ Determined category from product name "${productName}": ${selectedCategoryId}`
       );
     }
@@ -447,9 +450,9 @@ export class SimpleProductService {
 
     // Process each analysis result
     for (const result of analysisResults) {
-      console.log(
-        'Processing analysis result:',
-        JSON.stringify(result, null, 2)
+      logger.debug(
+        { analysisResult: result },
+        'Processing analysis result'
       );
 
       // Extract product information from the first result
@@ -466,13 +469,13 @@ export class SimpleProductService {
         // Normalize season value - handle invalid values like "SPRING/SUMMER"
         try {
           productSeason = mapSeason(result.season);
-          console.log(
+          logger.debug(
             `✅ Normalized season from image analysis "${result.season}" → "${productSeason}"`
           );
         } catch (error) {
-          console.warn(
-            `⚠️ Failed to normalize season "${result.season}" from image analysis, keeping existing:`,
-            error
+          logger.warn(
+            { err: error, season: result.season },
+            'Failed to normalize season from image analysis'
           );
         }
       }
@@ -489,15 +492,18 @@ export class SimpleProductService {
       }
     }
 
-    console.log(`🎨 Extracted data:`, {
-      name: productName,
-      description: productDescription,
-      gender: productGender,
-      season: productSeason,
-      material: productMaterial,
-      categoryId: productCategoryId,
-      colors: detectedColors,
-    });
+    logger.debug(
+      {
+        name: productName,
+        description: productDescription,
+        gender: productGender,
+        season: productSeason,
+        material: productMaterial,
+        categoryId: productCategoryId,
+        colors: detectedColors,
+      },
+      '🎨 Extracted data'
+    );
 
     // Update product with extracted information
     await prisma.product.update({
@@ -531,7 +537,7 @@ export class SimpleProductService {
         data: { color: color },
       });
       updatedCount++;
-      console.log(
+      logger.debug(
         `  ✅ Updated image ${image.id} (sort: ${image.sort}) with color: ${color}`
       );
     }
@@ -545,7 +551,7 @@ export class SimpleProductService {
       },
     });
 
-    console.log(
+    logger.debug(
       `✅ Updated product ${product.id} with image analysis: ${updatedCount} images updated`
     );
   }
@@ -559,7 +565,7 @@ export class SimpleProductService {
     });
 
     if (!product) {
-      console.error(`❌ Product ${productId} not found`);
+      logger.error(`❌ Product ${productId} not found`);
       return;
     }
 
@@ -573,11 +579,11 @@ export class SimpleProductService {
         !Array.isArray(product.sizes) ||
         product.sizes.length === 0
       ) {
-        console.log(
+        logger.debug(
           `❌ Product ${productId} missing required data - deleting product`
         );
-        console.log(`   Price: ${product.pricePair}`);
-        console.log(`   Sizes: ${JSON.stringify(product.sizes)}`);
+        logger.debug(`   Price: ${product.pricePair}`);
+        logger.debug(`   Sizes: ${JSON.stringify(product.sizes)}`);
 
         // Delete the product entirely instead of marking as failed
         await prisma.product.delete({
@@ -593,7 +599,7 @@ export class SimpleProductService {
           },
         });
 
-        console.log(`🗑️ Deleted product ${productId} - required data missing`);
+        logger.debug(`🗑️ Deleted product ${productId} - required data missing`);
         return;
       }
 
@@ -606,7 +612,7 @@ export class SimpleProductService {
         },
       });
 
-      console.log(`✅ Activated product ${productId}`);
+      logger.debug(`✅ Activated product ${productId}`);
     }
   }
 
@@ -666,7 +672,7 @@ export class SimpleProductService {
       const leafCategories = this.getLeafCategories(categoryTree);
 
       if (leafCategories.length === 0) {
-        console.error(`❌ No leaf categories found in category tree`);
+        logger.error(`❌ No leaf categories found in category tree`);
         return null;
       }
 
@@ -676,14 +682,14 @@ export class SimpleProductService {
       );
 
       if (validCategories.length === 0) {
-        console.error(`❌ No valid deep categories found (all are "Обувь")`);
+        logger.error(`❌ No valid deep categories found (all are "Обувь")`);
         return null;
       }
 
-      console.log(
+      logger.debug(
         `🔍 Analyzing product name "${productName}" to determine category`
       );
-      console.log(
+      logger.debug(
         `   Found ${validCategories.length} leaf categories to choose from`
       );
 
@@ -768,29 +774,26 @@ Return JSON:
           const selectedCategory = validCategories.find(
             cat => cat.id === selectedCategoryId
           );
-          console.log(
+          logger.debug(
             `✅ LLM selected leaf category: ${selectedCategory?.name} (${selectedCategoryId})`
           );
           return selectedCategoryId;
         } else {
-          console.warn(
+          logger.warn(
             `⚠️ LLM selected category ${selectedCategoryId} is not a leaf category (has ${category?.children.length || 0} children), rejecting`
           );
           // Fallback: use first valid category as last resort
           return validCategories[0]?.id || null;
         }
       } else {
-        console.log(
+        logger.debug(
           `⚠️ LLM returned invalid category ID: ${selectedCategoryId}, will use first valid category`
         );
         // Fallback: use first valid category as last resort
         return validCategories[0]?.id || null;
       }
     } catch (error) {
-      console.error(
-        `❌ Error determining category from name "${productName}":`,
-        error
-      );
+      logServerError(`❌ Error determining category from name "${productName}":`, error);
       // Last resort: return null (will be handled by caller)
       return null;
     }

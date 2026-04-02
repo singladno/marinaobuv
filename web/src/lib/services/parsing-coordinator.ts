@@ -3,6 +3,7 @@
  * Manages manual vs automated parsing to prevent conflicts
  */
 import { prisma } from '../db-node';
+import { logger } from '@/lib/server/logger';
 
 export interface ParsingRequest {
   type: 'manual' | 'cron';
@@ -47,7 +48,7 @@ export class ParsingCoordinator {
     );
 
     if (stuckProcesses.length > 0) {
-      console.log(
+      logger.debug(
         `🧹 Found ${stuckProcesses.length} stuck processes, cleaning up...`
       );
       await this.cleanupStuckProcesses(stuckProcesses);

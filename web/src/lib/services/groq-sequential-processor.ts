@@ -39,6 +39,7 @@ import {
 import { normalizeToStandardColor } from '../constants/colors';
 import { readWaMulticolorPackFromAgLabels } from './multicolor-pack-detection';
 import { sumSizeCounts } from '../utils/pack-pairs-from-text';
+import { logError, logger, logServerError } from '@/lib/server/logger';
 
 export class GroqSequentialProcessor {
   private groq: Groq | null = null;
@@ -79,20 +80,20 @@ export class GroqSequentialProcessor {
     finalizedMessageIds: string[];
     productsCreated: number;
   }> {
-    console.log(
+    logger.debug(
       `🚀 Starting Groq sequential processing for ${messageIds.length} messages`
     );
 
     try {
       // Step 1: Group messages using rule-based logic (no LLM needed)
-      console.log('📊 Step 1: Grouping messages using rule-based logic...');
+      logger.debug('📊 Step 1: Grouping messages using rule-based logic...');
       const groupingResult = await this.groupMessagesWithRules(messageIds);
       const groups = groupingResult.groups;
       const debugInfo = null; // No debug info for rule-based grouping
 
       // Mark skipped messages (in the middle) as processed to avoid mixing with next batch
       if (groupingResult.skippedMessageIds.length > 0) {
-        console.log(
+        logger.debug(
           `📝 Marking ${groupingResult.skippedMessageIds.length} skipped messages (in middle) as processed`
         );
         await this.prisma.whatsAppMessage.updateMany({
@@ -103,14 +104,14 @@ export class GroqSequentialProcessor {
 
       // Leave ungrouped messages at the end unprocessed (they'll be picked up in next batch)
       if (groupingResult.ungroupedEndMessageIds.length > 0) {
-        console.log(
+        logger.debug(
           `📝 Leaving ${groupingResult.ungroupedEndMessageIds.length} ungrouped messages at end unprocessed (will process in next batch)`
         );
         // These messages remain unprocessed (processed: false) - no action needed
       }
 
       if (groups.length === 0) {
-        console.log('❌ No valid message groups found');
+        logger.debug('❌ No valid message groups found');
         return {
           anyProcessed: false,
           finalizedMessageIds: [],
@@ -118,20 +119,20 @@ export class GroqSequentialProcessor {
         };
       }
 
-      console.log(`✅ Found ${groups.length} message groups`);
+      logger.debug(`✅ Found ${groups.length} message groups`);
 
       // Step 2: Process each group sequentially
       const processedProducts: string[] = [];
 
       for (const group of groups) {
         try {
-          console.log(
+          logger.debug(
             `🔄 Processing group ${group.groupId} with ${group.messageIds.length} messages`
           );
 
           // Trust LLM - if it created a group, it's valid
           // No manual validation - let LLM decide what constitutes a valid product
-          console.log(
+          logger.debug(
             `✅ Accepting LLM-created group ${group.groupId} (trusting LLM judgment)`
           );
 
@@ -147,7 +148,7 @@ export class GroqSequentialProcessor {
 
           // Skip processing if this is a dummy product ID (already processed)
           if (productResult.productId === 'skipped-already-processed') {
-            console.log(
+            logger.debug(
               `⚠️ Skipping processing for already processed messages in group ${group.groupId}`
             );
             continue;
@@ -161,7 +162,7 @@ export class GroqSequentialProcessor {
 
           try {
             // Step 3: Analyze product with Groq
-            console.log(
+            logger.debug(
               `🔍 Step 2: Analyzing product ${productResult.productId}...`
             );
             await this.analyzeProductWithGroq(
@@ -175,7 +176,7 @@ export class GroqSequentialProcessor {
             }
 
             // Step 4: Upload images to S3
-            console.log(
+            logger.debug(
               `📤 Step 3: Uploading images to S3 for product ${productResult.productId}...`
             );
             await this.uploadImagesToS3(
@@ -189,7 +190,7 @@ export class GroqSequentialProcessor {
             }
 
             // Step 5: Detect colors with Groq
-            console.log(
+            logger.debug(
               `🎨 Step 4: Detecting colors for product ${productResult.productId}...`
             );
             await this.detectColorsWithGroq(
@@ -204,14 +205,14 @@ export class GroqSequentialProcessor {
 
             // Trust LLM - activate product without validation
             // LLM has already validated the product structure
-            console.log(
+            logger.debug(
               `✅ Activating product ${productResult.productId} (trusting LLM analysis)...`
             );
             await this.batchProductService.activateProduct(
               productResult.productId
             );
           } catch (processingError) {
-            console.error(
+            logError(
               `❌ Error processing product ${productResult.productId}:`,
               processingError instanceof Error
                 ? processingError.message
@@ -225,7 +226,7 @@ export class GroqSequentialProcessor {
                 : String(processingError);
 
             if (errorMessage.includes('No valid content for analysis')) {
-              console.log(
+              logger.debug(
                 `⚠️ Group has no valid content - marking messages as unprocessed for future grouping`
               );
               // Reset messages so they can be regrouped
@@ -241,7 +242,7 @@ export class GroqSequentialProcessor {
             } else if (
               errorMessage.includes('Product deleted: missing required data')
             ) {
-              console.log(
+              logger.debug(
                 `⚠️ Product deleted due to missing price/sizes - messages already reset for reprocessing`
               );
               // Product was already deleted and messages reset in updateProductWithAnalysis
@@ -254,7 +255,7 @@ export class GroqSequentialProcessor {
                 errorMessage.includes('Failed to generate JSON');
 
               if (isJsonValidationError) {
-                console.log(
+                logger.debug(
                   `⚠️ JSON validation error for product ${productResult.productId} - resetting messages for retry (product will be reprocessed)`
                 );
                 // Reset messages so they can be reprocessed on next run
@@ -268,7 +269,7 @@ export class GroqSequentialProcessor {
                 // Delete the failed product so it can be recreated on retry
                 await this.deleteInvalidProduct(productResult.productId);
               } else {
-                console.log(
+                logger.debug(
                   `🗑️ Cleaning up failed product ${productResult.productId}...`
                 );
                 // Clean up the failed product
@@ -277,23 +278,23 @@ export class GroqSequentialProcessor {
             }
             // Don't re-throw - continue processing remaining groups
             // The error is already logged, and we want to process all groups in the batch
-            console.log(
+            logger.debug(
               `⚠️ Skipping product ${productResult.productId} due to error, continuing with next group...`
             );
             continue; // Continue to next group instead of throwing
           }
 
           processedProducts.push(productResult.productId);
-          console.log(
+          logger.debug(
             `✅ Successfully processed product ${productResult.productId}`
           );
         } catch (error) {
-          console.error(`❌ Error processing group ${group.groupId}:`, error);
-          console.log(`⚠️ Continuing with next group...`);
+          logServerError(`❌ Error processing group ${group.groupId}:`, error);
+          logger.debug(`⚠️ Continuing with next group...`);
         }
       }
 
-      console.log(
+      logger.debug(
         `🎉 Sequential processing completed: ${processedProducts.length} products processed`
       );
       return {
@@ -302,7 +303,7 @@ export class GroqSequentialProcessor {
         productsCreated: processedProducts.length,
       };
     } catch (error) {
-      console.error('❌ Error in sequential processing:', error);
+      logServerError('❌ Error in sequential processing:', error);
       return {
         anyProcessed: false,
         finalizedMessageIds: [],
@@ -353,10 +354,10 @@ export class GroqSequentialProcessor {
         messagesForGrouping
       );
 
-    console.log(
+    logger.debug(
       `✅ Rule-based grouping: ${messages.length} messages → ${result.groups.length} groups`
     );
-    console.log(
+    logger.debug(
       `   - Grouped: ${result.groupedMessageIds.length}, Skipped (middle): ${result.skippedMessageIds.length}, Ungrouped (end): ${result.ungroupedEndMessageIds.length}`
     );
 
@@ -398,7 +399,7 @@ export class GroqSequentialProcessor {
    */
   private async deleteInvalidProduct(productId: string): Promise<void> {
     try {
-      console.log(`🗑️ Deleting invalid product ${productId}...`);
+      logger.debug(`🗑️ Deleting invalid product ${productId}...`);
 
       // Check if product exists first
       const product = await this.prisma.product.findUnique({
@@ -407,7 +408,7 @@ export class GroqSequentialProcessor {
       });
 
       if (!product) {
-        console.log(`⚠️ Product ${productId} not found, skipping deletion`);
+        logger.debug(`⚠️ Product ${productId} not found, skipping deletion`);
         return;
       }
 
@@ -415,15 +416,15 @@ export class GroqSequentialProcessor {
       const deletedImages = await this.prisma.productImage.deleteMany({
         where: { productId },
       });
-      console.log(`✅ Deleted ${deletedImages.count} product images`);
+      logger.debug(`✅ Deleted ${deletedImages.count} product images`);
 
       // Delete the product
       await this.prisma.product.delete({
         where: { id: productId },
       });
-      console.log(`✅ Deleted invalid product ${productId}`);
+      logger.debug(`✅ Deleted invalid product ${productId}`);
     } catch (error) {
-      console.error(`❌ Error deleting invalid product ${productId}:`, error);
+      logServerError(`❌ Error deleting invalid product ${productId}:`, error);
     }
   }
 
@@ -448,7 +449,7 @@ export class GroqSequentialProcessor {
       });
 
       if (!product) {
-        console.log(`❌ Product ${productId} not found`);
+        logger.debug(`❌ Product ${productId} not found`);
         return false;
       }
 
@@ -473,31 +474,31 @@ export class GroqSequentialProcessor {
         (product.sizes as any[]).length > 0;
       const hasImages = product.images && product.images.length > 0;
 
-      console.log(`🔍 Validating product ${productId}:`);
-      console.log(
+      logger.debug(`🔍 Validating product ${productId}:`);
+      logger.debug(
         `  Name: ${hasName ? '✅' : '⚠️'} (${product.name}) - Optional`
       );
-      console.log(`  Description: ${hasDescription ? '✅' : '⚠️'} - Optional`);
-      console.log(`  Price: ${hasPrice ? '✅' : '❌'} (${product.pricePair})`);
-      console.log(`  Gender: ${hasGender ? '✅' : '❌'} (${product.gender})`);
-      console.log(`  Season: ${hasSeason ? '✅' : '❌'} (${product.season})`);
-      console.log(
+      logger.debug(`  Description: ${hasDescription ? '✅' : '⚠️'} - Optional`);
+      logger.debug(`  Price: ${hasPrice ? '✅' : '❌'} (${product.pricePair})`);
+      logger.debug(`  Gender: ${hasGender ? '✅' : '❌'} (${product.gender})`);
+      logger.debug(`  Season: ${hasSeason ? '✅' : '❌'} (${product.season})`);
+      logger.debug(
         `  Sizes: ${hasSizes ? '✅' : '❌'} (${Array.isArray(product.sizes) ? (product.sizes as any[]).length : 0} sizes)`
       );
-      console.log(
+      logger.debug(
         `  Images: ${hasImages ? '✅' : '❌'} (${product.images.length} images)`
       );
 
       // Product is invalid if it has no images or missing essential data
       const isValid =
         hasPrice && hasGender && hasSeason && hasSizes && hasImages;
-      console.log(
+      logger.debug(
         `  Overall validation: ${isValid ? '✅ VALID' : '❌ INVALID'}`
       );
 
       return Boolean(isValid);
     } catch (error) {
-      console.error(`❌ Error validating product ${productId}:`, error);
+      logServerError(`❌ Error validating product ${productId}:`, error);
       return false;
     }
   }
@@ -515,11 +516,11 @@ export class GroqSequentialProcessor {
       },
     });
 
-    console.log(
+    logger.debug(
       `🔍 Validating group content for ${messageIds.length} messages:`
     );
     messages.forEach((msg: any, index: number) => {
-      console.log(
+      logger.debug(
         `  Message ${index + 1}: type="${msg.type}", text="${msg.text?.substring(0, 50)}...", mediaUrl="${msg.mediaUrl ? 'YES' : 'NO'}"`
       );
     });
@@ -549,17 +550,17 @@ export class GroqSequentialProcessor {
         msg.mediaUrl && (msg.type === 'image' || msg.type === 'imageMessage')
     );
 
-    console.log(`  ✅ Has text: ${hasText}`);
-    console.log(`  ✅ Has image: ${hasImage}`);
+    logger.debug(`  ✅ Has text: ${hasText}`);
+    logger.debug(`  ✅ Has image: ${hasImage}`);
 
     // Basic content validation - only check for text and images
     // Author validation is left to LLM (it's instructed to group only same-author messages)
     if (!hasText || !hasImage) {
-      console.log(`  ❌ Invalid group: missing text or images`);
+      logger.debug(`  ❌ Invalid group: missing text or images`);
       return false;
     }
 
-    console.log(`  ✅ Valid group: has text, has image`);
+    logger.debug(`  ✅ Valid group: has text, has image`);
     return true;
   }
 
@@ -610,7 +611,7 @@ export class GroqSequentialProcessor {
     const searchStart = new Date(firstTimestamp - searchWindowMs);
     const searchEnd = new Date(lastTimestamp + searchWindowMs);
 
-    console.log(
+    logger.debug(
       `  🔍 Searching for text messages: ${searchStart.toISOString()} to ${searchEnd.toISOString()}`
     );
 
@@ -634,7 +635,7 @@ export class GroqSequentialProcessor {
     });
 
     if (textMessages.length === 0) {
-      console.log(`  ❌ No text messages found for recovery`);
+      logger.debug(`  ❌ No text messages found for recovery`);
       return imageMessageIds;
     }
 
@@ -644,11 +645,11 @@ export class GroqSequentialProcessor {
     );
 
     if (validTextMessages.length === 0) {
-      console.log(`  ❌ No valid text messages found for recovery`);
+      logger.debug(`  ❌ No valid text messages found for recovery`);
       return imageMessageIds;
     }
 
-    console.log(
+    logger.debug(
       `  ✅ Found ${validTextMessages.length} text messages for recovery`
     );
 
@@ -705,7 +706,7 @@ export class GroqSequentialProcessor {
       }
     }
 
-    console.log(
+    logger.debug(
       `  🔍 Sequence types: ${types.join('')}, changes: ${typeChanges}`
     );
 
@@ -734,11 +735,11 @@ export class GroqSequentialProcessor {
         : isCommonValidPattern
           ? 'common valid pattern (IT*/TI*)'
           : '';
-      console.log(
+      logger.debug(
         `  ✅ Sequence validation: ${isValid} (allowed 2 changes for ${reason})`
       );
     } else {
-      console.log(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
+      logger.debug(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
     }
 
     return isValid;
@@ -756,7 +757,7 @@ export class GroqSequentialProcessor {
     packPairs: number | null;
   } | null> {
     try {
-      console.log(`📏 Extracting sizes for product ${productId}`);
+      logger.debug(`📏 Extracting sizes for product ${productId}`);
 
       const groq = await this.initializeGroq();
       const response = await groqChatCompletion(
@@ -813,10 +814,7 @@ export class GroqSequentialProcessor {
         packPairs: sizesResult.packPairs || null,
       };
     } catch (error) {
-      console.error(
-        `❌ Error extracting sizes for product ${productId}:`,
-        error
-      );
+      logServerError(`❌ Error extracting sizes for product ${productId}:`, error);
       // Don't throw - return null to continue without sizes extraction
       return null;
     }
@@ -830,7 +828,7 @@ export class GroqSequentialProcessor {
     textContents: string
   ): Promise<number | null> {
     try {
-      console.log(`💰 Extracting price for product ${productId}`);
+      logger.debug(`💰 Extracting price for product ${productId}`);
 
       const groq = await this.initializeGroq();
       const response = await groqChatCompletion(
@@ -884,19 +882,16 @@ export class GroqSequentialProcessor {
 
       const price = priceResult.price;
       if (typeof price === 'number' && price > 0) {
-        console.log(`✅ Extracted price: ${price} for product ${productId}`);
+        logger.debug(`✅ Extracted price: ${price} for product ${productId}`);
         return price;
       } else {
-        console.log(
+        logger.debug(
           `⚠️ No valid price found for product ${productId}, returning null`
         );
         return null;
       }
     } catch (error) {
-      console.error(
-        `❌ Error extracting price for product ${productId}:`,
-        error
-      );
+      logServerError(`❌ Error extracting price for product ${productId}:`, error);
       // Don't throw - return null to continue without price extraction
       return null;
     }
@@ -910,7 +905,7 @@ export class GroqSequentialProcessor {
     textContents: string
   ): Promise<'MALE' | 'FEMALE' | null> {
     try {
-      console.log(`👤 Extracting gender for product ${productId}`);
+      logger.debug(`👤 Extracting gender for product ${productId}`);
 
       const groq = await this.initializeGroq();
       const response = await groqChatCompletion(
@@ -964,19 +959,16 @@ export class GroqSequentialProcessor {
 
       const gender = genderResult.gender;
       if (gender === 'MALE' || gender === 'FEMALE') {
-        console.log(`✅ Extracted gender: ${gender} for product ${productId}`);
+        logger.debug(`✅ Extracted gender: ${gender} for product ${productId}`);
         return gender;
       } else {
-        console.log(
+        logger.debug(
           `⚠️ No valid gender found for product ${productId}, returning null`
         );
         return null;
       }
     } catch (error) {
-      console.error(
-        `❌ Error extracting gender for product ${productId}:`,
-        error
-      );
+      logServerError(`❌ Error extracting gender for product ${productId}:`, error);
       // Don't throw - return null to continue without gender extraction
       return null;
     }
@@ -1008,17 +1000,17 @@ export class GroqSequentialProcessor {
     if (!textContents || imageUrls.length === 0) {
       const missingText = !textContents || textContents.trim().length === 0;
       const missingImages = imageUrls.length === 0;
-      console.log(
+      logger.debug(
         `⚠️ Group has no valid content for analysis: missingText=${missingText}, missingImages=${missingImages}`
       );
-      console.log(`  Messages in group: ${messages.length}`);
-      console.log(
+      logger.debug(`  Messages in group: ${messages.length}`);
+      logger.debug(
         `  Message types: ${messages.map((m: any) => m.type).join(', ')}`
       );
 
       // LLM should have created valid groups - if we're here, it failed
       // Reset messages so they can be regrouped properly by LLM
-      console.log(
+      logger.debug(
         `⚠️ LLM created invalid group (missing ${missingText ? 'text' : ''} ${missingImages ? 'images' : ''}) - resetting messages for regrouping`
       );
       await this.prisma.whatsAppMessage.updateMany({
@@ -1034,7 +1026,7 @@ export class GroqSequentialProcessor {
       );
     }
 
-    console.log(
+    logger.debug(
       `📤 Analyzing product ${productId} with Groq (${imageUrls.length} images)`
     );
 
@@ -1115,7 +1107,7 @@ export class GroqSequentialProcessor {
 
       // Step 5: Merge extracted price into analysis result (price extraction takes priority)
       if (extractedPrice !== null && extractedPrice > 0) {
-        console.log(
+        logger.debug(
           `✅ Using extracted price: ${extractedPrice} for product ${productId}`
         );
         analysisResult.price = extractedPrice;
@@ -1123,7 +1115,7 @@ export class GroqSequentialProcessor {
 
       // Step 6: Merge extracted gender into analysis result (gender extraction takes priority)
       if (extractedGender !== null) {
-        console.log(
+        logger.debug(
           `✅ Using extracted gender: ${extractedGender} for product ${productId}`
         );
         analysisResult.gender = extractedGender;
@@ -1135,14 +1127,14 @@ export class GroqSequentialProcessor {
         extractedSizes.sizes &&
         extractedSizes.sizes.length > 0
       ) {
-        console.log(
+        logger.debug(
           `✅ Using extracted sizes (${extractedSizes.sizes.length} sizes) for product ${productId}`
         );
         analysisResult.sizes = extractedSizes.sizes;
         const sumCounts = sumSizeCounts(extractedSizes.sizes);
         const gptPackPairs = extractedSizes.packPairs;
         if (gptPackPairs !== null && gptPackPairs !== sumCounts) {
-          console.warn(
+          logger.warn(
             `[sizes] GPT packPairs (${gptPackPairs}) ≠ sum(counts)=${sumCounts} for ${productId} — using sum(counts) as pack total`
           );
         }
@@ -1197,9 +1189,9 @@ export class GroqSequentialProcessor {
         gptResponse
       );
 
-      console.log(`✅ Product ${productId} analyzed successfully`);
+      logger.debug(`✅ Product ${productId} analyzed successfully`);
     } catch (error) {
-      console.error(`❌ Error analyzing product ${productId}:`, error);
+      logServerError(`❌ Error analyzing product ${productId}:`, error);
 
       // Log detailed error information for JSON validation failures
       if (
@@ -1207,29 +1199,29 @@ export class GroqSequentialProcessor {
         (error.message.includes('json_validate_failed') ||
           error.message.includes('Failed to validate JSON'))
       ) {
-        console.error(
+        logger.error(
           `🔍 JSON Validation Error Details for product ${productId}:`
         );
-        console.error(`   Error message: ${error.message}`);
+        logger.error(`   Error message: ${error.message}`);
 
         // Try to extract failed_generation from error if available
         const errorObj = error as any;
         if (errorObj.error?.error?.failed_generation) {
-          console.error(
+          logger.error(
             `   Failed generation: ${errorObj.error.error.failed_generation.substring(0, 500)}`
           );
         } else if (errorObj.error?.failed_generation) {
-          console.error(
+          logger.error(
             `   Failed generation: ${errorObj.error.failed_generation.substring(0, 500)}`
           );
         } else {
-          console.error(
+          logger.error(
             `   ⚠️ No failed_generation field in error - cannot see what model returned`
           );
         }
 
         // Log input context for debugging
-        console.error(
+        logger.error(
           `   Input context: ${messageIds.length} messages, ${imageUrls.length} images, text length: ${textContents.length}`
         );
       }
@@ -1256,7 +1248,7 @@ export class GroqSequentialProcessor {
     );
 
     if (imageMessages.length === 0) {
-      console.log(`⚠️ No images found for product ${productId}`);
+      logger.debug(`⚠️ No images found for product ${productId}`);
       return;
     }
 
@@ -1309,7 +1301,7 @@ export class GroqSequentialProcessor {
           );
 
           if (!response.ok) {
-            console.log(
+            logger.debug(
               `⚠️ Failed to download image ${i + 1}: ${response.statusText}`
             );
             continue;
@@ -1363,10 +1355,10 @@ export class GroqSequentialProcessor {
               data: { mediaS3Key: s3Key },
             });
           } else {
-            console.error(`❌ Failed to upload image ${i + 1} to S3`);
+            logger.error(`❌ Failed to upload image ${i + 1} to S3`);
           }
         } catch (error) {
-          console.error(`❌ Error uploading image ${i + 1}:`, error);
+          logServerError(`❌ Error uploading image ${i + 1}:`, error);
           // Continue with next image instead of failing completely
           continue;
         }
@@ -1381,7 +1373,7 @@ export class GroqSequentialProcessor {
         });
 
         if (!product) {
-          console.log(
+          logger.debug(
             `⚠️ Product ${productId} not found, skipping image creation`
           );
           return;
@@ -1398,21 +1390,18 @@ export class GroqSequentialProcessor {
           })),
         });
 
-        console.log(
+        logger.debug(
           `✅ Created ${uploadedImages.length} product images for product ${productId}`
         );
       } else {
-        console.log(
+        logger.debug(
           `⚠️ No images were successfully uploaded for product ${productId}`
         );
       }
     } catch (error) {
-      console.error(
-        `❌ Error uploading images for product ${productId}:`,
-        error
-      );
+      logServerError(`❌ Error uploading images for product ${productId}:`, error);
       // Don't throw error - continue processing even if image upload fails
-      console.log(`⚠️ Continuing processing despite image upload failure`);
+      logger.debug(`⚠️ Continuing processing despite image upload failure`);
     }
   }
 
@@ -1439,7 +1428,7 @@ export class GroqSequentialProcessor {
       .join('\n\n');
 
     if (imageUrls.length === 0) {
-      console.log(`⚠️ No images found for product ${productId}`);
+      logger.debug(`⚠️ No images found for product ${productId}`);
       return;
     }
 
@@ -1451,7 +1440,7 @@ export class GroqSequentialProcessor {
       productForMulticolor?.agLabels
     );
     if (waMulticolorPack) {
-      console.log(
+      logger.debug(
         `🎨 Multicolor pack (text analysis): running full image analysis for ${productId}; per-image colors will be unified to разноцветный (same card as non-multicolor for name/description/category)`
       );
     }
@@ -1463,7 +1452,7 @@ export class GroqSequentialProcessor {
       // Multicolor: vision output still used for everything except the final stored color (overridden below).
       for (let i = 0; i < imageUrls.length; i++) {
         const imageUrl = imageUrls[i];
-        console.log(
+        logger.debug(
           `🎨 Analyzing image ${i + 1}/${imageUrls.length} for product ${productId}`
         );
 
@@ -1535,7 +1524,7 @@ export class GroqSequentialProcessor {
           analysisResult.originalImageIndex = i; // Store original index for proper mapping
           analysisResults.push(analysisResult);
 
-          console.log(
+          logger.debug(
             `✅ Image ${i + 1} analyzed: ${analysisResult.name || 'No name'} - Color: ${analysisResult.color || 'null'}`
           );
         } catch (imageError: any) {
@@ -1556,11 +1545,11 @@ export class GroqSequentialProcessor {
             imageError?.error?.error?.message?.includes('over capacity');
 
           if (is503Error) {
-            console.error(
+            logger.error(
               `❌ Error analyzing image ${i + 1}: Groq API over capacity (503) - all retries exhausted. Will skip this image.`
             );
           } else {
-            console.error(`❌ Error analyzing image ${i + 1}:`, errorMessage);
+            logError(`❌ Error analyzing image ${i + 1}:`, errorMessage);
           }
           // Continue with next image even if this one fails
           // Note: We don't add a result for failed images, so the index mapping will be preserved
@@ -1571,7 +1560,7 @@ export class GroqSequentialProcessor {
       let selectedCategoryId: string | null = null;
       if (analysisResults.length > 0) {
         try {
-          console.log(
+          logger.debug(
             `📂 Analyzing category for product ${productId} based on ${analysisResults.length} images`
           );
 
@@ -1651,29 +1640,29 @@ export class GroqSequentialProcessor {
 
               if (category && category.children.length === 0) {
                 selectedCategoryId = categoryResult.categoryId;
-                console.log(
+                logger.debug(
                   `✅ Category selected: ${category.name} (${categoryResult.categoryId}) - confidence: ${categoryResult.confidence || 'N/A'}`
                 );
               } else {
-                console.warn(
+                logger.warn(
                   `⚠️ Category ${categoryResult.categoryId} is not a leaf category (has ${category?.children.length || 0} children), rejecting`
                 );
                 // Don't set selectedCategoryId - will fall back to determineCategoryFromName
               }
             } else {
-              console.warn(
+              logger.warn(
                 `⚠️ Category ID ${categoryResult.categoryId} from AI is not in the leaf categories list, rejecting`
               );
               // Don't set selectedCategoryId - will fall back to determineCategoryFromName
             }
           } else {
-            console.log(
+            logger.debug(
               `⚠️ Category analysis did not return categoryId, will use default`
             );
           }
         } catch (categoryError) {
-          console.error(
-            `❌ Error in category analysis for product ${productId}:`,
+          logServerError(
+            `❌ Error in category analysis for product ${productId}`,
             categoryError
           );
           // Continue without category - will use default
@@ -1699,14 +1688,14 @@ export class GroqSequentialProcessor {
           ...m,
           color: mc,
         }));
-        console.log(
+        logger.debug(
           `🎨 Multicolor pack — overriding vision colors with "${mc}" for all mapped images`
         );
       }
 
-      console.log(
-        `🎨 Extracted color mappings for product ${productId}:`,
-        colorMappings
+      logger.debug(
+        { colorMappings },
+        `🎨 Extracted color mappings for product ${productId}`
       );
 
       // Check if product exists before updating colors
@@ -1716,7 +1705,7 @@ export class GroqSequentialProcessor {
       });
 
       if (!product) {
-        console.log(
+        logger.debug(
           `⚠️ Product ${productId} not found, skipping color mapping`
         );
         return;
@@ -1733,7 +1722,7 @@ export class GroqSequentialProcessor {
           where: { productId },
           data: { color: mc },
         });
-        console.log(
+        logger.debug(
           `🎨 Multicolor pack: ensured all ${updated.count} images "${mc}" (single product card)`
         );
       }
@@ -1747,14 +1736,11 @@ export class GroqSequentialProcessor {
       // Merge name/description/gender/season from image analysis if missing from first analysis
       await this.mergeGenderSeasonFromImageAnalysis(productId, analysisResults);
 
-      console.log(
+      logger.debug(
         `✅ Image analysis completed for product ${productId}: ${analysisResults.length} images processed`
       );
     } catch (error) {
-      console.error(
-        `❌ Error analyzing images for product ${productId}:`,
-        error
-      );
+      logServerError(`❌ Error analyzing images for product ${productId}:`, error);
       throw error;
     }
   }
@@ -1774,7 +1760,7 @@ export class GroqSequentialProcessor {
       });
 
       if (!product) {
-        console.log(
+        logger.debug(
           `❌ Product ${productId} not found for name/gender/season merge`
         );
         return;
@@ -1791,7 +1777,7 @@ export class GroqSequentialProcessor {
       const needsSeason = !product.season || product.season === null;
 
       if (!needsName && !needsDescription && !needsGender && !needsSeason) {
-        console.log(
+        logger.debug(
           `✅ Product ${productId} already has name, description, gender and season, no merge needed`
         );
         return;
@@ -1801,7 +1787,7 @@ export class GroqSequentialProcessor {
       const bestResult = imageAnalysisResults[0]; // Use first result as most confident
 
       if (!bestResult) {
-        console.log(
+        logger.debug(
           `⚠️ No image analysis results available for gender/season merge`
         );
         return;
@@ -1839,10 +1825,7 @@ export class GroqSequentialProcessor {
         // Merged name/description/gender/season from image analysis
       }
     } catch (error) {
-      console.error(
-        `❌ Error merging name/description/gender/season from image analysis for product ${productId}:`,
-        error
-      );
+      logServerError(`❌ Error merging name/description/gender/season from image analysis for product ${productId}:`, error);
       // Don't throw error - this is not critical
     }
   }

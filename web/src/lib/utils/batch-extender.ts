@@ -1,4 +1,5 @@
 import { prisma } from '../db-node';
+import { logger } from '@/lib/server/logger';
 
 export interface ExtendedBatchResult {
   messageIds: string[];
@@ -110,7 +111,7 @@ export async function extendBatchWithConsecutiveMessages(
 
   const extendedCount = consecutiveFromSameSender.length;
 
-  console.log(
+  logger.debug(
     `📈 Extended batch: ${originalMessageIds.length} → ${extendedMessageIds.length} messages ` +
       `(+${extendedCount} consecutive from ${lastMessageSender})`
   );

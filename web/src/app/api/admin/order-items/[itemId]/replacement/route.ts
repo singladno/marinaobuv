@@ -2,26 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logDebug } from '@/lib/server/logger';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
-    console.log('Replacement API called');
+    logDebug('Replacement API called');
     const auth = await requireAuth(request, 'ADMIN');
-    console.log('Auth:', auth);
+    logDebug('Auth', auth);
 
     if (auth.error) {
-      console.log('Unauthorized access attempt');
+      logDebug('Unauthorized access attempt');
       return auth.error;
     }
 
     const { itemId } = await params;
-    console.log('Item ID:', itemId);
+    logDebug('Item ID', itemId);
 
     const { replacementImageUrl, replacementImageKey, adminComment } =
       await request.json();
-    console.log('Request data:', {
+    logDebug('Request data', {
       replacementImageUrl,
       replacementImageKey,
       adminComment,
@@ -35,7 +37,7 @@ export async function POST(
     }
 
     // Verify the order item exists
-    console.log('Looking for order item:', itemId);
+    logDebug('Looking for order item', itemId);
     const orderItem = await prisma.orderItem.findFirst({
       where: {
         id: itemId,
@@ -49,10 +51,10 @@ export async function POST(
       },
     });
 
-    console.log('Order item found:', orderItem);
+    logDebug('Order item found', orderItem);
 
     if (!orderItem) {
-      console.log('Order item not found');
+      logDebug('Order item not found');
       return NextResponse.json(
         { error: 'Order item not found' },
         { status: 404 }
@@ -60,7 +62,7 @@ export async function POST(
     }
 
     if (!orderItem.order.userId) {
-      console.log('Order has no client');
+      logDebug('Order has no client');
       return NextResponse.json(
         { error: 'Order has no client' },
         { status: 400 }
@@ -111,7 +113,7 @@ export async function POST(
     }
 
     // Create replacement proposal
-    console.log('Creating replacement with data:', {
+    logDebug('Creating replacement with data', {
       orderItemId: itemId,
       adminUserId: auth.user.id,
       clientUserId: orderItem.order.userId,
@@ -149,7 +151,7 @@ export async function POST(
       },
     });
 
-    console.log('Replacement created successfully:', replacement);
+    logDebug('Replacement created successfully', replacement);
 
     // Create a chat message about the replacement proposal
     try {
@@ -182,7 +184,7 @@ export async function POST(
       await prisma.orderItemMessage.create({
         data: messageData,
       });
-      console.log('Replacement chat message created');
+      logDebug('Replacement chat message created');
     } catch (messageError) {
       logRequestError(request, '/api/admin/order-items/[itemId]/replacement', messageError, 'Failed to create replacement chat message:');
       // Don't fail the whole operation if message creation fails

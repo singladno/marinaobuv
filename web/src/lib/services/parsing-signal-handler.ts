@@ -4,6 +4,7 @@
  */
 
 import { ParsingProgressService } from './parsing-progress-service';
+import { logger, logServerError } from '@/lib/server/logger';
 
 let parsingProgressService: ParsingProgressService | null = null;
 let isShuttingDown = false;
@@ -28,7 +29,7 @@ export function initializeParsingSignalHandlers(
   // Handle unhandled promise rejections
   process.on('unhandledRejection', handleUnhandledRejection);
 
-  console.log('🛡️ Signal handlers initialized for parsing process');
+  logger.debug('🛡️ Signal handlers initialized for parsing process');
 }
 
 /**
@@ -36,12 +37,12 @@ export function initializeParsingSignalHandlers(
  */
 async function handleShutdown(signal: string) {
   if (isShuttingDown) {
-    console.log('⚠️ Already shutting down, ignoring signal');
+    logger.debug('⚠️ Already shutting down, ignoring signal');
     return;
   }
 
   isShuttingDown = true;
-  console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+  logger.debug(`\n🛑 Received ${signal}, shutting down gracefully...`);
 
   if (parsingProgressService) {
     try {
@@ -55,25 +56,25 @@ async function handleShutdown(signal: string) {
             progress.productsCreated || 0,
             `Process terminated by ${signal} signal - partial completion`
           );
-          console.log('📊 Parsing status updated to partial completion');
+          logger.debug('📊 Parsing status updated to partial completion');
         } else {
           await parsingProgressService.markFailed(
             `Process terminated by ${signal} signal`
           );
-          console.log('📊 Parsing status updated to failed');
+          logger.debug('📊 Parsing status updated to failed');
         }
       } else {
         await parsingProgressService.markFailed(
           `Process terminated by ${signal} signal`
         );
-        console.log('📊 Parsing status updated to failed');
+        logger.debug('📊 Parsing status updated to failed');
       }
     } catch (error) {
-      console.error('❌ Error updating parsing status:', error);
+      logServerError('❌ Error updating parsing status:', error);
     }
   }
 
-  console.log('👋 Shutdown complete');
+  logger.debug('👋 Shutdown complete');
   process.exit(0);
 }
 
@@ -81,7 +82,7 @@ async function handleShutdown(signal: string) {
  * Handle uncaught exceptions
  */
 async function handleUncaughtException(error: Error) {
-  console.error('💥 Uncaught Exception:', error);
+  logServerError('💥 Uncaught Exception:', error);
 
   if (parsingProgressService && !isShuttingDown) {
     try {
@@ -89,7 +90,7 @@ async function handleUncaughtException(error: Error) {
         `Uncaught exception: ${error.message}`
       );
     } catch (updateError) {
-      console.error('❌ Error updating parsing status:', updateError);
+      logServerError('Error updating parsing status after uncaught exception', updateError);
     }
   }
 
@@ -100,7 +101,7 @@ async function handleUncaughtException(error: Error) {
  * Handle unhandled promise rejections
  */
 async function handleUnhandledRejection(reason: any, promise: Promise<any>) {
-  console.error('💥 Unhandled Promise Rejection:', reason);
+  logServerError('Unhandled promise rejection', reason);
 
   if (parsingProgressService && !isShuttingDown) {
     try {
@@ -108,7 +109,7 @@ async function handleUnhandledRejection(reason: any, promise: Promise<any>) {
         `Unhandled promise rejection: ${reason}`
       );
     } catch (updateError) {
-      console.error('❌ Error updating parsing status:', updateError);
+      logServerError('Error updating parsing status after unhandled rejection', updateError);
     }
   }
 
@@ -123,5 +124,5 @@ export function cleanupSignalHandlers() {
   process.removeAllListeners('SIGINT');
   process.removeAllListeners('uncaughtException');
   process.removeAllListeners('unhandledRejection');
-  console.log('🧹 Signal handlers cleaned up');
+  logger.debug('🧹 Signal handlers cleaned up');
 }

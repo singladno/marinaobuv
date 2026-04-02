@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { config } from 'dotenv';
+import { logger, logServerError } from '@/lib/server/logger';
 
 // Load environment variables
 config();
@@ -30,12 +31,13 @@ async function uploadToYandex(
   try {
     const bucket = requiredEnv('S3_BUCKET');
 
-    console.log(
-      '📤 Uploading to S3:',
-      `https://storage.yandexcloud.net/${bucket}/${key}`
+    logger.debug(
+      `📤 Uploading to S3: https://storage.yandexcloud.net/${bucket}/${key}`
     );
-    console.log('Image size:', imageBuffer.length, 'bytes');
-    console.log('Content type:', contentType);
+    logger.debug(
+      { bytes: imageBuffer.length, contentType },
+      'S3 upload metadata'
+    );
 
     const command = new PutObjectCommand({
       Bucket: bucket,
@@ -46,10 +48,10 @@ async function uploadToYandex(
     });
 
     await s3Client.send(command);
-    console.log('✅ Upload completed successfully');
+    logger.debug('✅ Upload completed successfully');
     return true;
   } catch (error) {
-    console.error('❌ Upload error:', error);
+    logServerError('❌ Upload error:', error);
     return false;
   }
 }

@@ -7,6 +7,7 @@ import {
 } from '../provider-utils';
 
 import { ImageData } from './image-processing-service';
+import { logger } from '@/lib/server/logger';
 import {
   generateArticleNumber,
   createSlug,
@@ -220,16 +221,16 @@ export class ProductCreationCore {
       });
 
       if (!category) {
-        console.log(
+        logger.debug(
           `⚠️  Category ID ${analysis.categoryId} not found, falling back to default`
         );
       } else if (!category.isActive) {
-        console.log(
+        logger.debug(
           `⚠️  Category ID ${analysis.categoryId} (${category.name}) is inactive, falling back to default`
         );
         category = null;
       } else {
-        console.log(`✅ Using category: ${category.name} (${category.id})`);
+        logger.debug(`✅ Using category: ${category.name} (${category.id})`);
       }
     }
 
@@ -241,7 +242,7 @@ export class ProductCreationCore {
           where: { id: analysis.newCategory.parentCategoryId, isActive: true },
         });
         if (!parentCategory) {
-          console.log(
+          logger.debug(
             `⚠️  Parent category ID ${analysis.newCategory.parentCategoryId} not found, creating category without parent`
           );
         }
@@ -261,16 +262,16 @@ export class ProductCreationCore {
             isActive: true,
           },
         });
-        console.log(`✅ Created new category: ${analysis.newCategory.name}`);
+        logger.debug(`✅ Created new category: ${analysis.newCategory.name}`);
       } catch (error) {
-        console.log(`❌ Failed to create new category: ${error}`);
+        logger.debug(`❌ Failed to create new category: ${error}`);
         category = null; // Will fall back to default
       }
     }
 
     if (!category) {
       // Fallback: find or create a default "Обувь" category
-      console.log(`🔄 Falling back to default category`);
+      logger.debug(`🔄 Falling back to default category`);
       category = await prisma.category.findFirst({
         where: { name: 'Обувь', isActive: true },
       });
@@ -286,15 +287,15 @@ export class ProductCreationCore {
               isActive: true,
             },
           });
-          console.log(`✅ Created default category: Обувь`);
+          logger.debug(`✅ Created default category: Обувь`);
         } catch (error) {
-          console.log(`❌ Failed to create default category: ${error}`);
+          logger.debug(`❌ Failed to create default category: ${error}`);
           throw new Error(
             `Failed to create or find any suitable category for product`
           );
         }
       } else {
-        console.log(`✅ Using existing default category: Обувь`);
+        logger.debug(`✅ Using existing default category: Обувь`);
       }
     }
 

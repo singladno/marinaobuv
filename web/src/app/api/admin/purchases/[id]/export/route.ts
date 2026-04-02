@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logger } from '@/lib/server/logger';
 
 function escapeCsvValue(value: unknown): string {
   const stringValue =
@@ -168,7 +169,7 @@ export async function GET(
             item.product.article === '215126' ||
             item.product.article === '918391'
           ) {
-            console.log(
+            logger.debug(
               `[Export Debug] Article ${item.product.article} - Purchase item color: "${itemColor}" (normalized: "${normalizedItemColor}"), Image color: "${img.color}" (normalized: "${imgColor}"), Matches: ${matches}`
             );
           }
@@ -189,7 +190,7 @@ export async function GET(
               item.product.article === '215126' ||
               item.product.article === '918391'
             ) {
-              console.log(
+              logger.debug(
                 `[Export Debug] Article ${item.product.article} - No exact color match for "${itemColor}", using ${nullColorImages.length} images with null colors`
               );
             }
@@ -201,7 +202,7 @@ export async function GET(
               item.product.article === '215126' ||
               item.product.article === '918391'
             ) {
-              console.log(
+              logger.debug(
                 `[Export Debug] Article ${item.product.article} - No exact color match for "${itemColor}" and no null color images, using all ${allImages.length} images as fallback`
               );
             }
@@ -213,7 +214,7 @@ export async function GET(
           item.product.article === '215126' ||
           item.product.article === '918391'
         ) {
-          console.log(
+          logger.debug(
             `[Export Debug] Article ${item.product.article} - Total images: ${allImages.length}, Matched images: ${sameColorImages.length}, Purchase item color: "${itemColor}"`
           );
         }

@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { logger } from '@/lib/server/logger';
 
 /**
  * Run a command with a timeout
@@ -14,7 +15,7 @@ export async function runWithTimeout(
   timeoutMs: number,
   extraEnv: Record<string, string> = {}
 ): Promise<void> {
-  console.log(`$ ${command} ${args.join(' ')} (timeout: ${timeoutMs}ms)`);
+  logger.debug(`$ ${command} ${args.join(' ')} (timeout: ${timeoutMs}ms)`);
 
   return new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
@@ -52,7 +53,7 @@ export async function runWithTimeout(
 
     // Set up timeout
     timeoutId = setTimeout(() => {
-      console.log(
+      logger.debug(
         `⏰ Command timed out after ${timeoutMs}ms, killing process...`
       );
       child.kill('SIGTERM');
@@ -60,7 +61,7 @@ export async function runWithTimeout(
       // Force kill after 5 seconds if SIGTERM doesn't work
       setTimeout(() => {
         if (!child.killed) {
-          console.log('🔪 Force killing process...');
+          logger.debug('🔪 Force killing process...');
           child.kill('SIGKILL');
         }
       }, 5000);

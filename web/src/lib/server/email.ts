@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '@/lib/env';
+import { logDebug, logger, logServerError } from '@/lib/server/logger';
 
 export interface EmailOptions {
   to: string;
@@ -30,7 +31,7 @@ class EmailService {
         !env.SMTP_USER ||
         !env.SMTP_PASS
       ) {
-        console.warn(
+        logger.warn(
           '⚠️  Email not configured. Using console fallback for development.'
         );
         return;
@@ -49,9 +50,9 @@ class EmailService {
         },
       });
 
-      console.log('✅ Email service initialized successfully');
+      logger.debug('✅ Email service initialized successfully');
     } catch (error) {
-      console.error('❌ Failed to initialize email service:', error);
+      logServerError('❌ Failed to initialize email service:', error);
       this.transporter = null;
     }
   }
@@ -60,10 +61,10 @@ class EmailService {
     try {
       // If no transporter (not configured), use console fallback
       if (!this.transporter) {
-        console.log('📧 [EMAIL] → Console fallback (not configured)');
-        console.log(`To: ${options.to}`);
-        console.log(`Subject: ${options.subject}`);
-        console.log(`HTML: ${options.html}`);
+        logger.debug('📧 [EMAIL] → Console fallback (not configured)');
+        logger.debug(`To: ${options.to}`);
+        logger.debug(`Subject: ${options.subject}`);
+        logger.debug(`HTML: ${options.html}`);
         return true;
       }
 
@@ -76,14 +77,14 @@ class EmailService {
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      console.log(
-        '✅ Email sent successfully to:',
+      logDebug(
+        '✅ Email sent successfully to',
         options.to,
         result.messageId
       );
       return true;
     } catch (error) {
-      console.error('❌ Failed to send email:', error);
+      logServerError('❌ Failed to send email:', error);
       return false;
     }
   }

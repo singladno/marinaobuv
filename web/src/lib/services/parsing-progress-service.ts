@@ -1,3 +1,4 @@
+import { logger, logServerError } from '@/lib/server/logger';
 /**
  * Service for updating parsing progress in real-time
  * This service provides methods to update parsing progress during the parsing process
@@ -36,12 +37,12 @@ export class ParsingProgressService {
     update: Omit<ParsingProgressUpdate, 'parsingHistoryId'>
   ) {
     if (!this.parsingHistoryId) {
-      console.warn('⚠️ No parsing history ID set, skipping progress update');
+      logger.warn('⚠️ No parsing history ID set, skipping progress update');
       return;
     }
 
     try {
-      console.log(
+      logger.debug(
         `📡 Updating parsing progress at: ${this.baseUrl}/api/admin/parsing-progress`
       );
 
@@ -61,14 +62,14 @@ export class ParsingProgressService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ Failed to update parsing progress:', errorData);
+        logger.error('❌ Failed to update parsing progress:', errorData);
         return;
       }
 
       const result = await response.json();
-      console.log('📊 Parsing progress updated:', result.data);
+      logger.debug('📊 Parsing progress updated:', result.data);
     } catch (error) {
-      console.error('❌ Error updating parsing progress:', error);
+      logServerError('❌ Error updating parsing progress:', error);
     }
   }
 
@@ -144,14 +145,14 @@ export class ParsingProgressService {
       );
 
       if (!response.ok) {
-        console.error('❌ Failed to fetch parsing progress');
+        logger.error('❌ Failed to fetch parsing progress');
         return null;
       }
 
       const result = await response.json();
       return result.data;
     } catch (error) {
-      console.error('❌ Error fetching parsing progress:', error);
+      logServerError('❌ Error fetching parsing progress:', error);
       return null;
     }
   }

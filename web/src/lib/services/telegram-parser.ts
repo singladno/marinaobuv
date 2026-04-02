@@ -10,6 +10,7 @@ import { createSlug, generateArticleNumber } from './product-creation-mappers';
 import { env } from '../env';
 import { uploadImage, getObjectKey, getPublicUrl } from '../storage';
 import { GroqSequentialProcessor } from './groq-sequential-processor';
+import { logger, logServerError } from '@/lib/server/logger';
 
 interface TelegramMessageGroup {
   messageIds: string[];
@@ -394,7 +395,7 @@ export class TelegramParser {
       // Use TELEGRAM_CHANNEL_ID directly (the channel we're parsing from)
       const channel = env.TELEGRAM_CHANNEL_ID || channelId;
       if (!channel) {
-        console.error(
+        logger.error(
           `❌ No channel ID available for downloading message ${tgMessageId}`
         );
         return null;
@@ -407,10 +408,7 @@ export class TelegramParser {
       );
       return buffer;
     } catch (error) {
-      console.error(
-        `❌ Error downloading image for message ${tgMessageId}:`,
-        error
-      );
+      logServerError(`❌ Error downloading image for message ${tgMessageId}:`, error);
       return null;
     }
   }
@@ -448,7 +446,7 @@ export class TelegramParser {
             },
           });
           if (!response.ok) {
-            console.log(
+            logger.debug(
               `⚠️ Failed to download image ${i + 1}: ${response.statusText}`
             );
             continue;
@@ -461,7 +459,7 @@ export class TelegramParser {
           chatId
         ) {
           // Re-download from Telegram using message ID
-          console.log(
+          logger.debug(
             `📥 Re-downloading image ${i + 1} from Telegram (message ${image.tgMessageId})...`
           );
           imageBuffer = await this.downloadTelegramImageByMessageId(
@@ -469,13 +467,13 @@ export class TelegramParser {
             chatId
           );
           if (!imageBuffer) {
-            console.log(
+            logger.debug(
               `⚠️ Failed to re-download image ${i + 1} from Telegram`
             );
             continue;
           }
         } else {
-          console.log(
+          logger.debug(
             `⚠️ Skipping image ${i + 1}: no buffer, valid URL, or message ID`
           );
           continue;
@@ -500,12 +498,12 @@ export class TelegramParser {
             url: publicUrl,
             key: s3Key,
           });
-          console.log(`✅ Uploaded image ${i + 1} to S3: ${publicUrl}`);
+          logger.debug(`✅ Uploaded image ${i + 1} to S3: ${publicUrl}`);
         } else {
-          console.error(`❌ Failed to upload image ${i + 1} to S3`);
+          logger.error(`❌ Failed to upload image ${i + 1} to S3`);
         }
       } catch (error) {
-        console.error(`❌ Error uploading image ${i + 1}:`, error);
+        logServerError(`❌ Error uploading image ${i + 1}:`, error);
         continue;
       }
     }
@@ -523,7 +521,7 @@ export class TelegramParser {
     imageUrls: string[]
   ): Promise<void> {
     if (!textContent || imageUrls.length === 0) {
-      console.log(
+      logger.debug(
         `⚠️ No valid content for GROQ analysis: text=${!!textContent}, images=${imageUrls.length}`
       );
       return;
@@ -609,11 +607,11 @@ export class TelegramParser {
         data: updateData,
       });
 
-      console.log(
+      logger.debug(
         `✅ GROQ analysis completed for product ${productId}: name="${updateData.name}", sizes=${updateData.sizes?.length || 0}`
       );
     } catch (error) {
-      console.error(`❌ GROQ analysis error for product ${productId}:`, error);
+      logServerError(`❌ GROQ analysis error for product ${productId}:`, error);
       // Don't throw - continue with basic product info
     }
   }
@@ -685,7 +683,7 @@ export class TelegramParser {
     // Use TELEGRAM_CHANNEL_ID directly (it's the channel we're parsing from)
     const channelId = env.TELEGRAM_CHANNEL_ID || '';
 
-    console.log(
+    logger.debug(
       `📤 Uploading ${group.images.length} images to S3 for product ${product.id}...`
     );
     const uploadedImages = await this.uploadTelegramImagesToS3(
@@ -695,7 +693,7 @@ export class TelegramParser {
     );
 
     if (uploadedImages.length === 0) {
-      console.log(
+      logger.debug(
         `⚠️ No images uploaded for product ${product.id}, deleting product`
       );
       await this.prisma.product.delete({ where: { id: product.id } });
@@ -720,7 +718,7 @@ export class TelegramParser {
 
     // Use GROQ to analyze product
     try {
-      console.log(`🤖 Analyzing product ${product.id} with GROQ...`);
+      logger.debug(`🤖 Analyzing product ${product.id} with GROQ...`);
       await this.analyzeTelegramProductWithGroq(
         product.id,
         group.messageIds,
@@ -728,10 +726,7 @@ export class TelegramParser {
         uploadedImages.map(img => img.url)
       );
     } catch (error) {
-      console.error(
-        `❌ GROQ analysis failed for product ${product.id}:`,
-        error
-      );
+      logServerError(`❌ GROQ analysis failed for product ${product.id}:`, error);
       // Activate product even if GROQ fails (it has images and basic info)
       await this.prisma.product.update({
         where: { id: product.id },
@@ -740,7 +735,7 @@ export class TelegramParser {
           batchProcessingStatus: 'completed',
         },
       });
-      console.log(`✅ Product ${product.id} activated despite GROQ failure`);
+      logger.debug(`✅ Product ${product.id} activated despite GROQ failure`);
     }
 
     // Mark messages as processed
@@ -749,7 +744,7 @@ export class TelegramParser {
       data: { processed: true },
     });
 
-    console.log(
+    logger.debug(
       `✅ Created product ${product.id} from ${group.messageIds.length} messages`
     );
     return product.id;
@@ -762,7 +757,7 @@ export class TelegramParser {
     messagesRead: number;
     productsCreated: number;
   }> {
-    console.log(`[Telegram Parser] Starting parse (last ${hoursBack} hours)`);
+    logger.debug(`[Telegram Parser] Starting parse (last ${hoursBack} hours)`);
 
     if (!env.TELEGRAM_CHANNEL_ID) {
       throw new Error('TELEGRAM_CHANNEL_ID is not configured');
@@ -773,7 +768,7 @@ export class TelegramParser {
     let telegramMessages: any[] = [];
 
     if (env.TELEGRAM_API_ID && env.TELEGRAM_API_HASH && env.TELEGRAM_PHONE) {
-      console.log(
+      logger.debug(
         '[Telegram Parser] Using MTProto (user account) to fetch messages'
       );
       try {
@@ -786,10 +781,7 @@ export class TelegramParser {
         telegramMessages = mtprotoMessages;
         await telegramMTProtoFetcher.disconnect();
       } catch (error) {
-        console.error(
-          '[Telegram Parser] MTProto fetch failed, falling back to Bot API:',
-          error
-        );
+        logServerError('[Telegram Parser] MTProto fetch failed, falling back to Bot API:', error);
         // Fall back to Bot API
         telegramMessages = await telegramFetcher.fetchChannelMessagesByUsername(
           env.TELEGRAM_CHANNEL_ID,
@@ -797,7 +789,7 @@ export class TelegramParser {
         );
       }
     } else {
-      console.log('[Telegram Parser] Using Bot API to fetch messages');
+      logger.debug('[Telegram Parser] Using Bot API to fetch messages');
       telegramMessages = await telegramFetcher.fetchChannelMessagesByUsername(
         env.TELEGRAM_CHANNEL_ID,
         hoursBack
@@ -805,7 +797,7 @@ export class TelegramParser {
     }
 
     if (telegramMessages.length === 0) {
-      console.log('[Telegram Parser] No messages found');
+      logger.debug('[Telegram Parser] No messages found');
       return { messagesRead: 0, productsCreated: 0 };
     }
 
@@ -927,7 +919,7 @@ export class TelegramParser {
       });
     }
 
-    console.log(`[Telegram Parser] Saved ${savedMessages.length} messages`);
+    logger.debug(`[Telegram Parser] Saved ${savedMessages.length} messages`);
 
     // Check which messages are already processed
     const processedIds = await this.prisma.telegramMessage.findMany({
@@ -944,7 +936,7 @@ export class TelegramParser {
     );
 
     if (messagesToProcess.length === 0) {
-      console.log('[Telegram Parser] No unprocessed messages found');
+      logger.debug('[Telegram Parser] No unprocessed messages found');
       return { messagesRead: savedMessages.length, productsCreated: 0 };
     }
 
@@ -952,12 +944,12 @@ export class TelegramParser {
     // This ensures messages are processed in the correct order
     messagesToProcess.sort((a, b) => a.date - b.date);
 
-    console.log(
+    logger.debug(
       `[Telegram Parser] Messages sorted by date. First message date: ${new Date(messagesToProcess[0]?.date * 1000).toISOString()}, Last: ${new Date(messagesToProcess[messagesToProcess.length - 1]?.date * 1000).toISOString()}`
     );
 
     // Debug: Log message types
-    console.log(
+    logger.debug(
       `[Telegram Parser] Analyzing ${messagesToProcess.length} messages for grouping...`
     );
     const messageTypes = messagesToProcess.map(msg => ({
@@ -967,26 +959,29 @@ export class TelegramParser {
       type: msg.type,
       author: msg.fromUsername || msg.fromId,
     }));
-    console.log(`[Telegram Parser] Message breakdown:`, {
-      withText: messageTypes.filter(m => m.hasText).length,
-      withImage: messageTypes.filter(m => m.hasImage).length,
-      withBoth: messageTypes.filter(m => m.hasText && m.hasImage).length,
-      withNeither: messageTypes.filter(m => !m.hasText && !m.hasImage).length,
-    });
+    logger.debug(
+      {
+        withText: messageTypes.filter(m => m.hasText).length,
+        withImage: messageTypes.filter(m => m.hasImage).length,
+        withBoth: messageTypes.filter(m => m.hasText && m.hasImage).length,
+        withNeither: messageTypes.filter(m => !m.hasText && !m.hasImage).length,
+      },
+      '[Telegram Parser] Message breakdown'
+    );
 
     // Group messages
     const groups = this.groupMessages(messagesToProcess);
-    console.log(`[Telegram Parser] Created ${groups.length} message groups`);
+    logger.debug(`[Telegram Parser] Created ${groups.length} message groups`);
 
     if (groups.length === 0 && messagesToProcess.length > 0) {
-      console.log(
+      logger.debug(
         `[Telegram Parser] ⚠️  No groups created. This usually means:`
       );
-      console.log(
+      logger.debug(
         `   - Messages don't have both images AND text from the same author`
       );
-      console.log(`   - Messages are too far apart in time (>60 seconds)`);
-      console.log(`   - Messages are from different authors`);
+      logger.debug(`   - Messages are too far apart in time (>60 seconds)`);
+      logger.debug(`   - Messages are from different authors`);
     }
 
     // Process each group
@@ -1021,11 +1016,11 @@ export class TelegramParser {
 
         productsCreated++;
       } catch (error) {
-        console.error(`[Telegram Parser] Error processing group:`, error);
+        logServerError(`[Telegram Parser] Error processing group:`, error);
       }
     }
 
-    console.log(
+    logger.debug(
       `[Telegram Parser] Completed: ${savedMessages.length} messages read, ${productsCreated} products created`
     );
 

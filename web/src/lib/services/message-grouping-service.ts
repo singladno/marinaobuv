@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { createGroupingPrompt } from '../gpt-grouping-prompt';
 import { GreenApiFetcher } from '../green-api-fetcher';
 import { ModelConfigService } from './model-config-service';
+import { logger, logServerError } from '@/lib/server/logger';
 
 export interface MessageGroup {
   groupId: string;
@@ -91,13 +92,13 @@ export class MessageGroupingService {
       }
     }
 
-    console.log(
+    logger.debug(
       `  🔍 Sequence types: ${types.join('')}, changes: ${typeChanges}`
     );
 
     // Only allow 0 or 1 type change
     const isValid = typeChanges <= 1;
-    console.log(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
+    logger.debug(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
 
     return isValid;
   }
@@ -107,13 +108,13 @@ export class MessageGroupingService {
    */
   async groupMessages(messageIds: string[]): Promise<MessageGroup[]> {
     await this.ensureClient();
-    console.log(
+    logger.debug(
       `📊 Step 1: Grouping ${messageIds.length} messages with OpenAI...`
     );
 
     const messages = await this.fetchMessages(messageIds);
     if (messages.length === 0) {
-      console.log('⚠️  No messages found for grouping');
+      logger.debug('⚠️  No messages found for grouping');
       return [];
     }
 
@@ -168,34 +169,34 @@ export class MessageGroupingService {
       for (let b = 0; b < batches.length; b++) {
         const prompt = createGroupingPrompt(batches[b]);
 
-        console.log(
+        logger.debug(
           `📝 Prompt for batch ${b + 1}/${batches.length} (first 1000 chars):`
         );
-        console.log(
+        logger.debug(
           `   ${prompt.substring(0, 1000)}${prompt.length > 1000 ? '...' : ''}`
         );
 
         // Add rate limiting delay before grouping request
         const delayMs = parseInt(env.OPENAI_REQUEST_DELAY_MS || '2000');
-        console.log(
+        logger.debug(
           `⏳ Rate limiting: waiting ${delayMs}ms before grouping request (batch ${b + 1}/${batches.length})...`
         );
         await new Promise(resolve => setTimeout(resolve, delayMs));
 
-        console.log(`🔍 Sending request to OpenAI GPT-5 Responses API...`);
-        console.log(
+        logger.debug(`🔍 Sending request to OpenAI GPT-5 Responses API...`);
+        logger.debug(
           `   Model: ${ModelConfigService.getModelForTask('grouping')}`
         );
-        console.log(
+        logger.debug(
           `   Reasoning effort: ${ModelConfigService.getReasoningEffortForTask('grouping')}`
         );
-        console.log(
+        logger.debug(
           `   Text verbosity: ${ModelConfigService.getTextVerbosityForTask('grouping')}`
         );
-        console.log(
+        logger.debug(
           `   Max output tokens: ${ModelConfigService.getMaxOutputTokensForTask('grouping')}`
         );
-        console.log(`   Messages in batch: ${batches[b].length}`);
+        logger.debug(`   Messages in batch: ${batches[b].length}`);
 
         const model = ModelConfigService.getModelForTask('grouping');
         const payload: any = {
@@ -217,17 +218,17 @@ export class MessageGroupingService {
 
         const response = await this.openai.responses.create(payload);
 
-        console.log(`📥 Received response from OpenAI GPT-5 API`);
-        console.log(`   Usage: ${JSON.stringify(response.usage)}`);
-        console.log(`   Finish reason: ${response.finish_reason}`);
+        logger.debug(`📥 Received response from OpenAI GPT-5 API`);
+        logger.debug(`   Usage: ${JSON.stringify(response.usage)}`);
+        logger.debug(`   Finish reason: ${response.finish_reason}`);
 
         const content = response.output_text;
         if (!content) {
           throw new Error('No content in OpenAI response');
         }
 
-        console.log(`📄 Raw response content (first 500 chars):`);
-        console.log(
+        logger.debug(`📄 Raw response content (first 500 chars):`);
+        logger.debug(
           `   ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}`
         );
 
@@ -240,8 +241,8 @@ export class MessageGroupingService {
           if (jsonMatch) cleanedContent = jsonMatch[1].trim();
         }
 
-        console.log(`🧹 Cleaned content (first 500 chars):`);
-        console.log(
+        logger.debug(`🧹 Cleaned content (first 500 chars):`);
+        logger.debug(
           `   ${cleanedContent.substring(0, 500)}${cleanedContent.length > 500 ? '...' : ''}`
         );
 
@@ -253,13 +254,16 @@ export class MessageGroupingService {
         }
 
         const parsed = JSON.parse(cleanedContent);
-        console.log(`🔍 Parsed JSON structure:`, Object.keys(parsed));
+        logger.debug(
+          { keys: Object.keys(parsed) },
+          'Parsed JSON structure'
+        );
         let groups = (parsed.groups || []) as MessageGroup[];
-        console.log(`📊 Found ${groups.length} groups in parsed response`);
+        logger.debug(`📊 Found ${groups.length} groups in parsed response`);
 
         // Post-filter: drop any groups that don't contain BOTH at least one text message AND one image message
         if (groups.length > 0) {
-          console.log(`🔍 Post-filtering ${groups.length} groups...`);
+          logger.debug(`🔍 Post-filtering ${groups.length} groups...`);
           const messageById = new Map(messages.map((m: any) => [m.id, m]));
           const originalCount = groups.length;
           groups = groups.filter(group => {
@@ -283,16 +287,16 @@ export class MessageGroupingService {
 
             const passesFilter =
               hasImageMessages && hasTextMessages && isValidSequence;
-            console.log(
+            logger.debug(
               `   Group ${group.groupId}: ${groupMessages.length} messages, hasImageMessages: ${hasImageMessages}, hasTextMessages: ${hasTextMessages}, validSequence: ${isValidSequence}, passes: ${passesFilter}`
             );
             return passesFilter;
           });
-          console.log(
+          logger.debug(
             `🔍 Post-filtering complete: ${originalCount} → ${groups.length} groups`
           );
         }
-        console.log(
+        logger.debug(
           `✅ OpenAI identified ${groups.length} product groups in batch ${b + 1}/${batches.length}`
         );
         allGroups.push(...groups);
@@ -301,12 +305,12 @@ export class MessageGroupingService {
       // Detailed logs
       for (let i = 0; i < allGroups.length; i++) {
         const group = allGroups[i];
-        console.log(
+        logger.debug(
           `\n📦 Group ${i + 1}/${allGroups.length}: ${group.groupId}`
         );
-        console.log(`   📝 Context: ${group.productContext}`);
-        console.log(`   📊 Confidence: ${group.confidence}`);
-        console.log(`   📨 Messages (${group.messageIds.length}):`);
+        logger.debug(`   📝 Context: ${group.productContext}`);
+        logger.debug(`   📊 Confidence: ${group.confidence}`);
+        logger.debug(`   📨 Messages (${group.messageIds.length}):`);
         const groupMessages = messages.filter((msg: any) =>
           group.messageIds.includes(msg.id)
         );
@@ -319,7 +323,7 @@ export class MessageGroupingService {
           const hasText = (msg as any).text && (msg as any).text.trim();
           const sender =
             (msg as any).fromName || (msg as any).from || 'Unknown';
-          console.log(
+          logger.debug(
             `     ${messageType} from ${sender}${hasImage ? ' (with media)' : ''}${hasText ? ' (with text)' : ''}`
           );
         }
@@ -327,7 +331,7 @@ export class MessageGroupingService {
 
       return allGroups;
     } catch (error) {
-      console.error('❌ Error grouping messages with OpenAI:', error);
+      logServerError('❌ Error grouping messages with OpenAI:', error);
       return [];
     }
   }
@@ -390,7 +394,7 @@ export class MessageGroupingService {
       return;
     }
 
-    console.log(
+    logger.debug(
       `🔄 Refreshing media URLs for ${imageMessages.length} image messages...`
     );
 
@@ -403,7 +407,7 @@ export class MessageGroupingService {
         const current = index++;
         const message = imageMessages[current];
         try {
-          console.log(
+          logger.debug(
             `   📸 Refreshing media URL for message ${message.id} (${current + 1}/${imageMessages.length})...`
           );
 
@@ -418,17 +422,14 @@ export class MessageGroupingService {
               data: { mediaUrl: freshUrl },
             });
             message.mediaUrl = freshUrl;
-            console.log(`   ✅ Refreshed media URL for message ${message.id}`);
+            logger.debug(`   ✅ Refreshed media URL for message ${message.id}`);
           } else {
-            console.log(
+            logger.debug(
               `   ⚠️  Could not refresh media URL for message ${message.id}`
             );
           }
         } catch (error) {
-          console.error(
-            `   ❌ Error refreshing media URL for message ${message.id}:`,
-            error
-          );
+          logServerError(`   ❌ Error refreshing media URL for message ${message.id}:`, error);
         }
       }
     };

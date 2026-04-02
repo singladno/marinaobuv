@@ -4,6 +4,7 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 
 import { env } from './env';
+import { logger, logServerError } from '@/lib/server/logger';
 
 // Check if we're in a build context (GitHub Actions or build process)
 const isBuildContext =
@@ -124,7 +125,7 @@ export async function putBuffer(
       url: publicUrl(key),
     };
   } catch (error) {
-    console.error('Failed to upload to S3:', error);
+    logServerError('Failed to upload to S3:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -155,7 +156,7 @@ export async function putBase64(
 
     return await putBuffer(key, buffer, contentType);
   } catch (error) {
-    console.error('Failed to process base64 data:', error);
+    logServerError('Failed to process base64 data:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Invalid base64 data',
@@ -190,7 +191,7 @@ export async function putFromUrl(
     if (!response.ok) {
       // Check if it's a 404 or 403 (likely expired URL)
       if (response.status === 404 || response.status === 403) {
-        console.warn(
+        logger.warn(
           `Media URL appears to be expired (${response.status}): ${url}`
         );
         return {
@@ -210,7 +211,7 @@ export async function putFromUrl(
 
     return await putBuffer(key, buffer, finalContentType);
   } catch (error) {
-    console.error('Failed to upload from URL:', error);
+    logServerError('Failed to upload from URL:', error);
 
     // Check if the error indicates an expired URL
     const errorMessage =

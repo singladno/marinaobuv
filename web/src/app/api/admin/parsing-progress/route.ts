@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logDebug } from '@/lib/server/logger';
 
 interface ParsingProgressUpdate {
   parsingHistoryId: string;
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`📊 Updated parsing progress for ${parsingHistoryId}:`, {
+    logDebug(`📊 Updated parsing progress for ${parsingHistoryId}`, {
       messagesRead: updatedRecord.messagesRead,
       productsCreated: updatedRecord.productsCreated,
       status: updatedRecord.status,

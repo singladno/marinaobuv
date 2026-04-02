@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { logger, logServerError } from '@/lib/server/logger';
 
 export type UserRole = 'ADMIN' | 'CLIENT' | 'GRUZCHIK' | 'PROVIDER' | 'EXPORT_MANAGER';
 
@@ -72,7 +73,7 @@ export async function requireAuth(
       },
     };
   } catch (error) {
-    console.error('Authentication error:', error);
+    logServerError('Authentication error:', error);
     return {
       error: NextResponse.json(
         { error: 'Internal server error' },

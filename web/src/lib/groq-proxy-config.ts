@@ -1,5 +1,6 @@
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import 'dotenv/config';
+import { logDebug, logWarn, logger } from '@/lib/server/logger';
 
 /**
  * Groq Proxy Configuration
@@ -31,7 +32,7 @@ export const isProxyAvailable = async (): Promise<boolean> => {
     clearTimeout(timeoutId);
     return response.ok;
   } catch (error) {
-    console.warn('Proxy server not available:', error);
+    logWarn('Proxy server not available', error);
     return false;
   }
 };
@@ -52,7 +53,7 @@ export const getGroqConfig = async () => {
     );
   }
 
-  console.log('🔄 Using Groq proxy server');
+  logger.debug('🔄 Using Groq proxy server');
   // Groq SDK appends /openai/v1 automatically, so baseURL should be just the proxy server
   const baseURL = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}${PROXY_CONFIG.path}`;
 
@@ -67,7 +68,7 @@ export const getGroqConfig = async () => {
 // Test Groq connection through proxy only
 export const testGroqConnection = async () => {
   try {
-    console.log('🧪 Testing Groq connection through proxy...');
+    logger.debug('🧪 Testing Groq connection through proxy...');
 
     const proxyAvailable = await isProxyAvailable();
 
@@ -77,7 +78,7 @@ export const testGroqConnection = async () => {
       );
     }
 
-    console.log('🔄 Testing through proxy server...');
+    logger.debug('🔄 Testing through proxy server...');
     const proxyUrl = `${PROXY_CONFIG.protocol}://${PROXY_CONFIG.host}:${PROXY_CONFIG.port}${PROXY_CONFIG.path}`;
 
     const response = await fetch(`${proxyUrl}/openai/v1/models`, {
@@ -90,20 +91,20 @@ export const testGroqConnection = async () => {
     });
 
     if (response.ok) {
-      console.log('✅ Groq API accessible through proxy!');
+      logger.debug('✅ Groq API accessible through proxy!');
       const models = await response.json();
-      console.log(`📊 Available models: ${models.data?.length || 0}`);
+      logger.debug(`📊 Available models: ${models.data?.length || 0}`);
       return true;
     } else {
-      console.log('❌ Groq API not accessible through proxy:', response.status);
+      logDebug('❌ Groq API not accessible through proxy', response.status);
       const errorText = await response.text();
-      console.log('Error details:', errorText);
+      logDebug('Error details', errorText);
       throw new Error(
         `Groq API not accessible through proxy: ${response.status}`
       );
     }
   } catch (error) {
-    console.log('❌ Connection failed:', error);
+    logDebug('❌ Connection failed', error);
     throw error;
   }
 };

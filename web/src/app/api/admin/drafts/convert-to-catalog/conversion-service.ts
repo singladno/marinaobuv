@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/server/db';
+import { logger } from '@/lib/server/logger';
 
 import {
   createProductData,
@@ -38,7 +39,7 @@ interface DraftProduct {
 }
 
 export async function convertDraftToProduct(draft: DraftProduct) {
-  console.log(
+  logger.debug(
     `Processing draft ${draft.id} (${draft.name}) for catalog conversion...`
   );
 
@@ -63,18 +64,18 @@ export async function convertDraftToProduct(draft: DraftProduct) {
       ? (fullDraft.source as string[])
       : [];
 
-  console.log(
+  logger.debug(
     `  📱 Found ${sourceMessageIds.length} source message IDs for draft ${draft.id}`
   );
 
   // Process images
   const processedImages = processDraftImages(draft.images || []);
-  console.log(
+  logger.debug(
     `  📸 Using ${processedImages.length} existing images for draft ${draft.id} (no upload)`
   );
 
   if (processedImages.length === 0) {
-    console.log(
+    logger.debug(
       `  ⚠️  No active images found for draft ${draft.id}, skipping...`
     );
     throw new Error('No active images found');
@@ -83,11 +84,11 @@ export async function convertDraftToProduct(draft: DraftProduct) {
   // Process sizes
   const processedSizes = processDraftSizes(draft.sizes || []);
   if (draft.sizes && Array.isArray(draft.sizes)) {
-    console.log(
+    logger.debug(
       `  📏 Processing ${draft.sizes.length} sizes for draft ${draft.id}...`
     );
   } else {
-    console.log(`  📏 No sizes data found for draft ${draft.id}`);
+    logger.debug(`  📏 No sizes data found for draft ${draft.id}`);
   }
 
   // Generate unique slug
@@ -116,7 +117,7 @@ export async function convertDraftToProduct(draft: DraftProduct) {
     return created;
   });
 
-  console.log(
+  logger.debug(
     `  ✅ Successfully converted draft ${draft.id} to product ${product.id} with ${processedImages.length} images and ${sourceMessageIds.length} source messages`
   );
 

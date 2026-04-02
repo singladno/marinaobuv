@@ -2,6 +2,7 @@ import { prisma } from '@/lib/server/db';
 import { putBuffer } from '@/lib/s3u';
 import fs from 'fs';
 import path from 'path';
+import { logger, logServerError } from '@/lib/server/logger';
 
 export interface ExportOptions {
   format: 'csv' | 'xml';
@@ -306,11 +307,11 @@ export async function exportProducts(
   const productsWithImages = products.filter(
     p => p.images && p.images.length > 0
   );
-  console.log(
+  logger.debug(
     `📦 Export: ${products.length} products total, ${productsWithImages.length} with images`
   );
   if (products.length > 0 && productsWithImages.length === 0) {
-    console.warn('⚠️ Warning: No products have images!');
+    logger.warn('⚠️ Warning: No products have images!');
   }
 
   // Determine output path with timestamp including time
@@ -376,7 +377,7 @@ export async function exportProducts(
           ? 'text/csv; charset=utf-8'
           : 'application/xml; charset=utf-8';
 
-      console.log(
+      logger.debug(
         `📤 Uploading to S3: ${s3Key} (${format}, ${fileContent.length} bytes)`
       );
       const uploadResult = await putBuffer(s3Key, fileContent, contentType);
@@ -384,10 +385,10 @@ export async function exportProducts(
       if (uploadResult.success && uploadResult.url) {
         result.s3Key = s3Key;
         result.s3Url = uploadResult.url;
-        console.log(`✅ File uploaded to S3: ${uploadResult.url}`);
-        console.log(`   S3 Key: ${s3Key}`);
-        console.log(`   Format: ${format}`);
-        console.log(`   Size: ${fileContent.length} bytes`);
+        logger.debug(`✅ File uploaded to S3: ${uploadResult.url}`);
+        logger.debug(`   S3 Key: ${s3Key}`);
+        logger.debug(`   Format: ${format}`);
+        logger.debug(`   Size: ${fileContent.length} bytes`);
 
         // Also upload metadata file to S3
         try {
@@ -399,18 +400,21 @@ export async function exportProducts(
             'application/json'
           );
           if (metadataUploadResult.success) {
-            console.log(`✅ Metadata uploaded to S3: ${metadataS3Key}`);
+            logger.debug(`✅ Metadata uploaded to S3: ${metadataS3Key}`);
           }
         } catch (metadataError) {
-          console.warn('⚠️ Failed to upload metadata to S3:', metadataError);
+          logger.warn(
+            { err: metadataError },
+            'Failed to upload metadata to S3'
+          );
           // Don't fail the export if metadata upload fails
         }
       } else {
-        console.warn(`⚠️ Failed to upload to S3: ${uploadResult.error}`);
-        console.warn(`   S3 Key: ${s3Key}`);
+        logger.warn(`⚠️ Failed to upload to S3: ${uploadResult.error}`);
+        logger.warn(`   S3 Key: ${s3Key}`);
       }
     } catch (error) {
-      console.error('Error uploading to S3:', error);
+      logServerError('Error uploading to S3:', error);
       // Don't fail the export if S3 upload fails
     }
   }
@@ -476,7 +480,7 @@ export function getExportStatus(): ExportStatus {
       const parsed = JSON.parse(content);
       return parsed;
     } catch (error) {
-      console.error('Error reading export status file:', error);
+      logServerError('Error reading export status file:', error);
       return { status: 'idle' };
     }
   }

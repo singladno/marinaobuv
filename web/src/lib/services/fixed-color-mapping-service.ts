@@ -1,5 +1,6 @@
 import { prisma } from '../db-node';
 import { normalizeToStandardColor } from '@/lib/constants/colors';
+import { logDebug, logger } from '@/lib/server/logger';
 
 export interface ImageColorMapping {
   imageUrl: string;
@@ -23,12 +24,12 @@ export class FixedColorMappingService {
     });
 
     if (!product) {
-      console.error(`❌ Product not found: ${productId}`);
+      logger.error(`❌ Product not found: ${productId}`);
       return;
     }
 
-    console.log(
-      `🎨 Updating product ${productId} with proper color mapping:`,
+    logDebug(
+      `🎨 Updating product ${productId} with proper color mapping`,
       imageColorMappings
     );
 
@@ -51,9 +52,9 @@ export class FixedColorMappingService {
       (a: any, b: any) => a.sort - b.sort
     );
 
-    console.log(`📸 Found ${sortedImages.length} product images to update`);
-    console.log(
-      `📸 Product image sort values:`,
+    logger.debug(`📸 Found ${sortedImages.length} product images to update`);
+    logDebug(
+      `📸 Product image sort values`,
       sortedImages.map((img: any, idx: number) => `image[${idx}]: sort=${img.sort}`).join(', ')
     );
 
@@ -65,8 +66,8 @@ export class FixedColorMappingService {
           indexToColorMap.set(mapping.originalImageIndex, mapping.color);
         }
       });
-      console.log(
-        `🎯 Created index-to-color map with ${indexToColorMap.size} entries:`,
+      logDebug(
+        `🎯 Created index-to-color map with ${indexToColorMap.size} entries`,
         Array.from(indexToColorMap.entries()).map(([idx, color]) => `[${idx}]=${color}`).join(', ')
       );
     }
@@ -83,7 +84,7 @@ export class FixedColorMappingService {
       // This matches the originalImageIndex stored in analysis results
       if (indexToColorMap.has(image.sort)) {
         detectedColor = indexToColorMap.get(image.sort) || null;
-        console.log(
+        logger.debug(
           `  🎯 Index-based match (sort: ${image.sort}) for image ${i + 1}: ${detectedColor}`
         );
       }
@@ -91,7 +92,7 @@ export class FixedColorMappingService {
       // Strategy 2: Try to match by exact URL
       if (!detectedColor && urlToColorMap.has(image.url)) {
         detectedColor = urlToColorMap.get(image.url) || null;
-        console.log(
+        logger.debug(
           `  🔗 Exact URL match for image ${i + 1}: ${detectedColor}`
         );
       } else if (!detectedColor) {
@@ -99,7 +100,7 @@ export class FixedColorMappingService {
         for (const [originalUrl, color] of urlToColorMap.entries()) {
           if (this.isUrlMatch(image.url, originalUrl)) {
             detectedColor = color;
-            console.log(
+            logger.debug(
               `  🎯 URL pattern match for image ${i + 1}: ${detectedColor}`
             );
             break;
@@ -111,7 +112,7 @@ export class FixedColorMappingService {
       // This assumes images are in same order, but is less reliable
       if (!detectedColor && indexToColorMap.size === 0 && i < colorEntries.length) {
         detectedColor = colorEntries[i][1];
-        console.log(
+        logger.debug(
           `  📋 Index-based fallback mapping for image ${i + 1}: ${detectedColor}`
         );
       }
@@ -119,7 +120,7 @@ export class FixedColorMappingService {
       // Strategy 5: Use first available color as last resort
       if (!detectedColor && colorEntries.length > 0) {
         detectedColor = colorEntries[0][1];
-        console.log(`  🎯 Fallback color for image ${i + 1}: ${detectedColor}`);
+        logger.debug(`  🎯 Fallback color for image ${i + 1}: ${detectedColor}`);
       }
 
       if (detectedColor) {
@@ -131,11 +132,11 @@ export class FixedColorMappingService {
           data: { color: normalizedColor },
         });
         updatedCount++;
-        console.log(
+        logger.debug(
           `  ✅ Updated image ${image.id} (sort: ${image.sort}) with color: ${detectedColor} → ${normalizedColor}`
         );
       } else {
-        console.log(
+        logger.debug(
           `  ⚠️  No color found for image ${image.id} (URL: ${image.url})`
         );
       }
@@ -149,7 +150,7 @@ export class FixedColorMappingService {
       },
     });
 
-    console.log(
+    logger.debug(
       `✅ Updated product ${product.id} with color mapping: ${updatedCount}/${sortedImages.length} images updated`
     );
   }
@@ -221,7 +222,7 @@ export class FixedColorMappingService {
           originalImageIndex: result.originalImageIndex, // Preserve original index for matching
         });
 
-        console.log(
+        logger.debug(
           `🎨 Mapped image ${result.originalImageIndex !== undefined ? `[index ${result.originalImageIndex}] ` : ''}${result.imageUrl} to color: ${primaryColor}`
         );
       } else {
@@ -232,7 +233,7 @@ export class FixedColorMappingService {
             color: null,
             originalImageIndex: result.originalImageIndex,
           });
-          console.log(
+          logger.debug(
             `🎨 Mapped image [index ${result.originalImageIndex}] ${result.imageUrl} to color: null (no color detected)`
           );
         }

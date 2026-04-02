@@ -10,6 +10,22 @@ import { getGroqConfig } from '@/lib/groq-proxy-config';
 import { groqChatCompletion } from './groq-api-wrapper';
 import { ModelConfigService } from './model-config-service';
 import { sleep } from '../../utils/retry';
+import { logger as pino, logServerError } from '@/lib/server/logger';
+
+const logger = {
+  debug(msg: string, ...args: unknown[]) {
+    if (args.length === 0) pino.debug(msg);
+    else pino.debug({ detail: args.length === 1 ? args[0] : args }, msg);
+  },
+  warn(msg: string, ...args: unknown[]) {
+    if (args.length === 0) pino.warn(msg);
+    else pino.warn({ detail: args.length === 1 ? args[0] : args }, msg);
+  },
+  error(msg: string, ...args: unknown[]) {
+    if (args.length === 0) pino.error(msg);
+    else pino.error({ detail: args.length === 1 ? args[0] : args }, msg);
+  },
+};
 
 export interface ImageColorResult {
   url: string;
@@ -39,7 +55,7 @@ export class PerImageColorService {
    */
   private async downloadImageAsBase64(url: string): Promise<string | null> {
     try {
-      console.log(`   📥 Downloading image: ${url}`);
+      logger.debug(`   📥 Downloading image: ${url}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -64,7 +80,7 @@ export class PerImageColorService {
 
       return `data:${mimeType};base64,${base64}`;
     } catch (error) {
-      console.error(`   ❌ Failed to download image ${url}:`, error);
+      logServerError(`   ❌ Failed to download image ${url}:`, error);
       return null;
     }
   }
@@ -84,7 +100,7 @@ export class PerImageColorService {
       const arrayBuffer = await response.arrayBuffer();
       return Buffer.from(arrayBuffer);
     } catch (error) {
-      console.error(`   ❌ Failed to download image buffer ${url}:`, error);
+      logServerError(`   ❌ Failed to download image buffer ${url}:`, error);
       return null;
     }
   }
@@ -98,7 +114,7 @@ export class PerImageColorService {
     }
 
     try {
-      console.log(
+      logger.debug(
         `   🎨 Analyzing colors for ${imageUrls.length} images individually...`
       );
 
@@ -117,7 +133,7 @@ export class PerImageColorService {
         while (index < imageUrls.length) {
           const current = index++;
           const url = imageUrls[current];
-          console.log(
+          logger.debug(
             `   📥 Downloading image ${current + 1}/${imageUrls.length}...`
           );
           const base64 = await this.downloadImageAsBase64(url);
@@ -136,20 +152,20 @@ export class PerImageColorService {
       const failedImages = imageData.filter(img => img.base64 === null);
 
       if (failedImages.length > 0) {
-        console.error(
+        logger.error(
           `   ⚠️  Failed to download ${failedImages.length} images:`,
           failedImages.map(img => img.url)
         );
       }
 
       if (successfulImages.length === 0) {
-        console.error(
+        logger.error(
           `   ❌ No images could be downloaded, returning null colors for all ${imageUrls.length} images`
         );
         return imageUrls.map(url => ({ url, color: null }));
       }
 
-      console.log(
+      logger.debug(
         `   ✅ Successfully downloaded ${successfulImages.length}/${imageUrls.length} images`
       );
 
@@ -209,13 +225,13 @@ Return STRICT JSON with this shape:
         let lastError: any = null;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
-            console.log(
+            logger.debug(
               `   🔄 Color analysis batch attempt ${attempt}/${maxRetries} (size=${batch.length})...`
             );
 
             if (attempt > 1) {
               const delayMs = Math.min(10_000, 500 * 2 ** (attempt - 2));
-              console.log(
+              logger.debug(
                 `   ⏳ Backoff ${delayMs}ms before color analysis...`
               );
               await sleep(delayMs);
@@ -243,7 +259,7 @@ Return STRICT JSON with this shape:
                       },
                       ...batch.map((img, idx) => {
                         const base64Preview = img.base64.substring(0, 50);
-                        console.log(
+                        logger.debug(
                           `   📸 Image ${idx + 1} base64 preview: ${base64Preview}... (total length: ${img.base64.length})`
                         );
                         return {
@@ -278,7 +294,7 @@ Return STRICT JSON with this shape:
               throw new Error('No content in Groq response');
             }
 
-            console.log(
+            logger.debug(
               `   📋 Raw Groq color analysis response (first 500 chars):`,
               content.substring(0, 500)
             );
@@ -288,12 +304,12 @@ Return STRICT JSON with this shape:
               result = JSON.parse(content) as {
                 images?: Array<{ color?: string | null }>;
               };
-              console.log(
+              logger.debug(
                 `   📋 Parsed color analysis result:`,
                 JSON.stringify(result, null, 2)
               );
             } catch (parseError) {
-              console.error(
+              logger.error(
                 `   ❌ Failed to parse color analysis JSON:`,
                 parseError,
                 `\n   Raw content:`,
@@ -304,18 +320,18 @@ Return STRICT JSON with this shape:
 
             // Validate that we got the right number of results
             if (!result.images || result.images.length !== indices.length) {
-              console.error(
+              logger.error(
                 `   ❌ Color analysis returned ${result.images?.length || 0} results but expected ${indices.length}`
               );
-              console.error(`   📊 Expected indices: [${indices.join(', ')}]`);
-              console.error(`   📊 Received results:`, result.images);
+              logger.error(`   📊 Expected indices: [${indices.join(', ')}]`);
+              logger.error(`   📊 Received results:`, result.images);
               throw new Error(
                 `Color analysis returned ${result.images?.length || 0} results but expected ${indices.length}`
               );
             }
 
             // Apply results to original positions
-            console.log(
+            logger.debug(
               `   🔍 Mapping ${result.images.length} color results to ${indices.length} images`
             );
             indices.forEach((originalIdx, i) => {
@@ -333,7 +349,7 @@ Return STRICT JSON with this shape:
                 color: normalizedColor,
               };
 
-              console.log(
+              logger.debug(
                 `   🎨 Image ${originalIdx + 1}: ${rawColor} → ${normalizedColor || 'null'}`
               );
             });
@@ -341,13 +357,10 @@ Return STRICT JSON with this shape:
             return; // batch done
           } catch (error) {
             lastError = error;
-            console.error(
-              `   ❌ Color analysis batch attempt ${attempt} failed:`,
-              error
-            );
+            logServerError(`   ❌ Color analysis batch attempt ${attempt} failed:`, error);
             if (attempt < maxRetries) {
               const waitMs = Math.min(60_000, 1000 * 2 ** (attempt - 1));
-              console.log(
+              logger.debug(
                 `   ⏳ Waiting ${waitMs}ms before retrying color analysis batch...`
               );
               await sleep(waitMs);
@@ -356,7 +369,7 @@ Return STRICT JSON with this shape:
         }
         // If all attempts failed for this batch, leave colors as null for these indices
         if (lastError) {
-          console.error(
+          logger.error(
             `   ❌ All retries failed for batch [${indices.join(', ')}]. Leaving colors as null. Last error:`,
             lastError
           );
@@ -389,27 +402,30 @@ Return STRICT JSON with this shape:
 
       // Process batches sequentially to control TPM
       for (let i = 0; i < batches.length; i++) {
-        console.log(
+        logger.debug(
           `   🎯 Processing color batch ${i + 1}/${batches.length} (size=${batches[i].length})`
         );
         try {
           await processBatch(batches[i], indexBatches[i]);
         } catch (batchError) {
-          console.error(
-            `   ❌ Batch ${i + 1} failed completely, leaving colors as null for these images:`,
-            indexBatches[i],
-            batchError
+          pino.error(
+            {
+              err: batchError,
+              batchIndex: i + 1,
+              imageIndices: indexBatches[i],
+            },
+            'Color batch failed; leaving colors null for these images'
           );
           // Colors are already null for these indices, so we just continue
         }
       }
 
-      console.log(
+      logger.debug(
         `   ✅ Color analysis completed for ${imageUrls.length} images (batched)`
       );
       return colorResults;
     } catch (error) {
-      console.error('Error analyzing image colors:', error);
+      logServerError('Error analyzing image colors:', error);
 
       // Return null colors for all images if analysis fails
       return imageUrls.map(url => ({ url, color: null }));

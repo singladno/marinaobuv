@@ -1,4 +1,5 @@
 import { prisma } from './db-node';
+import { logger, logServerError } from '@/lib/server/logger';
 
 /**
  * Generates a unique item code for order items
@@ -31,7 +32,7 @@ export async function generateItemCode(): Promise<string> {
 
     return itemId;
   } catch (error) {
-    console.error('Error generating item ID:', error);
+    logServerError('Error generating item ID:', error);
 
     // Fallback: find the highest existing item code and increment
     const lastItem = await prisma.orderItem.findFirst({

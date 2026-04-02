@@ -1,4 +1,5 @@
 import { env } from '@/lib/env';
+import { logger } from '@/lib/server/logger';
 
 export interface SmsProvider {
   send(toPhoneE164: string, message: string): Promise<void>;
@@ -51,7 +52,7 @@ export function getSmsProvider(): SmsProvider {
 
   // Check if we're in development mode and SMS.ru is not configured
   if (process.env.NODE_ENV === 'development') {
-    console.warn(
+    logger.warn(
       '⚠️  SMS.ru sender not configured. Using console fallback for development.'
     );
     return new ConsoleSmsProvider();
@@ -60,7 +61,7 @@ export function getSmsProvider(): SmsProvider {
   // In production, check if we should use console fallback
   // This can be controlled by SMS_USE_CONSOLE environment variable
   if (env.SMS_USE_CONSOLE === 'true') {
-    console.warn(
+    logger.warn(
       '⚠️  SMS_USE_CONSOLE=true. Using console fallback for SMS in production.'
     );
     return new ConsoleSmsProvider();
@@ -72,9 +73,9 @@ export function getSmsProvider(): SmsProvider {
 // Console provider for development and production fallback
 class ConsoleSmsProvider implements SmsProvider {
   async send(toPhoneE164: string, message: string): Promise<void> {
-    console.log(`📱 [SMS] → ${toPhoneE164}: ${message}`);
-    console.log('⚠️  SMS.ru sender not configured. Using console fallback.');
-    console.log(
+    logger.debug(`📱 [SMS] → ${toPhoneE164}: ${message}`);
+    logger.debug('⚠️  SMS.ru sender not configured. Using console fallback.');
+    logger.debug(
       '🔧 To enable real SMS sending, configure SMS.ru sender in dashboard.'
     );
   }

@@ -2,6 +2,7 @@ import { generateItemCode } from '@/lib/itemCodeGenerator';
 import { generateOrderNumber } from '@/lib/order-number-generator';
 import { scriptPrisma as prisma } from '@/lib/script-db';
 import { emailService } from '@/lib/server/email';
+import { logger, logServerError } from '@/lib/server/logger';
 
 interface CreateOrderItem {
   slug?: string;
@@ -215,7 +216,7 @@ export async function createOrder(
       );
     }
   } catch (error) {
-    console.error('Failed to send order confirmation email:', error);
+    logServerError('Failed to send order confirmation email:', error);
     // Don't fail order creation if email fails
   }
 

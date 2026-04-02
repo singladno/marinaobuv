@@ -4,6 +4,7 @@
  */
 
 import { env } from './env';
+import { logger, logServerError } from '@/lib/server/logger';
 
 interface TelegramMessage {
   message_id: number;
@@ -74,7 +75,7 @@ export class TelegramFetcher {
 
       return `https://api.telegram.org/file/bot${this.botToken}/${data.result.file_path}`;
     } catch (error) {
-      console.error('Error getting file URL:', error);
+      logServerError('Error getting file URL:', error);
       return null;
     }
   }
@@ -98,7 +99,7 @@ export class TelegramFetcher {
       (Date.now() - hoursBack * 60 * 60 * 1000) / 1000
     );
 
-    console.log(
+    logger.debug(
       `[Telegram] Fetching messages from channel: ${targetChannel} (last ${hoursBack} hours)`
     );
 
@@ -156,12 +157,12 @@ export class TelegramFetcher {
           break;
         }
       } catch (error) {
-        console.error('[Telegram] Error fetching messages:', error);
+        logServerError('[Telegram] Error fetching messages:', error);
         break;
       }
     }
 
-    console.log(
+    logger.debug(
       `[Telegram] Fetched ${allMessages.length} messages from channel ${targetChannel}`
     );
     return allMessages;
@@ -185,7 +186,7 @@ export class TelegramFetcher {
     // Normalize channel username (remove @ if present)
     const normalizedUsername = channelUsername.replace('@', '');
 
-    console.log(
+    logger.debug(
       `[Telegram] Fetching messages from channel: @${normalizedUsername} (last ${hoursBack} hours)`
     );
 
@@ -245,11 +246,11 @@ export class TelegramFetcher {
         }
       }
     } catch (error) {
-      console.error('[Telegram] Error fetching channel messages:', error);
+      logServerError('[Telegram] Error fetching channel messages:', error);
       throw error;
     }
 
-    console.log(
+    logger.debug(
       `[Telegram] Fetched ${allMessages.length} messages from channel @${normalizedUsername}`
     );
     return allMessages;

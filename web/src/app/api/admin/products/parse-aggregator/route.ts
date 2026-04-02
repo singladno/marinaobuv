@@ -27,6 +27,7 @@ import {
 } from '@/lib/services/product-creation-mappers';
 import { normalizeToStandardColor } from '@/lib/constants/colors';
 import { detectMulticolorPackWithGroq } from '@/lib/services/multicolor-pack-detection';
+import { logger } from '@/lib/server/logger';
 
 interface PlaywrightResult {
   html: string;
@@ -491,7 +492,7 @@ export async function POST(req: NextRequest) {
     if (isMulticolorPack) {
       const mc = normalizeToStandardColor('разноцветный') ?? 'разноцветный';
       colorResults = imageUrls.map(url => ({ url, color: mc }));
-      console.log(
+      logger.debug(
         `🎨 Aggregator: multicolor pack (LLM) — skipped per-image color analysis, using ${mc}`
       );
     } else {

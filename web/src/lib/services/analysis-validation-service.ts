@@ -1,4 +1,5 @@
 import type { AnalysisResult } from '@/lib/types/analysis-result';
+import { logger } from '@/lib/server/logger';
 
 /**
  * Service for validating analysis results
@@ -14,7 +15,7 @@ export class AnalysisValidationService {
       result.name !== undefined &&
       result.name.trim() === ''
     ) {
-      console.log(
+      logger.debug(
         '❌ Validation failed: Empty product name (should be null if not provided)'
       );
       return false;
@@ -27,7 +28,7 @@ export class AnalysisValidationService {
       result.description !== null &&
       result.description.trim() === ''
     ) {
-      console.log(
+      logger.debug(
         '❌ Validation failed: Empty product description (should be null if not provided)'
       );
       return false;
@@ -35,18 +36,18 @@ export class AnalysisValidationService {
 
     // Check if price is missing - this should skip the group, not fail validation
     if (result.price === undefined || result.price === null) {
-      console.log('⚠️ Skipping group: No price returned from LLM analysis');
+      logger.debug('⚠️ Skipping group: No price returned from LLM analysis');
       return false;
     }
 
     if (result.price < 0) {
-      console.log('❌ Validation failed: Negative price not allowed');
+      logger.debug('❌ Validation failed: Negative price not allowed');
       return false;
     }
 
     // Allow price 0 for now, but log a warning
     if (result.price === 0) {
-      console.log('⚠️ Warning: Price is 0, this might need manual review');
+      logger.debug('⚠️ Warning: Price is 0, this might need manual review');
     }
 
     return true;
@@ -57,13 +58,13 @@ export class AnalysisValidationService {
    */
   private validateSizes(result: AnalysisResult): boolean {
     if (!result.sizes || result.sizes.length === 0) {
-      console.log('❌ Validation failed: Missing sizes');
+      logger.debug('❌ Validation failed: Missing sizes');
       return false;
     }
 
     for (const size of result.sizes) {
       if (!size.size || !size.count || size.count <= 0) {
-        console.log('❌ Validation failed: Invalid size structure');
+        logger.debug('❌ Validation failed: Invalid size structure');
         return false;
       }
     }
@@ -77,7 +78,7 @@ export class AnalysisValidationService {
   private validateCategoryFields(result: AnalysisResult): boolean {
     // If categoryId is provided, it should be a valid string
     if (result.categoryId && typeof result.categoryId !== 'string') {
-      console.log('❌ Validation failed: categoryId must be a string');
+      logger.debug('❌ Validation failed: categoryId must be a string');
       return false;
     }
 
@@ -87,21 +88,21 @@ export class AnalysisValidationService {
         !result.newCategory.name ||
         typeof result.newCategory.name !== 'string'
       ) {
-        console.log('❌ Validation failed: newCategory.name is required');
+        logger.debug('❌ Validation failed: newCategory.name is required');
         return false;
       }
       if (
         !result.newCategory.slug ||
         typeof result.newCategory.slug !== 'string'
       ) {
-        console.log('❌ Validation failed: newCategory.slug is required');
+        logger.debug('❌ Validation failed: newCategory.slug is required');
         return false;
       }
       if (
         result.newCategory.parentCategoryId &&
         typeof result.newCategory.parentCategoryId !== 'string'
       ) {
-        console.log(
+        logger.debug(
           '❌ Validation failed: newCategory.parentCategoryId must be a string'
         );
         return false;
@@ -127,7 +128,7 @@ export class AnalysisValidationService {
       return false;
     }
 
-    console.log('✅ Validation passed: All required fields present');
+    logger.debug('✅ Validation passed: All required fields present');
     return true;
   }
 }

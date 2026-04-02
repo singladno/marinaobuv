@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db-node';
 import { getWaChatIds } from '../../../../lib/env';
 import { extractNormalizedPhone } from '../../../../lib/utils/whatsapp-phone-extractor';
+import { logger, logServerError } from '@/lib/server/logger';
 
 /**
  * Green API Webhook Handler
@@ -13,8 +14,8 @@ export async function POST(request: NextRequest) {
     const typeWebhook = payload?.typeWebhook ?? 'unknown';
     const chatId = payload?.senderData?.chatId ?? 'unknown';
     // ASCII line for log grep (server logs)
-    console.log(`[WA webhook] type=${typeWebhook} chatId=${chatId}`);
-    console.log(
+    logger.debug(`[WA webhook] type=${typeWebhook} chatId=${chatId}`);
+    logger.debug(
       `🔔 Webhook: ${typeWebhook} from ${chatId}`
     );
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('❌ Green API webhook error:', error);
+    logServerError('❌ Green API webhook error:', error);
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
@@ -37,21 +38,21 @@ async function handleIncomingMessage(payload: any) {
   const { messageData, senderData, idMessage, timestamp } = payload;
 
   if (!messageData || !idMessage) {
-    console.log('⚠️  Invalid message data, skipping');
+    logger.debug('⚠️  Invalid message data, skipping');
     return;
   }
 
   // Extract chat ID and check if it's our target group
   const chatId = senderData?.chatId || null;
   if (!chatId) {
-    console.log('⚠️  No chat ID found, skipping');
+    logger.debug('⚠️  No chat ID found, skipping');
     return;
   }
 
   // Only save messages from configured chat IDs (WA_CHAT_IDS or TARGET_GROUP_ID)
   const allowedChatIds = getWaChatIds();
   if (allowedChatIds.length === 0 || !allowedChatIds.includes(chatId)) {
-    console.log(
+    logger.debug(
       `Webhook: skipped (chat ${chatId} not in WA_CHAT_IDS or no chats configured)`
     );
     return;
@@ -108,7 +109,7 @@ async function handleIncomingMessage(payload: any) {
     });
 
     if (existingMessage) {
-      console.log(`Message ${idMessage} already exists, skipping`);
+      logger.debug(`Message ${idMessage} already exists, skipping`);
       return;
     }
 
@@ -138,12 +139,12 @@ async function handleIncomingMessage(payload: any) {
       });
     }
 
-    console.log(`[WA webhook] saved message id=${idMessage}`);
-    console.log(
+    logger.debug(`[WA webhook] saved message id=${idMessage}`);
+    logger.debug(
       `✅ Successfully saved webhook message ${idMessage}${mediaUrl ? ` with media: ${mediaUrl}` : ''}`
     );
   } catch (error) {
-    console.error(`❌ Error processing webhook message ${idMessage}:`, error);
+    logServerError(`❌ Error processing webhook message ${idMessage}:`, error);
   }
 }
 

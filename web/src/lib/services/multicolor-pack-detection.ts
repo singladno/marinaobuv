@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk';
 import { groqChatCompletion } from './groq-api-wrapper';
 import { getTokenLogger } from '../utils/groq-token-logger';
+import { logger } from '@/lib/server/logger';
 
 /** WhatsApp pipeline: set in updateProductWithAnalysis from text-analysis JSON → Product.agLabels.waMulticolorPack */
 export function readWaMulticolorPackFromAgLabels(agLabels: unknown): boolean {
@@ -79,9 +80,9 @@ export async function detectMulticolorPackWithGroq(
     const parsed = JSON.parse(raw) as { multicolorPack?: unknown };
     return parsed.multicolorPack === true;
   } catch (e) {
-    console.warn(
-      `[multicolor-pack-detection] failed for ${operationId}, defaulting to false:`,
-      e
+    logger.warn(
+      { err: e, operationId },
+      `[multicolor-pack-detection] failed, defaulting to false`
     );
     return false;
   }

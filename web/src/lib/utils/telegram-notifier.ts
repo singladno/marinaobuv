@@ -4,6 +4,7 @@
  */
 
 import { env } from '../env';
+import { logger } from '@/lib/server/logger';
 
 interface TelegramConfig {
   botToken: string;
@@ -43,27 +44,27 @@ export class TelegramNotifier {
    */
   async sendMessage(message: string): Promise<void> {
     if (!this.config.enabled) {
-      console.log('📵 Telegram notifications disabled or not configured');
+      logger.debug('📵 Telegram notifications disabled or not configured');
       return;
     }
 
     if (this.config.chatIds.length === 0) {
-      console.log('📵 No Telegram chat IDs configured');
+      logger.debug('📵 No Telegram chat IDs configured');
       return;
     }
 
-    console.log(
+    logger.debug(
       `📱 Sending Telegram notifications to ${this.config.chatIds.length} chat(s)...`
     );
 
     for (const chatId of this.config.chatIds) {
       try {
         await this.sendToChat(chatId, message);
-        console.log(`✅ Telegram notification sent to chat ${chatId}`);
+        logger.debug(`✅ Telegram notification sent to chat ${chatId}`);
       } catch (error) {
-        console.error(
-          `❌ Failed to send Telegram notification to chat ${chatId}:`,
-          error
+        logger.error(
+          { err: error, chatId },
+          'Failed to send Telegram notification'
         );
       }
     }

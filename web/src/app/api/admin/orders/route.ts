@@ -4,6 +4,7 @@ import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth';
 import { emailService } from '@/lib/server/email';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logger } from '@/lib/server/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -236,7 +237,7 @@ export async function POST(req: NextRequest) {
           order.orderNumber,
           status
         );
-        console.log(
+        logger.debug(
           `✅ Email notification sent for order ${order.orderNumber} status change to ${status}`
         );
       } catch (error) {

@@ -4,6 +4,7 @@ import { Groq } from 'groq-sdk';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getGroqConfig } from '@/lib/groq-proxy-config';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logDebug, logError, logWarn } from '@/lib/server/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     // Fallback to llama-3.1-8b-instant if the larger model is not available
     const meditationModel =
       process.env.GROQ_MEDITATION_MODEL || 'llama-3.3-70b-versatile';
-    console.log('[meditation] Calling Groq API with model:', meditationModel);
+    logDebug('[meditation] Calling Groq API with model', meditationModel);
 
     let response;
     try {
@@ -53,10 +54,9 @@ export async function POST(req: NextRequest) {
         modelError?.message?.includes('decommissioned') ||
         modelError?.message?.includes('not found')
       ) {
-        console.warn(
-          '[meditation] Model',
-          meditationModel,
-          'not available, falling back to llama-3.1-8b-instant'
+        logWarn(
+          '[meditation] Model not available, falling back to llama-3.1-8b-instant',
+          meditationModel
         );
         response = await groq.chat.completions.create({
           model: 'llama-3.1-8b-instant',
@@ -81,23 +81,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(
-      '[meditation] Groq response:',
+    logDebug(
+      '[meditation] Groq response',
       JSON.stringify(response, null, 2)
     );
-    console.log('[meditation] Response choices:', response.choices);
-    console.log('[meditation] First choice:', response.choices?.[0]);
-    console.log(
-      '[meditation] First choice message:',
+    logDebug('[meditation] Response choices', response.choices);
+    logDebug('[meditation] First choice', response.choices?.[0]);
+    logDebug(
+      '[meditation] First choice message',
       response.choices?.[0]?.message
     );
-    console.log(
-      '[meditation] First choice content:',
+    logDebug(
+      '[meditation] First choice content',
       response.choices?.[0]?.message?.content
     );
 
     const rawContent = response.choices[0]?.message?.content?.trim() || '{}';
-    console.log('[meditation] Raw content:', rawContent);
+    logDebug('[meditation] Raw content', rawContent);
 
     let quoteData: { quote?: string; author?: string };
     try {
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
     const author = quoteData.author?.trim() || '';
 
     if (!quote) {
-      console.error(
+      logError(
         '[meditation] Empty quote received. Full response:',
         JSON.stringify(response, null, 2)
       );
@@ -128,8 +128,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log('[meditation] Generated quote:', quote);
-    console.log('[meditation] Author:', author);
+    logDebug('[meditation] Generated quote', quote);
+    logDebug('[meditation] Author', author);
 
     return NextResponse.json(
       {

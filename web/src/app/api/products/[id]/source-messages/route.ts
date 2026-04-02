@@ -5,6 +5,7 @@ import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { getPublicUrl } from '@/lib/storage';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logger } from '@/lib/server/logger';
 
 function formatWhatsAppChatLabel(chatId: string | null): string | null {
   if (!chatId || typeof chatId !== 'string') return null;
@@ -51,7 +52,7 @@ export async function GET(
       Array.isArray(product.sourceMessageIds) &&
       product.sourceMessageIds.length > 0
     ) {
-      console.log(
+      logger.debug(
         `Found ${product.sourceMessageIds.length} source message IDs for product ${product.id} (source: ${product.source})`
       );
 

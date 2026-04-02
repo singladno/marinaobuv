@@ -6,6 +6,7 @@
 
 import { prisma } from '../db-node';
 import { MessageGroup } from './groq-grouping-service';
+import { logger } from '@/lib/server/logger';
 
 export interface GroupingResult {
   groups: MessageGroup[];
@@ -186,7 +187,7 @@ export class RuleBasedGroupingService {
               ...imageIndices,
               ...textIndices
             );
-            console.log(
+            logger.debug(
               `  ✅ Created group ${group.groupId}: ${imageIndices.length} images + ${textIndices.length} texts`
             );
           }
@@ -196,13 +197,13 @@ export class RuleBasedGroupingService {
           if (imageStart > lastGroupEndIndex) {
             // This is at the end - leave unprocessed for next batch
             imageIndices.forEach(idx => ungroupedEndIds.add(messages[idx].id));
-            console.log(
+            logger.debug(
               `  ⚠️ Leaving ${imageIndices.length} images without text at end (starting at index ${imageStart}) - will process in next batch`
             );
           } else {
             // This is in the middle - mark as skipped (processed)
             imageIndices.forEach(idx => skippedIds.add(messages[idx].id));
-            console.log(
+            logger.debug(
               `  ⚠️ Skipping ${imageIndices.length} images without text in middle (starting at index ${imageStart}) - marking as processed`
             );
           }

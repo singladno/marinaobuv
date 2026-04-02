@@ -8,6 +8,7 @@ import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import { Api } from 'telegram/tl';
 import { env } from './env';
+import { logger, logServerError } from '@/lib/server/logger';
 
 interface TelegramMessageData {
   message_id: number;
@@ -81,7 +82,7 @@ export class TelegramMTProtoFetcher {
 
     // If not authorized, we need to authenticate
     if (!(await this.client.checkAuthorization())) {
-      console.log('[Telegram MTProto] Not authorized. Starting authentication...');
+      logger.debug('[Telegram MTProto] Not authorized. Starting authentication...');
       await this.client.sendCode(
         {
           apiId: this.apiId,
@@ -110,11 +111,11 @@ export class TelegramMTProtoFetcher {
 
       // Save session string for future use
       const newSessionString = this.client.session.save() as unknown as string;
-      console.log(
+      logger.debug(
         `[Telegram MTProto] Session string (save this to TELEGRAM_SESSION_STRING): ${newSessionString}`
       );
     } else {
-      console.log('[Telegram MTProto] Already authorized');
+      logger.debug('[Telegram MTProto] Already authorized');
     }
   }
 
@@ -151,7 +152,7 @@ export class TelegramMTProtoFetcher {
         return `document_${message.id}`;
       }
     } catch (error) {
-      console.error('[Telegram MTProto] Error getting media URL:', error);
+      logServerError('[Telegram MTProto] Error getting media URL:', error);
     }
 
     return null;
@@ -179,7 +180,7 @@ export class TelegramMTProtoFetcher {
     // Normalize channel username (remove @ if present)
     const normalizedUsername = channelUsername.replace('@', '');
 
-    console.log(
+    logger.debug(
       `[Telegram MTProto] Fetching messages from channel: @${normalizedUsername} (last ${hoursBack} hours)`
     );
 
@@ -344,12 +345,15 @@ export class TelegramMTProtoFetcher {
                       if (buffer && Buffer.isBuffer(buffer)) {
                         messageData.mediaBuffer = buffer;
                         messageData.mediaUrl = `telegram_photo_${msg.id}`; // Placeholder, will be replaced with S3 URL
-                        console.log(`[Telegram MTProto] Downloaded photo for message ${msg.id} (${buffer.length} bytes)`);
+                        logger.debug(`[Telegram MTProto] Downloaded photo for message ${msg.id} (${buffer.length} bytes)`);
                       }
                     } catch (error) {
                       // Download failed, but mark as photo anyway
                       messageData.mediaUrl = `telegram_photo_${msg.id}`;
-                      console.log(`[Telegram MTProto] Photo detected for ${msg.id}, download failed:`, error);
+                      logger.debug(
+                        { err: error, messageId: msg.id },
+                        '[Telegram MTProto] Photo download failed'
+                      );
                     }
                   }
                 }
@@ -377,13 +381,13 @@ export class TelegramMTProtoFetcher {
         }
       }
 
-      console.log(
+      logger.debug(
         `[Telegram MTProto] Fetched ${allMessages.length} messages from channel @${normalizedUsername}`
       );
 
       return allMessages;
     } catch (error) {
-      console.error('[Telegram MTProto] Error fetching messages:', error);
+      logServerError('[Telegram MTProto] Error fetching messages:', error);
       throw error;
     }
   }
@@ -459,13 +463,13 @@ export class TelegramMTProtoFetcher {
       });
 
       if (!messages || messages.length === 0) {
-        console.log(`⚠️ Could not find message ${messageId} in channel`);
+        logger.debug(`⚠️ Could not find message ${messageId} in channel`);
         return null;
       }
 
       const message = messages[0];
       if (!message.media) {
-        console.log(`⚠️ Message ${messageId} has no media`);
+        logger.debug(`⚠️ Message ${messageId} has no media`);
         return null;
       }
 
@@ -478,10 +482,7 @@ export class TelegramMTProtoFetcher {
 
       return null;
     } catch (error) {
-      console.error(
-        `[Telegram MTProto] Error downloading media for message ${messageId}:`,
-        error
-      );
+      logServerError(`[Telegram MTProto] Error downloading media for message ${messageId}:`, error);
       return null;
     }
   }

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/server/db';
 import { emailService } from '@/lib/server/email';
 import crypto from 'crypto';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logger } from '@/lib/server/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Send password reset email
     const resetLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
-    console.log('Password reset link:', resetLink);
+    logger.debug({ event: 'password_reset_email_prepared' }, 'password reset link generated');
 
     // Send email with reset link
     const emailSent = await emailService.sendPasswordResetEmail(

@@ -1,4 +1,5 @@
 import { putFromUrl, buildKey } from '../s3u';
+import { logger, logServerError } from '@/lib/server/logger';
 
 export interface ImageData {
   url: string;
@@ -28,7 +29,7 @@ export class ImageProcessingService {
         message.mediaUrl
       ) {
         try {
-          console.log(`     📸 Processing image from message ${message.id}...`);
+          logger.debug(`     📸 Processing image from message ${message.id}...`);
 
           // Upload to S3
           const extension = message.mediaMimeType
@@ -59,10 +60,7 @@ export class ImageProcessingService {
             color: imageColor?.color || null,
           });
         } catch (error) {
-          console.error(
-            `Error processing image from message ${message.id}:`,
-            error
-          );
+          logServerError(`Error processing image from message ${message.id}:`, error);
         }
       }
     }

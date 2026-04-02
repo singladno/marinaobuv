@@ -7,6 +7,7 @@ import { productInclude } from './product-includes';
 import { slugify } from '@/utils/slugify';
 import { generateArticleNumber } from '@/lib/services/product-creation-mappers';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logDebug, logger } from '@/lib/server/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -273,7 +274,7 @@ export async function POST(req: NextRequest) {
       if (actualProviderId) {
         productData.provider = { connect: { id: actualProviderId } };
       } else {
-        console.warn(
+        logger.warn(
           `Could not resolve provider for ${providerId}. Cannot set product provider.`
         );
       }
@@ -371,8 +372,15 @@ export async function PATCH(req: NextRequest) {
 
     // Debug: Log sizes if present
     if ('sizes' in rawUpdateData) {
-      console.log('[PATCH /api/admin/products] Updating sizes:', JSON.stringify(rawUpdateData.sizes));
-      console.log('[PATCH /api/admin/products] Sizes type:', typeof rawUpdateData.sizes, Array.isArray(rawUpdateData.sizes));
+      logDebug(
+        '[PATCH /api/admin/products] Updating sizes',
+        JSON.stringify(rawUpdateData.sizes)
+      );
+      logDebug(
+        '[PATCH /api/admin/products] Sizes type',
+        typeof rawUpdateData.sizes,
+        Array.isArray(rawUpdateData.sizes)
+      );
     }
 
     // Map relation IDs to relation updates if present
@@ -454,7 +462,7 @@ export async function PATCH(req: NextRequest) {
         if (actualProviderId) {
           updateData.provider = { connect: { id: actualProviderId } };
         } else {
-          console.warn(
+          logger.warn(
             `Could not resolve provider for ${rawUpdateData.providerId}. Cannot set product provider.`
           );
         }
@@ -469,8 +477,14 @@ export async function PATCH(req: NextRequest) {
 
     // Debug: Log final updateData
     if ('sizes' in updateData) {
-      console.log('[PATCH /api/admin/products] Final updateData.sizes:', JSON.stringify(updateData.sizes));
-      console.log('[PATCH /api/admin/products] updateData keys:', Object.keys(updateData));
+      logDebug(
+        '[PATCH /api/admin/products] Final updateData.sizes',
+        JSON.stringify(updateData.sizes)
+      );
+      logDebug(
+        '[PATCH /api/admin/products] updateData keys',
+        Object.keys(updateData)
+      );
     }
 
     // Update the product

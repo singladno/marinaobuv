@@ -7,6 +7,7 @@ import { compare } from 'bcryptjs';
 import { env } from '@/lib/env';
 import { normalizePhoneToE164 } from '@/lib/server/sms';
 import { extractNormalizedPhone } from '@/lib/utils/whatsapp-phone-extractor';
+import { logger, logServerError } from '@/lib/server/logger';
 
 // Extend NextAuth types
 declare module 'next-auth' {
@@ -202,7 +203,7 @@ export const authOptions: NextAuthOptions = {
               },
             });
 
-            console.log(
+            logger.debug(
               `✅ Linked Google OAuth to existing user: ${user.email}`
             );
           } else {
@@ -238,10 +239,10 @@ export const authOptions: NextAuthOptions = {
               },
             });
 
-            console.log(`✅ Created new user from Google OAuth: ${user.email}`);
+            logger.debug(`✅ Created new user from Google OAuth: ${user.email}`);
           }
         } catch (error) {
-          console.error('Error handling Google OAuth sign-in:', error);
+          logServerError('Error handling Google OAuth sign-in:', error);
           return false;
         }
       }
@@ -317,7 +318,7 @@ export const authOptions: NextAuthOptions = {
           token.providerId = dbUser.providerId;
         }
       } catch (error) {
-        console.error('Error refreshing JWT user role from database:', error);
+        logServerError('Error refreshing JWT user role from database:', error);
       }
 
       return token;

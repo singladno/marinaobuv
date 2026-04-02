@@ -5,6 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { logger } from '@/lib/server/logger';
 
 export interface TokenUsageLog {
   timestamp: string;
@@ -48,8 +49,8 @@ class GroqTokenLogger {
     // Open write stream for appending
     this.logStream = fs.createWriteStream(this.logFile, { flags: 'a' });
 
-    console.log(`📊 Token usage logging to: ${this.logFile}`);
-    console.log(`📊 Latest token usage also saved to: ${latestFile}`);
+    logger.debug(`📊 Token usage logging to: ${this.logFile}`);
+    logger.debug(`📊 Latest token usage also saved to: ${latestFile}`);
   }
 
   /**
@@ -90,7 +91,7 @@ class GroqTokenLogger {
     this.updateFullLogFile();
 
     // Console output for immediate visibility
-    console.log(
+    logger.debug(
       `📊 Token Usage [${operation}]: Input=${inputTokens}, Output=${outputTokens}, Total=${totalTokens}, Ratio=${logEntry.inputToOutputRatio}:1`
     );
   }
@@ -106,7 +107,7 @@ class GroqTokenLogger {
       // Write complete array to latest file
       fs.writeFileSync(latestFile, JSON.stringify(this.logs, null, 2));
     } catch (error) {
-      console.error('Error updating full log file:', error);
+      logger.error({ err: error }, 'Error updating full log file');
     }
   }
 
@@ -190,29 +191,29 @@ class GroqTokenLogger {
   printSummary(): void {
     const summary = this.getSummary();
 
-    console.log('\n📊 ===== GROQ TOKEN USAGE SUMMARY =====');
-    console.log(`Total API Calls: ${summary.totalCalls}`);
-    console.log(`Total Input Tokens: ${summary.totalInputTokens.toLocaleString()}`);
-    console.log(`Total Output Tokens: ${summary.totalOutputTokens.toLocaleString()}`);
-    console.log(`Total Tokens: ${summary.totalTokens.toLocaleString()}`);
-    console.log(`\nAverage Input Tokens: ${summary.averageInputTokens.toLocaleString()}`);
-    console.log(`Average Output Tokens: ${summary.averageOutputTokens.toLocaleString()}`);
-    console.log(`Average Input:Output Ratio: ${summary.averageRatio}:1`);
+    logger.debug('\n📊 ===== GROQ TOKEN USAGE SUMMARY =====');
+    logger.debug(`Total API Calls: ${summary.totalCalls}`);
+    logger.debug(`Total Input Tokens: ${summary.totalInputTokens.toLocaleString()}`);
+    logger.debug(`Total Output Tokens: ${summary.totalOutputTokens.toLocaleString()}`);
+    logger.debug(`Total Tokens: ${summary.totalTokens.toLocaleString()}`);
+    logger.debug(`\nAverage Input Tokens: ${summary.averageInputTokens.toLocaleString()}`);
+    logger.debug(`Average Output Tokens: ${summary.averageOutputTokens.toLocaleString()}`);
+    logger.debug(`Average Input:Output Ratio: ${summary.averageRatio}:1`);
 
-    console.log('\n📊 By Operation:');
+    logger.debug('\n📊 By Operation:');
     Object.keys(summary.byOperation).forEach((op) => {
       const stats = summary.byOperation[op];
-      console.log(`  ${op}:`);
-      console.log(`    Calls: ${stats.count}`);
-      console.log(`    Avg Input: ${stats.avgInput.toLocaleString()} tokens`);
-      console.log(`    Avg Output: ${stats.avgOutput.toLocaleString()} tokens`);
-      console.log(`    Avg Ratio: ${stats.avgRatio}:1`);
+      logger.debug(`  ${op}:`);
+      logger.debug(`    Calls: ${stats.count}`);
+      logger.debug(`    Avg Input: ${stats.avgInput.toLocaleString()} tokens`);
+      logger.debug(`    Avg Output: ${stats.avgOutput.toLocaleString()} tokens`);
+      logger.debug(`    Avg Ratio: ${stats.avgRatio}:1`);
     });
 
-    console.log('\n📊 Groq Requirements Check:');
-    console.log(`  ✅ Average Input < 8K: ${summary.averageInputTokens < 8000 ? '✅ PASS' : '❌ FAIL'} (${summary.averageInputTokens} tokens)`);
-    console.log(`  ✅ Input:Output Ratio ~4:1: ${summary.averageRatio >= 3.5 && summary.averageRatio <= 4.5 ? '✅ PASS' : '⚠️  CHECK'} (${summary.averageRatio}:1)`);
-    console.log('=====================================\n');
+    logger.debug('\n📊 Groq Requirements Check:');
+    logger.debug(`  ✅ Average Input < 8K: ${summary.averageInputTokens < 8000 ? '✅ PASS' : '❌ FAIL'} (${summary.averageInputTokens} tokens)`);
+    logger.debug(`  ✅ Input:Output Ratio ~4:1: ${summary.averageRatio >= 3.5 && summary.averageRatio <= 4.5 ? '✅ PASS' : '⚠️  CHECK'} (${summary.averageRatio}:1)`);
+    logger.debug('=====================================\n');
   }
 
   /**

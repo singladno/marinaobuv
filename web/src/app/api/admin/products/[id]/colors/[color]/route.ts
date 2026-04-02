@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { prisma } from '@/lib/server/db';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logDebug } from '@/lib/server/logger';
 
 /**
  * PATCH /api/admin/products/[id]/colors/[color]
@@ -22,7 +23,7 @@ export async function PATCH(
     const productId = resolvedParams.id;
     const encodedColor = resolvedParams.color;
 
-    console.log('[Color Toggle API] Received params:', { productId, encodedColor });
+    logDebug('[Color Toggle API] Received params', { productId, encodedColor });
 
     const { isActive } = await req.json();
 
@@ -49,7 +50,7 @@ export async function PATCH(
       color = encodedColor;
     }
 
-    console.log('[Color Toggle API] Decoded color:', color);
+    logDebug('[Color Toggle API] Decoded color', color);
 
     // Verify product exists
     const product = await prisma.product.findUnique({

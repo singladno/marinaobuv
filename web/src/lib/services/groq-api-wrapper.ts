@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import { withRetry, type RetryOptions } from '@/utils/retry';
+import { logger } from '@/lib/server/logger';
 
 /**
  * Groq API Error Types
@@ -104,16 +105,16 @@ export async function executeGroqCall<T>(
 
         // Log specific error types
         if (message.includes('over capacity')) {
-          console.warn(
+          logger.warn(
             `⚠️ Groq API over capacity - will retry with exponential backoff`
           );
         } else if (message.includes('rate limit')) {
-          console.warn(`⚠️ Groq API rate limit - will retry with backoff`);
+          logger.warn(`⚠️ Groq API rate limit - will retry with backoff`);
         } else if (
           message.includes('context deadline exceeded') ||
           message.includes('deadline exceeded')
         ) {
-          console.warn(
+          logger.warn(
             `⚠️ Groq API context deadline exceeded (server timeout) - will retry with exponential backoff`
           );
         } else if (
@@ -121,7 +122,7 @@ export async function executeGroqCall<T>(
           message.includes('Failed to validate JSON') ||
           message.includes('Failed to generate JSON')
         ) {
-          console.warn(
+          logger.warn(
             `⚠️ Groq API JSON validation failed - will retry (transient error, may succeed on retry)`
           );
         }

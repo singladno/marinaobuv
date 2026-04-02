@@ -9,6 +9,7 @@ import { publicUrl } from '@/lib/s3u';
 import { env } from '@/lib/env';
 import { s3Client } from '@/lib/s3u';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logDebug, logWarn } from '@/lib/server/logger';
 
 interface ExportFile {
   filename: string;
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
     // Get files from S3 (primary source)
     if (s3Client) {
       try {
-        console.log('🔍 Listing S3 exports from bucket:', env.S3_BUCKET);
+        logDebug('🔍 Listing S3 exports from bucket', env.S3_BUCKET);
         const allObjects: any[] = [];
         let continuationToken: string | undefined;
 
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
           continuationToken = response.NextContinuationToken;
         } while (continuationToken);
 
-        console.log(`📦 Found ${allObjects.length} objects in S3 with prefix 'exports/products-export-'`);
+        logDebug(`📦 Found ${allObjects.length} objects in S3 with prefix 'exports/products-export-'`);
 
         for (const object of allObjects) {
           if (!object.Key) continue;
@@ -135,13 +136,13 @@ export async function GET(request: NextRequest) {
           });
         }
 
-        console.log(`✅ Processed ${exportsMap.size} export files from S3`);
+        logDebug(`✅ Processed ${exportsMap.size} export files from S3`);
       } catch (s3Error) {
         logRequestError(request, '/api/admin/products/export/list', s3Error, '❌ Error listing S3 exports:');
         // Continue with local files if S3 fails
       }
     } else {
-      console.warn('⚠️ S3 client not available, using local files only');
+      logWarn('⚠️ S3 client not available, using local files only');
     }
 
     // Also check local files (for backward compatibility and development)
@@ -257,7 +258,7 @@ export async function GET(request: NextRequest) {
       return b.timestamp.localeCompare(a.timestamp);
     });
 
-    console.log(`📊 Returning ${groupedExports.length} grouped export entries`);
+    logDebug(`📊 Returning ${groupedExports.length} grouped export entries`);
 
     return NextResponse.json({
       success: true,

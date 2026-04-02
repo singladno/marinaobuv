@@ -1,4 +1,5 @@
 import { prisma } from './db-node';
+import { logger, logServerError } from '@/lib/server/logger';
 
 /**
  * Generate a sequential order number
@@ -37,7 +38,7 @@ export async function generateOrderNumber(): Promise<string> {
 
     return orderNumber;
   } catch (error) {
-    console.error('Error generating order number:', error);
+    logServerError('Error generating order number:', error);
 
     // Fallback: find the highest existing order number and increment
     const lastOrder = await prisma.order.findFirst({

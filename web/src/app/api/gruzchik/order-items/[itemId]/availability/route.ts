@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logger } from '@/lib/server/logger';
 
 export async function PATCH(
   request: NextRequest,
@@ -44,7 +45,7 @@ export async function PATCH(
         },
       });
 
-      console.log(
+      logger.debug(
         `Product ${updatedItem.productId} deactivated due to availability set to false for order item ${itemId}`
       );
     } else if (isAvailable === true) {
@@ -57,7 +58,7 @@ export async function PATCH(
         },
       });
 
-      console.log(
+      logger.debug(
         `Product ${updatedItem.productId} activated due to availability set to true for order item ${itemId}`
       );
     }

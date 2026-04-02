@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
+import { logger, logServerError } from '@/lib/server/logger';
 
 const prisma = new PrismaClient();
 
@@ -217,11 +218,11 @@ export class DeduplicationService {
             where: { id: product.id },
           });
           deletedCount++;
-          console.log(
+          logger.debug(
             `🗑️  Deleted duplicate product: ${product.id} (${product.name})`
           );
         } catch (error) {
-          console.error(`❌ Error deleting product ${product.id}:`, error);
+          logServerError(`❌ Error deleting product ${product.id}:`, error);
         }
       }
     }
