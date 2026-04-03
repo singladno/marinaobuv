@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select';
+import {
   ArrowDownTrayIcon,
   ClockIcon,
   PlayIcon,
@@ -30,6 +37,15 @@ interface GroupedExport {
   };
 }
 
+const EXPORT_RANGE_LABELS: Record<'all' | '1d' | '3d' | '7d' | '30d', string> =
+  {
+    all: 'За всё время',
+    '1d': '1 день',
+    '3d': '3 дня',
+    '7d': '1 неделя',
+    '30d': '1 месяц',
+  };
+
 interface ExportStatus {
   lastExportDate: string | null;
   nextScheduledExport: string;
@@ -54,6 +70,9 @@ export default function AdminExportsPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [onlyNew, setOnlyNew] = useState(true);
+  const [exportRange, setExportRange] = useState<
+    'all' | '1d' | '3d' | '7d' | '30d'
+  >('all');
   const [updateKey, setUpdateKey] = useState(0); // Force re-render key
   const { addNotification } = useNotifications();
 
@@ -158,7 +177,10 @@ export default function AdminExportsPage() {
       const response = await fetch('/api/admin/exports/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ onlyNew }),
+        body: JSON.stringify({
+          onlyNew: exportRange === 'all' && onlyNew,
+          range: exportRange,
+        }),
       });
 
       if (!response.ok) {
@@ -398,13 +420,46 @@ export default function AdminExportsPage() {
             Управление экспортом товаров
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+            <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Период
+            </span>
+            <Select
+              value={exportRange}
+              onValueChange={v => {
+                setExportRange(v as 'all' | '1d' | '3d' | '7d' | '30d');
+                if (v !== 'all') setOnlyNew(false);
+              }}
+              disabled={
+                exporting || status?.currentExport?.status === 'running'
+              }
+            >
+              <SelectTrigger
+                className="w-full min-w-[13rem] disabled:cursor-not-allowed disabled:opacity-60 sm:w-56"
+                aria-label="Период экспорта"
+              >
+                <SelectValue placeholder="Выберите период">
+                  {EXPORT_RANGE_LABELS[exportRange]}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">За всё время</SelectItem>
+                <SelectItem value="1d">1 день</SelectItem>
+                <SelectItem value="3d">3 дня</SelectItem>
+                <SelectItem value="7d">1 неделя</SelectItem>
+                <SelectItem value="30d">1 месяц</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <label className="flex cursor-pointer items-center gap-2">
             <Checkbox
               checked={onlyNew}
               onCheckedChange={setOnlyNew}
               disabled={
-                exporting || status?.currentExport?.status === 'running'
+                exporting ||
+                status?.currentExport?.status === 'running' ||
+                exportRange !== 'all'
               }
             />
             <span className="text-sm text-gray-700 dark:text-gray-300">

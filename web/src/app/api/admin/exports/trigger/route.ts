@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
+import {
+  exportRangeToDates,
+  parseExportRangePreset,
+} from '@/lib/export-range-presets';
 import { logRequestError } from '@/lib/server/request-logging';
 import {
   exportProducts,
@@ -38,9 +42,24 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const onlyNew = body.onlyNew === true;
+    const preset = parseExportRangePreset(body.range ?? 'all');
+    if (preset === null) {
+      return NextResponse.json(
+        {
+          error: 'Invalid range',
+          message:
+            'Допустимые значения range: all, 1d, 3d, 7d, 30d',
+        },
+        { status: 400 }
+      );
+    }
 
-    // Get last export date if onlyNew is true
-    const lastExportDate = onlyNew ? getLastExportDate() : null;
+    const resolvedRange = exportRangeToDates(preset);
+    const dateFrom = resolvedRange?.dateFrom;
+    const dateTo = resolvedRange?.dateTo;
+
+    const useOnlyNew = !dateFrom || !dateTo ? onlyNew : false;
+    const lastExportDate = useOnlyNew ? getLastExportDate() : null;
 
     // Set status to running
     const startStatus: ExportStatusType = {
@@ -77,8 +96,10 @@ export async function POST(request: NextRequest) {
 
       const csvResult = await exportProducts({
         format: 'csv',
-        onlyNew,
+        onlyNew: useOnlyNew,
         lastExportDate: lastExportDate || undefined,
+        dateFrom,
+        dateTo,
         sharedTimestamp,
       });
 
@@ -94,8 +115,10 @@ export async function POST(request: NextRequest) {
 
       const xmlResult = await exportProducts({
         format: 'xml',
-        onlyNew,
+        onlyNew: useOnlyNew,
         lastExportDate: lastExportDate || undefined,
+        dateFrom,
+        dateTo,
         sharedTimestamp,
       });
 
@@ -147,7 +170,12 @@ export async function POST(request: NextRequest) {
       throw error;
     }
   } catch (error) {
-    logRequestError(request, '/api/admin/exports/trigger', error, 'Error triggering export:');
+    logRequestError(
+      request,
+      '/api/admin/exports/trigger',
+      error,
+      'Error triggering export:'
+    );
     return NextResponse.json(
       {
         error: 'Failed to trigger export',

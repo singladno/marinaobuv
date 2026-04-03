@@ -4,10 +4,16 @@ import fs from 'fs';
 import path from 'path';
 
 import { authOptions } from '@/lib/auth';
+import {
+  exportRangeToDates,
+  parseExportRangePreset,
+} from '@/lib/export-range-presets';
 import { logRequestError } from '@/lib/server/request-logging';
 import {
   exportProducts,
   getLastExportDate,
+  parseExportDayEnd,
+  parseExportDayStart,
   saveLastExportDate,
   type ExportOptions,
 } from '@/lib/services/product-export-service';
@@ -29,14 +35,66 @@ export async function GET(request: NextRequest) {
     const format = (searchParams.get('format') || 'csv') as 'csv' | 'xml';
     const onlyNew = searchParams.get('onlyNew') === 'true';
     const download = searchParams.get('download') !== 'false'; // Default to true
+    const rangeRaw = searchParams.get('range');
+    const dateFromParam = searchParams.get('dateFrom');
+    const dateToParam = searchParams.get('dateTo');
+
+    let dateFrom: Date | undefined;
+    let dateTo: Date | undefined;
+
+    if (rangeRaw !== null) {
+      const preset = parseExportRangePreset(rangeRaw);
+      if (preset === null) {
+        return NextResponse.json(
+          {
+            error: 'Invalid range',
+            message:
+              'Допустимые значения range: all, 1d, 3d, 7d, 30d',
+          },
+          { status: 400 }
+        );
+      }
+      const resolved = exportRangeToDates(preset);
+      if (resolved) {
+        dateFrom = resolved.dateFrom;
+        dateTo = resolved.dateTo;
+      }
+    } else if (dateFromParam ?? dateToParam) {
+      if (!dateFromParam || !dateToParam) {
+        return NextResponse.json(
+          {
+            error: 'Invalid date range',
+            message:
+              'Укажите оба параметра dateFrom и dateTo (формат YYYY-MM-DD)',
+          },
+          { status: 400 }
+        );
+      }
+      const from = parseExportDayStart(dateFromParam);
+      const to = parseExportDayEnd(dateToParam);
+      if (!from || !to) {
+        return NextResponse.json(
+          {
+            error: 'Invalid date range',
+            message: 'Некорректные dateFrom или dateTo (ожидается YYYY-MM-DD)',
+          },
+          { status: 400 }
+        );
+      }
+      dateFrom = from;
+      dateTo = to;
+    }
 
     // Build export options
     const options: ExportOptions = {
       format,
-      onlyNew,
+      onlyNew: dateFrom && dateTo ? false : onlyNew,
     };
 
-    if (onlyNew) {
+    if (dateFrom && dateTo) {
+      options.dateFrom = dateFrom;
+      options.dateTo = dateTo;
+    } else if (onlyNew) {
       const lastExportDate = getLastExportDate();
       if (lastExportDate) {
         options.lastExportDate = lastExportDate;
@@ -77,7 +135,12 @@ export async function GET(request: NextRequest) {
       exportedAt: result.exportedAt,
     });
   } catch (error) {
-    logRequestError(request, '/api/admin/products/export', error, 'Error exporting products:');
+    logRequestError(
+      request,
+      '/api/admin/products/export',
+      error,
+      'Error exporting products:'
+    );
     return NextResponse.json(
       {
         error: 'Failed to export products',

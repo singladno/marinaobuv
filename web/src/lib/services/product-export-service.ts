@@ -8,9 +8,30 @@ export interface ExportOptions {
   format: 'csv' | 'xml';
   onlyNew?: boolean; // Only export products created/updated since last export
   lastExportDate?: Date;
+  /** If set, onlyNew / lastExportDate are ignored (calendar UTC days or rolling window from API) */
+  dateFrom?: Date;
+  dateTo?: Date;
   outputPath?: string; // Optional file path to save export
   uploadToS3?: boolean; // Upload to S3 after creating file (default: true)
   sharedTimestamp?: string; // Shared timestamp for grouping CSV and XML from same export run
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Parse YYYY-MM-DD as start of that calendar day (UTC). */
+export function parseExportDayStart(isoDate: string): Date | null {
+  const s = isoDate.trim();
+  if (!ISO_DAY.test(s)) return null;
+  const d = new Date(`${s}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Parse YYYY-MM-DD as end of that calendar day (UTC). */
+export function parseExportDayEnd(isoDate: string): Date | null {
+  const s = isoDate.trim();
+  if (!ISO_DAY.test(s)) return null;
+  const d = new Date(`${s}T23:59:59.999Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 export interface ExportResult {
@@ -131,8 +152,8 @@ async function exportToCsv(products: any[], outputPath: string): Promise<void> {
       : '';
 
     const sectionId =
-      (product.category as { legacySectionId?: string | null })?.legacySectionId ??
-      '';
+      (product.category as { legacySectionId?: string | null })
+        ?.legacySectionId ?? '';
 
     return [
       product.id,
@@ -188,8 +209,8 @@ async function exportToXml(products: any[], outputPath: string): Promise<void> {
     );
     xmlLines.push(`    <category>${escapeXmlValue(categoryPath)}</category>`);
     const sectionId =
-      (product.category as { legacySectionId?: string | null })?.legacySectionId ??
-      '';
+      (product.category as { legacySectionId?: string | null })
+        ?.legacySectionId ?? '';
     xmlLines.push(`    <sectionid>${escapeXmlValue(sectionId)}</sectionid>`);
     xmlLines.push(`    <price>${Number(product.pricePair)}</price>`);
     xmlLines.push(
@@ -239,8 +260,15 @@ async function exportToXml(products: any[], outputPath: string): Promise<void> {
 export async function exportProducts(
   options: ExportOptions
 ): Promise<ExportResult> {
-  const { format, onlyNew, lastExportDate, outputPath, sharedTimestamp } =
-    options;
+  const {
+    format,
+    onlyNew,
+    lastExportDate,
+    outputPath,
+    sharedTimestamp,
+    dateFrom,
+    dateTo,
+  } = options;
 
   // Build query conditions
   const where: any = {
@@ -256,8 +284,24 @@ export async function exportProducts(
     ],
   };
 
-  // If only exporting new products, filter by date
-  if (onlyNew && lastExportDate) {
+  const hasRange =
+    dateFrom instanceof Date &&
+    dateTo instanceof Date &&
+    !Number.isNaN(dateFrom.getTime()) &&
+    !Number.isNaN(dateTo.getTime());
+
+  if (hasRange) {
+    if (dateFrom > dateTo) {
+      throw new Error('dateFrom must be on or before dateTo');
+    }
+    // Include if created in [from, to] OR updated in [from, to] (inclusive UTC days)
+    where.AND.push({
+      OR: [
+        { createdAt: { gte: dateFrom, lte: dateTo } },
+        { updatedAt: { gte: dateFrom, lte: dateTo } },
+      ],
+    });
+  } else if (onlyNew && lastExportDate) {
     where.AND.push({
       OR: [
         { createdAt: { gte: lastExportDate } },
