@@ -438,14 +438,17 @@ main() {
 
     # Build the application while old instance is still running
     # The old instance uses its own .next directory in memory, so this won't affect it
+    # Use pipefail so a failed `next build` is not masked by `tee` (pipeline would otherwise exit 0).
     echo "🔨 Running production build (old instance continues serving)..."
-    cd web
-    timeout 1800 npm run build 2>&1 | tee /tmp/build.log || {
+    (
+      set -o pipefail
+      cd web
+      timeout 1800 npm run build 2>&1 | tee /tmp/build.log
+    ) || {
         echo "❌ Build failed or timed out"
         tail -50 /tmp/build.log || true
         exit 1
     }
-    cd ..
 
     # Verify build was successful
     if [ ! -f "web/.next/BUILD_ID" ]; then
