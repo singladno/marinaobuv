@@ -40,20 +40,16 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    // First, get all product IDs to filter out orphaned order items
-    const validProductIds = await prisma.product.findMany({
-      select: { id: true },
-    });
-    const validProductIdSet = new Set(validProductIds.map(p => p.id));
-
+    // Only include line items whose Product row still exists (orphan rows have no FK target).
+    // Do not use productId: { in: [...all ids] } — PostgreSQL caps bind parameters (~32767) and prod has more products.
     const [orders, gruzchiks] = await Promise.all([
       prisma.order.findMany({
         where: whereClause,
         include: {
           items: {
             where: {
-              productId: {
-                in: Array.from(validProductIdSet),
+              product: {
+                is: { id: { not: { equals: '' } } },
               },
             },
             include: {
@@ -241,7 +237,12 @@ export async function POST(req: NextRequest) {
           `✅ Email notification sent for order ${order.orderNumber} status change to ${status}`
         );
       } catch (error) {
-        logRequestError(req, '/api/admin/orders', error, `❌ Failed to send email notification for order ${order.orderNumber}:`);
+        logRequestError(
+          req,
+          '/api/admin/orders',
+          error,
+          `❌ Failed to send email notification for order ${order.orderNumber}:`
+        );
         // Don't fail the request if email fails
       }
     }
