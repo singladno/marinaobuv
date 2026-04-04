@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
+import { deduplicateRequest } from '@/lib/request-deduplication';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -104,8 +106,10 @@ function PurchaseDetailPageContent() {
           itemsWithSequentialIndexes.map((i: PurchaseItem) => i.sortIndex)
         ) !== JSON.stringify(data.items.map((i: PurchaseItem) => i.sortIndex))
       ) {
-        // Indexes need to be updated in database
-        await updateItemIndexes(itemsWithSequentialIndexes);
+        await updateItemIndexesIfChanged(
+          itemsWithSequentialIndexes,
+          data.items
+        );
       }
       setPurchase({
         ...data,
@@ -238,32 +242,42 @@ function PurchaseDetailPageContent() {
       }));
   };
 
-  const updateItemIndexes = async (items: PurchaseItem[]) => {
-    try {
-      // Update all items with new sequential indexes
-      const updatePromises = items.map((item, index) =>
-        fetch(`/api/admin/purchases/${params.id}/items/${item.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sortIndex: index + 1,
-          }),
-        })
-      );
+  /** Persist sort order — only PUT rows whose sortIndex changed (never call from inside setState; Strict Mode runs updaters twice). */
+  const updateItemIndexesIfChanged = async (
+    nextItems: PurchaseItem[],
+    previousItems: PurchaseItem[]
+  ) => {
+    const prevSortById = new Map(previousItems.map(i => [i.id, i.sortIndex]));
+    const toSync = nextItems.filter(
+      item => prevSortById.get(item.id) !== item.sortIndex
+    );
+    if (toSync.length === 0) return;
 
-      await Promise.all(updatePromises);
+    try {
+      await Promise.all(
+        toSync.map(item =>
+          fetch(`/api/admin/purchases/${params.id}/items/${item.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sortIndex: item.sortIndex }),
+          }).then(res => {
+            if (!res.ok) throw new Error('Failed to update sort index');
+            return res;
+          })
+        )
+      );
     } catch (err) {
       console.error('Failed to update item indexes:', err);
+      throw err;
     }
   };
 
   const handleItemsReordered = async (reorderedItems: PurchaseItem[]) => {
-    // Update the database
-    await updateItemIndexes(reorderedItems);
+    const previousItems = purchase?.items ?? [];
+    await updateItemIndexesIfChanged(reorderedItems, previousItems);
 
-    // Update the local state immediately for UI
     setPurchase(prev => {
       if (!prev) return null;
       return {
@@ -327,11 +341,11 @@ function PurchaseDetailPageContent() {
       }
 
       const updatedItem = await response.json();
-      // Trigger DnD-like animation BEFORE state update
+
       if (editingField.field === 'sortIndex' && purchase) {
         try {
           const sortedBefore = getSortedItems(purchase.items, purchase.id);
-          const destinationIndex = parseInt(editValue) - 1;
+          const destinationIndex = parseInt(editValue, 10) - 1;
           const overCandidate = sortedBefore[destinationIndex];
           if (overCandidate && overCandidate.id !== editingField.itemId) {
             handleDragEnd(
@@ -344,34 +358,35 @@ function PurchaseDetailPageContent() {
             );
           }
         } catch {}
-      }
-      setPurchase(prev => {
-        if (!prev) return null;
-        const updatedItems = prev.items.map(item =>
+
+        const previousItems = purchase.items;
+        const updatedItems = previousItems.map(item =>
           item.id === updatedItem.id ? updatedItem : item
         );
+        const recalculatedItems = recalculateIndexes(
+          updatedItems,
+          editingField.itemId,
+          parseInt(editValue, 10)
+        );
 
-        // Only recalculate indexes if sortIndex was changed
-        if (editingField.field === 'sortIndex') {
-          const recalculatedItems = recalculateIndexes(
-            updatedItems,
-            editingField.itemId,
-            parseInt(editValue)
+        await updateItemIndexesIfChanged(recalculatedItems, previousItems);
+
+        setPurchase(prev =>
+          prev ? { ...prev, items: recalculatedItems } : null
+        );
+      } else {
+        setPurchase(prev => {
+          if (!prev) return null;
+          const updatedItems = prev.items.map(item =>
+            item.id === updatedItem.id ? updatedItem : item
           );
-          // Update indexes in database only when sort order changes
-          updateItemIndexes(recalculatedItems);
-          return {
-            ...prev,
-            items: recalculatedItems,
-          };
-        } else {
-          // For other fields, just update the single item
           return {
             ...prev,
             items: updatedItems,
           };
-        }
-      });
+        });
+      }
+
       cancelFieldEdit();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update item');
@@ -482,22 +497,19 @@ function PurchaseDetailPageContent() {
         throw new Error('Failed to delete item');
       }
 
-      // Remove item from state
+      const previousItems = purchase?.items ?? [];
+      const remaining = previousItems.filter(item => item.id !== itemId);
+      const itemsWithRecalculatedIndexes = recalculateIndexes(remaining);
+
+      await updateItemIndexesIfChanged(itemsWithRecalculatedIndexes, remaining);
+
       setPurchase(prev => {
         if (!prev) return null;
-        const updatedItems = prev.items.filter(item => item.id !== itemId);
-
-        // Recalculate indexes for remaining items
-        const itemsWithRecalculatedIndexes = recalculateIndexes(updatedItems);
-
-        // Update indexes in database
-        updateItemIndexes(itemsWithRecalculatedIndexes);
-
         return {
           ...prev,
           items: itemsWithRecalculatedIndexes,
           _count: {
-            items: updatedItems.length,
+            items: remaining.length,
           },
         };
       });
@@ -524,7 +536,11 @@ function PurchaseDetailPageContent() {
   };
 
   useEffect(() => {
-    fetchPurchase();
+    const id = params.id;
+    if (!id || typeof id !== 'string') return;
+    void deduplicateRequest(`admin-purchase-detail-${id}`, () =>
+      fetchPurchase()
+    );
   }, [params.id]);
 
   if (loading) {
@@ -559,22 +575,26 @@ function PurchaseDetailPageContent() {
     <div className="space-y-6">
       {/* Smart Header */}
       <SmartHeader>
-        <div className="border-b bg-white px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
+        <div className="border-b bg-white px-4 py-3 sm:px-6 md:py-2.5 lg:py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between md:gap-3 lg:gap-4">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
               <Button
                 variant="ghost"
                 onClick={() => router.back()}
-                className="flex items-center gap-2"
+                className="flex shrink-0 items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Назад
               </Button>
-              <div>
-                <Text variant="h2" className="text-xl font-bold">
+              <div className="min-w-0">
+                {/* Explicit sizes: avoid Text h2's sm:text-3xl which was huge on iPad */}
+                <Text
+                  as="h1"
+                  className="text-lg font-bold leading-tight tracking-tight sm:text-xl md:text-lg md:leading-snug lg:text-xl"
+                >
                   {purchase.name}
                 </Text>
-                <Text className="text-muted-foreground">
+                <Text className="text-muted-foreground text-sm md:text-xs md:leading-tight">
                   {purchase._count.items} товаров
                 </Text>
               </div>
@@ -609,8 +629,8 @@ function PurchaseDetailPageContent() {
         </div>
       </SmartHeader>
 
-      {/* Content with spacing for fixed header on tablets/desktop */}
-      <div className="pt-0 md:pt-20">
+      {/* Content with spacing for fixed SmartHeader (tablet+); extra top pad on md so first card clears header */}
+      <div className="pt-0 md:pt-[5.25rem] lg:pt-20">
         {/* Items List */}
         {purchase.items.length === 0 ? (
           <Card className="p-8 text-center">
@@ -668,16 +688,13 @@ function PurchaseDetailPageContent() {
                             if (e.key === 'Enter') saveFieldEdit();
                             if (e.key === 'Escape') cancelFieldEdit();
                           }}
-                          className="h-8 w-auto px-2 py-1"
-                          style={{
-                            width: '42px',
-                          }}
+                          className="box-border h-8 w-16 min-w-16 max-w-16 px-1 py-1 text-center text-sm tabular-nums"
                           placeholder="#"
                           autoFocus
                         />
                       ) : (
                         <div
-                          className="flex h-8 w-[42px] cursor-pointer items-center justify-center rounded border border-gray-200 bg-gray-100 px-2 py-1 text-sm font-medium hover:border-gray-300 hover:bg-gray-200"
+                          className="flex h-8 w-16 min-w-16 max-w-16 cursor-pointer items-center justify-center rounded border border-gray-200 bg-gray-100 px-1 py-1 text-sm font-medium tabular-nums hover:border-gray-300 hover:bg-gray-200"
                           onClick={() =>
                             startFieldEdit(item.id, 'sortIndex', item.sortIndex)
                           }

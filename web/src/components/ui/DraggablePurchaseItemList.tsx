@@ -222,6 +222,7 @@ export function DraggablePurchaseItemList({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      autoScroll={false}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEndEvent}
       onDragCancel={() => {
@@ -262,7 +263,7 @@ export function DraggablePurchaseItemList({
             <div className="flex gap-4">
               <div className="flex-shrink-0">
                 <div className="mb-2 flex justify-center gap-2">
-                  <div className="flex h-8 w-[42px] items-center justify-center rounded border border-gray-200 bg-gray-100 px-2 py-1 text-sm font-medium">
+                  <div className="flex h-8 w-16 min-w-16 max-w-16 items-center justify-center rounded border border-gray-200 bg-gray-100 px-1 py-1 text-sm font-medium tabular-nums">
                     {sortedItems.find(item => item.id === activeId)?.sortIndex}
                   </div>
                 </div>

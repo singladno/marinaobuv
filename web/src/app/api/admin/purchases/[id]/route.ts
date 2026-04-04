@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { prismaProductSelectForPurchaseItem } from '@/lib/server/admin-purchase-selects';
 import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
@@ -23,18 +24,26 @@ export async function GET(
         id,
         createdById: session.user.id,
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
         items: {
-          include: {
+          orderBy: { sortIndex: 'asc' },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            price: true,
+            oldPrice: true,
+            sortIndex: true,
+            color: true,
+            productId: true,
             product: {
-              include: {
-                images: {
-                  orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
-                },
-              },
+              select: prismaProductSelectForPurchaseItem,
             },
           },
-          orderBy: { sortIndex: 'asc' },
         },
         _count: {
           select: { items: true },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { prismaProductSelectForPurchaseItem } from '@/lib/server/admin-purchase-selects';
 import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PUT(
@@ -50,11 +51,7 @@ export async function PUT(
       data: updateData,
       include: {
         product: {
-          include: {
-            images: {
-              orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
-            },
-          },
+          select: prismaProductSelectForPurchaseItem,
         },
       },
     });

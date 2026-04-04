@@ -457,6 +457,20 @@ main() {
         exit 1
     fi
 
+    # next start requires prerender-manifest.json; npm run build runs ensure-prerender-manifest.mjs,
+    # but re-run if someone invoked `next build` directly or output was incomplete
+    if [ ! -f "web/.next/prerender-manifest.json" ]; then
+        echo "⚠️  prerender-manifest.json missing after build — creating minimal manifest..."
+        node web/scripts/ensure-prerender-manifest.mjs || {
+            echo "❌ Could not ensure prerender-manifest.json — next start will crash"
+            exit 1
+        }
+    fi
+    if [ ! -f "web/.next/prerender-manifest.json" ]; then
+        echo "❌ prerender-manifest.json still missing — aborting deploy"
+        exit 1
+    fi
+
     BUILD_ID=$(cat web/.next/BUILD_ID)
     echo "✅ Build completed successfully (Build ID: $BUILD_ID)"
     if [ "$current_active" != "none" ]; then

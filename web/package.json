@@ -8,7 +8,7 @@
     "dev": "node scripts/dev-with-port.js & npm run lint:watch & npm run typecheck:watch",
     "lint:watch": "nodemon --watch src --ext ts,tsx,js,jsx --exec \"npm run lint\"",
     "docker:local": "docker-compose -f ../docker-compose.local.yml up -d && PORT=3000 next dev --turbopack",
-    "build": "next build",
+    "build": "next build && node scripts/ensure-prerender-manifest.mjs",
     "build:local": "next build",
     "start": "next start",
     "start:local": "next start",
