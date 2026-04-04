@@ -1,0 +1,25 @@
+# Example: run Groq parser on a dedicated worker (same host or second VM) under systemd
+# with CPU/memory caps. Copy to /etc/systemd/system/marinaobuv-parser.service, edit paths
+# and User=, then: sudo systemctl daemon-reload && sudo systemctl enable --now marinaobuv-parser.timer
+#
+# Prefer cron-only or a separate small VM; this is optional isolation on one machine.
+
+[Unit]
+Description=MarinaObuv Groq parser (one-shot)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/marinaobuv/web
+Environment=NODE_ENV=production
+# Load secrets: use EnvironmentFile=/var/www/marinaobuv/web/.env or a dedicated file.
+ExecStart=/usr/bin/env ./node_modules/.bin/tsx src/scripts/groq-sequential-cron.ts
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+MemoryMax=1G
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target

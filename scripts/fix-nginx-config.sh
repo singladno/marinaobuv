@@ -99,7 +99,7 @@ server {
 
     # Main application
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -115,7 +115,7 @@ server {
 
     # API routes
     location /api/ {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -125,7 +125,7 @@ server {
 
     # Static files with caching
     location /_next/static/ {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_cache_valid 200 1y;
         add_header Cache-Control "public, immutable";
         expires 1y;
@@ -133,7 +133,7 @@ server {
 
     # Health check
     location /health {
-        proxy_pass http://localhost:3000/api/health;
+        proxy_pass http://127.0.0.1:3000/api/health;
         access_log off;
     }
 }
@@ -146,6 +146,34 @@ EOF
         fi
         print_error "Nginx configuration test failed"
         exit 1
+    fi
+fi
+
+# Ensure main nginx.conf logs upstream_status (Yandex / 502 correlation). Idempotent.
+INJECT_PY="$SCRIPT_DIR/inject-nginx-with-upstream.py"
+if [ -f /etc/nginx/nginx.conf ] && ! sudo grep -q 'log_format with_upstream' /etc/nginx/nginx.conf 2>/dev/null; then
+    print_status "Adding log_format with_upstream to /etc/nginx/nginx.conf..."
+    STAMP_MAIN="$(date +%Y%m%d_%H%M%S)"
+    sudo cp /etc/nginx/nginx.conf "/etc/nginx/nginx.conf.backup.with_upstream.$STAMP_MAIN"
+    if [ ! -f "$INJECT_PY" ]; then
+        print_warning "inject-nginx-with-upstream.py missing — copy log_format from nginx/nginx.conf manually"
+    elif sudo python3 "$INJECT_PY"; then
+        if ! sudo nginx -t 2>/dev/null; then
+            print_error "nginx -t failed after with_upstream inject — restoring backup"
+            sudo mv "/etc/nginx/nginx.conf.backup.with_upstream.$STAMP_MAIN" /etc/nginx/nginx.conf
+            exit 1
+        fi
+        print_success "with_upstream log_format added (backup: /etc/nginx/nginx.conf.backup.with_upstream.$STAMP_MAIN)"
+    else
+        ec=$?
+        if [ "$ec" = 2 ]; then
+            print_warning "Could not inject with_upstream (no default_type line?) — merge from repo nginx/nginx.conf manually"
+            sudo mv "/etc/nginx/nginx.conf.backup.with_upstream.$STAMP_MAIN" /etc/nginx/nginx.conf 2>/dev/null || true
+        else
+            print_error "inject-nginx-with-upstream.py failed"
+            sudo mv "/etc/nginx/nginx.conf.backup.with_upstream.$STAMP_MAIN" /etc/nginx/nginx.conf 2>/dev/null || true
+            exit 1
+        fi
     fi
 fi
 

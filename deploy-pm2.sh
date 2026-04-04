@@ -208,6 +208,8 @@ sudo chown -R $USER:$USER /var/log/pm2
 # 14. Start or reload PM2 with ecosystem (main application only)
 print_status "Starting or reloading PM2 with ecosystem..."
 pm2 startOrReload $APP_DIR/ecosystem.config.js --env production --update-env
+# Parser uses cron only — never persist a PM2 groq-sequential process
+pm2 delete groq-sequential 2>/dev/null || true
 
 # 14.1. Verify main application is running
 print_status "Verifying main application is running..."
@@ -239,7 +241,7 @@ else
 server {
     listen 80;
     server_name marina-obuv.ru www.marina-obuv.ru;
-    
+
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -248,14 +250,14 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-XSS-Protection "1; mode=block" always;
-    
+
     # Rate limiting
     limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
     limit_req_zone \$binary_remote_addr zone=login:10m rate=1r/s;
-    
+
     # Main application
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -268,32 +270,32 @@ server {
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
     }
-    
+
     # API routes with rate limiting
     location /api/ {
         limit_req zone=api burst=20 nodelay;
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
-    
+
     # Static files with caching
     location /_next/static/ {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_cache_valid 200 1y;
         add_header Cache-Control "public, immutable";
         expires 1y;
     }
-    
+
     # Health check
     location /health {
-        proxy_pass http://localhost:3000/api/health;
+        proxy_pass http://127.0.0.1:3000/api/health;
         access_log off;
     }
-    
+
     # Gzip compression
     gzip on;
     gzip_vary on;
@@ -499,6 +501,7 @@ cd $APP_DIR
 if [ -f "scripts/install-crons.sh" ]; then
     bash scripts/install-crons.sh
     print_success "All cron jobs installed (parsing, queue polling, batch polling, backup, proxy monitoring)"
+    print_status "Parser: production uses scripts/cron-jobs.conf only (no PM2 groq-sequential)."
 else
     print_warning "Cron installation script not found"
 fi

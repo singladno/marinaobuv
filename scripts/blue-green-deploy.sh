@@ -130,7 +130,7 @@ server {
 
     # Main application - proxy to $target_color deployment
     location / {
-        proxy_pass http://localhost:$target_port;
+        proxy_pass http://127.0.0.1:$target_port;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -147,7 +147,7 @@ server {
     # API routes — admin first (higher limit); requires zone=admin_api in nginx.conf
     location /api/admin/ {
         limit_req zone=admin_api burst=300 nodelay;
-        proxy_pass http://localhost:$target_port;
+        proxy_pass http://127.0.0.1:$target_port;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -160,7 +160,7 @@ server {
 
     location /api/ {
         limit_req zone=api burst=80 nodelay;
-        proxy_pass http://localhost:$target_port;
+        proxy_pass http://127.0.0.1:$target_port;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -173,7 +173,7 @@ server {
 
     # Static files with caching
     location /_next/static/ {
-        proxy_pass http://localhost:$target_port;
+        proxy_pass http://127.0.0.1:$target_port;
         proxy_cache_valid 200 1y;
         add_header Cache-Control "public, immutable";
         expires 1y;
@@ -181,7 +181,7 @@ server {
 
     # Health check
     location /health {
-        proxy_pass http://localhost:$target_port/api/health;
+        proxy_pass http://127.0.0.1:$target_port/api/health;
         access_log off;
     }
 }
@@ -214,7 +214,7 @@ server {
 
     # Main application - proxy to active deployment
     location / {
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -231,7 +231,7 @@ server {
     # API routes — admin first (higher limit)
     location /api/admin/ {
         limit_req zone=admin_api burst=300 nodelay;
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -241,7 +241,7 @@ server {
 
     location /api/ {
         limit_req zone=api burst=80 nodelay;
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -251,7 +251,7 @@ server {
 
     # Health check
     location /health {
-        proxy_pass http://localhost:${target_port}/api/health;
+        proxy_pass http://127.0.0.1:${target_port}/api/health;
         access_log off;
     }
 }
@@ -285,7 +285,7 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     location / {
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -301,7 +301,7 @@ server {
 
     location /api/admin/ {
         limit_req zone=admin_api burst=300 nodelay;
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -314,7 +314,7 @@ server {
 
     location /api/ {
         limit_req zone=api burst=80 nodelay;
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -327,7 +327,7 @@ server {
 
     location /login {
         limit_req zone=login burst=5 nodelay;
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -336,7 +336,7 @@ server {
     }
 
     location /_next/static/ {
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -349,7 +349,7 @@ server {
     }
 
     location /_next/image {
-        proxy_pass http://localhost:${target_port};
+        proxy_pass http://127.0.0.1:${target_port};
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -358,7 +358,7 @@ server {
     }
 
     location /health {
-        proxy_pass http://localhost:${target_port}/api/health;
+        proxy_pass http://127.0.0.1:${target_port}/api/health;
         access_log off;
     }
 }
@@ -366,7 +366,8 @@ CONFDEOF
   else
     # Let's Encrypt not found: do not overwrite cert. Only update proxy port in existing conf.d HTTPS config.
     if [ -f /etc/nginx/conf.d/marinaobuv-https.conf ]; then
-      sudo sed -i "s|proxy_pass http://localhost:[0-9]*|proxy_pass http://localhost:${target_port}|g" /etc/nginx/conf.d/marinaobuv-https.conf
+      sudo sed -i "s|proxy_pass http://127.0.0.1:[0-9]*|proxy_pass http://127.0.0.1:${target_port}|g" /etc/nginx/conf.d/marinaobuv-https.conf
+      sudo sed -i "s|proxy_pass http://localhost:[0-9]*|proxy_pass http://127.0.0.1:${target_port}|g" /etc/nginx/conf.d/marinaobuv-https.conf
       echo "✅ Updated only proxy port to ${target_port} in conf.d HTTPS config (cert unchanged)"
     fi
   fi
@@ -518,6 +519,9 @@ main() {
     if [ "$current_active" != "none" ]; then
         stop_inactive_deployment "$current_active"
     fi
+
+    # Parser is cron-only — remove legacy PM2 name if present so it is never resurrected
+    pm2 delete groq-sequential 2>/dev/null || true
 
     # Save PM2 state
     pm2 save

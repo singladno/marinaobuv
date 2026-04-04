@@ -79,7 +79,7 @@ pm2 save || true
 log "Ensuring PM2 startup on boot (resurrect saved processes)"
 sudo env PATH="$PATH" pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
 
-# 4) Nginx: ensure proxy to localhost:3000 and fix configuration
+# 4) Nginx: ensure proxy to 127.0.0.1:3000 and fix configuration
 log "Fixing nginx configuration..."
 if [ -f "scripts/fix-nginx-config.sh" ]; then
   chmod +x scripts/fix-nginx-config.sh
@@ -104,9 +104,9 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -117,18 +117,18 @@ server {
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 86400;
     }
-    
+
     location /api/ {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-    
+
     location /health {
-        proxy_pass http://localhost:3000/api/health;
+        proxy_pass http://127.0.0.1:3000/api/health;
         access_log off;
     }
 }
@@ -223,5 +223,3 @@ fi
 sudo systemctl daemon-reload 2>/dev/null || true
 sudo systemctl enable marinaobuv-boot.service 2>/dev/null || true
 log "Systemd unit installed/enabled. Done."
-
-

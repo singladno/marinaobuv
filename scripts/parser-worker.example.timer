@@ -1,0 +1,16 @@
+# Example timer: every 4 hours, same schedule as JOB:parser-hourly in cron-jobs.conf.
+# Disable the cron job if you switch to this timer to avoid double runs.
+#
+# sudo cp scripts/parser-worker.example.service /etc/systemd/system/marinaobuv-parser.service
+# sudo cp scripts/parser-worker.example.timer /etc/systemd/system/marinaobuv-parser.timer
+# sudo systemctl daemon-reload && sudo systemctl enable --now marinaobuv-parser.timer
+
+[Unit]
+Description=Run MarinaObuv Groq parser on a schedule
+
+[Timer]
+OnCalendar=*-*-* 00,04,08,12,16,20:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

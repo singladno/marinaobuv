@@ -336,7 +336,7 @@ server {
     client_max_body_size 20M;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -345,7 +345,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -354,7 +354,7 @@ server {
     }
 
     location /health {
-        proxy_pass http://localhost:3000/api/health;
+        proxy_pass http://127.0.0.1:3000/api/health;
         access_log off;
     }
 }
@@ -487,6 +487,10 @@ else
     fi
   done
 fi
+
+# Groq parser runs via cron only — drop legacy PM2 app if it was ever saved
+echo "🧹 Removing legacy groq-sequential from PM2 (parser is cron-only)..."
+pm2 delete groq-sequential 2>/dev/null || true
 
 # Save PM2 configuration
 pm2 save
