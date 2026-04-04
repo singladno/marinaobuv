@@ -72,10 +72,7 @@ export async function POST(
     });
 
     if (!order) {
-      return NextResponse.json(
-        { error: 'Заказ не найден' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
     }
 
     // Get product details
@@ -92,15 +89,66 @@ export async function POST(
     });
 
     if (!product) {
-      return NextResponse.json(
-        { error: 'Товар не найден' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Товар не найден' }, { status: 404 });
     }
 
     // Calculate box price
     const boxPrice = getBoxPriceFromPair(product.pricePair, product.sizes);
-    const itemTotal = boxPrice * qty;
+    const colorNorm = color ?? null;
+
+    const existingItem = await prisma.orderItem.findFirst({
+      where: {
+        orderId: id,
+        productId: product.id,
+        color: colorNorm,
+      },
+    });
+
+    if (existingItem) {
+      const newQty = existingItem.qty + qty;
+      const orderItem = await prisma.orderItem.update({
+        where: { id: existingItem.id },
+        data: { qty: newQty },
+        include: {
+          product: {
+            include: {
+              images: {
+                select: {
+                  id: true,
+                  url: true,
+                  alt: true,
+                  color: true,
+                },
+              },
+              provider: {
+                select: {
+                  id: true,
+                  name: true,
+                  phone: true,
+                  place: true,
+                  location: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const items = await prisma.orderItem.findMany({
+        where: { orderId: id },
+        select: { priceBox: true, qty: true },
+      });
+      const subtotal = items.reduce(
+        (sum, item) => sum + Number(item.priceBox) * item.qty,
+        0
+      );
+      await prisma.order.update({
+        where: { id },
+        data: { subtotal, total: subtotal },
+      });
+
+      return NextResponse.json(orderItem, { status: 200 });
+    }
 
     // Generate item code
     const itemCode = await generateItemCode();
@@ -115,7 +163,7 @@ export async function POST(
         article: product.article,
         priceBox: boxPrice,
         qty,
-        color: color ?? null,
+        color: colorNorm,
         itemCode,
       },
       include: {
@@ -143,16 +191,27 @@ export async function POST(
       },
     });
 
-    // Update order total
-    const newTotal = Number(order.total) + itemTotal;
+    const itemsAfter = await prisma.orderItem.findMany({
+      where: { orderId: id },
+      select: { priceBox: true, qty: true },
+    });
+    const subtotalAfter = itemsAfter.reduce(
+      (sum, item) => sum + Number(item.priceBox) * item.qty,
+      0
+    );
     await prisma.order.update({
       where: { id },
-      data: { total: newTotal },
+      data: { subtotal: subtotalAfter, total: subtotalAfter },
     });
 
     return NextResponse.json(orderItem, { status: 201 });
   } catch (error) {
-    logRequestError(request, '/api/admin/orders/[id]/items', error, 'Error adding item to order:');
+    logRequestError(
+      request,
+      '/api/admin/orders/[id]/items',
+      error,
+      'Error adding item to order:'
+    );
     return NextResponse.json(
       { error: 'Не удалось добавить товар в заказ' },
       { status: 500 }

@@ -36,6 +36,7 @@ import { MessagePreviewCompact } from '@/components/features/admin/MessagePrevie
 import { AdminReplacementModal } from '@/components/features/admin/AdminReplacementModal';
 import { ProductImageModal } from '@/components/features/ProductImageModal';
 import { AddProductsToOrderModal } from '@/components/features/admin/AddProductsToOrderModal';
+import { OptimisticEditableCell } from '@/components/features/OptimisticEditableCell';
 import { cn } from '@/lib/utils';
 import { formatOrderNumber } from '@/utils/orderNumberUtils';
 import {
@@ -374,12 +375,12 @@ export default function OrderDetailsPage() {
             return (
               <div
                 key={index}
-                className="flex aspect-square w-8 flex-shrink-0 flex-col items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-xs"
+                className="inline-flex min-h-[2.25rem] min-w-[2rem] flex-shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-xs"
               >
-                <span className="font-medium text-gray-900">
+                <span className="whitespace-nowrap text-center font-medium text-gray-900">
                   {sizeValue}
                 </span>
-                <span className="flex h-3 w-3 items-center justify-center rounded-full bg-purple-100 text-[10px] font-medium text-purple-700">
+                <span className="flex h-3 min-w-[0.75rem] shrink-0 items-center justify-center rounded-full bg-purple-100 px-0.5 text-[10px] font-medium text-purple-700">
                   {countValue}
                 </span>
               </div>
@@ -630,6 +631,39 @@ export default function OrderDetailsPage() {
         `Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
       );
     }
+  };
+
+  const handleOrderItemQtySave = async (
+    itemId: string,
+    newQty: number | null
+  ) => {
+    if (newQty === null || !Number.isInteger(newQty) || newQty < 1) {
+      throw new Error('Укажите целое количество не меньше 1');
+    }
+
+    const response = await fetch(`/api/admin/order-items/${itemId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ qty: newQty }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Не удалось обновить количество');
+    }
+
+    const data = await response.json();
+    setOrder(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        subtotal: data.order.subtotal,
+        total: data.order.total,
+        items: prev.items.map(i =>
+          i.id === itemId ? { ...i, qty: newQty } : i
+        ),
+      };
+    });
   };
 
   const handleImageClick = (item: OrderItem, imageIndex: number = 0) => {
@@ -903,7 +937,7 @@ export default function OrderDetailsPage() {
       </div>
 
       {/* Order Items */}
-      <Card className="mx-0 border-0 shadow-none md:mx-0 md:border md:border-gray-200 md:rounded-xl md:shadow-sm dark:md:border-gray-700">
+      <Card className="mx-0 border-0 shadow-none md:mx-0 md:rounded-xl md:border md:border-gray-200 md:shadow-sm dark:md:border-gray-700">
         <CardHeader className="border-b border-gray-200 px-4 py-3 sm:p-6 dark:border-gray-700">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -1004,7 +1038,7 @@ export default function OrderDetailsPage() {
                         Нет товаров, соответствующих выбранным фильтрам
                       </div>
                     ) : (
-                      filteredItems.map(item => (
+                      filteredItems.map((item, itemIndex) => (
                         <div
                           key={item.id}
                           className={cn(
@@ -1147,7 +1181,9 @@ export default function OrderDetailsPage() {
                                     rel="noopener noreferrer"
                                     className="group inline-flex items-start gap-1.5 transition-colors hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                                   >
-                                    <span className="break-words">{item.name}</span>
+                                    <span className="break-words">
+                                      {item.name}
+                                    </span>
                                     <ExternalLink className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
                                   </Link>
                                 </h3>
@@ -1198,10 +1234,25 @@ export default function OrderDetailsPage() {
                             <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-2 dark:border-gray-700">
                               <div>
                                 <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
-                                  Количество
+                                  № {itemIndex + 1} · Количество
                                 </div>
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {item.qty} шт.
+                                <div className="flex max-w-[11rem] flex-wrap items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
+                                  <OptimisticEditableCell
+                                    value={item.qty}
+                                    onSave={async v => {
+                                      const n =
+                                        typeof v === 'number' ? v : Number(v);
+                                      await handleOrderItemQtySave(item.id, n);
+                                    }}
+                                    type="number"
+                                    min={1}
+                                    step="1"
+                                    className="font-semibold"
+                                    aria-label={`Количество, позиция ${itemIndex + 1}`}
+                                  />
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    шт.
+                                  </span>
                                 </div>
                               </div>
                               <div>
@@ -1372,7 +1423,9 @@ export default function OrderDetailsPage() {
                                 <span>Предложить замену</span>
                               </Button>
                               <Button
-                                onClick={() => handleDeleteItem(item.id, item.name)}
+                                onClick={() =>
+                                  handleDeleteItem(item.id, item.name)
+                                }
                                 variant="outline"
                                 size="sm"
                                 className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20"
@@ -1399,6 +1452,9 @@ export default function OrderDetailsPage() {
                         {/* Header */}
                         <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
                           <tr>
+                            <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                              №
+                            </th>
                             <th className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
                               Код
                             </th>
@@ -1449,7 +1505,7 @@ export default function OrderDetailsPage() {
 
                         {/* Body */}
                         <tbody className="bg-white dark:bg-gray-900">
-                          {filteredItems.map(item => (
+                          {filteredItems.map((item, itemIndex) => (
                             <tr
                               key={item.id}
                               className={cn(
@@ -1465,6 +1521,9 @@ export default function OrderDetailsPage() {
                                   'bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/20 dark:hover:bg-orange-950/30'
                               )}
                             >
+                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-center text-sm tabular-nums text-gray-600 dark:border-gray-700 dark:text-gray-300">
+                                {itemIndex + 1}
+                              </td>
                               <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
                                 {item.itemCode || '—'}
                               </td>
@@ -1626,8 +1685,22 @@ export default function OrderDetailsPage() {
                                   </span>
                                 )}
                               </td>
-                              <td className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-sm text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                                {item.qty}
+                              <td className="border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+                                <div className="min-w-[5rem] max-w-[8rem]">
+                                  <OptimisticEditableCell
+                                    value={item.qty}
+                                    onSave={async v => {
+                                      const n =
+                                        typeof v === 'number' ? v : Number(v);
+                                      await handleOrderItemQtySave(item.id, n);
+                                    }}
+                                    type="number"
+                                    min={1}
+                                    step="1"
+                                    className="text-sm font-medium tabular-nums text-gray-900 dark:text-gray-100"
+                                    aria-label={`Количество, строка ${itemIndex + 1}`}
+                                  />
+                                </div>
                               </td>
                               <td className="border-b border-gray-200 px-4 py-4 dark:border-gray-700">
                                 {renderSizes(item.product.sizes)}
@@ -1755,7 +1828,9 @@ export default function OrderDetailsPage() {
                                     <span className="text-xs">Замена</span>
                                   </Button>
                                   <Button
-                                    onClick={() => handleDeleteItem(item.id, item.name)}
+                                    onClick={() =>
+                                      handleDeleteItem(item.id, item.name)
+                                    }
                                     variant="outline"
                                     size="sm"
                                     className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20"
