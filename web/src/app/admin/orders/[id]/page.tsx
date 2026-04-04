@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { HorizontalScrollEdgeHints } from '@/components/ui/HorizontalScrollEdgeHints';
 import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 
 interface OrderItem {
@@ -284,6 +285,15 @@ export default function OrderDetailsPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const formatLineItemsCount = (n: number) => {
+    const abs100 = Math.abs(n) % 100;
+    const last = Math.abs(n) % 10;
+    if (abs100 >= 11 && abs100 <= 14) return `${n} позиций`;
+    if (last === 1) return `${n} позиция`;
+    if (last >= 2 && last <= 4) return `${n} позиции`;
+    return `${n} позиций`;
   };
 
   const getAvailabilityBadge = (isAvailable: boolean | null) => {
@@ -862,6 +872,9 @@ export default function OrderDetailsPage() {
           <CardContent className="space-y-1">
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {formatPrice(order.total)}
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {formatLineItemsCount(order.items.length)}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Оплата:{' '}
@@ -1447,8 +1460,8 @@ export default function OrderDetailsPage() {
                       Нет товаров, соответствующих выбранным фильтрам
                     </div>
                   ) : (
-                    <div className="h-full overflow-auto">
-                      <table className="w-full border-collapse">
+                    <HorizontalScrollEdgeHints className="h-full">
+                      <table className="w-full min-w-max border-collapse">
                         {/* Header */}
                         <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
                           <tr>
@@ -1844,7 +1857,7 @@ export default function OrderDetailsPage() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
+                    </HorizontalScrollEdgeHints>
                   )}
                 </div>
               </>
