@@ -208,14 +208,16 @@ export function HorizontalScrollEdgeHints({
     : undefined;
 
   const halfCircleClass =
-    'group relative cursor-default overflow-hidden text-slate-500/90 ring-1 ring-slate-500/[0.12] shadow-[0_2px_12px_-2px_rgba(15,23,42,0.06)] transition-[opacity,box-shadow,ring-color] duration-300 hover:ring-slate-500/22 hover:shadow-[0_4px_20px_-4px_rgba(15,23,42,0.1)] dark:text-slate-400/90 dark:ring-white/[0.08] dark:shadow-[0_2px_16px_-2px_rgba(0,0,0,0.2)] dark:hover:ring-white/[0.14] dark:hover:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.35)]';
+    'relative cursor-default overflow-hidden text-sky-600 ring-1 ring-sky-200/50 shadow-[0_2px_12px_-2px_rgba(125,211,252,0.12)] transition-opacity duration-300 dark:text-sky-200 dark:ring-sky-600/35 dark:shadow-[0_2px_14px_-2px_rgba(0,0,0,0.22)]';
 
-  /** Frosted gray glass — high blur, low fill so the table stays readable underneath. */
+  /**
+   * Sky-tinted glass: pale sky (50–200) so the hue stays even without backdrop-blur, but reads soft.
+   */
   const halfCircleSurface =
-    'pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-300/[0.22] via-slate-400/[0.16] to-slate-500/[0.12] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.4)] backdrop-blur-2xl backdrop-saturate-150 transition-[background-image,opacity] duration-300 group-hover:from-slate-300/[0.32] group-hover:via-slate-400/[0.24] group-hover:to-slate-500/[0.18] dark:from-slate-500/[0.18] dark:via-slate-600/[0.14] dark:to-slate-700/[0.1] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)] dark:group-hover:from-slate-500/[0.28] dark:group-hover:via-slate-600/[0.22] dark:group-hover:to-slate-700/[0.16]';
+    'pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-50/88 via-sky-100/76 to-sky-200/64 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.65)] dark:from-sky-950/48 dark:via-sky-900/42 dark:to-sky-800/36 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]';
 
   const iconClass =
-    'pointer-events-none absolute top-1/2 h-5 w-5 text-slate-400/75 dark:text-slate-400/65';
+    'pointer-events-none absolute top-1/2 h-5 w-5 text-sky-500/75 dark:text-sky-300/75';
 
   return (
     <div className={cn('relative min-h-0 min-w-0', className)}>
@@ -228,11 +230,8 @@ export function HorizontalScrollEdgeHints({
       </div>
 
       {clip && leftButtonStyle && (
-        <button
-          type="button"
-          tabIndex={-1}
-          title="Прокрутить таблицу влево"
-          aria-label="Прокрутить таблицу влево"
+        <div
+          aria-hidden
           className={cn(
             halfCircleClass,
             caps.canLeft && hintSide === 'left'
@@ -259,15 +258,12 @@ export function HorizontalScrollEdgeHints({
             }}
             aria-hidden
           />
-        </button>
+        </div>
       )}
 
       {clip && rightButtonStyle && (
-        <button
-          type="button"
-          tabIndex={-1}
-          title="Прокрутить таблицу вправо"
-          aria-label="Прокрутить таблицу вправо"
+        <div
+          aria-hidden
           className={cn(
             halfCircleClass,
             caps.canRight && hintSide === 'right'
@@ -294,7 +290,7 @@ export function HorizontalScrollEdgeHints({
             }}
             aria-hidden
           />
-        </button>
+        </div>
       )}
     </div>
   );
