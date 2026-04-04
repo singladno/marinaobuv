@@ -19,6 +19,7 @@ interface Product {
   source?: 'WA' | 'AG' | 'MANUAL';
   sourceScreenshotUrl?: string | null;
   isActive?: boolean;
+  colorActivationByColor?: Record<string, boolean>;
 }
 
 interface ProductGridProps {
@@ -73,23 +74,24 @@ export const ProductGrid = memo(function ProductGrid({
   const itemCount = shouldShowSkeletons ? 8 : uniqueProducts.length;
 
   // Calculate items to render - must be before any early returns
-  const itemsToRender: Array<Product & { isSkeleton?: boolean }> = useMemo(() => {
-    if (shouldShowSkeletons) {
-      return Array.from({ length: itemCount }).map((_, i) => ({
-        id: `skeleton-${i}`,
-        slug: '',
-        name: '',
-        pricePair: 0,
-        primaryImageUrl: null,
-        category: null,
-        isSkeleton: true,
-      })) as Array<Product & { isSkeleton?: boolean }>;
-    }
-    return uniqueProducts.map(p => ({
-      ...p,
-      isSkeleton: false,
-    }));
-  }, [shouldShowSkeletons, itemCount, uniqueProducts]);
+  const itemsToRender: Array<Product & { isSkeleton?: boolean }> =
+    useMemo(() => {
+      if (shouldShowSkeletons) {
+        return Array.from({ length: itemCount }).map((_, i) => ({
+          id: `skeleton-${i}`,
+          slug: '',
+          name: '',
+          pricePair: 0,
+          primaryImageUrl: null,
+          category: null,
+          isSkeleton: true,
+        })) as Array<Product & { isSkeleton?: boolean }>;
+      }
+      return uniqueProducts.map(p => ({
+        ...p,
+        isSkeleton: false,
+      }));
+    }, [shouldShowSkeletons, itemCount, uniqueProducts]);
 
   const gridClasses = {
     4: 'grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-stretch',
@@ -106,11 +108,7 @@ export const ProductGrid = memo(function ProductGrid({
       <div className={gridClasses[gridCols]}>
         {itemsToRender.map((item, index) => {
           if (item.isSkeleton) {
-            return (
-              <ProductCardSkeleton
-                key={`skeleton-${index}`}
-              />
-            );
+            return <ProductCardSkeleton key={`skeleton-${index}`} />;
           }
 
           return (
@@ -129,6 +127,7 @@ export const ProductGrid = memo(function ProductGrid({
               source={item.source ?? undefined}
               sourceScreenshotUrl={item.sourceScreenshotUrl ?? undefined}
               isActive={item.isActive ?? true}
+              colorActivationByColor={item.colorActivationByColor}
               onProductUpdated={onProductUpdated}
               priority={index < 4}
             />

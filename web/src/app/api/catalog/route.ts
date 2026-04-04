@@ -76,10 +76,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Admin-only: filter by source (one or multiple)
-    if (
-      auth.user?.role === 'ADMIN' &&
-      sourceIds.length > 0
-    ) {
+    if (auth.user?.role === 'ADMIN' && sourceIds.length > 0) {
       const allowedIds: string[] = [];
       if (sourceIds.includes('AG')) {
         const ag = await prisma.product.findMany({
@@ -241,14 +238,28 @@ export async function GET(request: NextRequest) {
     // Calculate pagination
     const skip = (page - 1) * pageSize;
 
-    // Execute queries
+    const isAdmin = auth.user?.role === 'ADMIN';
+
+    // Explicit select: avoid sending large unused columns (sizes, gptRequest, sourceMessageIds, …)
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
         skip,
         take: pageSize,
         orderBy,
-        include: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          pricePair: true,
+          categoryId: true,
+          createdAt: true,
+          updatedAt: true,
+          activeUpdatedAt: true,
+          source: true,
+          isActive: true,
+          sourceScreenshotUrl: true,
+          batchProcessingStatus: true,
           category: {
             select: {
               id: true,
@@ -256,14 +267,13 @@ export async function GET(request: NextRequest) {
             },
           },
           images: {
-            where: {
-              isActive: true,
-            },
+            ...(isAdmin ? {} : { where: { isActive: true } }),
             orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
             select: {
               url: true,
               color: true,
               isPrimary: true,
+              isActive: true,
             },
           },
           videos: {
@@ -297,13 +307,29 @@ export async function GET(request: NextRequest) {
         })
         .map((img: any) => ({ color: img.color as string, imageUrl: img.url }));
 
-      return {
+      const row: any = {
         ...product,
         primaryImageUrl,
         colorOptions,
         isActive: product.isActive ?? true,
         sourceScreenshotUrl: product.sourceScreenshotUrl || null,
       };
+
+      if (isAdmin && product.images?.length) {
+        const colorActivationByColor: Record<string, boolean> = {};
+        for (const img of product.images as Array<{
+          color: string | null;
+          isActive: boolean;
+        }>) {
+          if (!img.color) continue;
+          const k = img.color.toLowerCase();
+          if (!(k in colorActivationByColor)) colorActivationByColor[k] = false;
+          if (img.isActive) colorActivationByColor[k] = true;
+        }
+        row.colorActivationByColor = colorActivationByColor;
+      }
+
+      return row;
     });
 
     // Save search history if user is logged in and search query is provided
@@ -380,9 +406,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     logRequestError(request, '/api/catalog', error, '[catalog] GET error:');
-    const message = error instanceof Error ? error.message : 'Ошибка при получении каталога';
+    const message =
+      error instanceof Error ? error.message : 'Ошибка при получении каталога';
     return NextResponse.json(
-      { error: 'Ошибка при получении каталога', details: process.env.NODE_ENV === 'development' ? message : undefined },
+      {
+        error: 'Ошибка при получении каталога',
+        details: process.env.NODE_ENV === 'development' ? message : undefined,
+      },
       { status: 500 }
     );
   }

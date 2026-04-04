@@ -21,6 +21,8 @@ interface SourceFilterControlProps {
   onChange: (sourceIds: string[]) => void;
   onClear: () => void;
   loading?: boolean;
+  /** Called when the popover opens — load sources lazily instead of on every page load */
+  onRequestSources?: () => void;
 }
 
 function SourceIcon({ type }: { type: CatalogSourceItem['type'] }) {
@@ -71,6 +73,7 @@ export function SourceFilterControl({
   onChange,
   onClear,
   loading = false,
+  onRequestSources,
 }: SourceFilterControlProps) {
   const { user } = useUser();
   const [open, setOpen] = useState(false);
@@ -81,7 +84,7 @@ export function SourceFilterControl({
   const toggle = useCallback(
     (id: string) => {
       if (value.includes(id)) {
-        onChange(value.filter((x) => x !== id));
+        onChange(value.filter(x => x !== id));
       } else {
         onChange([...value, id]);
       }
@@ -89,12 +92,20 @@ export function SourceFilterControl({
     [value, onChange]
   );
 
-  if (!isAdmin || sources.length === 0) {
+  if (!isAdmin) {
     return null;
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={next => {
+        setOpen(next);
+        if (next) {
+          onRequestSources?.();
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -116,9 +127,15 @@ export function SourceFilterControl({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="max-h-[320px] w-72 overflow-y-auto p-2">
+      <PopoverContent
+        align="start"
+        className="max-h-[320px] w-72 overflow-y-auto p-2"
+      >
         <div className="flex flex-col gap-0.5">
-          {sources.map((source) => (
+          {loading && sources.length === 0 ? (
+            <div className="px-2 py-3 text-sm text-gray-500">Загрузка…</div>
+          ) : null}
+          {sources.map(source => (
             <label
               key={source.id}
               className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-gray-100"

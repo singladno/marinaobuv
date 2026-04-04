@@ -37,6 +37,23 @@ async function getPurchasesForUser(userId: string) {
   });
 }
 
+/** Lightweight list for catalog / context: no nested items (avoids multi‑MB payloads). */
+async function getPurchasesSummaryForUser(userId: string) {
+  return prisma.purchase.findMany({
+    where: { createdById: userId },
+    select: {
+      id: true,
+      name: true,
+      createdAt: true,
+      updatedAt: true,
+      _count: {
+        select: { items: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -45,8 +62,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
 
-    // No unstable_cache: list payload can exceed Next.js 2MB data cache limit (see web-pm2 logs).
-    const purchases = await getPurchasesForUser(session.user!.id);
+    const { searchParams } = new URL(request.url);
+    const full =
+      searchParams.get('full') === '1' || searchParams.get('full') === 'true';
+
+    // Default: summary only. Use ?full=1 for admin UI that needs items + product thumbs (e.g. /admin/purchases).
+    // No unstable_cache: full list payload can exceed Next.js 2MB data cache limit (see web-pm2 logs).
+    if (full) {
+      const purchases = await getPurchasesForUser(session.user!.id);
+      return NextResponse.json(purchases);
+    }
+
+    const rows = await getPurchasesSummaryForUser(session.user!.id);
+    const purchases = rows.map(p => ({
+      ...p,
+      items: [] as unknown[],
+    }));
 
     return NextResponse.json(purchases);
   } catch (error) {

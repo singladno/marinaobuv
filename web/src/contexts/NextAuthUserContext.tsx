@@ -11,6 +11,8 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 
+import { deduplicateRequest } from '@/lib/request-deduplication';
+
 type CurrentUser = {
   id: string;
   email?: string | null;
@@ -39,7 +41,6 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
   const [user, setUser] = useState<CurrentUser>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -62,13 +63,6 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
 
   const fetchUser = useCallback(async () => {
     try {
-      // Debounce: prevent calls within 1 second of each other
-      const now = Date.now();
-      if (now - lastFetchTime < 1000) {
-        return;
-      }
-      setLastFetchTime(now);
-
       setLoading(true);
       setError(null);
 
@@ -78,33 +72,40 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
 
       if (status === 'unauthenticated' || !session) {
         setUser(null);
-        // Only redirect if we're sure the user is not authenticated
         if (status === 'unauthenticated') {
           redirectToLoginIfProtected();
         }
         return;
       }
 
-      // Get additional user data from our API
-      const res = await fetch('/api/auth/me', {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
+      const json = await deduplicateRequest('auth-me', async () => {
+        const res = await fetch('/api/auth/me', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
+
+        if (res.status === 401) {
+          return { unauthorized: true as const };
+        }
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        return res.json();
       });
 
-      if (res.status === 401) {
+      if (json && 'unauthorized' in json && json.unauthorized) {
         setUser(null);
         redirectToLoginIfProtected();
         return;
       }
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      if (json && typeof json === 'object' && 'user' in json) {
+        setUser((json as { user: CurrentUser }).user ?? null);
       }
-
-      const json = await res.json();
-      setUser(json.user ?? null);
     } catch (err) {
       console.error('Error fetching user:', err);
       setError('Ошибка загрузки пользователя');
@@ -112,7 +113,7 @@ export function NextAuthUserProvider({ children }: UserProviderProps) {
     } finally {
       setLoading(false);
     }
-  }, [status, session, redirectToLoginIfProtected, lastFetchTime]);
+  }, [status, session, redirectToLoginIfProtected]);
 
   const refreshUser = useCallback(async () => {
     await fetchUser();

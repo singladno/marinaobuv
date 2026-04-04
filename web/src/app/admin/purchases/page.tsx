@@ -53,7 +53,7 @@ export default function PurchasesPage() {
   const fetchPurchases = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/purchases');
+      const response = await fetch('/api/admin/purchases?full=1');
       if (!response.ok) {
         throw new Error('Failed to fetch purchases');
       }

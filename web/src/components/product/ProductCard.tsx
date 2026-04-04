@@ -79,6 +79,8 @@ type Props = {
   source?: 'WA' | 'AG' | 'MANUAL' | 'TG'; // Product source: WA (WhatsApp), AG (aggregator), TG (Telegram), or MANUAL (manually created)
   sourceScreenshotUrl?: string | null; // Source screenshot URL for AG and MANUAL products
   isActive?: boolean; // Product active status
+  /** Admin: per-color image active flags from catalog (avoids N+1 /api/admin/products calls) */
+  colorActivationByColor?: Record<string, boolean>;
   onProductUpdated?: (updatedProduct?: any) => void; // Callback when product is updated
   priority?: boolean; // Image loading priority for LCP optimization
 };
@@ -98,6 +100,7 @@ function ProductCard({
   source,
   sourceScreenshotUrl,
   isActive = true,
+  colorActivationByColor,
   onProductUpdated,
   priority = false,
 }: Props) {
@@ -426,18 +429,26 @@ function ProductCard({
 
   const isAdmin = user?.role === 'ADMIN';
 
-  // Fetch color active states on mount and when productId changes
+  // Color active states: prefer catalog payload; else one fetch per product (fallback)
   useEffect(() => {
     if (!productId || !isAdmin || colorOptions.length === 0) return;
 
-    // Fetch product with images to get color active states
+    if (colorActivationByColor !== undefined) {
+      const states = new Map<string, boolean>();
+      for (const opt of colorOptions) {
+        const k = opt.color.toLowerCase();
+        states.set(opt.color, colorActivationByColor[k] ?? true);
+      }
+      setColorActiveStates(states);
+      return;
+    }
+
     const fetchColorStates = async () => {
       try {
         const response = await fetch(`/api/admin/products/${productId}`);
         if (response.ok) {
           const data = await response.json();
           const states = new Map<string, boolean>();
-          // Group images by color and check if any are active
           const colorGroups = new Map<string, boolean>();
           (data.product?.images || []).forEach((img: any) => {
             if (img.color) {
@@ -450,13 +461,12 @@ function ProductCard({
               }
             }
           });
-          colorGroups.forEach((isActive, color) => {
-            // Find the original color name (case-sensitive)
+          colorGroups.forEach((isActiveColor, color) => {
             const originalColor = colorOptions.find(
               opt => opt.color.toLowerCase() === color
             )?.color;
             if (originalColor) {
-              states.set(originalColor, isActive);
+              states.set(originalColor, isActiveColor);
             }
           });
           setColorActiveStates(states);
@@ -467,7 +477,7 @@ function ProductCard({
     };
 
     fetchColorStates();
-  }, [productId, isAdmin, colorOptions]);
+  }, [productId, isAdmin, colorOptions, colorActivationByColor]);
 
   const isInactive = !optimisticIsActive;
 

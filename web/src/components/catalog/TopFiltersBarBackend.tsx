@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import ColorFilter from '@/components/product/filters/ColorFilter';
 import PriceControl from '@/components/product/filters/PriceControl';
@@ -81,16 +81,25 @@ export default function TopFiltersBarBackend({
   const { user } = useUser();
   const [sources, setSources] = useState<CatalogSourceItem[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(false);
+  const sourcesRequestedRef = useRef(false);
 
-  useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
+  const ensureSourcesLoaded = useCallback(() => {
+    if (user?.role !== 'ADMIN' || sourcesRequestedRef.current) return;
+    sourcesRequestedRef.current = true;
     setSourcesLoading(true);
     fetch('/api/catalog/sources')
-      .then((res) => res.ok ? res.json() : { sources: [] })
-      .then((data) => setSources(data.sources ?? []))
+      .then(res => (res.ok ? res.json() : { sources: [] }))
+      .then(data => setSources(data.sources ?? []))
       .catch(() => setSources([]))
       .finally(() => setSourcesLoading(false));
   }, [user?.role]);
+
+  // If the URL already applies source filters, load options so labels/checkbox state work
+  useEffect(() => {
+    if (user?.role === 'ADMIN' && (filters.sourceIds?.length ?? 0) > 0) {
+      ensureSourcesLoaded();
+    }
+  }, [user?.role, filters.sourceIds, ensureSourcesLoaded]);
 
   const hasActive = useMemo(() => {
     // Check if there are any user-applied filters (excluding the base category context)
@@ -170,6 +179,7 @@ export default function TopFiltersBarBackend({
         onChange={sourceIds => onChange && onChange({ sourceIds, page: 1 })}
         onClear={() => onChange && onChange({ sourceIds: [], page: 1 })}
         loading={sourcesLoading}
+        onRequestSources={ensureSourcesLoaded}
       />
 
       {/* Category Navigation Control - Subcategories of current category */}

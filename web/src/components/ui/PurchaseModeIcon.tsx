@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusIcon, ArrowRightIcon, StarIcon } from '@heroicons/react/24/outline';
+import {
+  PlusIcon,
+  ArrowRightIcon,
+  StarIcon,
+} from '@heroicons/react/24/outline';
 // Custom Purchase Mode Icon - colorful pinwheel/flower design
 
 import { Button } from '@/components/ui/Button';
@@ -23,6 +27,7 @@ export function PurchaseModeIcon() {
     activePurchase,
     setActivePurchase,
     purchases,
+    setPurchases,
     refreshPurchases,
     loading,
   } = usePurchase();
@@ -42,7 +47,27 @@ export function PurchaseModeIcon() {
     }
   };
 
-  const handlePurchaseSelect = (purchase: any) => {
+  const handlePurchaseSelect = async (purchase: any) => {
+    if (!purchase?.id) {
+      setActivePurchase(null);
+      return;
+    }
+    const needsHydration =
+      (purchase._count?.items ?? 0) > 0 &&
+      (!purchase.items || purchase.items.length === 0);
+    if (needsHydration) {
+      try {
+        const res = await fetch(`/api/admin/purchases/${purchase.id}`);
+        if (res.ok) {
+          const full = await res.json();
+          setPurchases(prev => prev.map(p => (p.id === full.id ? full : p)));
+          setActivePurchase(full);
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
     setActivePurchase(purchase);
   };
 

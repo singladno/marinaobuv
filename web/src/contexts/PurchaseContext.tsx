@@ -5,6 +5,9 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
+  type SetStateAction,
+  type Dispatch,
   ReactNode,
 } from 'react';
 import { useUser } from './NextAuthUserContext';
@@ -33,9 +36,12 @@ interface PurchaseContextType {
   activePurchase: Purchase | null;
   setActivePurchase: (purchase: Purchase | null) => void;
   purchases: Purchase[];
-  setPurchases: (purchases: Purchase[]) => void;
+  setPurchases: Dispatch<SetStateAction<Purchase[]>>;
   selectedProductIds: Set<string>;
-  addProductToPurchase: (productId: string, color?: string | null) => Promise<void>;
+  addProductToPurchase: (
+    productId: string,
+    color?: string | null
+  ) => Promise<void>;
   removeProductFromPurchase: (productId: string, color?: string | null) => void;
   refreshPurchases: () => Promise<void>;
   updateActivePurchaseItems: (items: any[]) => void;
@@ -135,16 +141,40 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     }
   }, [activePurchase, isPurchaseMode, user, hasInitialized]);
 
-  // Fetch purchases when user changes
+  const refreshPurchases = useCallback(async () => {
+    if (user?.role !== 'ADMIN') return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/admin/purchases');
+      if (!response.ok) {
+        throw new Error('Failed to fetch purchases');
+      }
+      const data = await response.json();
+      setPurchases(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to fetch purchases'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.role]);
+
+  // Fetch purchase list only when admin may need it (not on every page load).
+  // Summary list is small; full items load when selecting a purchase or restoring.
   useEffect(() => {
     if (user?.role === 'ADMIN') {
-      refreshPurchases();
+      if (isPurchaseMode) {
+        refreshPurchases();
+      }
     } else if (user && user.role !== 'ADMIN') {
       // Only clear purchase state when we have a confirmed non-admin user
       // Don't clear on initial load when user is still loading
       clearPurchaseState();
     }
-  }, [user]);
+  }, [user, isPurchaseMode, refreshPurchases]);
 
   // Restore active purchase from localStorage after purchases are loaded
   // Only restore when purchase mode is on and we have a saved ID, but NOT when
@@ -160,15 +190,36 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
         const savedPurchase = purchases.find(
           p => p.id === savedActivePurchaseId
         );
-        if (savedPurchase) {
-          setActivePurchase(savedPurchase);
-        } else {
-          // Clear the saved ID if the purchase no longer exists
+        if (!savedPurchase) {
           setSavedActivePurchaseId(null);
           if (typeof window !== 'undefined') {
             localStorage.removeItem('active-purchase-id');
           }
+          return;
         }
+
+        const needsHydration =
+          (savedPurchase._count?.items ?? 0) > 0 &&
+          (!savedPurchase.items || savedPurchase.items.length === 0);
+
+        if (needsHydration) {
+          let cancelled = false;
+          fetch(`/api/admin/purchases/${savedActivePurchaseId}`)
+            .then(res => (res.ok ? res.json() : null))
+            .then(full => {
+              if (cancelled || !full) return;
+              setPurchases(prev =>
+                prev.map(p => (p.id === full.id ? full : p))
+              );
+              setActivePurchase(full);
+            })
+            .catch(() => {});
+          return () => {
+            cancelled = true;
+          };
+        }
+
+        setActivePurchase(savedPurchase);
       } catch (error) {
         console.warn(
           'Failed to restore active purchase from localStorage:',
@@ -190,28 +241,10 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     }
   }, [activePurchase]);
 
-  const refreshPurchases = async () => {
-    if (user?.role !== 'ADMIN') return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch('/api/admin/purchases');
-      if (!response.ok) {
-        throw new Error('Failed to fetch purchases');
-      }
-      const data = await response.json();
-      setPurchases(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch purchases'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addProductToPurchase = async (productId: string, color?: string | null) => {
+  const addProductToPurchase = async (
+    productId: string,
+    color?: string | null
+  ) => {
     if (!activePurchase || !user) {
       return;
     }
@@ -279,12 +312,17 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const removeProductFromPurchase = async (productId: string, color?: string | null) => {
+  const removeProductFromPurchase = async (
+    productId: string,
+    color?: string | null
+  ) => {
     if (!activePurchase || !user) return;
 
     // Find the item to remove
-    const itemToRemove = activePurchase.items.find(item =>
-      item.productId === productId && (color == null ? true : (item.color ?? null) === (color ?? null))
+    const itemToRemove = activePurchase.items.find(
+      item =>
+        item.productId === productId &&
+        (color == null ? true : (item.color ?? null) === (color ?? null))
     );
     if (!itemToRemove) return;
 
@@ -334,7 +372,9 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
 
       // Remove from selected products if no items remain for product
       setSelectedProductIds(prev => {
-        const stillHasThisProduct = (activePurchase.items.filter(i => i.id !== itemToRemove.id)).some(i => i.productId === productId);
+        const stillHasThisProduct = activePurchase.items
+          .filter(i => i.id !== itemToRemove.id)
+          .some(i => i.productId === productId);
         if (stillHasThisProduct) return prev;
         const newSet = new Set(prev);
         newSet.delete(productId);
@@ -402,7 +442,10 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
         try {
           localStorage.removeItem('active-purchase-id');
         } catch (error) {
-          console.warn('Failed to clear active purchase from localStorage:', error);
+          console.warn(
+            'Failed to clear active purchase from localStorage:',
+            error
+          );
         }
       }
     }
