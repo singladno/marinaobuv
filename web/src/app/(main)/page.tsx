@@ -3,6 +3,7 @@
 import { ProductGrid } from '@/components/catalog/ProductGrid';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
+import { TopFiltersBarSkeleton } from '@/components/catalog/TopFiltersBarSkeleton';
 import { ResultsHeaderSkeleton } from '@/components/catalog/ResultsHeaderSkeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -79,6 +80,8 @@ export default function Home() {
     targetPath: '/',
   });
 
+  const catalogPending = loading || !hasCompletedRequest;
+
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -110,18 +113,22 @@ export default function Home() {
         </div>
 
         {/* Top Filters Bar */}
-        <div className="mb-6">
-          <TopFiltersBarBackend
-            filters={filters}
-            onChange={handleFiltersChange}
-            onClear={clearFilters}
-          />
-        </div>
+        {catalogPending ? (
+          <TopFiltersBarSkeleton />
+        ) : (
+          <div className="mb-6">
+            <TopFiltersBarBackend
+              filters={filters}
+              onChange={handleFiltersChange}
+              onClear={clearFilters}
+            />
+          </div>
+        )}
 
         {/* Products Grid */}
         <div className="w-full">
           {/* Results Header */}
-          {loading || !hasCompletedRequest ? (
+          {catalogPending ? (
             <ResultsHeaderSkeleton />
           ) : (
             <div className="mb-6 flex items-center justify-between">
@@ -145,7 +152,7 @@ export default function Home() {
           <ProductGrid
             products={products}
             gridCols={gridCols}
-            loading={loading}
+            loading={catalogPending}
             loadingMore={loadingMore}
             hasNextPage={hasNextPage}
             error={error}

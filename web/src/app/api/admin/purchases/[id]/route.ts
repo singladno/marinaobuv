@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
-import { prismaProductSelectForPurchaseItem } from '@/lib/server/admin-purchase-selects';
+import {
+  prismaProductSelectForPurchaseDetailList,
+  prismaProductSelectForPurchaseDetailListLite,
+} from '@/lib/server/admin-purchase-selects';
 import { logRequestError } from '@/lib/server/request-logging';
 
 export async function GET(
@@ -18,6 +21,22 @@ export async function GET(
 
     // Await params before using
     const { id } = await params;
+    const lite = request.nextUrl.searchParams.get('lite') === '1';
+
+    const itemSelectShared = {
+      id: true,
+      name: true,
+      price: true,
+      oldPrice: true,
+      sortIndex: true,
+      color: true,
+      productId: true,
+      product: {
+        select: lite
+          ? prismaProductSelectForPurchaseDetailListLite
+          : prismaProductSelectForPurchaseDetailList,
+      },
+    };
 
     const purchase = await prisma.purchase.findFirst({
       where: {
@@ -31,19 +50,9 @@ export async function GET(
         updatedAt: true,
         items: {
           orderBy: { sortIndex: 'asc' },
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            oldPrice: true,
-            sortIndex: true,
-            color: true,
-            productId: true,
-            product: {
-              select: prismaProductSelectForPurchaseItem,
-            },
-          },
+          select: lite
+            ? itemSelectShared
+            : { ...itemSelectShared, description: true },
         },
         _count: {
           select: { items: true },
@@ -60,7 +69,12 @@ export async function GET(
 
     return NextResponse.json(purchase);
   } catch (error) {
-    logRequestError(request, '/api/admin/purchases/[id]', error, 'Error fetching purchase:');
+    logRequestError(
+      request,
+      '/api/admin/purchases/[id]',
+      error,
+      'Error fetching purchase:'
+    );
     return NextResponse.json(
       { error: 'Failed to fetch purchase' },
       { status: 500 }
@@ -102,7 +116,12 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logRequestError(request, '/api/admin/purchases/[id]', error, 'Error deleting purchase:');
+    logRequestError(
+      request,
+      '/api/admin/purchases/[id]',
+      error,
+      'Error deleting purchase:'
+    );
     return NextResponse.json(
       { error: 'Failed to delete purchase' },
       { status: 500 }

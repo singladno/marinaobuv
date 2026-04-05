@@ -7,6 +7,7 @@ import { ProductGrid } from '@/components/catalog/ProductGrid';
 import { log } from '@/lib/logger';
 import GridColsSwitcher from '@/components/catalog/GridColsSwitcher';
 import TopFiltersBarBackend from '@/components/catalog/TopFiltersBarBackend';
+import { TopFiltersBarSkeleton } from '@/components/catalog/TopFiltersBarSkeleton';
 import CategoryBreadcrumbs from '@/components/catalog/CategoryBreadcrumbs';
 import { ResultsHeaderSkeleton } from '@/components/catalog/ResultsHeaderSkeleton';
 import { Text } from '@/components/ui/Text';
@@ -309,6 +310,9 @@ function CatalogPageContent() {
     targetPath: /^\/catalog/,
   });
 
+  /** True until the first catalog response (hook may stay `loading: false` before fetch starts). */
+  const catalogPending = loading || !hasCompletedRequest;
+
   if (error) {
     return (
       <div className="bg-background min-h-screen">
@@ -369,23 +373,27 @@ function CatalogPageContent() {
         </div>
 
         {/* Top Filters Bar */}
-        <div className="mb-6">
-          <TopFiltersBarBackend
-            filters={filters}
-            onChange={handleFiltersChange}
-            onClear={clearFilters}
-            baseCategoryId={categoryId}
-            subcategories={subcategories}
-            siblingCategories={siblingCategories}
-            parentChildren={parentChildren}
-            parentCategory={parentCategory}
-            currentPath={categoryPath}
-            currentCategoryName={displayName || categoryName}
-          />
-        </div>
+        {catalogPending ? (
+          <TopFiltersBarSkeleton />
+        ) : (
+          <div className="mb-6">
+            <TopFiltersBarBackend
+              filters={filters}
+              onChange={handleFiltersChange}
+              onClear={clearFilters}
+              baseCategoryId={categoryId}
+              subcategories={subcategories}
+              siblingCategories={siblingCategories}
+              parentChildren={parentChildren}
+              parentCategory={parentCategory}
+              currentPath={categoryPath}
+              currentCategoryName={displayName || categoryName}
+            />
+          </div>
+        )}
 
         {/* Results Header */}
-        {loading || !hasCompletedRequest ? (
+        {catalogPending ? (
           <ResultsHeaderSkeleton />
         ) : (
           <div className="mb-6 flex items-center justify-between">
@@ -405,7 +413,7 @@ function CatalogPageContent() {
           <ProductGrid
             products={products}
             gridCols={gridCols}
-            loading={loading}
+            loading={catalogPending}
             hasNextPage={false}
             error={error}
             showEndMessage={false}

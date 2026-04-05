@@ -21,6 +21,7 @@ import { useNotifications } from '@/components/ui/NotificationProvider';
 import ScrollArrows from '@/components/ui/ScrollArrows';
 import BulkDescriptionEditModal from '@/components/features/BulkDescriptionEditModal';
 import { AdminPurchaseItemCard } from '@/components/features/AdminPurchaseItemCard';
+import { AdminPurchaseDetailSkeleton } from '@/components/features/AdminPurchaseDetailSkeleton';
 
 /** Admin layout scrolls in `[data-admin-scroll-root]`, not `window`. */
 function getPurchasePageScrollContainer(): HTMLElement {
@@ -108,35 +109,91 @@ function PurchaseDetailPageContent() {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  /** False until `/item-descriptions` merges (bulk edit needs full text). */
+  const [itemDescriptionsReady, setItemDescriptionsReady] = useState(false);
 
   const confirmationModal = useConfirmationModal();
   const { addNotification } = useNotifications();
   const { getSortedItems, handleDragEnd } = usePurchaseItemSorting();
 
   const fetchPurchase = async () => {
+    const purchaseId = params.id;
+    if (!purchaseId || typeof purchaseId !== 'string') return;
+
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/purchases/${params.id}`);
-      if (!response.ok) {
+      setItemDescriptionsReady(false);
+
+      // Phase 1: small JSON (no per-item descriptions) — ends spinner quickly.
+      const liteRes = await fetch(`/api/admin/purchases/${purchaseId}?lite=1`);
+      if (!liteRes.ok) {
         throw new Error('Failed to fetch purchase');
       }
-      const data = await response.json();
-      // Ensure items have sequential indexes starting from 1
-      const itemsWithSequentialIndexes = recalculateIndexes(data.items);
-      if (
-        JSON.stringify(
-          itemsWithSequentialIndexes.map((i: PurchaseItem) => i.sortIndex)
-        ) !== JSON.stringify(data.items.map((i: PurchaseItem) => i.sortIndex))
-      ) {
-        await updateItemIndexesIfChanged(
-          itemsWithSequentialIndexes,
-          data.items
-        );
-      }
+      const data = await liteRes.json();
+
+      const itemsNormalized: PurchaseItem[] = data.items.map(
+        (i: PurchaseItem & { description?: string }) => ({
+          ...i,
+          description: typeof i.description === 'string' ? i.description : '',
+        })
+      );
+
+      const itemsWithSequentialIndexes = recalculateIndexes(itemsNormalized);
       setPurchase({
         ...data,
         items: itemsWithSequentialIndexes,
       });
+
+      if (
+        JSON.stringify(
+          itemsWithSequentialIndexes.map((i: PurchaseItem) => i.sortIndex)
+        ) !==
+        JSON.stringify(itemsNormalized.map((i: PurchaseItem) => i.sortIndex))
+      ) {
+        void updateItemIndexesIfChanged(
+          itemsWithSequentialIndexes,
+          itemsNormalized
+        ).catch(err => console.error('Failed to sync sort indexes:', err));
+      }
+
+      if (itemsNormalized.length === 0) {
+        setItemDescriptionsReady(true);
+      } else {
+        // Phase 2: descriptions only — large text, does not block the spinner.
+        void (async () => {
+          try {
+            const descRes = await fetch(
+              `/api/admin/purchases/${purchaseId}/item-descriptions`
+            );
+            if (!descRes.ok) throw new Error('Failed to fetch descriptions');
+            const payload = (await descRes.json()) as {
+              items: Array<{ id: string; description: string }>;
+            };
+            const map = new Map(
+              payload.items.map(r => [r.id, r.description] as const)
+            );
+            setPurchase(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                items: prev.items.map(it => ({
+                  ...it,
+                  description: map.get(it.id) ?? it.description,
+                })),
+              };
+            });
+            setItemDescriptionsReady(true);
+          } catch (e) {
+            console.error(e);
+            addNotification({
+              type: 'error',
+              title: 'Ошибка',
+              message:
+                'Не удалось загрузить описания товаров. Попробуйте обновить страницу.',
+            });
+          }
+        })();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -579,14 +636,7 @@ function PurchaseDetailPageContent() {
   }, [params.id]);
 
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-purple-600"></div>
-          <Text>Загрузка закупки...</Text>
-        </div>
-      </div>
-    );
+    return <AdminPurchaseDetailSkeleton />;
   }
 
   if (error) {
@@ -638,6 +688,8 @@ function PurchaseDetailPageContent() {
               <Button
                 variant="outline"
                 onClick={() => setIsBulkModalOpen(true)}
+                disabled={!itemDescriptionsReady}
+                title={itemDescriptionsReady ? undefined : 'Загрузка описаний…'}
                 className="flex items-center gap-2"
               >
                 <Edit3 className="h-4 w-4" />

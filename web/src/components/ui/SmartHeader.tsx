@@ -1,46 +1,29 @@
 'use client';
 
-import { ReactNode, useState, useEffect } from 'react';
-import { useSidebarToggle } from '@/hooks/useSidebarToggle';
+import { ReactNode } from 'react';
+
+import { cn } from '@/lib/utils';
 
 interface SmartHeaderProps {
   children: ReactNode;
   className?: string;
 }
 
+/**
+ * Tablet/desktop: fixed below the admin sidebar. Mobile: stays in normal flow.
+ * Uses CSS (`md:`) only — no `useEffect` width check — so the first paint matches
+ * after hydration and avoids a vertical jump when paired with `md:pt-*` on content.
+ */
 export function SmartHeader({ children, className = '' }: SmartHeaderProps) {
-  const [isTabletOrDesktop, setIsTabletOrDesktop] = useState(false);
-
-  useEffect(() => {
-    const checkDevice = () => {
-      setIsTabletOrDesktop(window.innerWidth >= 768);
-    };
-
-    checkDevice();
-    window.addEventListener('resize', checkDevice);
-
-    return () => window.removeEventListener('resize', checkDevice);
-  }, []);
-
-  // For phones: normal flow, for iPads: always fixed
-  const shouldStick = isTabletOrDesktop;
-
   return (
     <div
-      className={`${
-        shouldStick
-          ? 'fixed top-0 z-50 bg-white shadow-sm transition-all duration-300'
-          : ''
-      } ${className}`}
-      style={
-        shouldStick
-          ? {
-              left: 'var(--sidebar-width, 224px)',
-              right: '0',
-              width: 'calc(100vw - var(--sidebar-width, 224px))',
-            }
-          : {}
-      }
+      className={cn(
+        'z-50 bg-white transition-all duration-300',
+        'md:fixed md:top-0 md:shadow-sm',
+        'md:left-[var(--sidebar-width,224px)] md:right-0',
+        'md:w-[calc(100vw-var(--sidebar-width,224px))]',
+        className
+      )}
     >
       {children}
     </div>

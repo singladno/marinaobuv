@@ -10,6 +10,10 @@ import {
   type Dispatch,
   ReactNode,
 } from 'react';
+import { usePathname } from 'next/navigation';
+
+import { deduplicateRequest } from '@/lib/request-deduplication';
+
 import { useUser } from './NextAuthUserContext';
 
 interface Purchase {
@@ -56,6 +60,10 @@ const PurchaseContext = createContext<PurchaseContextType | undefined>(
 
 export function PurchaseProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
+  const pathname = usePathname();
+  /** `/admin/purchases/:id` — defer list fetch so it does not compete with the detail request. */
+  const isAdminPurchaseDetailPage =
+    pathname != null && /^\/admin\/purchases\/[^/]+$/.test(pathname);
 
   // Initialize state from localStorage if available
   const [isPurchaseMode, setIsPurchaseMode] = useState(() => {
@@ -147,11 +155,16 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/admin/purchases');
-      if (!response.ok) {
-        throw new Error('Failed to fetch purchases');
-      }
-      const data = await response.json();
+      const data = await deduplicateRequest(
+        'admin-purchases-list',
+        async () => {
+          const response = await fetch('/api/admin/purchases');
+          if (!response.ok) {
+            throw new Error('Failed to fetch purchases');
+          }
+          return response.json();
+        }
+      );
       setPurchases(data);
     } catch (err) {
       setError(
@@ -167,6 +180,12 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user?.role === 'ADMIN') {
       if (isPurchaseMode) {
+        if (isAdminPurchaseDetailPage) {
+          const id = window.setTimeout(() => {
+            refreshPurchases();
+          }, 300);
+          return () => clearTimeout(id);
+        }
         refreshPurchases();
       }
     } else if (user && user.role !== 'ADMIN') {
@@ -174,7 +193,7 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
       // Don't clear on initial load when user is still loading
       clearPurchaseState();
     }
-  }, [user, isPurchaseMode, refreshPurchases]);
+  }, [user, isPurchaseMode, refreshPurchases, isAdminPurchaseDetailPage]);
 
   // Restore active purchase from localStorage after purchases are loaded
   // Only restore when purchase mode is on and we have a saved ID, but NOT when

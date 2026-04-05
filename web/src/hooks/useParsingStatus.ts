@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+import { deduplicateRequest } from '@/lib/request-deduplication';
 
 interface ParsingStatus {
   runningParsers: number;
@@ -34,21 +36,29 @@ export function useParsingStatus(enablePolling = false) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchParsingStatus = async () => {
+  const fetchParsingStatus = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/parsing-status');
-      const data: ParsingStatus = await response.json();
-
-      if (response.ok) {
-        setParsingStatus(data);
+      const result = await deduplicateRequest(
+        'admin-parsing-status',
+        async () => {
+          const response = await fetch('/api/admin/parsing-status');
+          const data: ParsingStatus = await response.json();
+          return { ok: response.ok, data };
+        }
+      );
+      if (result.ok) {
+        setParsingStatus(result.data);
         setError(null);
       } else {
-        setError(data.error || 'Failed to fetch parsing status');
+        setError(
+          (result.data as { error?: string }).error ||
+            'Failed to fetch parsing status'
+        );
       }
-    } catch (err) {
+    } catch {
       setError('Network error');
     }
-  };
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -57,14 +67,13 @@ export function useParsingStatus(enablePolling = false) {
       setLoading(false);
     };
 
-    loadData();
+    void loadData();
 
-    // Only refresh status every 5 seconds if polling is enabled
     if (enablePolling) {
-      const interval = setInterval(fetchParsingStatus, 5000);
+      const interval = setInterval(() => void fetchParsingStatus(), 5000);
       return () => clearInterval(interval);
     }
-  }, [enablePolling]);
+  }, [enablePolling, fetchParsingStatus]);
 
   return {
     parsingStatus,

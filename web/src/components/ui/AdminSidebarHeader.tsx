@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 import { useUser } from '@/contexts/NextAuthUserContext';
 import { getRoleLabel } from '@/app/admin/users/utils';
@@ -16,7 +17,10 @@ export function AdminSidebarHeader({
   isCollapsed,
   setIsCollapsed,
 }: AdminSidebarHeaderProps) {
-  const { user } = useUser();
+  const { user, loading } = useUser();
+  const { status: sessionStatus } = useSession();
+  const showUserSkeleton = loading || sessionStatus === 'loading';
+
   const userName = user?.name || user?.email || 'Пользователь';
   const userRole = user?.role ? getRoleLabel(user.role) : 'Админ';
 
@@ -47,13 +51,32 @@ export function AdminSidebarHeader({
           </svg>
         </div>
         {!isCollapsed && (
-          <div className="ml-3 flex flex-col">
-            <span className="text-sm font-semibold text-gray-800 dark:text-white leading-tight">
-              {userName}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-              {userRole}
-            </span>
+          <div
+            className="ml-3 flex min-w-0 flex-1 flex-col gap-1.5"
+            aria-busy={showUserSkeleton}
+            aria-label={showUserSkeleton ? 'Загрузка профиля' : undefined}
+          >
+            {showUserSkeleton ? (
+              <>
+                <div
+                  className="h-4 max-w-[11rem] animate-pulse rounded-md bg-gray-200 dark:bg-gray-700"
+                  aria-hidden
+                />
+                <div
+                  className="h-3 w-24 animate-pulse rounded-md bg-gray-200 dark:bg-gray-600"
+                  aria-hidden
+                />
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-semibold leading-tight text-gray-800 dark:text-white">
+                  {userName}
+                </span>
+                <span className="text-xs leading-tight text-gray-500 dark:text-gray-400">
+                  {userRole}
+                </span>
+              </>
+            )}
           </div>
         )}
       </Link>

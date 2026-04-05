@@ -81,7 +81,7 @@ function PurchaseItemImageSliderInner({
                   src={img.url}
                   alt={alt}
                   fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
+                  sizes="(max-width: 768px) 42vw, 240px"
                   className="object-cover"
                 />
               </div>

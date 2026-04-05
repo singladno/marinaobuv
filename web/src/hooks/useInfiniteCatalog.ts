@@ -72,7 +72,8 @@ export function useInfiniteCatalog(
 ) {
   const { searchQuery } = useSearch();
   const [allProducts, setAllProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  /** Start true so the grid shows skeletons on the first paint before the mount effect runs. */
+  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
