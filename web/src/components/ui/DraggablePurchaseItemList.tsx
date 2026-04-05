@@ -4,17 +4,17 @@ import React, {
   useState,
   useMemo,
   useRef,
-  useCallback,
   useEffect,
   useLayoutEffect,
+  memo,
 } from 'react';
 import Image from 'next/image';
 import {
   DndContext,
-  closestCenter,
-  KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   TouchSensor,
+  rectIntersection,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -22,19 +22,18 @@ import {
   DragStartEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
+  defaultAnimateLayoutChanges,
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   usePurchaseItemSorting,
   PurchaseItem,
 } from '@/contexts/PurchaseItemSortingContext';
+import { getPurchaseItemGalleryImages } from '@/components/features/PurchaseItemImageSlider';
 
 interface DraggablePurchaseItemListProps {
   items: PurchaseItem[];
@@ -47,6 +46,67 @@ interface SortableItemWrapperProps {
   item: PurchaseItem;
   children: (isDragging: boolean) => React.ReactNode;
 }
+
+/** Memoized so DragOverlay does not rebuild heavy markup on every pointer move. */
+const PurchaseDragOverlayPreview = memo(function PurchaseDragOverlayPreview({
+  item: activeItem,
+}: {
+  item: PurchaseItem;
+}) {
+  const gallery = useMemo(
+    () => getPurchaseItemGalleryImages(activeItem),
+    [activeItem]
+  );
+  const src = gallery[0]?.url;
+  return (
+    <div className="w-[min(100vw-2rem,22rem)] scale-105 transform overflow-hidden rounded-lg border-2 border-blue-400 bg-white opacity-95 shadow-2xl">
+      <div className="flex flex-col p-3">
+        <div className="mb-3">
+          <div className="flex h-8 w-16 items-center justify-center rounded border border-gray-200 bg-gray-100 text-sm font-medium tabular-nums">
+            {activeItem.sortIndex}
+          </div>
+        </div>
+        <div className="bg-muted relative aspect-square w-full overflow-hidden rounded-lg">
+          {src ? (
+            <Image
+              src={src}
+              alt={activeItem.name}
+              width={352}
+              height={352}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gray-100">
+              <span className="text-sm text-gray-500">Нет фото</span>
+            </div>
+          )}
+        </div>
+        <div className="mt-3 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-lg font-semibold tabular-nums">
+              {new Intl.NumberFormat('ru-RU', {
+                style: 'currency',
+                currency: 'RUB',
+              }).format(Number(activeItem.price))}
+            </span>
+            <span className="text-sm font-semibold tabular-nums text-red-600 line-through">
+              {new Intl.NumberFormat('ru-RU', {
+                style: 'currency',
+                currency: 'RUB',
+              }).format(Number(activeItem.oldPrice))}
+            </span>
+          </div>
+          <span className="block text-sm font-semibold leading-snug">
+            {activeItem.name}
+          </span>
+          <div className="line-clamp-3 text-sm text-gray-600">
+            {activeItem.description}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 function SortableItemWrapper({
   item,
@@ -62,7 +122,8 @@ function SortableItemWrapper({
     isDragging,
   } = useSortable({
     id: item.id,
-    animateLayoutChanges: () => true,
+    // `() => true` forces layout animations on every sortable every frame — very janky.
+    animateLayoutChanges: args => defaultAnimateLayoutChanges(args),
   });
 
   const style: React.CSSProperties = {
@@ -88,8 +149,8 @@ function SortableItemWrapper({
       data-item-id={item.id}
       style={style}
       className={cn(
-        'cursor-grab select-none transition-opacity active:cursor-grabbing',
-        isDragging && 'opacity-30' // Make original item very transparent when dragging (DragOverlay shows it)
+        'cursor-grab select-none active:cursor-grabbing',
+        isDragging && 'opacity-30' // DragOverlay shows the preview; avoid transition-* (extra paint during drag)
       )}
       {...listeners}
       {...attributes}
@@ -105,7 +166,8 @@ export function DraggablePurchaseItemList({
   onItemsReordered,
   children,
 }: DraggablePurchaseItemListProps) {
-  const { getSortedItems, handleDragEnd } = usePurchaseItemSorting();
+  const { getSortedItems, handleDragEnd, loadSortingForPurchase } =
+    usePurchaseItemSorting();
   const [activeId, setActiveId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const prevRectsRef = useRef<Map<string, DOMRect>>(new Map());
@@ -113,11 +175,9 @@ export function DraggablePurchaseItemList({
   // When dragging, disable touch-action on all items to prevent interference
   const isDragging = activeId !== null;
 
-  // Load sorting for this purchase when component mounts or purchaseId changes
   useEffect(() => {
-    // This will trigger the context to load sorting for this purchase
-    getSortedItems(items, purchaseId);
-  }, [purchaseId, items, getSortedItems]);
+    loadSortingForPurchase(purchaseId);
+  }, [purchaseId, loadSortingForPurchase]);
 
   // Sensors with activation constraints
   // Both use delay-based activation: hold for 300ms to start dragging
@@ -138,11 +198,24 @@ export function DraggablePurchaseItemList({
     // KeyboardSensor disabled to prevent key press interference with editing
   );
 
-  // Force re-render when sortedItemIds changes
-  const sortedItems = getSortedItems(items, purchaseId);
+  const sortedItems = useMemo(
+    () => getSortedItems(items, purchaseId),
+    [getSortedItems, items, purchaseId]
+  );
 
-  // FLIP animation for programmatic reorders (manual index edits)
+  const sortedIdsKey = useMemo(
+    () => sortedItems.map(i => i.id).join(','),
+    [sortedItems]
+  );
+
+  const sortableItemIds = useMemo(
+    () => sortedItems.map(item => item.id),
+    [sortedItems]
+  );
+
+  // FLIP for programmatic reorders only — skip while dragging (getBoundingClientRect × N is costly).
   useLayoutEffect(() => {
+    if (activeId) return;
     const container = containerRef.current;
     if (!container) return;
     const nodes = Array.from(
@@ -173,7 +246,7 @@ export function DraggablePurchaseItemList({
       }
     });
     prevRectsRef.current = nextRects;
-  }, [sortedItems.map(i => i.id).join(',')]);
+  }, [sortedIdsKey, activeId]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -221,7 +294,12 @@ export function DraggablePurchaseItemList({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={rectIntersection}
+      measuring={{
+        droppable: {
+          strategy: MeasuringStrategy.BeforeDragging,
+        },
+      }}
       autoScroll={false}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEndEvent}
@@ -230,13 +308,10 @@ export function DraggablePurchaseItemList({
         setActiveId(null);
       }}
     >
-      <SortableContext
-        items={sortedItems.map(item => item.id)}
-        strategy={verticalListSortingStrategy}
-      >
+      <SortableContext items={sortableItemIds} strategy={rectSortingStrategy}>
         <div
           ref={containerRef}
-          className="space-y-4"
+          className="grid grid-cols-1 items-stretch gap-6 [contain:layout_style] sm:grid-cols-2 md:grid-cols-3"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {sortedItems.map(item => (
@@ -258,68 +333,14 @@ export function DraggablePurchaseItemList({
         }}
         dropAnimation={null}
       >
-        {activeId ? (
-          <div className="scale-105 transform rounded-lg border-2 border-blue-400 bg-white p-4 opacity-95 shadow-2xl">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <div className="mb-2 flex justify-center gap-2">
-                  <div className="flex h-8 w-16 min-w-16 max-w-16 items-center justify-center rounded border border-gray-200 bg-gray-100 px-1 py-1 text-sm font-medium tabular-nums">
-                    {sortedItems.find(item => item.id === activeId)?.sortIndex}
-                  </div>
-                </div>
-                <div className="flex justify-center">
-                  {(() => {
-                    const activeItem = sortedItems.find(i => i.id === activeId);
-                    if (!activeItem) return null;
-                    const normalize = (s?: string | null) =>
-                      (s || '').trim().toLowerCase();
-                    const color = normalize(activeItem.color);
-                    const imgs = activeItem.product.images || [];
-                    const colorMatch = imgs.find(img => normalize(img.color) === color);
-                    const src = (colorMatch || imgs[0])?.url;
-                    return src ? (
-                      <Image
-                        src={src}
-                        alt={
-                          sortedItems.find(item => item.id === activeId)?.name ||
-                          ''
-                        }
-                        width={64}
-                        height={64}
-                        className="h-16 w-16 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
-                        <span className="text-xs text-gray-500">Нет фото</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="mb-2 flex items-center gap-4">
-                  <span className="truncate text-sm font-semibold">
-                    {sortedItems.find(item => item.id === activeId)?.name}
-                  </span>
-                  <span className="text-lg font-semibold">
-                    {sortedItems.find(item => item.id === activeId)?.price &&
-                      new Intl.NumberFormat('ru-RU', {
-                        style: 'currency',
-                        currency: 'RUB',
-                      }).format(
-                        Number(
-                          sortedItems.find(item => item.id === activeId)?.price
-                        )
-                      )}
-                  </span>
-                </div>
-                <div className="line-clamp-2 text-sm text-gray-600">
-                  {sortedItems.find(item => item.id === activeId)?.description}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {activeId
+          ? (() => {
+              const activeItem = sortedItems.find(i => i.id === activeId);
+              return activeItem ? (
+                <PurchaseDragOverlayPreview item={activeItem} />
+              ) : null;
+            })()
+          : null}
       </DragOverlay>
     </DndContext>
   );

@@ -37,6 +37,8 @@ const STORAGE_KEY_PREFIX = 'purchase-item-sorting-';
 
 interface PurchaseItemSortingContextType {
   sortedItemIds: string[];
+  /** Call when opening a purchase so localStorage order applies (same tab). */
+  loadSortingForPurchase: (purchaseId: string) => void;
   getSortedItems: (items: PurchaseItem[], purchaseId: string) => PurchaseItem[];
   handleDragEnd: (
     result: any,
@@ -239,6 +241,7 @@ export function PurchaseItemSortingProvider({
 
   const value: PurchaseItemSortingContextType = {
     sortedItemIds,
+    loadSortingForPurchase,
     getSortedItems,
     handleDragEnd,
     clearSorting,

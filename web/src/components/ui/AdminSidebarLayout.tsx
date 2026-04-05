@@ -33,18 +33,23 @@ export default function AdminSidebarLayout({
 
       {/* Main content area - Right column */}
       <div
+        data-admin-scroll-root
         className="flex flex-1 flex-col overflow-y-auto bg-gray-50 transition-all duration-300 ease-in-out dark:bg-gray-900"
         style={
           {
             '--sidebar-width': isCollapsed ? '80px' : '224px',
             WebkitOverflowScrolling: 'touch',
+            // Prevent browser scroll anchoring from following reordered list items (purchase DnD / index edits).
+            overflowAnchor: 'none',
           } as React.CSSProperties
         }
       >
         {/* Mobile header removed - using bottom navigation only */}
 
         {/* Main content - Allow scrolling; add bottom padding for mobile bottom nav */}
-        <main className="flex-1 p-0 pb-20 sm:p-6 sm:pb-20 lg:pb-6">{children}</main>
+        <main className="flex-1 p-0 pb-20 sm:p-6 sm:pb-20 lg:pb-6">
+          {children}
+        </main>
         {/* Spacer for bottom navigation on mobile and tablet */}
         <div className="h-16 lg:hidden" />
         <AdminBottomNavigation userRole={userRole} />

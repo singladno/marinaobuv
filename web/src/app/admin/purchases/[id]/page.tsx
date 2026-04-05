@@ -1,28 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import { deduplicateRequest } from '@/lib/request-deduplication';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import {
-  ArrowLeft,
-  Download,
-  ShoppingCart,
-  Edit3,
-  Plus,
-  Check,
-  X,
-  GripVertical,
-  Trash2,
-} from 'lucide-react';
+import { ArrowLeft, Download, ShoppingCart, Edit3 } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { SmartHeader } from '@/components/ui/SmartHeader';
 import { DraggablePurchaseItemList } from '@/components/ui/DraggablePurchaseItemList';
@@ -32,7 +20,43 @@ import { useConfirmationModal } from '@/hooks/useConfirmationModal';
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import ScrollArrows from '@/components/ui/ScrollArrows';
 import BulkDescriptionEditModal from '@/components/features/BulkDescriptionEditModal';
-import { ProductImageModal } from '@/components/features/ProductImageModal';
+import { AdminPurchaseItemCard } from '@/components/features/AdminPurchaseItemCard';
+
+/** Admin layout scrolls in `[data-admin-scroll-root]`, not `window`. */
+function getPurchasePageScrollContainer(): HTMLElement {
+  const byData = document.querySelector('[data-admin-scroll-root]');
+  if (byData instanceof HTMLElement) return byData;
+  const main = document.querySelector('main');
+  const parent = main?.parentElement;
+  if (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (
+      overflowY === 'auto' ||
+      overflowY === 'scroll' ||
+      overflowY === 'overlay'
+    ) {
+      return parent;
+    }
+  }
+  return document.documentElement;
+}
+
+function commitItemsUpdatePreservingScroll(commit: () => void): void {
+  const scroller = getPurchasePageScrollContainer();
+  const top = scroller.scrollTop;
+  const left = scroller.scrollLeft;
+  flushSync(commit);
+  const apply = () => {
+    scroller.scrollTop = top;
+    scroller.scrollLeft = left;
+  };
+  apply();
+  // FLIP / layout + scroll anchoring can adjust after sync commit; restore again on next frames.
+  requestAnimationFrame(() => {
+    apply();
+    requestAnimationFrame(apply);
+  });
+}
 
 interface PurchaseItem {
   id: string;
@@ -83,8 +107,6 @@ function PurchaseDetailPageContent() {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedItemForImageModal, setSelectedItemForImageModal] =
-    useState<PurchaseItem | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   const confirmationModal = useConfirmationModal();
@@ -224,12 +246,11 @@ function PurchaseDetailPageContent() {
         // Insert the target item at the desired position
         otherItems.splice(newIndex - 1, 0, targetItem);
 
-        // Reassign sequential indexes
-        otherItems.forEach((item, index) => {
-          item.sortIndex = index + 1;
-        });
-
-        return otherItems;
+        // Immutable sortIndex so list items get new references and memo/UI stay in sync
+        return otherItems.map((row, index) => ({
+          ...row,
+          sortIndex: index + 1,
+        }));
       }
     }
 
@@ -242,7 +263,7 @@ function PurchaseDetailPageContent() {
       }));
   };
 
-  /** Persist sort order — only PUT rows whose sortIndex changed (never call from inside setState; Strict Mode runs updaters twice). */
+  /** Persist sort order in one request (avoids N PUTs on load/reorder). */
   const updateItemIndexesIfChanged = async (
     nextItems: PurchaseItem[],
     previousItems: PurchaseItem[]
@@ -254,20 +275,22 @@ function PurchaseDetailPageContent() {
     if (toSync.length === 0) return;
 
     try {
-      await Promise.all(
-        toSync.map(item =>
-          fetch(`/api/admin/purchases/${params.id}/items/${item.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ sortIndex: item.sortIndex }),
-          }).then(res => {
-            if (!res.ok) throw new Error('Failed to update sort index');
-            return res;
-          })
-        )
+      const response = await fetch(
+        `/api/admin/purchases/${params.id}/items/reorder`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            items: toSync.map(item => ({
+              id: item.id,
+              sortIndex: item.sortIndex,
+            })),
+          }),
+        }
       );
+      if (!response.ok) throw new Error('Failed to update sort order');
     } catch (err) {
       console.error('Failed to update item indexes:', err);
       throw err;
@@ -278,12 +301,14 @@ function PurchaseDetailPageContent() {
     const previousItems = purchase?.items ?? [];
     await updateItemIndexesIfChanged(reorderedItems, previousItems);
 
-    setPurchase(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        items: reorderedItems,
-      };
+    commitItemsUpdatePreservingScroll(() => {
+      setPurchase(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          items: reorderedItems,
+        };
+      });
     });
   };
 
@@ -371,9 +396,11 @@ function PurchaseDetailPageContent() {
 
         await updateItemIndexesIfChanged(recalculatedItems, previousItems);
 
-        setPurchase(prev =>
-          prev ? { ...prev, items: recalculatedItems } : null
-        );
+        commitItemsUpdatePreservingScroll(() => {
+          setPurchase(prev =>
+            prev ? { ...prev, items: recalculatedItems } : null
+          );
+        });
       } else {
         setPurchase(prev => {
           if (!prev) return null;
@@ -410,7 +437,9 @@ function PurchaseDetailPageContent() {
 
     try {
       setIsBulkProcessing(true);
-      const updatePromises = purchase.items.map(async item => {
+      const updates: { id: string; description: string }[] = [];
+
+      for (const item of purchase.items) {
         let next = item.description || '';
         if (mode === 'replace' && replaceFrom) {
           try {
@@ -422,30 +451,36 @@ function PurchaseDetailPageContent() {
           next = `${next}${value}`;
         }
 
-        if (next === item.description) return null;
+        if (next !== item.description) {
+          updates.push({ id: item.id, description: next });
+        }
+      }
 
-        const res = await fetch(
-          `/api/admin/purchases/${params.id}/items/${item.id}`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: item.name,
-              description: next,
-              price: Number(item.price),
-              sortIndex: item.sortIndex,
-            }),
-          }
-        );
-        if (!res.ok) throw new Error('Failed to update item');
-        const updated = await res.json();
-        return updated;
-      });
+      if (updates.length === 0) {
+        addNotification({
+          type: 'success',
+          title: 'Готово',
+          message: 'Изменений не требуется',
+        });
+        setIsBulkModalOpen(false);
+        return;
+      }
 
-      const results = await Promise.all(updatePromises);
-      const updatedById = new Map(
-        results.filter(Boolean).map((it: any) => [it.id, it])
+      const res = await fetch(
+        `/api/admin/purchases/${params.id}/items/bulk-descriptions`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: updates }),
+        }
       );
+
+      if (!res.ok) {
+        throw new Error('Failed to update descriptions');
+      }
+
+      const data = (await res.json()) as { items: PurchaseItem[] };
+      const updatedById = new Map(data.items.map(it => [it.id, it]));
 
       setPurchase(prev => {
         if (!prev) return prev;
@@ -649,222 +684,18 @@ function PurchaseDetailPageContent() {
             onItemsReordered={handleItemsReordered}
           >
             {(item, isDragging) => (
-              <Card
-                className={`relative p-4 transition-all duration-200 ${
-                  isDragging ? 'opacity-20' : ''
-                }`}
-              >
-                {/* Delete Button - Top Right */}
-                <button
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleDeleteItem(item.id, item.name);
-                  }}
-                  disabled={deletingItemId === item.id}
-                  className="absolute right-2 top-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-600 transition-colors hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  title="Удалить товар из закупки"
-                >
-                  {deletingItemId === item.id ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </button>
-
-                <div className="flex gap-4">
-                  {/* Left Column: Controls + Image */}
-                  <div className="flex-shrink-0">
-                    {/* Controls Row */}
-                    <div className="mb-2 flex justify-center gap-2">
-                      {/* Editable Sort Index */}
-                      {editingField?.itemId === item.id &&
-                      editingField?.field === 'sortIndex' ? (
-                        <Input
-                          type="number"
-                          value={editValue}
-                          onChange={e => setEditValue(e.target.value)}
-                          onBlur={saveFieldEdit}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') saveFieldEdit();
-                            if (e.key === 'Escape') cancelFieldEdit();
-                          }}
-                          className="box-border h-8 w-16 min-w-16 max-w-16 px-1 py-1 text-center text-sm tabular-nums"
-                          placeholder="#"
-                          autoFocus
-                        />
-                      ) : (
-                        <div
-                          className="flex h-8 w-16 min-w-16 max-w-16 cursor-pointer items-center justify-center rounded border border-gray-200 bg-gray-100 px-1 py-1 text-sm font-medium tabular-nums hover:border-gray-300 hover:bg-gray-200"
-                          onClick={() =>
-                            startFieldEdit(item.id, 'sortIndex', item.sortIndex)
-                          }
-                        >
-                          {item.sortIndex}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Product Image */}
-                    <div className="flex justify-center">
-                      {(() => {
-                        const normalize = (s?: string | null) =>
-                          (s || '').trim().toLowerCase();
-                        const color = normalize(item.color);
-                        const imgs = item.product.images || [];
-                        const colorMatch = imgs.find(
-                          img => normalize(img.color) === color
-                        );
-                        const src = (colorMatch || imgs[0])?.url;
-                        return src ? (
-                          <div
-                            className="h-16 w-16 cursor-pointer"
-                            onClick={() => setSelectedItemForImageModal(item)}
-                            title="Просмотр изображений"
-                          >
-                            <Image
-                              src={src}
-                              alt={item.name}
-                              width={64}
-                              height={64}
-                              className="h-16 w-16 rounded object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex h-16 w-16 items-center justify-center rounded bg-gray-100">
-                            <Text className="text-xs text-gray-500">
-                              Нет фото
-                            </Text>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="min-w-0 flex-1">
-                    {/* Name and Prices Row */}
-                    <div className="mb-2 flex items-center gap-4">
-                      {/* Editable Name */}
-                      {editingField?.itemId === item.id &&
-                      editingField?.field === 'name' ? (
-                        <Input
-                          value={editValue}
-                          onChange={e => setEditValue(e.target.value)}
-                          onBlur={saveFieldEdit}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') saveFieldEdit();
-                            if (e.key === 'Escape') cancelFieldEdit();
-                          }}
-                          className="min-w-0 flex-shrink-0 px-2 py-1"
-                          style={{
-                            width: `${Math.max(editValue.length * 9 + 20, item.name.length * 9 + 20)}px`,
-                          }}
-                          placeholder="Название товара"
-                          autoFocus
-                        />
-                      ) : (
-                        <Text
-                          className="cursor-pointer rounded border border-gray-200 px-2 py-1 text-sm font-semibold hover:border-gray-300 hover:bg-gray-100"
-                          onClick={() =>
-                            startFieldEdit(item.id, 'name', item.name)
-                          }
-                        >
-                          {item.name}
-                        </Text>
-                      )}
-
-                      {/* Editable Price */}
-                      <div className="flex items-center gap-2">
-                        {editingField?.itemId === item.id &&
-                        editingField?.field === 'price' ? (
-                          <Input
-                            type="number"
-                            value={editValue}
-                            onChange={e => setEditValue(e.target.value)}
-                            onBlur={saveFieldEdit}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') saveFieldEdit();
-                              if (e.key === 'Escape') cancelFieldEdit();
-                            }}
-                            className="w-24"
-                            placeholder="Цена"
-                            autoFocus
-                          />
-                        ) : (
-                          <Text
-                            className="cursor-pointer rounded border border-gray-200 px-2 py-1 text-lg font-semibold hover:border-gray-300 hover:bg-gray-100"
-                            onClick={() =>
-                              startFieldEdit(item.id, 'price', item.price)
-                            }
-                          >
-                            {new Intl.NumberFormat('ru-RU', {
-                              style: 'currency',
-                              currency: 'RUB',
-                            }).format(Number(item.price))}
-                          </Text>
-                        )}
-                        <Text className="text-sm font-semibold text-red-600 line-through">
-                          {new Intl.NumberFormat('ru-RU', {
-                            style: 'currency',
-                            currency: 'RUB',
-                          }).format(Number(item.oldPrice))}
-                        </Text>
-                      </div>
-                    </div>
-
-                    {/* Description Row - Full Width */}
-                    <div className="mb-2">
-                      {editingField?.itemId === item.id &&
-                      editingField?.field === 'description' ? (
-                        <textarea
-                          value={editValue}
-                          onChange={e => {
-                            setEditValue(e.target.value);
-                            const el = e.currentTarget;
-                            el.style.height = 'auto';
-                            el.style.height = `${el.scrollHeight}px`;
-                          }}
-                          onFocus={e => {
-                            const el = e.currentTarget;
-                            el.style.height = 'auto';
-                            el.style.height = `${el.scrollHeight}px`;
-                          }}
-                          onInput={e => {
-                            const el = e.currentTarget;
-                            el.style.height = 'auto';
-                            el.style.height = `${el.scrollHeight}px`;
-                          }}
-                          onBlur={saveFieldEdit}
-                          onKeyDown={e => {
-                            if (e.key === 'Escape') cancelFieldEdit();
-                          }}
-                          className="min-h-[2.5rem] w-full rounded-md border border-gray-200 p-2 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-                          rows={1}
-                          style={{ overflow: 'hidden', resize: 'none' }}
-                          placeholder="Описание товара"
-                          aria-label="Описание товара"
-                          autoFocus
-                        />
-                      ) : (
-                        <div
-                          className="text-muted-foreground min-h-[2.5rem] cursor-pointer rounded border border-gray-200 px-2 py-2 text-sm hover:border-gray-300 hover:bg-gray-100"
-                          onClick={() =>
-                            startFieldEdit(
-                              item.id,
-                              'description',
-                              item.description
-                            )
-                          }
-                        >
-                          <div className="line-clamp-2 text-sm">
-                            {item.description}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              <AdminPurchaseItemCard
+                item={item}
+                isDragging={isDragging}
+                editingField={editingField}
+                editValue={editValue}
+                deletingItemId={deletingItemId}
+                setEditValue={setEditValue}
+                saveFieldEdit={saveFieldEdit}
+                cancelFieldEdit={cancelFieldEdit}
+                startFieldEdit={startFieldEdit}
+                onDelete={handleDeleteItem}
+              />
             )}
           </DraggablePurchaseItemList>
         )}
@@ -888,34 +719,6 @@ function PurchaseDetailPageContent() {
         onApply={handleApplyBulkDescriptions}
         isProcessing={isBulkProcessing}
       />
-      {selectedItemForImageModal &&
-        (() => {
-          const normalize = (s?: string | null) =>
-            (s || '').trim().toLowerCase();
-          const itemColor = normalize(selectedItemForImageModal.color);
-          const allImages = selectedItemForImageModal.product.images || [];
-          // Filter images to only show the ones matching the item's color
-          const filteredImages = allImages.filter(
-            img => normalize(img.color) === itemColor
-          );
-          // If no color match, fall back to all images
-          const images = filteredImages.length > 0 ? filteredImages : allImages;
-          const initialIndex = 0; // Always start at first image since we filtered
-          return (
-            <ProductImageModal
-              isOpen={!!selectedItemForImageModal}
-              onClose={() => setSelectedItemForImageModal(null)}
-              images={images.map(img => ({
-                id: img.id,
-                url: img.url,
-                alt: img.color || null,
-                isPrimary: img.isPrimary,
-              }))}
-              productName={selectedItemForImageModal.name}
-              initialIndex={initialIndex}
-            />
-          );
-        })()}
       <ScrollArrows offsetBottomPx={28} showOnMobile />
     </div>
   );
