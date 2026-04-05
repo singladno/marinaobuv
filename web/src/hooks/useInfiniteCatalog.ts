@@ -208,10 +208,7 @@ export function useInfiniteCatalog(
         if ((updatedFilters.colors ?? []).length > 0)
           searchParams.set('colors', (updatedFilters.colors ?? []).join(','));
         if (updatedFilters.inStock) searchParams.set('inStock', 'true');
-        if (
-          updatedFilters.sourceIds &&
-          updatedFilters.sourceIds.length > 0
-        ) {
+        if (updatedFilters.sourceIds && updatedFilters.sourceIds.length > 0) {
           searchParams.set('sourceIds', updatedFilters.sourceIds.join(','));
         }
         searchParams.set('page', updatedFilters.page.toString());

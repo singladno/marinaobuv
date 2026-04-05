@@ -125,29 +125,23 @@ export function PurchaseProvider({ children }: { children: ReactNode }) {
     }
   }, [isPurchaseMode, user, hasInitialized]);
 
-  // Persist active purchase to localStorage
-  // Note: When activePurchase is null (e.g., purchase mode turned off),
-  // we intentionally DO NOT remove the saved id so the last used purchase
-  // can be restored when purchase mode is turned back on.
-  // However, if purchase mode is ON and activePurchase is null, it means
-  // the user explicitly cleared the selection, so we should clear the saved ID.
+  // Persist active purchase id when we have a selection.
+  // Do NOT clear localStorage here when activePurchase is null: on first paint after refresh
+  // purchase mode is already on but activePurchase is still null until `purchases` load and
+  // the restore effect runs — clearing here would wipe `active-purchase-id` before restore.
+  // Explicit clear is handled by `handleSetActivePurchase(null)` only.
   useEffect(() => {
     if (typeof window !== 'undefined' && user && hasInitialized) {
       try {
         if (activePurchase) {
           localStorage.setItem('active-purchase-id', activePurchase.id);
           setSavedActivePurchaseId(activePurchase.id);
-        } else if (isPurchaseMode) {
-          // If purchase mode is ON but activePurchase is null, user explicitly cleared selection
-          // Clear the saved ID to prevent restoration
-          localStorage.removeItem('active-purchase-id');
-          setSavedActivePurchaseId(null);
         }
       } catch (error) {
         console.warn('Failed to save active purchase to localStorage:', error);
       }
     }
-  }, [activePurchase, isPurchaseMode, user, hasInitialized]);
+  }, [activePurchase, user, hasInitialized]);
 
   const refreshPurchases = useCallback(async () => {
     if (user?.role !== 'ADMIN') return;

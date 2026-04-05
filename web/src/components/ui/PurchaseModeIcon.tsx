@@ -41,10 +41,10 @@ export function PurchaseModeIcon() {
   }
 
   const handleToggle = (checked: boolean) => {
+    // `setIsPurchaseMode` clears active purchase when turning off without touching localStorage
+    // so the last id can be restored next time. Do not call `setActivePurchase(null)` here —
+    // it would run while mode is still true in the same tick and clear `active-purchase-id`.
     setIsPurchaseMode(checked);
-    if (!checked) {
-      setActivePurchase(null);
-    }
   };
 
   const handlePurchaseSelect = async (purchase: any) => {

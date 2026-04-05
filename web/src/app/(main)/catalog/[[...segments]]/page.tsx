@@ -177,7 +177,10 @@ function CatalogPageContent() {
     const searchParam = searchParams.get('search');
     const sourceIdsParam = searchParams.get('sourceIds');
     const sourceIds = sourceIdsParam
-      ? sourceIdsParam.split(',').map((s) => s.trim()).filter(Boolean)
+      ? sourceIdsParam
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
       : undefined;
 
     const merged = {
