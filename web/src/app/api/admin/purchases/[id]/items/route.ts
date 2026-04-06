@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { prismaProductSelectForPurchaseItem } from '@/lib/server/admin-purchase-selects';
+import { normalizePurchaseItemSortIndexes } from '@/lib/server/normalize-purchase-item-order';
 import { formatPurchaseDescription } from '@/utils/purchaseDescriptionFormatter';
 import { logRequestError } from '@/lib/server/request-logging';
 
@@ -113,9 +114,27 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(purchaseItem, { status: 201 });
+    await normalizePurchaseItemSortIndexes(id);
+
+    const purchaseItemNormalized = await prisma.purchaseItem.findFirst({
+      where: { id: purchaseItem.id },
+      include: {
+        product: {
+          select: prismaProductSelectForPurchaseItem,
+        },
+      },
+    });
+
+    return NextResponse.json(purchaseItemNormalized ?? purchaseItem, {
+      status: 201,
+    });
   } catch (error) {
-    logRequestError(request, '/api/admin/purchases/[id]/items', error, 'Error adding item to purchase:');
+    logRequestError(
+      request,
+      '/api/admin/purchases/[id]/items',
+      error,
+      'Error adding item to purchase:'
+    );
     return NextResponse.json(
       { error: 'Failed to add item to purchase' },
       { status: 500 }

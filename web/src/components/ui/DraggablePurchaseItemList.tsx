@@ -25,6 +25,7 @@ import {
   SortableContext,
   rectSortingStrategy,
   defaultAnimateLayoutChanges,
+  arrayMove,
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -166,7 +167,7 @@ export function DraggablePurchaseItemList({
   onItemsReordered,
   children,
 }: DraggablePurchaseItemListProps) {
-  const { getSortedItems, handleDragEnd, loadSortingForPurchase } =
+  const { getSortedItems, loadSortingForPurchase, setOrderForPurchase } =
     usePurchaseItemSorting();
   const [activeId, setActiveId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -253,13 +254,8 @@ export function DraggablePurchaseItemList({
   };
 
   const handleDragEndEvent = (event: DragEndEvent) => {
-    // Clear active ID immediately to allow next drag
     setActiveId(null);
 
-    // Handle the drag end in the context (for localStorage)
-    handleDragEnd(event, items, purchaseId);
-
-    // Update the database with new indexes
     if (event.active && event.over && event.active.id !== event.over.id) {
       const sortedItems = getSortedItems(items, purchaseId);
       const sourceIndex = sortedItems.findIndex(
@@ -270,18 +266,19 @@ export function DraggablePurchaseItemList({
       );
 
       if (sourceIndex !== -1 && destinationIndex !== -1) {
-        // Create new array with reordered items
-        const reorderedItems = [...sortedItems];
-        const [movedItem] = reorderedItems.splice(sourceIndex, 1);
-        reorderedItems.splice(destinationIndex, 0, movedItem);
-
-        // Update sortIndex for all items based on new order
+        const reorderedItems = arrayMove(
+          sortedItems,
+          sourceIndex,
+          destinationIndex
+        );
         const itemsWithNewIndexes = reorderedItems.map((item, index) => ({
           ...item,
           sortIndex: index + 1,
         }));
-
-        // Call the callback to update the database
+        setOrderForPurchase(
+          purchaseId,
+          itemsWithNewIndexes.map(i => i.id)
+        );
         onItemsReordered(itemsWithNewIndexes);
       }
     }

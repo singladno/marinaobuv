@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
+import { normalizePurchaseItemSortIndexes } from '@/lib/server/normalize-purchase-item-order';
 import { logRequestError } from '@/lib/server/request-logging';
 
 /**
@@ -84,6 +85,8 @@ export async function PATCH(
         })
       )
     );
+
+    await normalizePurchaseItemSortIndexes(id);
 
     return NextResponse.json({ ok: true, updated: items.length });
   } catch (error) {

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/server/db';
 import { prismaProductSelectForPurchaseItem } from '@/lib/server/admin-purchase-selects';
+import { normalizePurchaseItemSortIndexes } from '@/lib/server/normalize-purchase-item-order';
 import { logRequestError } from '@/lib/server/request-logging';
 
 export async function PUT(
@@ -56,9 +57,27 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json(purchaseItem);
+    if (sortIndex !== undefined) {
+      await normalizePurchaseItemSortIndexes(id);
+    }
+
+    const purchaseItemNormalized = await prisma.purchaseItem.findFirst({
+      where: { id: itemId },
+      include: {
+        product: {
+          select: prismaProductSelectForPurchaseItem,
+        },
+      },
+    });
+
+    return NextResponse.json(purchaseItemNormalized ?? purchaseItem);
   } catch (error) {
-    logRequestError(request, '/api/admin/purchases/[id]/items/[itemId]', error, 'Error updating purchase item:');
+    logRequestError(
+      request,
+      '/api/admin/purchases/[id]/items/[itemId]',
+      error,
+      'Error updating purchase item:'
+    );
     return NextResponse.json(
       { error: 'Failed to update purchase item' },
       { status: 500 }
@@ -100,9 +119,16 @@ export async function DELETE(
       where: { id: itemId },
     });
 
+    await normalizePurchaseItemSortIndexes(id);
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    logRequestError(request, '/api/admin/purchases/[id]/items/[itemId]', error, 'Error deleting purchase item:');
+    logRequestError(
+      request,
+      '/api/admin/purchases/[id]/items/[itemId]',
+      error,
+      'Error deleting purchase item:'
+    );
     return NextResponse.json(
       { error: 'Failed to delete purchase item' },
       { status: 500 }

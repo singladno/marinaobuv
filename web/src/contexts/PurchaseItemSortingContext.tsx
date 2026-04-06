@@ -40,6 +40,8 @@ interface PurchaseItemSortingContextType {
   /** Call when opening a purchase so localStorage order applies (same tab). */
   loadSortingForPurchase: (purchaseId: string) => void;
   getSortedItems: (items: PurchaseItem[], purchaseId: string) => PurchaseItem[];
+  /** Persist visual order after DnD (same ids as `onItemsReordered`). Replaces internal handleDragEnd. */
+  setOrderForPurchase: (purchaseId: string, orderedIds: string[]) => void;
   handleDragEnd: (
     result: any,
     items: PurchaseItem[],
@@ -118,6 +120,13 @@ export function PurchaseItemSortingProvider({
       }
     },
     []
+  );
+
+  const setOrderForPurchase = useCallback(
+    (purchaseId: string, orderedIds: string[]) => {
+      saveSorting(orderedIds, purchaseId);
+    },
+    [saveSorting]
   );
 
   // Get sorted items based on current sorting and available items
@@ -243,6 +252,7 @@ export function PurchaseItemSortingProvider({
     sortedItemIds,
     loadSortingForPurchase,
     getSortedItems,
+    setOrderForPurchase,
     handleDragEnd,
     clearSorting,
     hasCustomSorting,

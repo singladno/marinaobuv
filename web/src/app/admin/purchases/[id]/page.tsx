@@ -114,7 +114,7 @@ function PurchaseDetailPageContent() {
 
   const confirmationModal = useConfirmationModal();
   const { addNotification } = useNotifications();
-  const { getSortedItems, handleDragEnd } = usePurchaseItemSorting();
+  const { clearSorting, setOrderForPurchase } = usePurchaseItemSorting();
 
   const fetchPurchase = async () => {
     const purchaseId = params.id;
@@ -139,6 +139,7 @@ function PurchaseDetailPageContent() {
       );
 
       const itemsWithSequentialIndexes = recalculateIndexes(itemsNormalized);
+      clearSorting(purchaseId);
       setPurchase({
         ...data,
         items: itemsWithSequentialIndexes,
@@ -291,19 +292,23 @@ function PurchaseDetailPageContent() {
     targetItemId?: string,
     newIndex?: number
   ) => {
-    if (targetItemId && newIndex) {
-      // Handle position insertion - if new index conflicts, shift other items
+    const n = items.length;
+    if (n === 0) return items;
+
+    // Use explicit numeric checks — `&& newIndex` was wrong for 0 (falsy).
+    if (
+      targetItemId != null &&
+      newIndex != null &&
+      typeof newIndex === 'number' &&
+      Number.isFinite(newIndex)
+    ) {
+      const clampedSlot = Math.max(1, Math.min(Math.floor(newIndex), n));
       const itemsCopy = [...items];
       const targetItem = itemsCopy.find(item => item.id === targetItemId);
 
       if (targetItem) {
-        // Remove the target item temporarily
         const otherItems = itemsCopy.filter(item => item.id !== targetItemId);
-
-        // Insert the target item at the desired position
-        otherItems.splice(newIndex - 1, 0, targetItem);
-
-        // Immutable sortIndex so list items get new references and memo/UI stay in sync
+        otherItems.splice(clampedSlot - 1, 0, targetItem);
         return otherItems.map((row, index) => ({
           ...row,
           sortIndex: index + 1,
@@ -311,9 +316,11 @@ function PurchaseDetailPageContent() {
       }
     }
 
-    // Fallback to simple sequential ordering
-    return items
-      .sort((a, b) => a.sortIndex - b.sortIndex)
+    return [...items]
+      .sort(
+        (a, b) =>
+          a.sortIndex - b.sortIndex || String(a.id).localeCompare(String(b.id))
+      )
       .map((item, index) => ({
         ...item,
         sortIndex: index + 1,
@@ -425,22 +432,6 @@ function PurchaseDetailPageContent() {
       const updatedItem = await response.json();
 
       if (editingField.field === 'sortIndex' && purchase) {
-        try {
-          const sortedBefore = getSortedItems(purchase.items, purchase.id);
-          const destinationIndex = parseInt(editValue, 10) - 1;
-          const overCandidate = sortedBefore[destinationIndex];
-          if (overCandidate && overCandidate.id !== editingField.itemId) {
-            handleDragEnd(
-              {
-                active: { id: editingField.itemId },
-                over: { id: overCandidate.id },
-              },
-              purchase.items,
-              purchase.id
-            );
-          }
-        } catch {}
-
         const previousItems = purchase.items;
         const updatedItems = previousItems.map(item =>
           item.id === updatedItem.id ? updatedItem : item
@@ -452,6 +443,11 @@ function PurchaseDetailPageContent() {
         );
 
         await updateItemIndexesIfChanged(recalculatedItems, previousItems);
+
+        setOrderForPurchase(
+          purchase.id,
+          recalculatedItems.map(i => i.id)
+        );
 
         commitItemsUpdatePreservingScroll(() => {
           setPurchase(prev =>
