@@ -216,6 +216,15 @@ jobs:
             # Save PM2 configuration
             pm2 save
 
+            # Without this, a VM reboot leaves port 8787 empty until the next deploy:
+            # `pm2 save` only writes dump.pm2; systemd needs the one-time startup hook to resurrect apps.
+            echo "🔁 Ensuring PM2 restores groq-proxy after OS reboot..."
+            LAST_LINE=$(pm2 startup systemd -u root --hp /root 2>/dev/null | sed '/^$/d' | tail -n 1)
+            if echo "$LAST_LINE" | grep -qE '^(sudo |env PATH=)'; then
+              bash -c "$LAST_LINE" || echo "⚠️ pm2 startup hook install returned non-zero (may already be configured)"
+            fi
+            pm2 save
+
             # Wait for server to start
             echo "⏳ Waiting for proxy server to start..."
             sleep 5
