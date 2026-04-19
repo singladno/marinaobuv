@@ -3,16 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db-node';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { inferIsFromMeFromWaWebhookPayload } from '@/lib/wa-admin-inbox';
-
-function isValidChatId(id: string): boolean {
-  if (!id || id.length > 200) return false;
-  if (!/^[0-9+\-@.a-zA-Z_]+$/.test(id)) return false;
-  return (
-    id.endsWith('@c.us') ||
-    id.endsWith('@g.us') ||
-    id.endsWith('@s.whatsapp.net')
-  );
-}
+import { isValidAdminWaChatId } from '@/lib/server/wa-chat-id';
 
 /** Message thread from DB only (populated by Green API webhooks). */
 export async function GET(request: NextRequest) {
@@ -28,7 +19,7 @@ export async function GET(request: NextRequest) {
     )
   );
 
-  if (!chatId || !isValidChatId(chatId)) {
+  if (!chatId || !isValidAdminWaChatId(chatId)) {
     return NextResponse.json({ error: 'Некорректный chatId' }, { status: 400 });
   }
 

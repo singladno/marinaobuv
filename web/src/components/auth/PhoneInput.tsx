@@ -9,6 +9,10 @@ interface PhoneInputProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** When used inside dialogs above z-50, e.g. `z-[170]` so the list appears on top. */
+  dropdownZClass?: string;
+  /** Backdrop below dropdown but above page; use with dropdown in modals, e.g. `z-[165]`. */
+  overlayZClass?: string;
 }
 
 // Country codes with flags and Russian names
@@ -109,6 +113,8 @@ export function PhoneInput({
   placeholder = '+7 000 000-00-00',
   disabled = false,
   className = '',
+  dropdownZClass = 'z-50',
+  overlayZClass = 'z-40',
 }: PhoneInputProps) {
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -407,7 +413,9 @@ export function PhoneInput({
 
           {/* Dropdown */}
           {isDropdownOpen && (
-            <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-72 overflow-auto rounded-lg border border-gray-300 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-700">
+            <div
+              className={`absolute left-0 top-full mt-1 max-h-60 w-72 overflow-auto rounded-lg border border-gray-300 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-700 ${dropdownZClass}`}
+            >
               <div className="p-2">
                 <div className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   Код страны
@@ -459,7 +467,7 @@ export function PhoneInput({
       {/* Click outside to close dropdown */}
       {isDropdownOpen && (
         <div
-          className="fixed inset-0 z-40"
+          className={`fixed inset-0 ${overlayZClass}`}
           onClick={() => setIsDropdownOpen(false)}
         />
       )}

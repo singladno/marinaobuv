@@ -2,7 +2,8 @@
 
 /**
  * Webhook Status Monitor
- * Checks Green API instance status and sends notifications when disconnected
+ * Checks Green API instance status and sends Telegram notifications when disconnected
+ * or when webhook settings are wrong. Supports two instances: product parser + admin chat.
  */
 
 import './load-env';
@@ -18,45 +19,47 @@ interface WebhookStatus {
   instanceStatus?: string;
 }
 
-interface NotificationConfig {
-  message: string;
-  enabled: boolean;
+type InstanceRole = 'product-parser' | 'admin-chat';
+
+function escapeTelegramHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function defaultHeadline(role: InstanceRole): string {
+  if (role === 'product-parser') {
+    return (
+      env.WEBHOOK_NOTIFICATION_MESSAGE ||
+      '⚠️ Product parser WhatsApp (Green API — catalog / WA_CHAT_IDS): instance not OK.'
+    );
+  }
+  return (
+    env.WEBHOOK_NOTIFICATION_MESSAGE_ADMIN ||
+    '⚠️ Admin chat WhatsApp (Green API — support inbox): instance not OK.'
+  );
 }
 
 export class WebhookStatusMonitor {
-  private instanceId: string;
-  private token: string;
   private baseUrl: string;
-  private notificationConfig: NotificationConfig;
+  private notificationsEnabled: boolean;
 
   constructor() {
-    if (!env.GREEN_API_INSTANCE_ID || !env.GREEN_API_TOKEN) {
-      throw new Error('Green API credentials not configured!');
-    }
-
-    this.instanceId = env.GREEN_API_INSTANCE_ID;
-    this.token = env.GREEN_API_TOKEN;
     this.baseUrl = env.GREEN_API_BASE_URL || 'https://api.green-api.com';
-
-    // Telegram notification configuration
-    this.notificationConfig = {
-      message:
-        env.WEBHOOK_NOTIFICATION_MESSAGE ||
-        '⚠️ Webhook Alert: Green API instance is disconnected. Please check the connection.',
-      enabled: env.WEBHOOK_NOTIFICATIONS_ENABLED === 'true',
-    };
+    this.notificationsEnabled = env.WEBHOOK_NOTIFICATIONS_ENABLED === 'true';
   }
 
   /**
-   * Check Green API instance status
+   * Check one Green API instance (authorized + webhook URL + incoming webhook on).
    */
-  async checkInstanceStatus(): Promise<WebhookStatus> {
+  async checkInstanceStatus(
+    instanceId: string,
+    token: string
+  ): Promise<WebhookStatus> {
     try {
-      console.log('🔍 Checking Green API instance status...');
-
-      // Check instance state
       const stateResponse = await fetch(
-        `${this.baseUrl}/waInstance${this.instanceId}/getStateInstance/${this.token}`,
+        `${this.baseUrl}/waInstance${instanceId}/getStateInstance/${token}`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -70,14 +73,11 @@ export class WebhookStatusMonitor {
       }
 
       const stateData = await stateResponse.json();
-      console.log('📊 Instance state:', stateData);
 
-      // Check if instance is authorized and connected
       const isConnected = stateData.stateInstance === 'authorized';
       const instanceStatus = stateData.stateInstance;
 
       if (!isConnected) {
-        console.log('❌ Instance is not connected. State:', instanceStatus);
         return {
           isConnected: false,
           lastCheck: new Date(),
@@ -86,9 +86,8 @@ export class WebhookStatusMonitor {
         };
       }
 
-      // Additional check: verify webhook settings
       const settingsResponse = await fetch(
-        `${this.baseUrl}/waInstance${this.instanceId}/getSettings/${this.token}`,
+        `${this.baseUrl}/waInstance${instanceId}/getSettings/${token}`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -102,26 +101,21 @@ export class WebhookStatusMonitor {
       }
 
       const settingsData = await settingsResponse.json();
-      console.log('⚙️ Webhook settings:', settingsData);
 
-      // Check if incoming webhook is enabled (first check - most important)
       if (settingsData.incomingWebhook !== 'yes') {
-        console.log('⚠️ Incoming webhook is not enabled');
         return {
           isConnected: false,
           lastCheck: new Date(),
           errorMessage:
-            'Incoming webhook is not enabled - messages will not be received',
+            'Incoming webhook is not enabled — messages will not be received',
           instanceStatus,
         };
       }
 
-      // Check if webhook URL is properly configured (relay by default; see configure-webhook.ts)
       const webhookUrl = settingsData.webhookUrl;
       const expectedWebhookUrl = getGreenApiIncomingWebhookUrl();
 
       if (!webhookUrl || webhookUrl !== expectedWebhookUrl) {
-        console.log('⚠️ Webhook URL mismatch or not configured');
         return {
           isConnected: false,
           lastCheck: new Date(),
@@ -130,16 +124,12 @@ export class WebhookStatusMonitor {
         };
       }
 
-      console.log(
-        '✅ Instance is connected and webhook is properly configured'
-      );
       return {
         isConnected: true,
         lastCheck: new Date(),
         instanceStatus,
       };
     } catch (error) {
-      console.error('❌ Error checking instance status:', error);
       return {
         isConnected: false,
         lastCheck: new Date(),
@@ -148,11 +138,8 @@ export class WebhookStatusMonitor {
     }
   }
 
-  /**
-   * Send notification via Telegram
-   */
   async sendNotification(message: string): Promise<void> {
-    if (!this.notificationConfig.enabled) {
+    if (!this.notificationsEnabled) {
       console.log('📵 Notifications disabled');
       return;
     }
@@ -175,22 +162,22 @@ export class WebhookStatusMonitor {
     }
   }
 
-  /**
-   * Save status to database for tracking
-   */
-  async saveStatusToDatabase(status: WebhookStatus): Promise<void> {
+  async saveStatusToDatabase(
+    status: WebhookStatus,
+    instanceLabel: string
+  ): Promise<void> {
     try {
-      // Note: This requires the WebhookStatus model to be added to the database
-      // Run: npx prisma db push or npx prisma migrate dev
       await (prisma as any).webhookStatus.create({
         data: {
           isConnected: status.isConnected,
           lastCheck: status.lastCheck,
-          errorMessage: status.errorMessage,
+          errorMessage: status.errorMessage
+            ? `[${instanceLabel}] ${status.errorMessage}`
+            : undefined,
           instanceStatus: status.instanceStatus,
         },
       });
-      console.log('💾 Status saved to database');
+      console.log(`💾 Status saved to database (${instanceLabel})`);
     } catch (error) {
       console.error('❌ Failed to save status to database:', error);
       console.log(
@@ -199,12 +186,9 @@ export class WebhookStatusMonitor {
     }
   }
 
-  /**
-   * Main monitoring function
-   */
   async monitor(): Promise<void> {
     console.log('🚀 Starting Webhook Status Monitor...');
-    console.log(`📱 Notifications enabled: ${this.notificationConfig.enabled}`);
+    console.log(`📱 Notifications enabled: ${this.notificationsEnabled}`);
 
     const telegramNotifier = getTelegramNotifier();
     if (telegramNotifier.isConfigured()) {
@@ -216,23 +200,69 @@ export class WebhookStatusMonitor {
       );
     }
 
-    const status = await this.checkInstanceStatus();
+    const checks: Array<{
+      instanceId: string;
+      token: string;
+      role: InstanceRole;
+      label: string;
+      logLabel: string;
+    }> = [];
 
-    // Save status to database
-    await this.saveStatusToDatabase(status);
+    if (env.GREEN_API_INSTANCE_ID && env.GREEN_API_TOKEN) {
+      checks.push({
+        instanceId: env.GREEN_API_INSTANCE_ID,
+        token: env.GREEN_API_TOKEN,
+        role: 'product-parser',
+        label: 'Product parser',
+        logLabel: 'product parser (catalog)',
+      });
+    }
 
-    if (!status.isConnected) {
-      console.log('🚨 Webhook is not working properly!');
-      console.log(`❌ Error: ${status.errorMessage}`);
+    if (env.GREEN_API_ADMIN_INSTANCE_ID && env.GREEN_API_ADMIN_TOKEN) {
+      checks.push({
+        instanceId: env.GREEN_API_ADMIN_INSTANCE_ID,
+        token: env.GREEN_API_ADMIN_TOKEN,
+        role: 'admin-chat',
+        label: 'Admin chat',
+        logLabel: 'admin chat',
+      });
+    }
 
-      // Send Telegram notification if enabled
-      if (this.notificationConfig.enabled) {
-        const dashboardUrl = 'https://console.green-api.com/instanceList/';
-        const notificationMessage = `${this.notificationConfig.message}\n\nDetails: ${status.errorMessage}\nTime: ${status.lastCheck.toISOString()}\n\n🔗 Connect instance: ${dashboardUrl}`;
-        await this.sendNotification(notificationMessage);
+    if (checks.length === 0) {
+      throw new Error(
+        'No Green API credentials configured. Set GREEN_API_INSTANCE_ID + GREEN_API_TOKEN (product parser) and/or GREEN_API_ADMIN_INSTANCE_ID + GREEN_API_ADMIN_TOKEN (admin chat).'
+      );
+    }
+
+    const dashboardUrl = 'https://console.green-api.com/instanceList/';
+
+    for (const c of checks) {
+      console.log(`🔍 Checking Green API instance (${c.logLabel})...`);
+
+      const status = await this.checkInstanceStatus(c.instanceId, c.token);
+
+      await this.saveStatusToDatabase(status, c.label);
+
+      if (!status.isConnected) {
+        console.log(
+          `🚨 Webhook is not OK for ${c.logLabel}: ${status.errorMessage}`
+        );
+
+        if (this.notificationsEnabled) {
+          const headline = defaultHeadline(c.role);
+          const details = escapeTelegramHtml(status.errorMessage || 'unknown');
+          const notificationMessage =
+            `${escapeTelegramHtml(headline)}\n\n` +
+            `<b>Instance:</b> ${escapeTelegramHtml(c.label)}\n` +
+            `<b>Details:</b> ${details}\n` +
+            `<b>Time:</b> ${escapeTelegramHtml(status.lastCheck.toISOString())}\n\n` +
+            `<a href="${dashboardUrl}">Open Green API console</a>`;
+
+          await this.sendNotification(notificationMessage);
+        }
+      } else {
+        console.log(`✅ Webhook OK (${c.logLabel})`);
       }
-    } else {
-      console.log('✅ Webhook is working properly');
     }
 
     console.log('🏁 Monitoring complete');

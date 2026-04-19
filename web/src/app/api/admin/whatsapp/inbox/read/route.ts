@@ -2,16 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { markWaAdminChatRead } from '@/lib/wa-admin-inbox';
-
-function isValidChatId(id: string): boolean {
-  if (!id || id.length > 200) return false;
-  if (!/^[0-9+\-@.a-zA-Z_]+$/.test(id)) return false;
-  return (
-    id.endsWith('@c.us') ||
-    id.endsWith('@g.us') ||
-    id.endsWith('@s.whatsapp.net')
-  );
-}
+import { isValidAdminWaChatId } from '@/lib/server/wa-chat-id';
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request, 'ADMIN');
@@ -28,7 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   const chatId = body.chatId?.trim();
-  if (!chatId || !isValidChatId(chatId)) {
+  if (!chatId || !isValidAdminWaChatId(chatId)) {
     return NextResponse.json({ error: 'Некорректный chatId' }, { status: 400 });
   }
 

@@ -10,6 +10,8 @@ interface ModalProps {
   className?: string;
   zIndex?: string;
   headerContent?: React.ReactNode;
+  /** Lets portaled or tall dropdowns (e.g. phone country list) escape the panel without clipping. */
+  allowContentOverflow?: boolean;
 }
 
 export function Modal({
@@ -21,10 +23,13 @@ export function Modal({
   className = '',
   zIndex = 'z-50',
   headerContent,
+  allowContentOverflow = false,
 }: ModalProps) {
   const [mounted, setMounted] = React.useState(false);
   const modalRef = React.useRef<HTMLDivElement>(null);
-  const modalIdRef = React.useRef<string>(`modal-${Math.random().toString(36).substr(2, 9)}`);
+  const modalIdRef = React.useRef<string>(
+    `modal-${Math.random().toString(36).substr(2, 9)}`
+  );
 
   // Ensure component is mounted on client side
   React.useEffect(() => {
@@ -81,9 +86,9 @@ export function Modal({
 
     return () => {
       // Only restore scroll if no other modals are open
-      const otherModals = Array.from(document.querySelectorAll('[data-modal-id]')).filter(
-        el => el !== modalRef.current
-      );
+      const otherModals = Array.from(
+        document.querySelectorAll('[data-modal-id]')
+      ).filter(el => el !== modalRef.current);
       if (otherModals.length === 0 && !wasBodyScrollLocked) {
         document.body.style.overflow = 'unset';
       }
@@ -136,7 +141,9 @@ export function Modal({
           e.stopPropagation();
           e.preventDefault();
           // Check if this is the topmost modal before closing
-          const allModals = Array.from(document.querySelectorAll('[data-modal-id]')) as HTMLElement[];
+          const allModals = Array.from(
+            document.querySelectorAll('[data-modal-id]')
+          ) as HTMLElement[];
           if (allModals.length > 0) {
             let topModal: HTMLElement | null = null;
             let highestZ = -1;
@@ -174,7 +181,9 @@ export function Modal({
             e.stopPropagation();
             e.preventDefault();
             // Check if this is the topmost modal before closing
-            const allModals = Array.from(document.querySelectorAll('[data-modal-id]')) as HTMLElement[];
+            const allModals = Array.from(
+              document.querySelectorAll('[data-modal-id]')
+            ) as HTMLElement[];
             if (allModals.length > 0) {
               let topModal: HTMLElement | null = null;
               let highestZ = -1;
@@ -206,14 +215,16 @@ export function Modal({
 
       {/* Modal */}
       <div
-        className={`relative ${isFullscreen ? 'w-full h-full' : `w-full ${sizeClasses[size]}`} ${className}`}
+        className={`relative ${isFullscreen ? 'h-full w-full' : `w-full ${sizeClasses[size]}`} ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
         onClick={e => e.stopPropagation()}
         onMouseDown={e => e.stopPropagation()}
       >
-        <div className={`${isFullscreen ? 'h-full' : 'rounded-card-large max-h-[80vh]'} bg-card shadow-modal flex flex-col overflow-hidden`}>
+        <div
+          className={`${isFullscreen ? 'h-full' : 'rounded-card-large max-h-[80vh]'} bg-card shadow-modal flex flex-col ${allowContentOverflow ? 'overflow-visible' : 'overflow-hidden'}`}
+        >
           {/* Header */}
           <div className="bg-card flex-shrink-0 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
             <div className="flex items-center justify-between">
@@ -256,7 +267,13 @@ export function Modal({
           </div>
 
           {/* Body */}
-          <div className="overflow-y-auto">{children}</div>
+          <div
+            className={
+              allowContentOverflow ? 'overflow-visible' : 'overflow-y-auto'
+            }
+          >
+            {children}
+          </div>
         </div>
       </div>
     </div>

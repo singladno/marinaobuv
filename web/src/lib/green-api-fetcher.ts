@@ -19,6 +19,8 @@ export class GreenApiFetcher {
   private instanceId: string;
   private token: string;
   private baseUrl: string;
+  /** SendFileByUpload lives on media host, not api host. */
+  private mediaUrl: string;
 
   constructor() {
     if (!env.GREEN_API_INSTANCE_ID || !env.GREEN_API_TOKEN) {
@@ -30,6 +32,7 @@ export class GreenApiFetcher {
     this.instanceId = env.GREEN_API_INSTANCE_ID;
     this.token = env.GREEN_API_TOKEN;
     this.baseUrl = env.GREEN_API_BASE_URL || 'https://api.green-api.com';
+    this.mediaUrl = env.GREEN_API_MEDIA_URL || 'https://media.green-api.com';
   }
 
   /**
@@ -596,6 +599,108 @@ export class GreenApiFetcher {
       throw new Error(`Green API error: sendMessage unexpected response`);
     } catch (error) {
       logServerError(`[Green API] Error sending message:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send an image/file via multipart upload (SendFileByUpload on media host).
+   */
+  async sendFileByUpload(params: {
+    chatId: string;
+    file: Blob;
+    fileName: string;
+    caption?: string;
+  }): Promise<{ idMessage: string }> {
+    const url = `${this.mediaUrl}/waInstance${this.instanceId}/sendFileByUpload/${this.token}`;
+
+    logger.debug(`[Green API] sendFileByUpload to ${params.chatId}`);
+
+    const form = new FormData();
+    form.append('chatId', params.chatId);
+    form.append('file', params.file, params.fileName);
+    form.append('fileName', params.fileName);
+    const cap = params.caption?.trim();
+    if (cap) {
+      form.append('caption', cap.slice(0, 20_000));
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: form,
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data === 'object' && data && 'message' in data
+            ? String((data as { message?: string }).message)
+            : `Green API request failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+      if (data?.idMessage) {
+        return { idMessage: String(data.idMessage) };
+      }
+
+      logError(
+        'Green API sendFileByUpload response:',
+        JSON.stringify(data, null, 2)
+      );
+      throw new Error(`Green API error: sendFileByUpload unexpected response`);
+    } catch (error) {
+      logServerError(`[Green API] Error sendFileByUpload:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a number is registered on WhatsApp. See CheckWhatsapp in Green API docs.
+   * Uses `chatId` in the form `{digits}@c.us` (avoids JSON integer precision issues).
+   */
+  async checkWhatsapp(digitsRaw: string): Promise<{
+    existsWhatsapp: boolean;
+    chatId?: string;
+  }> {
+    const digits = digitsRaw.replace(/\D/g, '');
+    if (digits.length < 10 || digits.length > 16) {
+      throw new Error(
+        'Номер телефона: укажите от 10 до 16 цифр в международном формате'
+      );
+    }
+
+    const url = `${this.baseUrl}/waInstance${this.instanceId}/checkWhatsapp/${this.token}`;
+
+    logger.debug(`[Green API] checkWhatsapp for …${digits.slice(-4)}`);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: `${digits}@c.us` }),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >;
+
+      if (!response.ok) {
+        const msg =
+          typeof data.message === 'string'
+            ? data.message
+            : `Green API checkWhatsapp failed: ${response.status}`;
+        throw new Error(msg);
+      }
+
+      return {
+        existsWhatsapp: Boolean(data.existsWhatsapp),
+        chatId: typeof data.chatId === 'string' ? data.chatId : undefined,
+      };
+    } catch (error) {
+      logServerError(`[Green API] Error checkWhatsapp:`, error);
       throw error;
     }
   }

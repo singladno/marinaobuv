@@ -7,6 +7,10 @@
 import './load-env';
 import { env } from '../lib/env';
 import { getGreenApiIncomingWebhookUrl } from '../lib/server/green-webhook-relay';
+import {
+  applyGreenApiWebhookSettings,
+  buildGreenApiWebhookSettingsPayload,
+} from '../lib/server/green-api-webhook-settings';
 
 async function configureWebhook() {
   const instanceId = env.GREEN_API_INSTANCE_ID;
@@ -27,43 +31,14 @@ async function configureWebhook() {
   console.log(`🔧 Instance ID: ${instanceId}`);
   console.log(`🎯 Target Group: ${env.TARGET_GROUP_ID}`);
 
-  const settingsPayload = {
-    webhookUrl: webhookUrl,
-    // CRITICAL: Enable incoming messages and files webhook
-    incomingWebhook: 'yes',
-    // Enable all message types
-    outgoingWebhook: 'yes',
-    stateWebhook: 'yes',
-    outgoingMessageWebhook: 'yes',
-    outgoingAPIMessageWebhook: 'yes',
-    // Additional webhook settings for comprehensive coverage
-    pollMessageWebhook: 'yes',
-    incomingCallWebhook: 'yes',
-    editedMessageWebhook: 'yes',
-    deletedMessageWebhook: 'yes',
-  };
-
-  const postData = JSON.stringify(settingsPayload);
-
-  const response = await fetch(
-    `https://api.green-api.com/waInstance${instanceId}/setSettings/${token}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: postData,
-    }
-  );
-
+  const settingsPayload = buildGreenApiWebhookSettingsPayload();
   console.log('📤 Sending payload:', JSON.stringify(settingsPayload, null, 2));
-  console.log('📡 Response status:', response.status);
-  console.log(
-    '📡 Response headers:',
-    Object.fromEntries(response.headers.entries())
-  );
 
-  const result = await response.json();
+  const result = await applyGreenApiWebhookSettings({
+    instanceId,
+    token,
+    baseUrl: env.GREEN_API_BASE_URL,
+  });
   console.log('📥 Full API response:', JSON.stringify(result, null, 2));
 
   if (result.saveSettings === true) {

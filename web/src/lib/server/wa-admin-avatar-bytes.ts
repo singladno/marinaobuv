@@ -1,15 +1,8 @@
 import { prisma } from '@/lib/db-node';
 import { tryCreateGreenApiFetcher } from '@/lib/green-api-fetcher';
+import { isValidAdminWaChatId } from '@/lib/server/wa-chat-id';
 
-export function isValidWaChatId(id: string): boolean {
-  if (!id || id.length > 200) return false;
-  if (!/^[0-9+\-@.a-zA-Z_]+$/.test(id)) return false;
-  return (
-    id.endsWith('@c.us') ||
-    id.endsWith('@g.us') ||
-    id.endsWith('@s.whatsapp.net')
-  );
-}
+export const isValidWaChatId = isValidAdminWaChatId;
 
 /** Parse Green API `base64Avatar` (data URL or raw base64) into image bytes. */
 export function waAvatarBytesFromGreenBase64Field(

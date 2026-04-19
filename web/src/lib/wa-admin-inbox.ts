@@ -162,6 +162,79 @@ export async function upsertWaAdminMessage(
 }
 
 /**
+ * Store admin text send in DB right after Green API accepts it, so the thread
+ * updates without waiting for `outgoingAPIMessageReceived` webhooks.
+ * Same `waMessageId` from a later webhook upserts richer fields idempotently.
+ */
+export async function persistWaAdminOutgoingTextFromSendApi(params: {
+  chatId: string;
+  waMessageId: string;
+  text: string;
+}): Promise<void> {
+  const ts = BigInt(Math.floor(Date.now() / 1000));
+  await upsertWaAdminMessage({
+    waMessageId: params.waMessageId,
+    chatId: params.chatId,
+    timestamp: ts,
+    typeMessage: 'textMessage',
+    textMessage: params.text,
+    caption: null,
+    senderName: null,
+    senderId: null,
+    isFromMe: true,
+    statusMessage: 'pending',
+    chatMeta: {
+      chatType: params.chatId.endsWith('@g.us') ? 'group' : 'user',
+    },
+    rawPayload: {
+      typeWebhook: 'outgoingAPIMessageReceived',
+      idMessage: params.waMessageId,
+      timestamp: Number(ts),
+      messageData: {
+        typeMessage: 'textMessage',
+        textMessage: params.text,
+      },
+      senderData: { chatId: params.chatId },
+    },
+  });
+}
+
+/** Same as {@link persistWaAdminOutgoingTextFromSendApi} for image uploads. */
+export async function persistWaAdminOutgoingImageFromSendApi(params: {
+  chatId: string;
+  waMessageId: string;
+  caption?: string;
+}): Promise<void> {
+  const ts = BigInt(Math.floor(Date.now() / 1000));
+  const cap = params.caption?.trim() || null;
+  await upsertWaAdminMessage({
+    waMessageId: params.waMessageId,
+    chatId: params.chatId,
+    timestamp: ts,
+    typeMessage: 'imageMessage',
+    textMessage: null,
+    caption: cap,
+    senderName: null,
+    senderId: null,
+    isFromMe: true,
+    statusMessage: 'pending',
+    chatMeta: {
+      chatType: params.chatId.endsWith('@g.us') ? 'group' : 'user',
+    },
+    rawPayload: {
+      typeWebhook: 'outgoingAPIMessageReceived',
+      idMessage: params.waMessageId,
+      timestamp: Number(ts),
+      messageData: {
+        typeMessage: 'imageMessage',
+        ...(cap ? { caption: cap } : {}),
+      },
+      senderData: { chatId: params.chatId },
+    },
+  });
+}
+
+/**
  * Green API incomingMessageReceived — persist for admin inbox (all chats).
  */
 export async function upsertWaAdminFromIncomingWebhook(
@@ -463,10 +536,7 @@ export function inferIsFromMeFromWaWebhookPayload(
 ): boolean {
   if (rawPayload && typeof rawPayload === 'object') {
     const tw = (rawPayload as Record<string, unknown>).typeWebhook;
-    if (
-      tw === 'outgoingMessageReceived' ||
-      tw === 'outgoingAPIMessageReceived'
-    )
+    if (tw === 'outgoingMessageReceived' || tw === 'outgoingAPIMessageReceived')
       return true;
     if (tw === 'incomingMessageReceived') return false;
   }
@@ -475,12 +545,28 @@ export function inferIsFromMeFromWaWebhookPayload(
 
 /** Changes when any inbox message row is inserted (for SSE refresh). */
 export async function getInboxEventVersion(): Promise<string> {
-  const row = await prisma.waAdminMessage.findFirst({
-    orderBy: { createdAt: 'desc' },
-    select: { createdAt: true, id: true },
-  });
-  if (!row) return '0';
-  return `${row.createdAt.getTime()}-${row.id}`;
+  const [msg, chat] = await Promise.all([
+    prisma.waAdminMessage.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true, id: true },
+    }),
+    prisma.waAdminChat.findFirst({
+      orderBy: { updatedAt: 'desc' },
+      select: { updatedAt: true, chatId: true },
+    }),
+  ]);
+
+  const msgTs = msg?.createdAt.getTime() ?? 0;
+  const chatTs = chat?.updatedAt.getTime() ?? 0;
+
+  if (msgTs === 0 && chatTs === 0) return '0';
+  if (msgTs >= chatTs && msg) {
+    return `${msg.createdAt.getTime()}-${msg.id}`;
+  }
+  if (chat) {
+    return `${chat.updatedAt.getTime()}-chat-${chat.chatId}`;
+  }
+  return '0';
 }
 
 export async function upsertWaAdminChatsFromContacts(
@@ -512,4 +598,39 @@ export async function upsertWaAdminChatsFromContacts(
 
 export function logWaAdminUpsertSkipped(reason: string): void {
   logger.debug(`[wa-admin-inbox] skip: ${reason}`);
+}
+
+/**
+ * Green API `outgoingMessageStatus` — delivery/read updates for a message already in DB.
+ * Bumps {@link WaAdminChat.updatedAt} so inbox SSE version changes (status-only rows have same createdAt).
+ */
+export async function applyWaAdminOutgoingMessageStatus(
+  payload: Record<string, unknown>
+): Promise<void> {
+  const idMessage = payload.idMessage;
+  const status = payload.status;
+  if (typeof idMessage !== 'string' || !idMessage) return;
+  if (typeof status !== 'string' || !status) return;
+
+  const row = await prisma.waAdminMessage.findUnique({
+    where: { waMessageId: idMessage },
+    select: { chatId: true },
+  });
+  if (!row) {
+    logWaAdminUpsertSkipped(
+      `outgoingMessageStatus: no row for idMessage=${idMessage}`
+    );
+    return;
+  }
+
+  await prisma.waAdminMessage.update({
+    where: { waMessageId: idMessage },
+    data: { statusMessage: status },
+  });
+
+  await prisma.$executeRaw`
+    UPDATE "WaAdminChat"
+    SET "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "chatId" = ${row.chatId}
+  `;
 }

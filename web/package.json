@@ -42,6 +42,7 @@
     "backfill:wa-chat-names": "tsx scripts/backfill-wa-chat-names.ts",
     "webhook:monitor": "tsx src/scripts/webhook-status-monitor.ts",
     "webhook:configure": "tsx src/scripts/configure-webhook.ts",
+    "webhook:configure:admin": "tsx src/scripts/configure-webhook-admin.ts",
     "export:latest": "tsx src/scripts/get-latest-export-urls.ts",
     "lint": "eslint .",
     "lint:eslint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 0",

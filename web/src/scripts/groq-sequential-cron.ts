@@ -1,10 +1,14 @@
+import './load-env';
 import { GroqSequentialProcessor } from '../lib/services/groq-sequential-processor';
 import { fetchExtendedBatch } from '../lib/utils/batch-extender';
 import { ParsingCoordinator } from '../lib/services/parsing-coordinator';
 import { ParsingProgressService } from '../lib/services/parsing-progress-service';
 import { env, getWaChatIds } from '../lib/env';
 import { scriptPrisma as prisma } from '../lib/script-db';
-import { initializeTokenLogger, closeTokenLogger } from '../lib/utils/groq-token-logger';
+import {
+  initializeTokenLogger,
+  closeTokenLogger,
+} from '../lib/utils/groq-token-logger';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -12,7 +16,11 @@ import path from 'node:path';
  * Setup file logging for Groq parsing
  * Logs to web/logs/groq-parse.log (overwrites on each run)
  */
-function setupFileLogging(): { logStream: fs.WriteStream; originalLog: typeof console.log; originalError: typeof console.error } {
+function setupFileLogging(): {
+  logStream: fs.WriteStream;
+  originalLog: typeof console.log;
+  originalError: typeof console.error;
+} {
   const logsDir = path.join(process.cwd(), 'logs');
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
@@ -29,9 +37,11 @@ function setupFileLogging(): { logStream: fs.WriteStream; originalLog: typeof co
 
   // Override console.log
   console.log = (...args: any[]) => {
-    const message = args.map(arg =>
-      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-    ).join(' ');
+    const message = args
+      .map(arg =>
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      )
+      .join(' ');
     const logMessage = `[${timestamp()}] ${message}\n`;
     logStream.write(logMessage);
     originalLog(...args);
@@ -39,9 +49,11 @@ function setupFileLogging(): { logStream: fs.WriteStream; originalLog: typeof co
 
   // Override console.error
   console.error = (...args: any[]) => {
-    const message = args.map(arg =>
-      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-    ).join(' ');
+    const message = args
+      .map(arg =>
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      )
+      .join(' ');
     const logMessage = `[${timestamp()}] ERROR: ${message}\n`;
     logStream.write(logMessage);
     originalError(...args);
@@ -56,7 +68,11 @@ function setupFileLogging(): { logStream: fs.WriteStream; originalLog: typeof co
 /**
  * Restore original console methods
  */
-function restoreConsole(logStream: fs.WriteStream, originalLog: typeof console.log, originalError: typeof console.error) {
+function restoreConsole(
+  logStream: fs.WriteStream,
+  originalLog: typeof console.log,
+  originalError: typeof console.error
+) {
   console.log = originalLog;
   console.error = originalError;
   logStream.end();
@@ -95,37 +111,39 @@ async function main() {
       }
 
       isShuttingDown = true;
-    console.log(`\n🛑 Received ${signal}, initiating graceful shutdown...`);
+      console.log(`\n🛑 Received ${signal}, initiating graceful shutdown...`);
 
-    // Set a timeout to force exit if graceful shutdown takes too long
-    const shutdownTimeout = setTimeout(() => {
-      console.log('⚠️ Graceful shutdown timeout, forcing exit...');
-      process.exit(1);
-    }, 10000); // 10 second timeout
+      // Set a timeout to force exit if graceful shutdown takes too long
+      const shutdownTimeout = setTimeout(() => {
+        console.log('⚠️ Graceful shutdown timeout, forcing exit...');
+        process.exit(1);
+      }, 10000); // 10 second timeout
 
-    try {
-      if (progressService) {
-        console.log('📊 Updating parsing status to failed due to shutdown...');
-        await progressService.updateProgress({
-          status: 'failed',
-          errorMessage: `Process terminated by ${signal} signal`,
-          messagesRead: currentChatProcessed,
-          productsCreated: currentChatProductsCreated,
-        });
-        console.log('✅ Parsing status updated successfully');
+      try {
+        if (progressService) {
+          console.log(
+            '📊 Updating parsing status to failed due to shutdown...'
+          );
+          await progressService.updateProgress({
+            status: 'failed',
+            errorMessage: `Process terminated by ${signal} signal`,
+            messagesRead: currentChatProcessed,
+            productsCreated: currentChatProductsCreated,
+          });
+          console.log('✅ Parsing status updated successfully');
+        }
+
+        clearTimeout(shutdownTimeout);
+        console.log('👋 Graceful shutdown completed');
+        process.exit(0);
+      } catch (error) {
+        console.error(
+          '❌ Failed to update parsing status during shutdown:',
+          error
+        );
+        clearTimeout(shutdownTimeout);
+        process.exit(1);
       }
-
-      clearTimeout(shutdownTimeout);
-      console.log('👋 Graceful shutdown completed');
-      process.exit(0);
-    } catch (error) {
-      console.error(
-        '❌ Failed to update parsing status during shutdown:',
-        error
-      );
-      clearTimeout(shutdownTimeout);
-      process.exit(1);
-    }
     };
 
     // Register signal handlers
@@ -138,36 +156,36 @@ async function main() {
     // Handle uncaught exceptions
     process.on('uncaughtException', async error => {
       console.error('❌ Uncaught Exception:', error);
-    if (progressService) {
-      try {
-        await progressService.updateProgress({
-          status: 'failed',
-          errorMessage: `Uncaught exception: ${error.message}`,
-          messagesRead: currentChatProcessed,
-          productsCreated: currentChatProductsCreated,
-        });
-      } catch (updateError) {
-        console.error('❌ Failed to update parsing status:', updateError);
+      if (progressService) {
+        try {
+          await progressService.updateProgress({
+            status: 'failed',
+            errorMessage: `Uncaught exception: ${error.message}`,
+            messagesRead: currentChatProcessed,
+            productsCreated: currentChatProductsCreated,
+          });
+        } catch (updateError) {
+          console.error('❌ Failed to update parsing status:', updateError);
+        }
       }
-    }
       process.exit(1);
     });
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', async (reason, promise) => {
       console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-    if (progressService) {
-      try {
-        await progressService.updateProgress({
-          status: 'failed',
-          errorMessage: `Unhandled rejection: ${reason}`,
-          messagesRead: currentChatProcessed,
-          productsCreated: currentChatProductsCreated,
-        });
-      } catch (updateError) {
-        console.error('❌ Failed to update parsing status:', updateError);
+      if (progressService) {
+        try {
+          await progressService.updateProgress({
+            status: 'failed',
+            errorMessage: `Unhandled rejection: ${reason}`,
+            messagesRead: currentChatProcessed,
+            productsCreated: currentChatProductsCreated,
+          });
+        } catch (updateError) {
+          console.error('❌ Failed to update parsing status:', updateError);
+        }
       }
-    }
       process.exit(1);
     });
 
@@ -184,7 +202,9 @@ async function main() {
 
     const chatIds = getWaChatIds();
     if (chatIds.length === 0) {
-      console.log('⏸️ No WA chat IDs configured (set WA_CHAT_IDS or TARGET_GROUP_ID)');
+      console.log(
+        '⏸️ No WA chat IDs configured (set WA_CHAT_IDS or TARGET_GROUP_ID)'
+      );
       return;
     }
 
@@ -219,13 +239,17 @@ async function main() {
         'Groq sequential processing cron job',
         currentChatId
       );
-      console.log(`📊 Created parsing history record for chat: ${parsingHistoryId}`);
+      console.log(
+        `📊 Created parsing history record for chat: ${parsingHistoryId}`
+      );
 
       progressService = new ParsingProgressService();
       progressService.setParsingHistoryId(parsingHistoryId);
 
       if (initialCount === 0) {
-        console.log(`   No unprocessed messages for this chat, marking run as completed (0/0).`);
+        console.log(
+          `   No unprocessed messages for this chat, marking run as completed (0/0).`
+        );
         await progressService.updateProgress({
           status: 'completed',
           messagesRead: 0,
@@ -235,7 +259,9 @@ async function main() {
       }
 
       totalUnprocessed += initialCount;
-      console.log(`   Found ${initialCount} unprocessed messages for this chat.`);
+      console.log(
+        `   Found ${initialCount} unprocessed messages for this chat.`
+      );
 
       const processor = new GroqSequentialProcessor(prisma, progressService);
       let currentOffset = 0;
@@ -249,7 +275,9 @@ async function main() {
           if (isShuttingDown) break;
 
           cycleCount++;
-          console.log(`\n🔄 Processing cycle ${cycleCount} (chat: ${currentChatId})...`);
+          console.log(
+            `\n🔄 Processing cycle ${cycleCount} (chat: ${currentChatId})...`
+          );
 
           const extendedBatch = await fetchExtendedBatch(
             batchSize,
@@ -273,7 +301,8 @@ async function main() {
           try {
             if (isShuttingDown) break;
 
-            const result = await processor.processMessagesToProducts(messageIds);
+            const result =
+              await processor.processMessagesToProducts(messageIds);
 
             if (result.anyProcessed) {
               cycleProcessed = messageIds.length;
@@ -297,7 +326,9 @@ async function main() {
               error instanceof Error &&
               error.message.includes('json_validate_failed')
             ) {
-              console.log(`   Groq JSON validation error - batch will be retried later`);
+              console.log(
+                `   Groq JSON validation error - batch will be retried later`
+              );
             }
           }
 
@@ -325,7 +356,8 @@ async function main() {
         if (progressService) {
           await progressService.updateProgress({
             status: 'failed',
-            errorMessage: chatError instanceof Error ? chatError.message : 'Unknown error',
+            errorMessage:
+              chatError instanceof Error ? chatError.message : 'Unknown error',
             messagesRead: chatProcessed,
             productsCreated: chatProductsCreated,
           });

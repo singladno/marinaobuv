@@ -27,7 +27,12 @@ const schema = z
     GREEN_API_INSTANCE_ID: z.string().optional(),
     GREEN_API_TOKEN: z.string().optional(),
     GREEN_API_BASE_URL: z.string().url().optional(),
+    /** Host for SendFileByUpload (default https://media.green-api.com). */
+    GREEN_API_MEDIA_URL: z.string().url().optional(),
     GREEN_API_DASHBOARD_URL: z.string().url().optional(),
+    /** Second WhatsApp instance for admin panel chat only (optional). */
+    GREEN_API_ADMIN_INSTANCE_ID: z.string().optional(),
+    GREEN_API_ADMIN_TOKEN: z.string().optional(),
     // Admin phone that gets ADMIN role on login
     ADMIN_PHONE: z.string().optional(),
     // Admin email that gets ADMIN role
@@ -169,6 +174,8 @@ const schema = z
     WEBHOOK_NOTIFICATIONS_ENABLED: z.string().optional(),
     WEBHOOK_NOTIFICATION_NUMBERS: z.string().optional(),
     WEBHOOK_NOTIFICATION_MESSAGE: z.string().optional(),
+    /** Telegram alert headline for admin WhatsApp instance (optional; default text names "Admin chat"). */
+    WEBHOOK_NOTIFICATION_MESSAGE_ADMIN: z.string().optional(),
 
     // Telegram Notifications (Green API webhook alerts; comma-separated list of chat IDs)
     TELEGRAM_BOT_TOKEN: z.string().optional(),
@@ -207,7 +214,10 @@ const raw = {
   GREEN_API_INSTANCE_ID: process.env.GREEN_API_INSTANCE_ID,
   GREEN_API_TOKEN: process.env.GREEN_API_TOKEN,
   GREEN_API_BASE_URL: process.env.GREEN_API_BASE_URL,
+  GREEN_API_MEDIA_URL: process.env.GREEN_API_MEDIA_URL,
   GREEN_API_DASHBOARD_URL: process.env.GREEN_API_DASHBOARD_URL,
+  GREEN_API_ADMIN_INSTANCE_ID: process.env.GREEN_API_ADMIN_INSTANCE_ID,
+  GREEN_API_ADMIN_TOKEN: process.env.GREEN_API_ADMIN_TOKEN,
   ADMIN_PHONE: process.env.ADMIN_PHONE,
   ADMIN_EMAIL: process.env.ADMIN_EMAIL,
 
@@ -270,6 +280,8 @@ const raw = {
   WEBHOOK_NOTIFICATIONS_ENABLED: process.env.WEBHOOK_NOTIFICATIONS_ENABLED,
   WEBHOOK_NOTIFICATION_NUMBERS: process.env.WEBHOOK_NOTIFICATION_NUMBERS,
   WEBHOOK_NOTIFICATION_MESSAGE: process.env.WEBHOOK_NOTIFICATION_MESSAGE,
+  WEBHOOK_NOTIFICATION_MESSAGE_ADMIN:
+    process.env.WEBHOOK_NOTIFICATION_MESSAGE_ADMIN,
 
   // Telegram Notifications
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,

@@ -567,6 +567,14 @@ if [ -f ".env" ] && [ -n "$(grep GREEN_API_INSTANCE_ID .env)" ]; then
     else
         print_warning "Webhook configuration failed, but deployment completed"
     fi
+    if [ -n "$(grep -E '^GREEN_API_ADMIN_INSTANCE_ID=' .env 2>/dev/null | grep -v '^#' || true)" ]; then
+        print_status "Configuring Green API webhook (admin instance)..."
+        if npx tsx src/scripts/configure-webhook-admin.ts; then
+            print_success "Admin instance webhook configured successfully"
+        else
+            print_warning "Admin webhook configuration failed, but deployment completed"
+        fi
+    fi
 else
     print_warning "No Green API credentials found, skipping webhook setup"
 fi

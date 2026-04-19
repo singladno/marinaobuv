@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db-node';
 import { getWaChatIds } from '../../../../lib/env';
 import {
+  applyWaAdminOutgoingMessageStatus,
   upsertWaAdminFromIncomingWebhook,
   upsertWaAdminFromOutgoingWebhook,
 } from '@/lib/wa-admin-inbox';
@@ -31,6 +32,9 @@ export async function POST(request: NextRequest) {
       ) {
         // Phone sends → outgoingMessageReceived; API sends (admin panel) → outgoingAPIMessageReceived
         await upsertWaAdminFromOutgoingWebhook(payload);
+      } else if (payload.typeWebhook === 'outgoingMessageStatus') {
+        // sent → delivered → read (enable in Green console: outgoing message statuses)
+        await applyWaAdminOutgoingMessageStatus(payload);
       }
     } catch (e) {
       logServerError('[WA webhook] admin inbox upsert failed:', e);

@@ -2,7 +2,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, Plus, X } from 'lucide-react';
 import {
   Fragment,
   useCallback,
@@ -11,9 +11,13 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from 'react';
 
+import { PhoneInput } from '@/components/auth/PhoneInput';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
 import {
   Popover,
   PopoverContent,
@@ -44,6 +48,7 @@ import {
   getMessageDataFromWebhookRaw,
   getQuotedMessageObjectForPreview,
 } from '@/lib/wa-admin-green-message-text';
+import { waInboxChatMatchesFilter } from '@/lib/wa-inbox-chat-search';
 
 type WaChat = {
   id: string;
@@ -55,6 +60,76 @@ type WaChat = {
   unreadImageCount?: number;
   lastPreview?: string | null;
 };
+
+type PendingChatImage = {
+  id: string;
+  file: File;
+  url: string;
+};
+
+/** Safari/iOS often leave `type` empty for HEIC; still show preview. */
+function looksLikeImageFile(file: File): boolean {
+  if (file.type.startsWith('image/')) return true;
+  const t = file.type.toLowerCase();
+  if (t === 'application/octet-stream' || t === '') {
+    return /\.(jpe?g|jpeg|png|gif|webp|bmp|heic|heif|jfif|avif|tiff?)$/i.test(
+      file.name
+    );
+  }
+  return /\.(jpe?g|jpeg|png|gif|webp|bmp|heic|heif|jfif|avif|tiff?)$/i.test(
+    file.name
+  );
+}
+
+/** Temp id until Green API returns `idMessage` (optimistic bubble). */
+const WA_OPTIMISTIC_MSG_PREFIX = '__wa_opt__:';
+
+function isOptimisticPlaceholderId(id: string): boolean {
+  return id.startsWith(WA_OPTIMISTIC_MSG_PREFIX);
+}
+
+function canShowLocalImagePreview(typeMessage: string | undefined): boolean {
+  const t = typeMessage || '';
+  return t === 'imageMessage' || t === 'stickerMessage' || t === 'gifMessage';
+}
+
+/** Main photo/video fills bubble width (no side inset), WhatsApp-style. */
+function messageHasBleedMedia(m: WaMessage): boolean {
+  const tm = m.typeMessage || '';
+  if (tm === 'videoMessage') return Boolean(m.mediaS3Url);
+  if (tm === 'imageMessage' || tm === 'stickerMessage' || tm === 'gifMessage') {
+    return (
+      Boolean(m.mediaS3Url) ||
+      (Boolean(m.localPreviewUrl) && canShowLocalImagePreview(tm))
+    );
+  }
+  return false;
+}
+
+/**
+ * Attach blob URLs for outgoing images still waiting on S3 mirror; revoke when CDN URL appears.
+ */
+function mergeWaMessagesWithOutgoingBlobs(
+  msgs: WaMessage[],
+  blobByWaId: Map<string, string>
+): WaMessage[] {
+  return msgs.map(m => {
+    const blob = blobByWaId.get(m.idMessage);
+    if (blob && !m.mediaS3Url && canShowLocalImagePreview(m.typeMessage)) {
+      return { ...m, localPreviewUrl: blob };
+    }
+    if (m.mediaS3Url && blobByWaId.has(m.idMessage)) {
+      const u = blobByWaId.get(m.idMessage)!;
+      URL.revokeObjectURL(u);
+      blobByWaId.delete(m.idMessage);
+    }
+    return m;
+  });
+}
+
+function stripClientOnlyMessageFields(msgs: WaMessage[]): WaMessage[] {
+  return msgs.map(({ localPreviewUrl: _lp, ...rest }) => rest);
+}
 
 type WaMessage = {
   idMessage: string;
@@ -69,6 +144,8 @@ type WaMessage = {
   statusMessage?: string;
   /** Публичный CDN после зеркалирования вебхук-медиа в S3 */
   mediaS3Url?: string;
+  /** Blob URL until `mediaS3Url` exists (client-only; not persisted). */
+  localPreviewUrl?: string;
   /** Вебхук Green API (цитаты, реакции, типы без denormalized текста). */
   rawPayload?: unknown;
 };
@@ -287,10 +364,23 @@ function messagePlainText(m: WaMessage): string | null {
 function resolveMessageDisplayText(m: WaMessage): string | null {
   const direct = messagePlainText(m);
   if (direct) return direct;
+  const tm = m.typeMessage || '';
+  /** Не показывать автогенерируемые подписи вроде «📷 Фото» под медиа — только реальный caption/текст. */
+  if (
+    tm === 'imageMessage' ||
+    tm === 'stickerMessage' ||
+    tm === 'gifMessage' ||
+    tm === 'videoMessage'
+  ) {
+    return null;
+  }
   const md = getMessageDataFromWebhookRaw(m.rawPayload);
   if (md) {
     const parsed = extractGreenInboundDisplayText(md);
-    if (parsed) return parsed;
+    if (parsed) {
+      if (parsed === '📷 Фото' || parsed === '🎬 Видео') return null;
+      return parsed;
+    }
   }
   return null;
 }
@@ -312,9 +402,18 @@ function messageBodyFallback(m: WaMessage): string {
 function WaMessageBubbleContent({
   m,
   onJumpToQuoted,
+  bleedMedia = false,
+  firstInBubbleGroup = true,
+  /** When set (media bubbles): время/галочки внизу справа, не растягивают ширину пузыря. */
+  footerMeta,
 }: {
   m: WaMessage;
   onJumpToQuoted?: (waMessageId: string) => void;
+  /** Extend image/video to bubble left/right (and top when first block). */
+  bleedMedia?: boolean;
+  /** Matches bubble corner radius (first vs stacked message in a group). */
+  firstInBubbleGroup?: boolean;
+  footerMeta?: ReactNode;
 }) {
   const quotedObj = getQuotedMessageObjectForPreview(m.rawPayload);
   const quoteSnippet =
@@ -369,14 +468,59 @@ function WaMessageBubbleContent({
           <div className={quoteShellClass}>{quotePreviewInner}</div>
         )
       ) : null}
-      {m.mediaS3Url ? (
-        <div className="mb-1">
-          <WaMessageMedia m={m} />
+      {m.mediaS3Url ||
+      (m.localPreviewUrl && canShowLocalImagePreview(m.typeMessage)) ? (
+        <div
+          className={clsx(
+            'relative w-max max-w-full',
+            bleedMedia && 'p-1.5',
+            bleedMedia && 'overflow-hidden rounded-lg',
+            bleedMedia && !quoteSnippet && '-mt-1',
+            bleedMedia && quoteSnippet && 'mt-0',
+            bleedMedia ? 'mb-0' : 'mb-1'
+          )}
+        >
+          <WaMessageMedia m={m} bleed={bleedMedia} />
+          {isOptimisticPlaceholderId(m.idMessage) ? (
+            <>
+              <div
+                className="pointer-events-none absolute inset-0 rounded bg-black/10 dark:bg-black/25"
+                aria-hidden
+              />
+              <div className="pointer-events-none absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white shadow-md">
+                <Loader2
+                  className="h-4 w-4 shrink-0 animate-spin"
+                  aria-hidden
+                />
+              </div>
+            </>
+          ) : null}
         </div>
       ) : null}
-      {resolved ? (
+      {footerMeta &&
+      (m.mediaS3Url ||
+        (m.localPreviewUrl && canShowLocalImagePreview(m.typeMessage))) ? (
+        <>
+          {resolved ? (
+            <div className="mt-1 flex w-full min-w-0 items-end justify-between gap-2">
+              <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                {resolved}
+              </p>
+              <div className="inline-flex shrink-0 translate-y-px items-center gap-0.5 text-[11px] tabular-nums leading-none text-[#667781] dark:text-[#94a9b3]">
+                {footerMeta}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-1 flex w-full justify-end">
+              <div className="inline-flex shrink-0 translate-y-px items-center gap-0.5 text-[11px] tabular-nums leading-none text-[#667781] dark:text-[#94a9b3]">
+                {footerMeta}
+              </div>
+            </div>
+          )}
+        </>
+      ) : resolved ? (
         <p className="whitespace-pre-wrap break-words">{resolved}</p>
-      ) : !m.mediaS3Url ? (
+      ) : !m.mediaS3Url && !m.localPreviewUrl ? (
         <p className="whitespace-pre-wrap break-words">
           {messageBodyFallback(m)}
         </p>
@@ -385,21 +529,35 @@ function WaMessageBubbleContent({
   );
 }
 
-function WaMessageMedia({ m }: { m: WaMessage }) {
-  const url = m.mediaS3Url;
+function WaMessageMedia({
+  m,
+  bleed = false,
+}: {
+  m: WaMessage;
+  bleed?: boolean;
+}) {
+  const url = m.mediaS3Url || m.localPreviewUrl;
   if (!url) return null;
   const tm = m.typeMessage;
   if (tm === 'imageMessage' || tm === 'stickerMessage' || tm === 'gifMessage') {
     const compact = tm === 'stickerMessage';
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- CDN URL нашего S3
+      // eslint-disable-next-line @next/next/no-img-element -- S3 CDN или blob превью
       <img
         src={url}
         alt=""
-        loading="lazy"
+        loading={url.startsWith('blob:') ? 'eager' : 'lazy'}
         className={clsx(
-          'block max-w-full rounded object-contain',
-          compact ? 'max-h-40' : 'max-h-64'
+          'block min-w-0',
+          bleed
+            ? clsx(
+                'h-auto w-auto max-w-full rounded-none object-contain',
+                compact ? 'max-h-40' : 'max-h-[min(22rem,70vh)]'
+              )
+            : clsx(
+                'max-w-full rounded object-contain',
+                compact ? 'max-h-40' : 'max-h-64'
+              )
         )}
       />
     );
@@ -409,7 +567,12 @@ function WaMessageMedia({ m }: { m: WaMessage }) {
       <video
         src={url}
         controls
-        className="block max-h-64 max-w-full rounded"
+        className={clsx(
+          'block min-w-0',
+          bleed
+            ? 'h-auto max-h-[min(22rem,70vh)] w-auto max-w-full rounded-none object-contain'
+            : 'max-h-64 max-w-full rounded'
+        )}
         preload="metadata"
       />
     );
@@ -771,6 +934,12 @@ export function AdminWhatsAppChatPanel({
 }: AdminWhatsAppChatPanelProps) {
   const [chats, setChats] = useState<WaChat[]>([]);
   const [chatFilter, setChatFilter] = useState('');
+  const [addContactOpen, setAddContactOpen] = useState(false);
+  const [addFirstName, setAddFirstName] = useState('');
+  const [addLastName, setAddLastName] = useState('');
+  const [addPhone, setAddPhone] = useState('');
+  const [addContactLoading, setAddContactLoading] = useState(false);
+  const [addContactErr, setAddContactErr] = useState<string | null>(null);
   const [chatsLoading, setChatsLoading] = useState(false);
   const [chatsError, setChatsError] = useState<string | null>(null);
 
@@ -781,6 +950,7 @@ export function AdminWhatsAppChatPanel({
 
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([]);
   const [readThroughTs, setReadThroughTs] = useState(0);
 
   /** Скролл-контейнер списка чатов: виртуализация + lazy-аватары по viewport. */
@@ -789,6 +959,9 @@ export function AdminWhatsAppChatPanel({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  /** Blob URLs for outgoing images until `mediaS3Url` exists (survives full list reloads). */
+  const outgoingLocalBlobByWaIdRef = useRef<Map<string, string>>(new Map());
   /** Прокрутка к цитируемому сообщению по `waMessageId`. */
   const messageBubbleRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [highlightedMessageId, setHighlightedMessageId] = useState<
@@ -821,6 +994,8 @@ export function AdminWhatsAppChatPanel({
   const selectedIdRef = useRef<string | null>(null);
   selectedIdRef.current = selectedId;
 
+  const previousSelectedChatRef = useRef<string | null>(null);
+
   const chatsRequestBusy = useRef(false);
   /** Отменяет предыдущий fetch сообщений при новом запросе или смене чата (избегает гонок с selectedIdRef). */
   const messagesFetchAbortRef = useRef<AbortController | null>(null);
@@ -847,7 +1022,36 @@ export function AdminWhatsAppChatPanel({
     if (!open) return;
     setSelectedId(null);
     setDraft('');
+    setPendingImages(prev => {
+      prev.forEach(p => URL.revokeObjectURL(p.url));
+      return [];
+    });
     setMessagesError(null);
+  }, [open]);
+
+  /** Сброс черновика вложений только при смене чата (не при первом выборе). */
+  useEffect(() => {
+    const prev = previousSelectedChatRef.current;
+    previousSelectedChatRef.current = selectedId;
+    if (prev === null || prev === selectedId) return;
+    setPendingImages(p => {
+      if (p.length === 0) return p;
+      p.forEach(x => URL.revokeObjectURL(x.url));
+      return [];
+    });
+  }, [selectedId]);
+
+  useEffect(() => {
+    return () => {
+      outgoingLocalBlobByWaIdRef.current.forEach(u => URL.revokeObjectURL(u));
+      outgoingLocalBlobByWaIdRef.current.clear();
+    };
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (open) return;
+    outgoingLocalBlobByWaIdRef.current.forEach(u => URL.revokeObjectURL(u));
+    outgoingLocalBlobByWaIdRef.current.clear();
   }, [open]);
 
   useEffect(() => {
@@ -858,6 +1062,10 @@ export function AdminWhatsAppChatPanel({
         e.preventDefault();
         setSelectedId(null);
         setDraft('');
+        setPendingImages(prev => {
+          prev.forEach(x => URL.revokeObjectURL(x.url));
+          return [];
+        });
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -963,9 +1171,13 @@ export function AdminWhatsAppChatPanel({
         if (!res.ok) {
           throw new Error(data.error || 'Не удалось загрузить сообщения');
         }
-        const msgs: WaMessage[] = Array.isArray(data.messages)
+        const rawMsgs: WaMessage[] = Array.isArray(data.messages)
           ? data.messages
           : [];
+        const msgs = mergeWaMessagesWithOutgoingBlobs(
+          rawMsgs,
+          outgoingLocalBlobByWaIdRef.current
+        );
         const meta: { readThroughTs?: number } = data;
         if (selectedIdRef.current === chatId) {
           const rts =
@@ -975,12 +1187,13 @@ export function AdminWhatsAppChatPanel({
           }
           setMessages(msgs);
           setReadThroughTs(rts);
+          const forCache = stripClientOnlyMessageFields(msgs);
           threadMemoryRef.current.set(chatId, {
-            messages: msgs,
+            messages: forCache,
             readThroughTs: rts,
           });
           void waInboxIdbPutThread(chatId, {
-            messages: msgs,
+            messages: forCache,
             readThroughTs: rts,
           });
         }
@@ -988,7 +1201,7 @@ export function AdminWhatsAppChatPanel({
         if (ac.signal.aborted) return;
         if (!silent) {
           setMessagesError(e instanceof Error ? e.message : 'Ошибка загрузки');
-          setMessages([]);
+          /** Не очищаем ленту при сбое refetch — иначе после отправки сообщение «пропадает». */
         }
       } finally {
         if (messagesFetchAbortRef.current === ac) {
@@ -1154,19 +1367,56 @@ export function AdminWhatsAppChatPanel({
     [messages]
   );
 
-  const filteredChats = useMemo(() => {
-    const q = chatFilter.trim().toLowerCase();
-    if (!q) return chats;
-    return chats.filter(c => {
-      const label = displayName(c).toLowerCase();
-      return label.includes(q) || c.id.toLowerCase().includes(q);
-    });
-  }, [chats, chatFilter]);
+  const filteredChats = useMemo(
+    () => chats.filter(c => waInboxChatMatchesFilter(c, chatFilter)),
+    [chats, chatFilter]
+  );
+
+  const submitAddContact = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setAddContactErr(null);
+      setAddContactLoading(true);
+      try {
+        const res = await fetch('/api/admin/whatsapp/contacts', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: addFirstName,
+            lastName: addLastName.trim() || undefined,
+            phone: addPhone,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(
+            typeof data.error === 'string' ? data.error : 'Не удалось добавить'
+          );
+        }
+        const newId = typeof data.chatId === 'string' ? data.chatId : undefined;
+        setAddContactOpen(false);
+        setAddFirstName('');
+        setAddLastName('');
+        setAddPhone('');
+        await loadChats({ silent: false });
+        if (newId) setSelectedId(newId);
+      } catch (err) {
+        setAddContactErr(
+          err instanceof Error ? err.message : 'Ошибка сохранения'
+        );
+      } finally {
+        setAddContactLoading(false);
+      }
+    },
+    [addFirstName, addLastName, addPhone, loadChats]
+  );
 
   const chatListVirtualizer = useVirtualizer({
     count: filteredChats.length,
     getScrollElement: () => chatListScrollEl,
-    estimateSize: () => 68,
+    /** Typical row (avatar + 1–2 lines); avoid overstating — minHeight=vRow.size was adding empty slack when estimate > natural height. */
+    estimateSize: () => 60,
     overscan: 6,
   });
 
@@ -1190,7 +1440,7 @@ export function AdminWhatsAppChatPanel({
   );
 
   /** Одна строка по умолчанию; Shift+Enter — новая строка; рост до ~5 строк. */
-  const MESSAGE_INPUT_ONE_LINE_PX = 40;
+  const MESSAGE_INPUT_ONE_LINE_PX = 34;
   const MESSAGE_INPUT_MAX_PX = 160;
   const adjustMessageInputHeight = useCallback(() => {
     const el = messageInputRef.current;
@@ -1201,25 +1451,167 @@ export function AdminWhatsAppChatPanel({
 
   useLayoutEffect(() => {
     adjustMessageInputHeight();
-  }, [draft, adjustMessageInputHeight]);
+  }, [draft, pendingImages.length, adjustMessageInputHeight]);
+
+  const removePendingImage = useCallback((id: string) => {
+    setPendingImages(prev => {
+      const x = prev.find(p => p.id === id);
+      if (x) URL.revokeObjectURL(x.url);
+      return prev.filter(p => p.id !== id);
+    });
+  }, []);
+
+  const appendImagesFromFileList = useCallback((list: FileList | File[]) => {
+    if (!selectedIdRef.current) return;
+    const arr = Array.from(list);
+    const next: PendingChatImage[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      const file = arr[i]!;
+      if (!looksLikeImageFile(file)) continue;
+      next.push({
+        id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 9)}`,
+        file,
+        url: URL.createObjectURL(file),
+      });
+    }
+    if (next.length === 0) return;
+    setPendingImages(p => [...p, ...next]);
+  }, []);
+
+  const handleImageFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const input = e.target;
+      const list = input.files;
+      if (list?.length) appendImagesFromFileList(list);
+      input.value = '';
+    },
+    [appendImagesFromFileList]
+  );
+
+  const handleComposerPaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = e.clipboardData?.items;
+      if (!items?.length || !selectedIdRef.current) return;
+      const files: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (it?.kind !== 'file') continue;
+        const f = it.getAsFile();
+        if (f && looksLikeImageFile(f)) files.push(f);
+      }
+      if (files.length === 0) return;
+      e.preventDefault();
+      appendImagesFromFileList(files);
+    },
+    [appendImagesFromFileList]
+  );
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedId || !draft.trim() || sending) return;
+    if (!selectedId || sending) return;
+    const text = draft.trim();
+    const pending = pendingImages;
+    if (!text && pending.length === 0) return;
+
     setSending(true);
+    setMessagesError(null);
     try {
-      const res = await fetch('/api/admin/whatsapp/messages', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId: selectedId, message: draft.trim() }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Не удалось отправить');
+      if (pending.length > 0) {
+        const chatId = selectedId;
+        const captionForFirst = text;
+        const snapshot = pending.map(p => ({
+          pendingId: p.id,
+          file: p.file,
+          url: p.url,
+        }));
+        setPendingImages([]);
+        setDraft('');
+
+        const optimisticMsgs: WaMessage[] = snapshot.map((s, i) => ({
+          idMessage: `${WA_OPTIMISTIC_MSG_PREFIX}${s.pendingId}`,
+          timestamp: Math.floor(Date.now() / 1000) + i * 0.001,
+          typeMessage: 'imageMessage',
+          isFromMe: true,
+          statusMessage: 'pending',
+          caption: i === 0 && captionForFirst ? captionForFirst : undefined,
+          localPreviewUrl: s.url,
+        }));
+
+        setMessages(prev => [...prev, ...optimisticMsgs]);
+
+        const optIds = new Set(
+          snapshot.map(s => `${WA_OPTIMISTIC_MSG_PREFIX}${s.pendingId}`)
+        );
+        const completed = new Set<number>();
+
+        try {
+          for (let i = 0; i < snapshot.length; i++) {
+            const fd = new FormData();
+            fd.append('chatId', chatId);
+            fd.append('file', snapshot[i]!.file);
+            if (i === 0 && captionForFirst)
+              fd.append('caption', captionForFirst);
+            const res = await fetch('/api/admin/whatsapp/messages/upload', {
+              method: 'POST',
+              credentials: 'include',
+              body: fd,
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              throw new Error(
+                typeof data.error === 'string'
+                  ? data.error
+                  : 'Не удалось отправить фото'
+              );
+            }
+            const waId = data.idMessage;
+            if (typeof waId !== 'string' || !waId) {
+              throw new Error('Не получен id сообщения');
+            }
+            completed.add(i);
+            outgoingLocalBlobByWaIdRef.current.set(waId, snapshot[i]!.url);
+            const optId = `${WA_OPTIMISTIC_MSG_PREFIX}${snapshot[i]!.pendingId}`;
+            setMessages(prev =>
+              prev.map(m =>
+                m.idMessage === optId
+                  ? {
+                      ...m,
+                      idMessage: waId,
+                      statusMessage: 'pending',
+                      localPreviewUrl: snapshot[i]!.url,
+                    }
+                  : m
+              )
+            );
+          }
+          setSending(false);
+          await loadMessages(chatId, { silent: true });
+          await loadChats({ silent: true });
+        } catch (uploadErr) {
+          setMessages(prev => prev.filter(m => !optIds.has(m.idMessage)));
+          snapshot.forEach((s, i) => {
+            if (!completed.has(i)) {
+              URL.revokeObjectURL(s.url);
+            }
+          });
+          await loadMessages(chatId, { silent: true });
+          throw uploadErr;
+        }
+      } else if (text) {
+        const res = await fetch('/api/admin/whatsapp/messages', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatId: selectedId, message: text }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || 'Не удалось отправить');
+        }
+        setDraft('');
+        await loadMessages(selectedId, { silent: true });
+        await loadChats({ silent: true });
       }
-      setDraft('');
-      await loadMessages(selectedId);
     } catch (err) {
       setMessagesError(err instanceof Error ? err.message : 'Ошибка отправки');
     } finally {
@@ -1288,14 +1680,26 @@ export function AdminWhatsAppChatPanel({
                 Чаты
               </h2>
             </div>
-            <div className="shrink-0 px-2 pb-2 pt-1">
+            <div className="flex shrink-0 items-stretch gap-1.5 px-2 pb-2 pt-1">
               <Input
                 fullWidth
                 placeholder="Поиск по чатам"
                 value={chatFilter}
                 onChange={e => setChatFilter(e.target.value)}
-                className="text-xs dark:border-gray-600 dark:bg-gray-800"
+                className="min-w-0 flex-1 text-xs dark:border-gray-600 dark:bg-gray-800"
               />
+              <button
+                type="button"
+                onClick={() => {
+                  setAddContactErr(null);
+                  setAddContactOpen(true);
+                }}
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-violet-200 bg-white text-[#075E54] shadow-sm transition-colors hover:bg-violet-50 dark:border-violet-800 dark:bg-gray-800 dark:text-emerald-400 dark:hover:bg-gray-700"
+                title="Новый контакт"
+                aria-label="Добавить контакт"
+              >
+                <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+              </button>
             </div>
             <div
               ref={setChatListScrollEl}
@@ -1336,7 +1740,6 @@ export function AdminWhatsAppChatPanel({
                         ref={chatListVirtualizer.measureElement}
                         className="absolute left-0 top-0 w-full px-0.5 pb-0.5"
                         style={{
-                          minHeight: vRow.size,
                           transform: `translateY(${vRow.start}px)`,
                         }}
                       >
@@ -1451,7 +1854,16 @@ export function AdminWhatsAppChatPanel({
                     const firstInGroup = isFirstInGroup(displayMessages, idx);
                     const lastInGroup = isLastInGroup(displayMessages, idx);
                     const rowReactions = reactionsByTarget.get(m.idMessage);
+                    const bleedMedia = messageHasBleedMedia(m);
                     const dateLabel = formatDateBadge(m.timestamp);
+                    const timeMetaEl = (
+                      <>
+                        <span>{formatTimeOnly(m.timestamp)}</span>
+                        {mine && (
+                          <OutgoingDeliveryTicks status={m.statusMessage} />
+                        )}
+                      </>
+                    );
 
                     /** Как в WhatsApp: плотнее между пузырями; если есть реакция — больше места снизу (бейдж «свисает»). */
                     const hasReactions = Boolean(rowReactions?.length);
@@ -1468,26 +1880,18 @@ export function AdminWhatsAppChatPanel({
                       return lastInGroup ? 'mb-2' : 'mb-0.5';
                     })();
 
-                    /** WhatsApp-style “comic” tail: curved tab at top outer corner (first bubble in a group only). */
                     /** Визуал пузыря; лимит ширины — только на обёртке (см. ниже), чтобы не дублировать min() и не ломать flex. */
                     const bubbleBase = clsx(
                       'relative z-0 block min-w-0 overflow-visible px-2.5 pb-1.5 pt-2 text-[13px] leading-snug',
                       'transition-colors duration-300 ease-out',
-                      /* Unified soft shadow on bubble + tail (pseudo counts for drop-shadow in WebKit/Chromium). */
                       'drop-shadow-[0_1px_0.5px_rgba(0,0,0,0.12)] dark:drop-shadow-[0_1px_0.5px_rgba(0,0,0,0.35)]'
                     );
 
                     const bubbleCorners = firstInGroup
                       ? mine
-                        ? clsx(
-                            'rounded-[9px] rounded-tr-[3px]',
-                            /* inherit = same computed bg as bubble (light/dark) — no seam at the curve */
-                            'after:pointer-events-none after:absolute after:-right-2 after:top-0 after:z-0 after:block after:h-[19px] after:w-[13px] after:rounded-bl-[18px] after:bg-inherit after:content-[""]'
-                          )
+                        ? 'rounded-[10px]'
                         : clsx(
-                            'rounded-[9px] rounded-tl-[3px] border border-gray-200/90',
-                            'before:pointer-events-none before:absolute before:-left-2 before:top-0 before:z-0 before:block before:h-[19px] before:w-[13px] before:rounded-br-[18px] before:bg-inherit before:content-[""]',
-                            'dark:border-gray-600'
+                            'rounded-[10px] border border-gray-200/90 dark:border-gray-600'
                           )
                       : clsx(
                           'rounded-[9px]',
@@ -1508,8 +1912,7 @@ export function AdminWhatsAppChatPanel({
                         >
                           <div
                             className={clsx(
-                              /* WhatsApp Web: пузырь до ~65–82% ширины колонки; верх — min(%, rem) для широкого окна. */
-                              'relative max-w-[min(82%,36rem)] shrink-0',
+                              'relative w-fit min-w-0 max-w-[min(82%,36rem)] shrink-0',
                               mine && 'ml-auto',
                               hasReactions && 'pb-1'
                             )}
@@ -1543,27 +1946,33 @@ export function AdminWhatsAppChatPanel({
                                     )
                               )}
                             >
-                              {/* Как в WhatsApp: время и галочки в одной строке с текстом, без лишней min-height; лёгкий translate — только оптика. */}
-                              <div className="flex min-w-0 items-end gap-2">
-                                <div className="min-w-0 flex-1">
-                                  <WaMessageBubbleContent
-                                    m={m}
-                                    onJumpToQuoted={jumpToQuotedMessage}
-                                  />
-                                </div>
-                                <div
-                                  className={clsx(
-                                    'inline-flex shrink-0 translate-y-px items-center gap-0.5 text-[11px] tabular-nums leading-none text-[#667781] dark:text-[#94a9b3]'
-                                  )}
-                                >
-                                  <span>{formatTimeOnly(m.timestamp)}</span>
-                                  {mine && (
-                                    <OutgoingDeliveryTicks
-                                      status={m.statusMessage}
+                              {bleedMedia ? (
+                                <WaMessageBubbleContent
+                                  m={m}
+                                  bleedMedia
+                                  firstInBubbleGroup={firstInGroup}
+                                  footerMeta={timeMetaEl}
+                                  onJumpToQuoted={jumpToQuotedMessage}
+                                />
+                              ) : (
+                                <div className="flex min-w-0 items-end gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <WaMessageBubbleContent
+                                      m={m}
+                                      bleedMedia={false}
+                                      firstInBubbleGroup={firstInGroup}
+                                      onJumpToQuoted={jumpToQuotedMessage}
                                     />
-                                  )}
+                                  </div>
+                                  <div
+                                    className={clsx(
+                                      'inline-flex shrink-0 translate-y-px items-center gap-0.5 text-[11px] tabular-nums leading-none text-[#667781] dark:text-[#94a9b3]'
+                                    )}
+                                  >
+                                    {timeMetaEl}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </div>
                             {rowReactions && rowReactions.length > 0 ? (
                               <WaMessageReactionBadge
@@ -1583,38 +1992,123 @@ export function AdminWhatsAppChatPanel({
             {selectedId ? (
               <form
                 onSubmit={handleSend}
+                onDragOver={e => {
+                  if (e.dataTransfer?.types?.includes('Files')) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }
+                }}
+                onDrop={e => {
+                  const dt = e.dataTransfer;
+                  if (!dt?.files?.length || !selectedIdRef.current) return;
+                  e.preventDefault();
+                  appendImagesFromFileList(dt.files);
+                }}
                 className="shrink-0 border-t border-violet-100 bg-[#f0f2f5] p-2 dark:border-violet-900/40 dark:bg-[#1e2a30]"
               >
-                <div className="flex items-end gap-2">
-                  <textarea
-                    ref={messageInputRef}
-                    value={draft}
-                    onChange={e => setDraft(e.target.value)}
-                    onKeyDown={e => {
-                      if (
-                        e.key === 'Enter' &&
-                        !e.shiftKey &&
-                        !e.nativeEvent.isComposing
-                      ) {
-                        e.preventDefault();
-                        e.currentTarget.form?.requestSubmit();
-                      }
-                    }}
-                    placeholder="Сообщение"
-                    disabled={sending}
-                    rows={1}
+                <div className="flex items-end gap-1.5">
+                  <div
                     className={clsx(
-                      'box-border max-h-[160px] min-h-[40px] w-0 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-gray-200/90 bg-white px-4 py-2.5 text-sm leading-5 shadow-none outline-none',
-                      'placeholder:text-gray-500 focus:border-emerald-600/40 focus:ring-2 focus:ring-emerald-500/25',
-                      'dark:border-gray-600 dark:bg-gray-800 dark:placeholder:text-gray-500 dark:focus:border-emerald-500/50 dark:focus:ring-emerald-900/35'
+                      'flex min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-gray-200/90 bg-white shadow-sm',
+                      'dark:border-gray-600 dark:bg-gray-800',
+                      pendingImages.length > 0
+                        ? 'min-h-[5.25rem]'
+                        : 'min-h-[34px]'
                     )}
-                    aria-label="Текст сообщения"
-                  />
+                  >
+                    {pendingImages.length > 0 ? (
+                      <div className="flex max-h-[5rem] gap-1.5 overflow-x-auto border-b border-gray-100 px-2 py-1.5 dark:border-gray-700/80">
+                        {pendingImages.map(p => (
+                          <div
+                            key={p.id}
+                            className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-gray-200/90 bg-gray-50 dark:border-gray-600 dark:bg-gray-900/40"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element -- blob: превью перед отправкой */}
+                            <img
+                              src={p.url}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              disabled={sending}
+                              onClick={() => removePendingImage(p.id)}
+                              className="absolute right-0.5 top-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/55 text-white hover:bg-black/70 disabled:opacity-40"
+                              title="Убрать"
+                              aria-label="Убрать вложение"
+                            >
+                              <X
+                                className="h-3 w-3"
+                                strokeWidth={2.5}
+                                aria-hidden
+                              />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="flex min-h-[34px] items-center gap-2 py-0.5 pl-2.5 pr-2">
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*,.heic,.heif"
+                        multiple
+                        className="sr-only"
+                        tabIndex={-1}
+                        onChange={handleImageFileChange}
+                        aria-label="Выбор изображений для отправки"
+                      />
+                      <button
+                        type="button"
+                        disabled={sending}
+                        onClick={() => imageInputRef.current?.click()}
+                        className={clsx(
+                          'mx-0.5 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors',
+                          'bg-[#e9edef] text-[#54656f] hover:bg-[#d9dde0] dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
+                          'disabled:cursor-not-allowed disabled:opacity-45'
+                        )}
+                        title="Прикрепить изображения"
+                        aria-label="Прикрепить изображения"
+                      >
+                        <Plus
+                          className="h-3.5 w-3.5"
+                          strokeWidth={2.5}
+                          aria-hidden
+                        />
+                      </button>
+                      <textarea
+                        ref={messageInputRef}
+                        value={draft}
+                        onChange={e => setDraft(e.target.value)}
+                        onPaste={handleComposerPaste}
+                        onKeyDown={e => {
+                          if (
+                            e.key === 'Enter' &&
+                            !e.shiftKey &&
+                            !e.nativeEvent.isComposing
+                          ) {
+                            e.preventDefault();
+                            e.currentTarget.form?.requestSubmit();
+                          }
+                        }}
+                        placeholder="Введите сообщение"
+                        disabled={sending}
+                        rows={1}
+                        className={clsx(
+                          'box-border max-h-[160px] min-h-[32px] w-0 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-1.5 pr-1 text-sm leading-5 shadow-none outline-none ring-0',
+                          'placeholder:text-[#8696a0] focus:ring-0 dark:placeholder:text-gray-500'
+                        )}
+                        aria-label="Текст сообщения"
+                      />
+                    </div>
+                  </div>
                   <button
                     type="submit"
-                    disabled={!draft.trim() || sending}
+                    disabled={
+                      (!draft.trim() && pendingImages.length === 0) || sending
+                    }
                     className={clsx(
-                      'flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white shadow-sm transition',
+                      'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-white shadow-sm transition',
                       'bg-[#00a884] hover:brightness-110 active:brightness-95',
                       'disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[#00a884]'
                     )}
@@ -1623,11 +2117,11 @@ export function AdminWhatsAppChatPanel({
                   >
                     {sending ? (
                       <Loader2
-                        className="h-5 w-5 shrink-0 animate-spin"
+                        className="h-3.5 w-3.5 shrink-0 animate-spin"
                         aria-hidden
                       />
                     ) : (
-                      <WaSendPlaneIcon className="h-5 w-5 shrink-0" />
+                      <WaSendPlaneIcon className="h-3.5 w-3.5 shrink-0" />
                     )}
                   </button>
                 </div>
@@ -1636,6 +2130,97 @@ export function AdminWhatsAppChatPanel({
           </section>
         </div>
       </div>
+
+      <Modal
+        isOpen={addContactOpen}
+        onClose={() => {
+          if (!addContactLoading) setAddContactOpen(false);
+        }}
+        title="Новый контакт"
+        size="sm"
+        zIndex="z-[160]"
+        className="max-w-[min(100vw-2rem,400px)]"
+        allowContentOverflow
+      >
+        <form className="space-y-3 px-6 py-4" onSubmit={submitAddContact}>
+          <div className="space-y-1">
+            <label
+              htmlFor="wa-add-first"
+              className="text-xs font-medium text-gray-700 dark:text-gray-300"
+            >
+              Имя
+            </label>
+            <Input
+              id="wa-add-first"
+              fullWidth
+              required
+              autoComplete="given-name"
+              value={addFirstName}
+              onChange={e => setAddFirstName(e.target.value)}
+              placeholder="Имя"
+              className="text-sm dark:border-gray-600 dark:bg-gray-800"
+            />
+          </div>
+          <div className="space-y-1">
+            <label
+              htmlFor="wa-add-last"
+              className="text-xs font-medium text-gray-700 dark:text-gray-300"
+            >
+              Фамилия{' '}
+              <span className="font-normal text-gray-400">(необязательно)</span>
+            </label>
+            <Input
+              id="wa-add-last"
+              fullWidth
+              autoComplete="family-name"
+              value={addLastName}
+              onChange={e => setAddLastName(e.target.value)}
+              placeholder="Фамилия"
+              className="text-sm dark:border-gray-600 dark:bg-gray-800"
+            />
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Телефон
+            </span>
+            <PhoneInput
+              value={addPhone}
+              onChange={setAddPhone}
+              disabled={addContactLoading}
+              placeholder="+7 000 000-00-00"
+              dropdownZClass="z-[170]"
+              overlayZClass="z-[165]"
+              className="text-sm"
+            />
+          </div>
+          {addContactErr ? (
+            <p className="text-xs text-red-600 dark:text-red-400">
+              {addContactErr}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={addContactLoading}
+              onClick={() => setAddContactOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button type="submit" size="sm" disabled={addContactLoading}>
+              {addContactLoading ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Сохранение…
+                </span>
+              ) : (
+                'Сохранить'
+              )}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }
