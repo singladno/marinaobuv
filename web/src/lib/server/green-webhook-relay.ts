@@ -68,6 +68,22 @@ export async function forwardGreenWebhookPost(params: {
   const auth = sourceHeaders.get('authorization');
   if (auth) h.set('Authorization', auth);
 
+  // ngrok free: without this, server-side fetch often gets an HTML interstitial instead of the app.
+  try {
+    const host = new URL(targetUrl).hostname;
+    if (
+      host.endsWith('.ngrok-free.app') ||
+      host.endsWith('.ngrok-free.dev') ||
+      host.endsWith('.ngrok.io') ||
+      host.endsWith('.ngrok.app') ||
+      host.endsWith('.ngrok.dev')
+    ) {
+      h.set('ngrok-skip-browser-warning', 'true');
+    }
+  } catch {
+    /* ignore */
+  }
+
   return fetch(targetUrl, {
     method: 'POST',
     headers: h,
