@@ -644,6 +644,13 @@ model WebhookStatus {
   @@index([isConnected])
 }
 
+/// Singleton: optional dev tunnel URL for Green API webhook relay (see /api/webhooks/green-api/relay).
+model GreenApiWebhookRelayConfig {
+  id           String   @id @default("singleton")
+  secondaryUrl String?  @db.Text
+  updatedAt    DateTime @updatedAt
+}
+
 model Purchase {
   id          String         @id @default(cuid())
   name        String

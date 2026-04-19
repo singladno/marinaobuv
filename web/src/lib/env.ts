@@ -181,6 +181,9 @@ const schema = z
     TELEGRAM_API_HASH: z.string().optional(), // Get from https://my.telegram.org/apps
     TELEGRAM_PHONE: z.string().optional(), // Your phone number (e.g., +1234567890)
     TELEGRAM_SESSION_STRING: z.string().optional(), // Session string (auto-generated after first auth)
+
+    /// Forward target for /api/webhooks/green-api/relay (defaults to SITE_URL + /api/webhooks/green-api)
+    GREEN_API_WEBHOOK_PRIMARY_URL: z.string().url().optional(),
   })
   .refine(
     data => isBuildContext || data.YC_IAM_TOKEN || data.YC_API_KEY,
@@ -277,6 +280,8 @@ const raw = {
   TELEGRAM_API_HASH: process.env.TELEGRAM_API_HASH,
   TELEGRAM_PHONE: process.env.TELEGRAM_PHONE,
   TELEGRAM_SESSION_STRING: process.env.TELEGRAM_SESSION_STRING,
+
+  GREEN_API_WEBHOOK_PRIMARY_URL: process.env.GREEN_API_WEBHOOK_PRIMARY_URL,
 };
 
 const parsed = schema.safeParse(raw);
