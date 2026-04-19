@@ -1,7 +1,31 @@
-import type { GreenApiMessage } from '@/types/green-api';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db-node';
-import { logger } from '@/lib/server/logger';
+import { logServerError, logger } from '@/lib/server/logger';
+import {
+  extractDeepText,
+  extractGreenInboundDisplayText,
+  getMessageDataFromWebhookRaw,
+} from '@/lib/wa-admin-green-message-text';
+import { mirrorWebhookMediaIfNeeded } from '@/lib/wa-admin-media-s3';
+
+function safeExtractStoredText(
+  messageData: Record<string, unknown>
+): string | null {
+  try {
+    return (
+      extractGreenInboundDisplayText(messageData) ??
+      extractDeepText(messageData) ??
+      null
+    );
+  } catch (e) {
+    logServerError('[wa-admin-inbox] message text extract failed:', e);
+    try {
+      return extractDeepText(messageData) ?? null;
+    } catch {
+      return null;
+    }
+  }
+}
 
 /** Входящие «картинки» для бейджа: фото, стикеры, видео. */
 const INCOMING_MEDIA_TYPES = [
@@ -9,6 +33,16 @@ const INCOMING_MEDIA_TYPES = [
   'stickerMessage',
   'videoMessage',
 ] as const;
+
+const MEDIA_PREVIEW_EMOJI: Record<string, string> = {
+  imageMessage: '📷',
+  stickerMessage: '🎨',
+  videoMessage: '🎬',
+  documentMessage: '📎',
+  audioMessage: '🎵',
+  pttMessage: '🎤',
+  gifMessage: '🎞',
+};
 
 export type WaAdminUpsertInput = {
   waMessageId: string;
@@ -27,6 +61,8 @@ export type WaAdminUpsertInput = {
     chatType?: 'user' | 'group';
   };
   rawPayload?: unknown;
+  /** Public CDN URL after S3 mirror (webhook media). */
+  mediaS3Url?: string | null;
 };
 
 function previewFromMessage(input: WaAdminUpsertInput): string {
@@ -35,6 +71,15 @@ function previewFromMessage(input: WaAdminUpsertInput): string {
     (input.caption && input.caption.trim()) ||
     '';
   if (t) return t.length > 120 ? `${t.slice(0, 117)}…` : t;
+  if (input.mediaS3Url && input.typeMessage) {
+    const emoji = MEDIA_PREVIEW_EMOJI[input.typeMessage];
+    if (emoji) return emoji;
+  }
+  const md = getMessageDataFromWebhookRaw(input.rawPayload);
+  if (md) {
+    const d = extractGreenInboundDisplayText(md);
+    if (d) return d.length > 120 ? `${d.slice(0, 117)}…` : d;
+  }
   if (input.typeMessage && input.typeMessage !== 'textMessage') {
     return `(${input.typeMessage})`;
   }
@@ -90,6 +135,7 @@ export async function upsertWaAdminMessage(
         senderId: input.senderId ?? null,
         isFromMe: input.isFromMe,
         statusMessage: input.statusMessage ?? null,
+        mediaS3Url: input.mediaS3Url ?? null,
         rawPayload:
           input.rawPayload === undefined
             ? undefined
@@ -104,71 +150,15 @@ export async function upsertWaAdminMessage(
         senderId: input.senderId ?? null,
         isFromMe: input.isFromMe,
         statusMessage: input.statusMessage ?? null,
+        ...(input.mediaS3Url !== undefined
+          ? { mediaS3Url: input.mediaS3Url }
+          : {}),
         ...(input.rawPayload !== undefined
           ? { rawPayload: input.rawPayload as object }
           : {}),
       },
     });
   });
-}
-
-export async function upsertWaAdminFromGreenApiMessage(
-  m: GreenApiMessage,
-  fallbackChatId?: string
-): Promise<void> {
-  const chatId = m.chatId || fallbackChatId;
-  if (!chatId || !m.idMessage) return;
-
-  const ts = BigInt(m.timestamp);
-  const isFromMe =
-    typeof m.isFromMe === 'boolean' ? m.isFromMe : m.type === 'outgoing';
-
-  const text =
-    m.textMessage ||
-    m.caption ||
-    (m.typeMessage && m.typeMessage !== 'textMessage'
-      ? `(${m.typeMessage})`
-      : '') ||
-    '';
-
-  await upsertWaAdminMessage({
-    waMessageId: m.idMessage,
-    chatId,
-    timestamp: ts,
-    typeMessage: m.typeMessage,
-    textMessage: m.textMessage ?? text,
-    caption: m.caption ?? null,
-    senderName: m.senderName ?? null,
-    senderId: m.senderId ?? null,
-    isFromMe,
-    statusMessage: m.statusMessage ?? null,
-    chatMeta: {
-      name: m.groupName || null,
-      contactName: undefined,
-      chatType: m.isGroup || chatId.endsWith('@g.us') ? 'group' : 'user',
-    },
-  });
-}
-
-function extractTextFromMessageData(
-  messageData: Record<string, unknown>
-): string | null {
-  const md = messageData as {
-    textMessage?: string;
-    textMessageData?: { textMessage?: string };
-    extendedTextMessage?: { text?: string };
-    extendedTextMessageData?: { text?: string };
-    caption?: string;
-    typeMessage?: string;
-  };
-  const text =
-    md.textMessage ||
-    md.textMessageData?.textMessage ||
-    md.extendedTextMessage?.text ||
-    md.extendedTextMessageData?.text ||
-    md.caption ||
-    null;
-  return text != null && String(text).trim() ? String(text) : null;
 }
 
 /**
@@ -191,9 +181,9 @@ export async function upsertWaAdminFromIncomingWebhook(
     (messageData.chatId as string | undefined);
   if (!chatId) return;
 
-  const text = extractTextFromMessageData(messageData);
   const typeMessage = (messageData.typeMessage as string) || 'textMessage';
   const caption = (messageData.caption as string | undefined) || null;
+  const text = safeExtractStoredText(messageData);
 
   const chatName: string | null =
     senderData?.chatName != null
@@ -204,6 +194,12 @@ export async function upsertWaAdminFromIncomingWebhook(
       ? String(senderData.senderContactName).trim() || null
       : null;
 
+  const existing = await prisma.waAdminMessage.findUnique({
+    where: { waMessageId: idMessage },
+    select: { mediaS3Url: true },
+  });
+
+  /** Сначала пишем в БД — зеркалирование в S3 не должно блокировать вебхук при «висящем» downloadUrl. */
   await upsertWaAdminMessage({
     waMessageId: idMessage,
     chatId,
@@ -221,7 +217,21 @@ export async function upsertWaAdminFromIncomingWebhook(
       chatType: chatId.endsWith('@g.us') ? 'group' : 'user',
     },
     rawPayload: payload,
+    mediaS3Url: existing?.mediaS3Url ?? undefined,
   });
+
+  const mirrored = await mirrorWebhookMediaIfNeeded({
+    waMessageId: idMessage,
+    typeMessage,
+    messageData,
+    existingMediaS3Url: existing?.mediaS3Url,
+  });
+  if (mirrored && mirrored !== existing?.mediaS3Url) {
+    await prisma.waAdminMessage.update({
+      where: { waMessageId: idMessage },
+      data: { mediaS3Url: mirrored },
+    });
+  }
 }
 
 /**
@@ -242,9 +252,9 @@ export async function upsertWaAdminFromOutgoingWebhook(
   const chatId = (senderData?.chatId as string | undefined) || null;
   if (!chatId) return;
 
-  const text = extractTextFromMessageData(messageData);
   const typeMessage = (messageData.typeMessage as string) || 'textMessage';
   const caption = (messageData.caption as string | undefined) || null;
+  const text = safeExtractStoredText(messageData);
   const statusMessage =
     (messageData.statusMessage as string | undefined) || null;
 
@@ -252,6 +262,11 @@ export async function upsertWaAdminFromOutgoingWebhook(
     senderData?.chatName != null
       ? String(senderData.chatName).trim() || null
       : null;
+
+  const existing = await prisma.waAdminMessage.findUnique({
+    where: { waMessageId: idMessage },
+    select: { mediaS3Url: true },
+  });
 
   await upsertWaAdminMessage({
     waMessageId: idMessage,
@@ -270,7 +285,21 @@ export async function upsertWaAdminFromOutgoingWebhook(
       chatType: chatId.endsWith('@g.us') ? 'group' : 'user',
     },
     rawPayload: payload,
+    mediaS3Url: existing?.mediaS3Url ?? undefined,
   });
+
+  const mirrored = await mirrorWebhookMediaIfNeeded({
+    waMessageId: idMessage,
+    typeMessage,
+    messageData,
+    existingMediaS3Url: existing?.mediaS3Url,
+  });
+  if (mirrored && mirrored !== existing?.mediaS3Url) {
+    await prisma.waAdminMessage.update({
+      where: { waMessageId: idMessage },
+      data: { mediaS3Url: mirrored },
+    });
+  }
 }
 
 async function getUnreadAfterTimestamp(
@@ -335,7 +364,11 @@ export async function countUnreadIncomingMedia(
 
 /**
  * Unread counts for many chats in O(1) DB round-trips (avoids per-chat COUNT + read-state upserts).
- * Threshold when read state is missing: max(message.timestamp) for that chat (same as “caught up”, unread 0).
+ *
+ * If there is no `WaAdminChatReadState` row for (user, chat), we use threshold **0** so every
+ * incoming message with `timestamp > 0` counts as unread. Using `max(timestamp)` here was wrong:
+ * that value moves forward with each new webhook message, so `timestamp > thresh` was never true
+ * and badges stayed at 0 for chats the user had never opened (no persisted read cursor).
  */
 export async function batchUnreadCountsForChats(
   userId: string,
@@ -348,28 +381,18 @@ export async function batchUnreadCountsForChats(
     out.set(id, { unread: 0, unreadMedia: 0 });
   }
 
-  const [states, maxTsRows] = await Promise.all([
-    prisma.waAdminChatReadState.findMany({
-      where: { userId, chatId: { in: chatIds } },
-      select: { chatId: true, lastReadMessageTs: true },
-    }),
-    prisma.waAdminMessage.groupBy({
-      by: ['chatId'],
-      where: { chatId: { in: chatIds } },
-      _max: { timestamp: true },
-    }),
-  ]);
+  const states = await prisma.waAdminChatReadState.findMany({
+    where: { userId, chatId: { in: chatIds } },
+    select: { chatId: true, lastReadMessageTs: true },
+  });
 
   const stateMap = new Map(
     states.map(s => [s.chatId, s.lastReadMessageTs] as const)
   );
-  const maxMap = new Map(
-    maxTsRows.map(m => [m.chatId, m._max.timestamp ?? BigInt(0)] as const)
-  );
 
   const valueRows = chatIds.map(id => {
     const s = stateMap.get(id);
-    const th = s !== undefined ? s : (maxMap.get(id) ?? BigInt(0));
+    const th = s !== undefined ? s : BigInt(0);
     return Prisma.sql`(${id}::text, ${th}::bigint)`;
   });
   const valuesSql = Prisma.join(valueRows, ', ');
@@ -429,6 +452,23 @@ export async function markWaAdminChatRead(
   });
 }
 
+/**
+ * Исходящее/входящее для админ-чата: в `rawPayload` лежит полный вебхук Green API.
+ * Если в БД `isFromMe` = false по умолчанию, но пришёл `outgoingMessageReceived`,
+ * пузырь должен быть справа — иначе «ваши» сообщения выглядят как чужие.
+ */
+export function inferIsFromMeFromWaWebhookPayload(
+  rawPayload: unknown,
+  dbIsFromMe: boolean
+): boolean {
+  if (rawPayload && typeof rawPayload === 'object') {
+    const tw = (rawPayload as Record<string, unknown>).typeWebhook;
+    if (tw === 'outgoingMessageReceived') return true;
+    if (tw === 'incomingMessageReceived') return false;
+  }
+  return Boolean(dbIsFromMe);
+}
+
 /** Changes when any inbox message row is inserted (for SSE refresh). */
 export async function getInboxEventVersion(): Promise<string> {
   const row = await prisma.waAdminMessage.findFirst({
@@ -468,64 +508,4 @@ export async function upsertWaAdminChatsFromContacts(
 
 export function logWaAdminUpsertSkipped(reason: string): void {
   logger.debug(`[wa-admin-inbox] skip: ${reason}`);
-}
-
-/** Merge Green API journal rows into inbox (used by cold sync). */
-export async function upsertWaAdminFromJournalRows(
-  incoming: Array<{
-    chatId?: string;
-    idMessage?: string;
-    timestamp?: number;
-    typeMessage?: string;
-    textMessage?: string;
-    caption?: string;
-    senderName?: string;
-    senderId?: string;
-  }>,
-  outgoing: Array<{
-    chatId?: string;
-    idMessage?: string;
-    timestamp?: number;
-    typeMessage?: string;
-    textMessage?: string;
-    caption?: string;
-    statusMessage?: string;
-  }>
-): Promise<void> {
-  for (const row of incoming) {
-    if (!row.chatId || !row.idMessage || row.timestamp == null) continue;
-    await upsertWaAdminMessage({
-      waMessageId: row.idMessage,
-      chatId: row.chatId,
-      timestamp: BigInt(row.timestamp),
-      typeMessage: row.typeMessage ?? null,
-      textMessage: row.textMessage ?? null,
-      caption: row.caption ?? null,
-      senderName: row.senderName ?? null,
-      senderId: row.senderId ?? null,
-      isFromMe: false,
-      statusMessage: null,
-      chatMeta: {
-        chatType: row.chatId.endsWith('@g.us') ? 'group' : 'user',
-      },
-    });
-  }
-  for (const row of outgoing) {
-    if (!row.chatId || !row.idMessage || row.timestamp == null) continue;
-    await upsertWaAdminMessage({
-      waMessageId: row.idMessage,
-      chatId: row.chatId,
-      timestamp: BigInt(row.timestamp),
-      typeMessage: row.typeMessage ?? null,
-      textMessage: row.textMessage ?? null,
-      caption: row.caption ?? null,
-      senderName: null,
-      senderId: null,
-      isFromMe: true,
-      statusMessage: row.statusMessage ?? null,
-      chatMeta: {
-        chatType: row.chatId.endsWith('@g.us') ? 'group' : 'user',
-      },
-    });
-  }
 }

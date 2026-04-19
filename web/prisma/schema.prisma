@@ -350,6 +350,8 @@ model WaAdminMessage {
   senderId      String?
   isFromMe      Boolean  @default(false)
   statusMessage String?
+  /// Public CDN URL after mirroring webhook media from Green API to S3 (not WhatsApp downloadUrl).
+  mediaS3Url    String?  @db.Text
   rawPayload    Json?
   createdAt     DateTime @default(now())
 

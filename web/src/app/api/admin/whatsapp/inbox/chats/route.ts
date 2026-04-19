@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db-node';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { batchUnreadCountsForChats } from '@/lib/wa-admin-inbox';
+import { logServerError } from '@/lib/server/logger';
 
 function displayName(c: {
   name: string;
@@ -26,7 +27,15 @@ export async function GET(request: NextRequest) {
 
   const userId = auth.user.id;
   const chatIds = chats.map(c => c.chatId);
-  const unreadMap = await batchUnreadCountsForChats(userId, chatIds);
+  let unreadMap: Map<string, { unread: number; unreadMedia: number }>;
+  try {
+    unreadMap = await batchUnreadCountsForChats(userId, chatIds);
+  } catch (e) {
+    logServerError('[inbox/chats] batchUnreadCountsForChats failed:', e);
+    unreadMap = new Map(
+      chatIds.map(id => [id, { unread: 0, unreadMedia: 0 }] as const)
+    );
+  }
 
   const withUnread = chats.map(c => {
     const u = unreadMap.get(c.chatId) ?? { unread: 0, unreadMedia: 0 };

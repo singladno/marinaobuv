@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db-node';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { inferIsFromMeFromWaWebhookPayload } from '@/lib/wa-admin-inbox';
 
 function isValidChatId(id: string): boolean {
   if (!id || id.length > 200) return false;
@@ -13,6 +14,7 @@ function isValidChatId(id: string): boolean {
   );
 }
 
+/** Message thread from DB only (populated by Green API webhooks). */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request, 'ADMIN');
   if (auth.error) return auth.error;
@@ -55,9 +57,12 @@ export async function GET(request: NextRequest) {
     textMessage: m.textMessage ?? undefined,
     senderName: m.senderName ?? undefined,
     senderId: m.senderId ?? undefined,
-    isFromMe: m.isFromMe,
+    isFromMe: inferIsFromMeFromWaWebhookPayload(m.rawPayload, m.isFromMe),
     caption: m.caption ?? undefined,
     statusMessage: m.statusMessage ?? undefined,
+    mediaS3Url: m.mediaS3Url ?? undefined,
+    /** Полный вебхук-пейлоад для расширенного рендера (цитаты, реакции). */
+    rawPayload: m.rawPayload ?? undefined,
   }));
 
   return NextResponse.json({

@@ -2,7 +2,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
-import { Check } from 'lucide-react';
+import { Check, Loader2, Send } from 'lucide-react';
 import {
   Fragment,
   useCallback,
@@ -14,6 +14,11 @@ import {
 } from 'react';
 
 import { Input } from '@/components/ui/Input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/Popover';
 import {
   waAvatarIdbDelete,
   waAvatarIdbGet,
@@ -29,6 +34,16 @@ import {
   waInboxIdbPutChats,
   waInboxIdbPutThread,
 } from '@/lib/client/wa-inbox-idb';
+import {
+  extractGreenInboundDisplayText,
+  extractQuotedMessageBodySnippet,
+  resolveQuotedAuthorLabel,
+  extractQuotedTargetMessageId,
+  extractReactionEmojiFromRawPayload,
+  extractReactionTargetMessageId,
+  getMessageDataFromWebhookRaw,
+  getQuotedMessageObjectForPreview,
+} from '@/lib/wa-admin-green-message-text';
 
 type WaChat = {
   id: string;
@@ -52,6 +67,10 @@ type WaMessage = {
   caption?: string;
   /** Green API outgoing status: pending → read */
   statusMessage?: string;
+  /** Публичный CDN после зеркалирования вебхук-медиа в S3 */
+  mediaS3Url?: string;
+  /** Вебхук Green API (цитаты, реакции, типы без denormalized текста). */
+  rawPayload?: unknown;
 };
 
 /**
@@ -82,15 +101,24 @@ function chatInitials(label: string): string {
  */
 const AVATAR_LAZY_REV = '4';
 
+/** Длительность enter/exit overlay + окна (см. transition duration-300). */
+const WA_CHAT_PANEL_MS = 320;
+
 function ChatRowAvatar({
   chatId,
   label,
   /** Элемент со скроллом списка чатов: фото не грузим, пока строка не в viewport. */
   scrollRootEl,
+  /** Шапка открытого чата — грузим фото сразу, без IntersectionObserver. */
+  eager = false,
+  /** Чуть крупнее в шапке диалога. */
+  sizeClass = 'h-10 w-10 text-[11px]',
 }: {
   chatId: string;
   label: string;
   scrollRootEl?: HTMLDivElement | null;
+  eager?: boolean;
+  sizeClass?: string;
 }) {
   const [broken, setBroken] = useState(false);
   const [photoReady, setPhotoReady] = useState(false);
@@ -100,9 +128,13 @@ function ChatRowAvatar({
   const initials = chatInitials(label);
 
   /** Пока нет root — не грузим фото; после ref на скролл — только если строка в видимой области. */
-  const [inListViewport, setInListViewport] = useState(false);
+  const [inListViewport, setInListViewport] = useState(eager);
 
   useEffect(() => {
+    if (eager) {
+      setInListViewport(true);
+      return;
+    }
     if (!scrollRootEl) return;
     const target = containerRef.current;
     if (!target) return;
@@ -114,7 +146,7 @@ function ChatRowAvatar({
     );
     io.observe(target);
     return () => io.disconnect();
-  }, [scrollRootEl, chatId]);
+  }, [eager, scrollRootEl, chatId]);
 
   const proxyUrl = useMemo(
     () =>
@@ -190,7 +222,10 @@ function ChatRowAvatar({
   return (
     <div
       ref={containerRef}
-      className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 text-[11px] font-bold text-white shadow-sm"
+      className={clsx(
+        'relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 font-bold text-white shadow-sm',
+        sizeClass
+      )}
       aria-hidden
     >
       <span className="relative z-0 flex h-full w-full items-center justify-center">
@@ -241,13 +276,175 @@ function ChatRowAvatar({
   );
 }
 
-function messageBody(m: WaMessage): string {
-  if (m.textMessage) return m.textMessage;
-  if (m.caption) return m.caption;
+function messagePlainText(m: WaMessage): string | null {
+  const t = m.textMessage?.trim();
+  if (t) return t;
+  const c = m.caption?.trim();
+  if (c) return c;
+  return null;
+}
+
+function resolveMessageDisplayText(m: WaMessage): string | null {
+  const direct = messagePlainText(m);
+  if (direct) return direct;
+  const md = getMessageDataFromWebhookRaw(m.rawPayload);
+  if (md) {
+    const parsed = extractGreenInboundDisplayText(md);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+/** Текст, если нет тела — плейсхолдер типа (до зеркалирования в S3). */
+function messageBodyFallback(m: WaMessage): string {
+  if (m.mediaS3Url) return '';
+  const md = getMessageDataFromWebhookRaw(m.rawPayload);
+  if (md) {
+    const t = extractGreenInboundDisplayText(md);
+    if (t) return t;
+  }
   if (m.typeMessage && m.typeMessage !== 'textMessage') {
     return `(${m.typeMessage})`;
   }
   return '—';
+}
+
+function WaMessageBubbleContent({
+  m,
+  onJumpToQuoted,
+}: {
+  m: WaMessage;
+  onJumpToQuoted?: (waMessageId: string) => void;
+}) {
+  const quotedObj = getQuotedMessageObjectForPreview(m.rawPayload);
+  const quoteSnippet =
+    quotedObj != null ? extractQuotedMessageBodySnippet(quotedObj) : null;
+  const quotedAuthor = resolveQuotedAuthorLabel(m.rawPayload, quotedObj);
+  const quotedTargetId = extractQuotedTargetMessageId(m.rawPayload);
+  const canJumpToQuote = Boolean(
+    quotedTargetId && onJumpToQuoted && quoteSnippet
+  );
+  const resolved = resolveMessageDisplayText(m);
+
+  /** Как в WhatsApp: полоса слева, справа один блок с фоном — внутри имя автора и превью текста. */
+  const quotePreviewInner = (
+    <>
+      <div
+        className="w-[3px] shrink-0 self-stretch rounded-sm bg-emerald-700 dark:bg-emerald-400/90"
+        aria-hidden
+      />
+      <div className="min-w-0 flex-1 rounded-r-md bg-emerald-50/95 px-2 py-1.5 text-left dark:bg-emerald-950/45">
+        <p className="text-[11px] font-semibold leading-tight text-emerald-800 dark:text-emerald-300">
+          {quotedAuthor}
+        </p>
+        <p
+          className={clsx(
+            'mt-0.5 text-[11px] leading-snug text-gray-800 dark:text-gray-200'
+          )}
+        >
+          {quoteSnippet}
+        </p>
+      </div>
+    </>
+  );
+
+  const quoteShellClass =
+    'mb-1.5 flex w-full max-w-full min-w-0 items-stretch gap-0 overflow-hidden rounded-lg border border-emerald-200/60 text-left dark:border-emerald-800/45';
+
+  return (
+    <>
+      {quoteSnippet ? (
+        canJumpToQuote ? (
+          <button
+            type="button"
+            className={clsx(
+              quoteShellClass,
+              'cursor-pointer transition-colors hover:border-emerald-300 hover:bg-emerald-50/40 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/30'
+            )}
+            onClick={() => onJumpToQuoted!(quotedTargetId!)}
+          >
+            {quotePreviewInner}
+          </button>
+        ) : (
+          <div className={quoteShellClass}>{quotePreviewInner}</div>
+        )
+      ) : null}
+      {m.mediaS3Url ? (
+        <div className="mb-1">
+          <WaMessageMedia m={m} />
+        </div>
+      ) : null}
+      {resolved ? (
+        <p className="whitespace-pre-wrap break-words">{resolved}</p>
+      ) : !m.mediaS3Url ? (
+        <p className="whitespace-pre-wrap break-words">
+          {messageBodyFallback(m)}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function WaMessageMedia({ m }: { m: WaMessage }) {
+  const url = m.mediaS3Url;
+  if (!url) return null;
+  const tm = m.typeMessage;
+  if (tm === 'imageMessage' || tm === 'stickerMessage' || tm === 'gifMessage') {
+    const compact = tm === 'stickerMessage';
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- CDN URL нашего S3
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        className={clsx(
+          'block max-w-full rounded object-contain',
+          compact ? 'max-h-40' : 'max-h-64'
+        )}
+      />
+    );
+  }
+  if (tm === 'videoMessage') {
+    return (
+      <video
+        src={url}
+        controls
+        className="block max-h-64 max-w-full rounded"
+        preload="metadata"
+      />
+    );
+  }
+  if (tm === 'audioMessage' || tm === 'pttMessage') {
+    return <audio src={url} controls className="block w-full max-w-[260px]" />;
+  }
+  if (tm === 'documentMessage') {
+    const md = getMessageDataFromWebhookRaw(m.rawPayload);
+    const fd = md?.fileMessageData as { fileName?: string } | undefined;
+    const name =
+      (typeof md?.fileName === 'string' && md.fileName.trim()) ||
+      (fd?.fileName && String(fd.fileName).trim()) ||
+      'Документ';
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block text-[13px] font-medium text-emerald-800 underline dark:text-emerald-300"
+      >
+        {name}
+      </a>
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block text-[13px] font-medium text-emerald-800 underline dark:text-emerald-300"
+    >
+      Вложение
+    </a>
+  );
 }
 
 /** Time only, inside bubbles (no date — day is on the centered badge). */
@@ -318,25 +515,199 @@ function outgoingStatusLabel(status?: string): string {
  * WhatsApp-style delivery ticks on outgoing bubbles only.
  * Single ✓ ≈ sent; double ✓✓ gray ≈ delivered; double ✓✓ blue ≈ read.
  */
-/** Разделитель как в Telegram: полоска с текстом над первым новым входящим. */
+/** Разделитель как в Telegram: полная ширина, светлая полоса, над первым новым входящим. */
 function NewMessagesDivider() {
   return (
     <div
-      className="-mx-2 mb-2 w-[calc(100%+1rem)] sm:mx-0 sm:w-full"
+      className="-mx-2.5 my-3 w-[calc(100%+1.25rem)] sm:-mx-3 sm:w-[calc(100%+1.5rem)]"
       role="separator"
       aria-label="Новые сообщения"
     >
-      <div className="bg-sky-100/90 py-2 text-center text-[11px] font-medium text-gray-700 dark:bg-sky-950/50 dark:text-gray-200">
-        Новые сообщения
+      <div className="border-y border-white/60 bg-white/70 py-1.5 text-center text-[12px] font-medium text-gray-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-[1px] dark:border-white/10 dark:bg-gray-800/55 dark:text-gray-100 dark:shadow-none">
+        Новые
       </div>
     </div>
+  );
+}
+
+type WaReactionEntry = {
+  emoji: string;
+  reactionWaMessageId: string;
+  senderName: string | null;
+  senderId: string | null;
+  isFromMe: boolean;
+  timestamp: number;
+};
+
+/** Реакции не показываем отдельными пузырями — только здесь, по id целевого сообщения. */
+function buildReactionsByTarget(
+  all: WaMessage[]
+): Map<string, WaReactionEntry[]> {
+  const accum = new Map<string, Map<string, WaReactionEntry>>();
+  for (const m of all) {
+    if (m.typeMessage !== 'reactionMessage') continue;
+    const targetId = extractReactionTargetMessageId(m.rawPayload);
+    if (!targetId) continue;
+    const emoji = extractReactionEmojiFromRawPayload(m.rawPayload);
+    const senderKey =
+      (m.senderId ?? '').trim() || m.idMessage || String(m.timestamp);
+    if (!emoji) {
+      const bySender = accum.get(targetId);
+      if (bySender) {
+        bySender.delete(senderKey);
+        if (bySender.size === 0) accum.delete(targetId);
+      }
+      continue;
+    }
+    let bySender = accum.get(targetId);
+    if (!bySender) {
+      bySender = new Map();
+      accum.set(targetId, bySender);
+    }
+    bySender.set(senderKey, {
+      emoji,
+      reactionWaMessageId: m.idMessage,
+      senderName: m.senderName ?? null,
+      senderId: m.senderId ?? null,
+      isFromMe: Boolean(m.isFromMe),
+      timestamp: m.timestamp,
+    });
+  }
+  const out = new Map<string, WaReactionEntry[]>();
+  for (const [targetId, bySender] of accum) {
+    const list = [...bySender.values()].sort(
+      (a, b) => a.timestamp - b.timestamp
+    );
+    if (list.length) out.set(targetId, list);
+  }
+  return out;
+}
+
+function reactionActorLabel(r: WaReactionEntry): string {
+  if (r.isFromMe) return 'Вы';
+  const n = (r.senderName ?? '').trim();
+  if (n) return n;
+  return (r.senderId ?? '').trim() || 'Участник';
+}
+
+function WaMessageReactionBadge({
+  reactions,
+  mine,
+}: {
+  reactions: WaReactionEntry[];
+  mine: boolean;
+}) {
+  const [filter, setFilter] = useState<'all' | string>('all');
+  const sumByEmoji = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of reactions) {
+      map.set(r.emoji, (map.get(r.emoji) ?? 0) + 1);
+    }
+    return map;
+  }, [reactions]);
+
+  const filtered = useMemo(
+    () =>
+      filter === 'all' ? reactions : reactions.filter(r => r.emoji === filter),
+    [filter, reactions]
+  );
+
+  const total = reactions.length;
+  const uniqueEmojis = [...sumByEmoji.keys()];
+  const previewEmoji =
+    uniqueEmojis.length <= 2
+      ? uniqueEmojis.join('')
+      : `${uniqueEmojis[0] ?? '👍'}…`;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={clsx(
+            'absolute z-10 flex min-h-[26px] max-w-[120px] items-center justify-center gap-0.5 rounded-full border border-gray-300/90 bg-white px-2 py-1 text-left shadow-md outline-none transition hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-violet-400/50 dark:border-gray-500 dark:bg-[#1f2c33] dark:hover:bg-gray-800',
+            /* Исходящие — внизу справа, входящие — слева; чуть ниже края пузыря, как в WhatsApp. */
+            mine ? 'bottom-[-12px] right-2' : 'bottom-[-12px] left-2'
+          )}
+          aria-label={`Реакции: ${total}`}
+        >
+          <span className="truncate text-[14px] leading-none">
+            {previewEmoji}
+          </span>
+          {total > 1 && (
+            <span className="shrink-0 text-[10px] font-semibold tabular-nums text-gray-600 dark:text-gray-300">
+              {total}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align={mine ? 'end' : 'start'}
+        side="top"
+        sideOffset={6}
+        className="w-[min(18rem,calc(100vw-2rem))] border border-gray-200/90 bg-[#f0f2f5] p-0 shadow-lg dark:border-gray-600 dark:bg-[#1e2a30]"
+      >
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-gray-200/80 px-2 py-2 dark:border-gray-600">
+          <button
+            type="button"
+            onClick={() => setFilter('all')}
+            className={clsx(
+              'rounded-full px-2.5 py-1 text-[11px] font-medium transition',
+              filter === 'all'
+                ? 'bg-gray-300/90 text-gray-900 dark:bg-gray-600 dark:text-gray-100'
+                : 'text-gray-600 hover:bg-gray-200/80 dark:text-gray-300 dark:hover:bg-gray-700'
+            )}
+          >
+            Все {total}
+          </button>
+          {[...sumByEmoji.entries()].map(([emoji, n]) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => setFilter(f => (f === emoji ? 'all' : emoji))}
+              className={clsx(
+                'rounded-full px-2 py-0.5 text-[12px] transition',
+                filter === emoji
+                  ? 'bg-gray-300/90 dark:bg-gray-600'
+                  : 'hover:bg-gray-200/80 dark:hover:bg-gray-700'
+              )}
+            >
+              {emoji} {n}
+            </button>
+          ))}
+        </div>
+        <ul className="max-h-60 overflow-y-auto px-1 py-1.5">
+          {filtered.map(r => (
+            <li
+              key={r.reactionWaMessageId}
+              className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] hover:bg-gray-200/60 dark:hover:bg-gray-700/50"
+            >
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-300/80 text-[11px] font-semibold text-gray-700 dark:bg-gray-600 dark:text-gray-100"
+                aria-hidden
+              >
+                {chatInitials(reactionActorLabel(r))}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-gray-900 dark:text-gray-100">
+                  {reactionActorLabel(r)}
+                </p>
+              </div>
+              <span className="shrink-0 text-[18px] leading-none" aria-hidden>
+                {r.emoji}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 
 /** WhatsApp-style centered day pill */
 function DateBadge({ label }: { label: string }) {
   return (
-    <div className="my-3 flex w-full justify-center px-2">
+    <div className="my-4 flex w-full justify-center px-2">
       <span
         className="max-w-[90%] rounded-full bg-white/95 px-3 py-1 text-center text-[11px] font-semibold text-gray-800 shadow-sm dark:bg-gray-800/95 dark:text-gray-100"
         role="separator"
@@ -372,7 +743,7 @@ function OutgoingDeliveryTicks({ status }: { status?: string }) {
         title={label}
         aria-label={label}
       >
-        <Check className={clsx(tickClass, '-mr-[7px]')} aria-hidden />
+        <Check className={clsx(tickClass, '-mr-[11px]')} aria-hidden />
         <Check className={tickClass} aria-hidden />
       </span>
     );
@@ -417,12 +788,44 @@ export function AdminWhatsAppChatPanel({
     useState<HTMLDivElement | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  /** Прокрутка к цитируемому сообщению по `waMessageId`. */
+  const messageBubbleRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [highlightedMessageId, setHighlightedMessageId] = useState<
+    string | null
+  >(null);
+  const highlightClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const jumpToQuotedMessage = useCallback((waMessageId: string) => {
+    const el = messageBubbleRefs.current.get(waMessageId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (highlightClearTimeoutRef.current) {
+      window.clearTimeout(highlightClearTimeoutRef.current);
+    }
+    setHighlightedMessageId(waMessageId);
+    highlightClearTimeoutRef.current = window.setTimeout(() => {
+      setHighlightedMessageId(null);
+      highlightClearTimeoutRef.current = null;
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (highlightClearTimeoutRef.current) {
+        window.clearTimeout(highlightClearTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const selectedIdRef = useRef<string | null>(null);
   selectedIdRef.current = selectedId;
 
   const chatsRequestBusy = useRef(false);
-  const messagesRequestBusy = useRef(false);
-  const mergeAttemptedRef = useRef(new Set<string>());
+  /** Отменяет предыдущий fetch сообщений при новом запросе или смене чата (избегает гонок с selectedIdRef). */
+  const messagesFetchAbortRef = useRef<AbortController | null>(null);
   const didColdSyncRef = useRef(false);
 
   /** In-memory last loaded thread per chat (instant switch back without network). */
@@ -434,10 +837,73 @@ export function AdminWhatsAppChatPanel({
   messagesRef.current = messages;
   readThroughTsRef.current = readThroughTs;
 
+  /**
+   * Порог readThroughTs для полоски «Новые» на время текущего визита в чат.
+   * Берётся из первого GET /messages до POST /read; при смене чата сбрасывается,
+   * чтобы после возврата линия не кешировалась поверх уже прочитанного.
+   */
+  const newMessagesDividerThresholdRef = useRef<Map<string, number>>(new Map());
+
+  /** При каждом открытии модуля — ни один чат не выбран (state не сбрасывается при open=false, т.к. компонент остаётся смонтированным). */
+  useLayoutEffect(() => {
+    if (!open) return;
+    setSelectedId(null);
+    setDraft('');
+    setMessagesError(null);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (selectedIdRef.current) {
+        e.preventDefault();
+        setSelectedId(null);
+        setDraft('');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  /** Плавное появление / исчезновение: `panelHold` держит DOM до конца exit-анимации. */
+  const [panelHold, setPanelHold] = useState(false);
+  const [enterReady, setEnterReady] = useState(false);
+  const showPanel = open || panelHold;
+
+  useLayoutEffect(() => {
+    if (open) {
+      setPanelHold(true);
+      setEnterReady(false);
+      const reduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced) {
+        setEnterReady(true);
+        return;
+      }
+      const id = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setEnterReady(true));
+      });
+      return () => cancelAnimationFrame(id);
+    }
+    setEnterReady(false);
+    return undefined;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open && panelHold) {
+      const t = window.setTimeout(() => setPanelHold(false), WA_CHAT_PANEL_MS);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [open, panelHold]);
+
   const loadChats = useCallback(
     async (opts?: { silent?: boolean }): Promise<number> => {
       const silent = Boolean(opts?.silent);
-      if (silent && chatsRequestBusy.current) return -1;
+      /** Не отменяем silent-обновления (SSE): иначе второй вызов в том же тике мог вернуть -1 и список не обновится. */
+      if (!silent && chatsRequestBusy.current) return -1;
       chatsRequestBusy.current = true;
       if (!silent) {
         setChatsLoading(true);
@@ -472,10 +938,16 @@ export function AdminWhatsAppChatPanel({
   );
 
   const loadMessages = useCallback(
-    async (chatId: string, opts?: { silent?: boolean }) => {
+    async (
+      chatId: string,
+      opts?: { silent?: boolean; freezeDividerBaseline?: boolean }
+    ) => {
       const silent = Boolean(opts?.silent);
-      if (silent && messagesRequestBusy.current) return;
-      messagesRequestBusy.current = true;
+      const freezeDividerBaseline = Boolean(opts?.freezeDividerBaseline);
+      messagesFetchAbortRef.current?.abort();
+      const ac = new AbortController();
+      messagesFetchAbortRef.current = ac;
+
       if (!silent) {
         setMessagesLoading(true);
       }
@@ -486,48 +958,23 @@ export function AdminWhatsAppChatPanel({
           `/api/admin/whatsapp/inbox/messages?${params}`,
           {
             credentials: 'include',
+            signal: ac.signal,
           }
         );
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           throw new Error(data.error || 'Не удалось загрузить сообщения');
         }
-        let msgs: WaMessage[] = Array.isArray(data.messages)
+        const msgs: WaMessage[] = Array.isArray(data.messages)
           ? data.messages
           : [];
-        let meta: { readThroughTs?: number } = data;
-        /**
-         * One merge per chat per panel lifetime: pull getChatHistory into DB so the thread
-         * is not "webhooks only" with gaps when journal/sync had partial rows first.
-         * (Previously we only merged when the first DB read returned 0 rows — that skipped
-         * backfill whenever any messages already existed.)
-         */
-        if (
-          selectedIdRef.current === chatId &&
-          !mergeAttemptedRef.current.has(chatId)
-        ) {
-          mergeAttemptedRef.current.add(chatId);
-          const mres = await fetch('/api/admin/whatsapp/inbox/merge', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chatId, count: 100 }),
-          });
-          if (mres.ok) {
-            const res2 = await fetch(
-              `/api/admin/whatsapp/inbox/messages?${params}`,
-              { credentials: 'include' }
-            );
-            const data2 = await res2.json().catch(() => ({}));
-            if (res2.ok && selectedIdRef.current === chatId) {
-              msgs = Array.isArray(data2.messages) ? data2.messages : [];
-              meta = data2;
-            }
-          }
-        }
+        const meta: { readThroughTs?: number } = data;
         if (selectedIdRef.current === chatId) {
           const rts =
             typeof meta.readThroughTs === 'number' ? meta.readThroughTs : 0;
+          if (freezeDividerBaseline) {
+            newMessagesDividerThresholdRef.current.set(chatId, rts);
+          }
           setMessages(msgs);
           setReadThroughTs(rts);
           threadMemoryRef.current.set(chatId, {
@@ -540,12 +987,15 @@ export function AdminWhatsAppChatPanel({
           });
         }
       } catch (e) {
+        if (ac.signal.aborted) return;
         if (!silent) {
           setMessagesError(e instanceof Error ? e.message : 'Ошибка загрузки');
           setMessages([]);
         }
       } finally {
-        messagesRequestBusy.current = false;
+        if (messagesFetchAbortRef.current === ac) {
+          messagesFetchAbortRef.current = null;
+        }
         if (!silent) {
           setMessagesLoading(false);
         }
@@ -553,6 +1003,12 @@ export function AdminWhatsAppChatPanel({
     },
     []
   );
+
+  useEffect(() => {
+    if (!open) {
+      messagesFetchAbortRef.current?.abort();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -630,6 +1086,12 @@ export function AdminWhatsAppChatPanel({
         }
       }
 
+      await loadMessages(id, {
+        silent: networkSilent,
+        freezeDividerBaseline: true,
+      });
+      if (cancelled || selectedIdRef.current !== id) return;
+
       await fetch('/api/admin/whatsapp/inbox/read', {
         method: 'POST',
         credentials: 'include',
@@ -640,11 +1102,12 @@ export function AdminWhatsAppChatPanel({
       await loadChats({ silent: true });
       if (cancelled || selectedIdRef.current !== id) return;
 
-      await loadMessages(id, { silent: networkSilent });
+      await loadMessages(id, { silent: true });
     })();
 
     return () => {
       cancelled = true;
+      newMessagesDividerThresholdRef.current.delete(id);
       threadMemoryRef.current.set(id, {
         messages: messagesRef.current,
         readThroughTs: readThroughTsRef.current,
@@ -683,6 +1146,16 @@ export function AdminWhatsAppChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, open, selectedId]);
 
+  const displayMessages = useMemo(
+    () => messages.filter(m => m.typeMessage !== 'reactionMessage'),
+    [messages]
+  );
+
+  const reactionsByTarget = useMemo(
+    () => buildReactionsByTarget(messages),
+    [messages]
+  );
+
   const filteredChats = useMemo(() => {
     const q = chatFilter.trim().toLowerCase();
     if (!q) return chats;
@@ -718,6 +1191,20 @@ export function AdminWhatsAppChatPanel({
     [chats, selectedId]
   );
 
+  /** Одна строка по умолчанию; Shift+Enter — новая строка; рост до ~5 строк. */
+  const MESSAGE_INPUT_ONE_LINE_PX = 40;
+  const MESSAGE_INPUT_MAX_PX = 160;
+  const adjustMessageInputHeight = useCallback(() => {
+    const el = messageInputRef.current;
+    if (!el) return;
+    el.style.height = `${MESSAGE_INPUT_ONE_LINE_PX}px`;
+    el.style.height = `${Math.min(el.scrollHeight, MESSAGE_INPUT_MAX_PX)}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    adjustMessageInputHeight();
+  }, [draft, adjustMessageInputHeight]);
+
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedId || !draft.trim() || sending) return;
@@ -742,21 +1229,31 @@ export function AdminWhatsAppChatPanel({
     }
   }
 
-  if (!open) return null;
+  if (!showPanel) return null;
 
   return (
     <>
       <button
         type="button"
-        className="fixed inset-0 z-[145] cursor-default bg-black/30 backdrop-blur-sm"
+        className={clsx(
+          'fixed inset-0 z-[145] cursor-default transition-[opacity,backdrop-filter] duration-300 ease-out motion-reduce:duration-150',
+          enterReady
+            ? 'bg-black/35 opacity-100 backdrop-blur-sm'
+            : 'bg-black/0 opacity-0 backdrop-blur-none'
+        )}
         aria-label="Закрыть"
         onClick={onClose}
       />
 
       <div
         className={clsx(
-          'fixed z-[150] flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl',
+          'fixed z-[150] flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl will-change-transform',
           'dark:bg-gray-900',
+          'origin-center md:origin-bottom-right',
+          'transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-150 motion-reduce:ease-out',
+          enterReady
+            ? 'translate-y-0 scale-100 opacity-100 md:translate-x-0'
+            : 'translate-y-3 scale-[0.97] opacity-0 md:translate-x-3 md:translate-y-4',
           /* Full viewport minus margin; width grows on large screens */
           'inset-4 h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-auto max-w-none',
           'sm:inset-6 sm:h-[calc(100dvh-3rem)] sm:max-h-[calc(100dvh-3rem)]',
@@ -769,9 +1266,6 @@ export function AdminWhatsAppChatPanel({
         <div className="flex shrink-0 items-center justify-between border-b border-violet-900/20 bg-gradient-to-r from-[#075E54] to-[#0d6b5c] px-3 py-2.5 text-white">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">WhatsApp</p>
-            <p className="truncate text-xs text-white/80">
-              {selectedChat ? displayName(selectedChat) : 'Выберите чат'}
-            </p>
           </div>
           <button
             type="button"
@@ -791,7 +1285,12 @@ export function AdminWhatsAppChatPanel({
               'dark:border-violet-900/40'
             )}
           >
-            <div className="shrink-0 p-2">
+            <div className="shrink-0 px-3 pb-1 pt-3">
+              <h2 className="text-[1.35rem] font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-100">
+                Чаты
+              </h2>
+            </div>
+            <div className="shrink-0 px-2 pb-2 pt-1">
               <Input
                 fullWidth
                 placeholder="Поиск по чатам"
@@ -847,7 +1346,7 @@ export function AdminWhatsAppChatPanel({
                           type="button"
                           onClick={() => setSelectedId(c.id)}
                           className={clsx(
-                            'mb-0.5 flex w-full cursor-pointer items-start gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors',
+                            'mb-0.5 flex w-full cursor-pointer items-start gap-2 rounded-lg border-0 px-2 py-2 text-left text-xs outline-none ring-0 transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none',
                             active
                               ? 'bg-gradient-to-r from-violet-100 to-fuchsia-50 text-violet-950 dark:from-violet-900/50 dark:to-fuchsia-950/30 dark:text-violet-100'
                               : hasUnread
@@ -900,6 +1399,29 @@ export function AdminWhatsAppChatPanel({
           </aside>
 
           <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#ece5dd] dark:bg-gray-950">
+            {selectedChat && (
+              <header
+                className="flex shrink-0 items-center gap-3 border-b border-gray-200/90 bg-[#f0f2f5] px-3 py-2.5 dark:border-gray-700 dark:bg-[#1f2c33]"
+                aria-label="Активный чат"
+              >
+                <ChatRowAvatar
+                  chatId={selectedChat.id}
+                  label={displayName(selectedChat)}
+                  eager
+                  sizeClass="h-11 w-11 text-xs"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[16px] font-semibold leading-tight text-gray-900 dark:text-gray-100">
+                    {displayName(selectedChat)}
+                  </p>
+                  <p className="mt-0.5 truncate text-[13px] text-[#667781] dark:text-[#8696a0]">
+                    {selectedChat.type === 'group'
+                      ? 'Группа'
+                      : 'Личные сообщения'}
+                  </p>
+                </div>
+              </header>
+            )}
             <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2 sm:px-3">
               {!selectedId && (
                 <p className="py-8 text-center text-xs text-gray-500">
@@ -913,21 +1435,46 @@ export function AdminWhatsAppChatPanel({
               {selectedId &&
                 !messagesLoading &&
                 (() => {
-                  const firstNewIncomingIdx = messages.findIndex(
-                    m => !m.isFromMe && m.timestamp > readThroughTs
+                  const frozen =
+                    newMessagesDividerThresholdRef.current.get(selectedId);
+                  const dividerReadThreshold =
+                    frozen !== undefined ? frozen : readThroughTs;
+                  const firstNewIncomingIdx = displayMessages.findIndex(
+                    m => !m.isFromMe && m.timestamp > dividerReadThreshold
                   );
-                  return messages.map((m, idx) => {
+                  return displayMessages.map((m, idx) => {
                     const mine = Boolean(m.isFromMe);
                     const showNewDivider =
                       firstNewIncomingIdx >= 0 && idx === firstNewIncomingIdx;
-                    const showDate = showDateSeparatorBefore(messages, idx);
-                    const firstInGroup = isFirstInGroup(messages, idx);
-                    const lastInGroup = isLastInGroup(messages, idx);
+                    const showDate = showDateSeparatorBefore(
+                      displayMessages,
+                      idx
+                    );
+                    const firstInGroup = isFirstInGroup(displayMessages, idx);
+                    const lastInGroup = isLastInGroup(displayMessages, idx);
+                    const rowReactions = reactionsByTarget.get(m.idMessage);
                     const dateLabel = formatDateBadge(m.timestamp);
 
+                    /** Как в WhatsApp: плотнее между пузырями; если есть реакция — больше места снизу (бейдж «свисает»). */
+                    const hasReactions = Boolean(rowReactions?.length);
+                    const bubbleRowMarginBottom = (() => {
+                      if (
+                        firstNewIncomingIdx > 0 &&
+                        idx === firstNewIncomingIdx - 1
+                      ) {
+                        return 'mb-0';
+                      }
+                      if (hasReactions) {
+                        return lastInGroup ? 'mb-6' : 'mb-5';
+                      }
+                      return lastInGroup ? 'mb-2' : 'mb-0.5';
+                    })();
+
                     /** WhatsApp-style “comic” tail: curved tab at top outer corner (first bubble in a group only). */
+                    /** Визуал пузыря; лимит ширины — только на обёртке (см. ниже), чтобы не дублировать min() и не ломать flex. */
                     const bubbleBase = clsx(
-                      'relative z-0 w-fit max-w-[min(75%,18.5rem)] min-w-[3rem] overflow-visible px-2.5 pb-1.5 pt-2 text-[13px] leading-snug',
+                      'relative z-0 block min-w-0 overflow-visible px-2.5 pb-1.5 pt-2 text-[13px] leading-snug',
+                      'transition-colors duration-300 ease-out',
                       /* Unified soft shadow on bubble + tail (pseudo counts for drop-shadow in WebKit/Chromium). */
                       'drop-shadow-[0_1px_0.5px_rgba(0,0,0,0.12)] dark:drop-shadow-[0_1px_0.5px_rgba(0,0,0,0.35)]'
                     );
@@ -958,40 +1505,74 @@ export function AdminWhatsAppChatPanel({
                           className={clsx(
                             'flex w-full',
                             mine ? 'justify-end' : 'justify-start',
-                            lastInGroup ? 'mb-2' : 'mb-0.5'
+                            bubbleRowMarginBottom
                           )}
                         >
                           <div
                             className={clsx(
-                              bubbleBase,
-                              bubbleCorners,
-                              mine
-                                ? 'bg-[#DCF8C6] text-gray-900 dark:bg-emerald-900/55 dark:text-gray-100'
-                                : 'bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100'
+                              /* WhatsApp Web: пузырь до ~65–82% ширины колонки; верх — min(%, rem) для широкого окна. */
+                              'relative max-w-[min(82%,36rem)] shrink-0',
+                              mine && 'ml-auto',
+                              hasReactions && 'pb-1'
                             )}
                           >
-                            {!mine && m.senderName && (
-                              <p className="mb-0.5 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
-                                {m.senderName}
-                              </p>
-                            )}
-                            <div className="flex items-end gap-2">
-                              <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                                {messageBody(m)}
-                              </p>
-                              <div
-                                className={clsx(
-                                  'inline-flex shrink-0 items-center gap-0.5 pb-0.5 text-[11px] tabular-nums text-[#667781] dark:text-[#94a9b3]'
-                                )}
-                              >
-                                <span>{formatTimeOnly(m.timestamp)}</span>
-                                {mine && (
-                                  <OutgoingDeliveryTicks
-                                    status={m.statusMessage}
+                            <div
+                              ref={el => {
+                                if (el) {
+                                  messageBubbleRefs.current.set(
+                                    m.idMessage,
+                                    el
+                                  );
+                                } else {
+                                  messageBubbleRefs.current.delete(m.idMessage);
+                                }
+                              }}
+                              className={clsx(
+                                bubbleBase,
+                                bubbleCorners,
+                                mine
+                                  ? clsx(
+                                      'text-gray-900 dark:text-gray-100',
+                                      highlightedMessageId === m.idMessage
+                                        ? 'dark:bg-emerald-950/88 bg-[#c4e2ad]'
+                                        : 'bg-[#DCF8C6] dark:bg-emerald-900/55'
+                                    )
+                                  : clsx(
+                                      'text-gray-900 dark:text-gray-100',
+                                      highlightedMessageId === m.idMessage
+                                        ? 'bg-[#e6e6e6] dark:bg-gray-700'
+                                        : 'bg-white dark:bg-gray-800'
+                                    )
+                              )}
+                            >
+                              {/* Как в WhatsApp: время и галочки в одной строке с текстом, без лишней min-height; лёгкий translate — только оптика. */}
+                              <div className="flex min-w-0 items-end gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <WaMessageBubbleContent
+                                    m={m}
+                                    onJumpToQuoted={jumpToQuotedMessage}
                                   />
-                                )}
+                                </div>
+                                <div
+                                  className={clsx(
+                                    'inline-flex shrink-0 translate-y-px items-center gap-0.5 text-[11px] tabular-nums leading-none text-[#667781] dark:text-[#94a9b3]'
+                                  )}
+                                >
+                                  <span>{formatTimeOnly(m.timestamp)}</span>
+                                  {mine && (
+                                    <OutgoingDeliveryTicks
+                                      status={m.statusMessage}
+                                    />
+                                  )}
+                                </div>
                               </div>
                             </div>
+                            {rowReactions && rowReactions.length > 0 ? (
+                              <WaMessageReactionBadge
+                                reactions={rowReactions}
+                                mine={mine}
+                              />
+                            ) : null}
                           </div>
                         </div>
                       </Fragment>
@@ -1001,34 +1582,63 @@ export function AdminWhatsAppChatPanel({
               <div ref={messagesEndRef} />
             </div>
 
-            <form
-              onSubmit={handleSend}
-              className="shrink-0 border-t border-violet-100 bg-white p-2 dark:border-violet-900/40 dark:bg-gray-900"
-            >
-              <div className="flex gap-2">
-                <textarea
-                  value={draft}
-                  onChange={e => setDraft(e.target.value)}
-                  placeholder={
-                    selectedId ? 'Сообщение…' : 'Сначала выберите чат'
-                  }
-                  disabled={!selectedId || sending}
-                  rows={2}
-                  className={clsx(
-                    'min-h-[44px] flex-1 resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-none outline-none',
-                    'placeholder:text-muted focus:border-violet-500 focus:ring-2 focus:ring-violet-200',
-                    'dark:border-gray-600 dark:bg-gray-800 dark:focus:ring-violet-900/40'
-                  )}
-                />
-                <button
-                  type="submit"
-                  disabled={!selectedId || !draft.trim() || sending}
-                  className="shrink-0 cursor-pointer self-end rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2 text-sm font-medium text-white shadow-md transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {sending ? '…' : 'Отправить'}
-                </button>
-              </div>
-            </form>
+            {selectedId ? (
+              <form
+                onSubmit={handleSend}
+                className="shrink-0 border-t border-violet-100 bg-[#f0f2f5] p-2 dark:border-violet-900/40 dark:bg-[#1e2a30]"
+              >
+                <div className="flex items-end gap-2">
+                  <textarea
+                    ref={messageInputRef}
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (
+                        e.key === 'Enter' &&
+                        !e.shiftKey &&
+                        !e.nativeEvent.isComposing
+                      ) {
+                        e.preventDefault();
+                        e.currentTarget.form?.requestSubmit();
+                      }
+                    }}
+                    placeholder="Сообщение"
+                    disabled={sending}
+                    rows={1}
+                    className={clsx(
+                      'box-border max-h-[160px] min-h-[40px] w-0 min-w-0 flex-1 resize-none overflow-y-auto rounded-3xl border border-gray-200/90 bg-white px-4 py-2.5 text-sm leading-5 shadow-none outline-none',
+                      'placeholder:text-gray-500 focus:border-emerald-600/40 focus:ring-2 focus:ring-emerald-500/25',
+                      'dark:border-gray-600 dark:bg-gray-800 dark:placeholder:text-gray-500 dark:focus:border-emerald-500/50 dark:focus:ring-emerald-900/35'
+                    )}
+                    aria-label="Текст сообщения"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!draft.trim() || sending}
+                    className={clsx(
+                      'flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white shadow-sm transition',
+                      'bg-[#00a884] hover:brightness-110 active:brightness-95',
+                      'disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[#00a884]'
+                    )}
+                    title="Отправить"
+                    aria-label="Отправить"
+                  >
+                    {sending ? (
+                      <Loader2
+                        className="h-5 w-5 shrink-0 animate-spin"
+                        aria-hidden
+                      />
+                    ) : (
+                      <Send
+                        className="relative h-[18px] w-[18px] shrink-0 translate-x-px translate-y-px"
+                        strokeWidth={2.25}
+                        aria-hidden
+                      />
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : null}
           </section>
         </div>
       </div>

@@ -186,7 +186,9 @@ export async function putFromUrl(
   }
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(25_000),
+    });
 
     if (!response.ok) {
       // Check if it's a 404 or 403 (likely expired URL)
