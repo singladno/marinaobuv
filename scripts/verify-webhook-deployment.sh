@@ -39,8 +39,8 @@ test_webhook_endpoint() {
         log_info "Attempt $attempt/$max_attempts..."
         
         # Prefer testing via Nginx (port-agnostic)
-        if curl -f -s http://localhost/api/webhooks/green-api > /dev/null 2>&1 || \
-           curl -f -s https://marina-obuv.ru/api/webhooks/green-api > /dev/null 2>&1; then
+        if curl -f -s http://localhost/api/webhooks/green-api/relay > /dev/null 2>&1 || \
+           curl -f -s https://marina-obuv.ru/api/webhooks/green-api/relay > /dev/null 2>&1; then
             log_success "External webhook endpoint is responding"
             return 0
         fi

@@ -480,7 +480,7 @@ echo "Note: Groq Proxy Server Health check skipped (runs on separate server)"
 
 echo ""
 echo "WhatsApp Webhook Status:"
-curl -s https://marina-obuv.ru/api/webhooks/green-api && echo "✅ Webhook endpoint is accessible" || echo "❌ Webhook endpoint is not accessible"
+curl -s https://marina-obuv.ru/api/webhooks/green-api/relay && echo "✅ Webhook relay is accessible" || echo "❌ Webhook relay is not accessible"
 EOF
 
 chmod +x $APP_DIR/monitor.sh

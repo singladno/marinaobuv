@@ -45,14 +45,36 @@ export async function POST(request: NextRequest) {
       where: { id: SINGLETON_ID },
     });
     const secondaryRaw = row?.secondaryUrl?.trim();
-    if (secondaryRaw && !isUnsafeSecondaryUrl(secondaryRaw, primaryUrl)) {
+
+    if (!secondaryRaw) {
+      logger.info(
+        '[WA webhook relay] secondaryUrl not set in DB (singleton row missing or empty); dev tunnel not notified'
+      );
+    } else if (isUnsafeSecondaryUrl(secondaryRaw, primaryUrl)) {
+      logger.info(
+        '[WA webhook relay] secondary URL skipped as unsafe (same as primary or points to relay)'
+      );
+    } else {
+      let secondaryHost = 'unknown';
+      try {
+        secondaryHost = new URL(secondaryRaw).hostname;
+      } catch {
+        /* ignore */
+      }
+      logger.info(
+        `[WA webhook relay] forwarding copy to secondary host=${secondaryHost}`
+      );
       forwardGreenWebhookPost({
         targetUrl: secondaryRaw,
         body,
         sourceHeaders: request.headers,
       })
         .then(res => {
-          if (!res.ok) {
+          if (res.ok) {
+            logger.info(
+              `[WA webhook relay] secondary ok status=${res.status} host=${secondaryHost}`
+            );
+          } else {
             logger.warn(
               `[WA webhook relay] secondary ${res.status} ${secondaryRaw.slice(0, 80)}`
             );

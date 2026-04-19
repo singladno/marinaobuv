@@ -54,7 +54,19 @@ check_webhook_status() {
     log_info "  incomingWebhook: $incoming_webhook"
     log_info "  webhookUrl: $webhook_url"
     
-    if [ "$incoming_webhook" = "yes" ] && [ "$webhook_url" = "https://www.marina-obuv.ru/api/webhooks/green-api" ]; then
+    # Must match web/src/scripts/configure-webhook.ts (relay by default)
+    local expected="${GREEN_API_INCOMING_WEBHOOK_URL:-}"
+    if [ -z "$expected" ]; then
+        local site="${NEXT_PUBLIC_SITE_URL:-}"
+        site="${site%/}"
+        if [ -n "$site" ]; then
+            expected="${site}/api/webhooks/green-api/relay"
+        else
+            expected="https://www.marina-obuv.ru/api/webhooks/green-api/relay"
+        fi
+    fi
+    
+    if [ "$incoming_webhook" = "yes" ] && [ "$webhook_url" = "$expected" ]; then
         log_success "Webhook is properly configured"
         return 0
     else
@@ -89,7 +101,7 @@ test_webhook_endpoint() {
     while [ $attempt -le $max_attempts ]; do
         log_info "Attempt $attempt/$max_attempts..."
         
-        if curl -f -s https://marina-obuv.ru/api/webhooks/green-api > /dev/null 2>&1; then
+        if curl -f -s https://marina-obuv.ru/api/webhooks/green-api/relay > /dev/null 2>&1; then
             log_success "Webhook endpoint is responding"
             return 0
         fi

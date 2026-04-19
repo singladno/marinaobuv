@@ -6,11 +6,13 @@
 
 import './load-env';
 import { env } from '../lib/env';
+import { getGreenApiIncomingWebhookUrl } from '../lib/server/green-webhook-relay';
 
 async function configureWebhook() {
   const instanceId = env.GREEN_API_INSTANCE_ID;
   const token = env.GREEN_API_TOKEN;
-  const webhookUrl = 'https://www.marina-obuv.ru/api/webhooks/green-api';
+  /** Must match relay route — deploy runs this script and overwrites Green API; do not hardcode the non-relay path. */
+  const webhookUrl = getGreenApiIncomingWebhookUrl();
 
   if (!instanceId || !token) {
     console.error('❌ Green API credentials not configured!');

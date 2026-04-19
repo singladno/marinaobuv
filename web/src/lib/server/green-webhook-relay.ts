@@ -3,6 +3,20 @@ import { logger } from '@/lib/server/logger';
 
 const RELAY_PATH = '/api/webhooks/green-api/relay';
 
+/** URL registered in Green API (setSettings `webhookUrl`). Defaults to relay so prod + optional dev tunnel work. */
+export function getGreenApiIncomingWebhookUrl(): string {
+  if (env.GREEN_API_INCOMING_WEBHOOK_URL) {
+    return env.GREEN_API_INCOMING_WEBHOOK_URL.replace(/\/$/, '');
+  }
+  const site = env.NEXT_PUBLIC_SITE_URL;
+  if (!site) {
+    throw new Error(
+      'Set GREEN_API_INCOMING_WEBHOOK_URL or NEXT_PUBLIC_SITE_URL for Green API incoming webhook URL'
+    );
+  }
+  return `${site.replace(/\/$/, '')}/api/webhooks/green-api/relay`;
+}
+
 export function getGreenWebhookPrimaryUrl(): string {
   if (env.GREEN_API_WEBHOOK_PRIMARY_URL) {
     return env.GREEN_API_WEBHOOK_PRIMARY_URL.replace(/\/$/, '');

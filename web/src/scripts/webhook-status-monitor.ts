@@ -7,6 +7,7 @@
 
 import './load-env';
 import { env } from '../lib/env';
+import { getGreenApiIncomingWebhookUrl } from '../lib/server/green-webhook-relay';
 import { prisma } from '../lib/db-node';
 import { getTelegramNotifier } from '../lib/utils/telegram-notifier';
 
@@ -115,10 +116,9 @@ export class WebhookStatusMonitor {
         };
       }
 
-      // Check if webhook URL is properly configured
+      // Check if webhook URL is properly configured (relay by default; see configure-webhook.ts)
       const webhookUrl = settingsData.webhookUrl;
-      const expectedWebhookUrl =
-        'https://www.marina-obuv.ru/api/webhooks/green-api';
+      const expectedWebhookUrl = getGreenApiIncomingWebhookUrl();
 
       if (!webhookUrl || webhookUrl !== expectedWebhookUrl) {
         console.log('⚠️ Webhook URL mismatch or not configured');

@@ -184,6 +184,8 @@ const schema = z
 
     /// Forward target for /api/webhooks/green-api/relay (defaults to SITE_URL + /api/webhooks/green-api)
     GREEN_API_WEBHOOK_PRIMARY_URL: z.string().url().optional(),
+    /// Full URL Green API should call (setSettings / dashboard). Defaults to SITE_URL + /api/webhooks/green-api/relay
+    GREEN_API_INCOMING_WEBHOOK_URL: z.string().url().optional(),
   })
   .refine(
     data => isBuildContext || data.YC_IAM_TOKEN || data.YC_API_KEY,
@@ -282,6 +284,7 @@ const raw = {
   TELEGRAM_SESSION_STRING: process.env.TELEGRAM_SESSION_STRING,
 
   GREEN_API_WEBHOOK_PRIMARY_URL: process.env.GREEN_API_WEBHOOK_PRIMARY_URL,
+  GREEN_API_INCOMING_WEBHOOK_URL: process.env.GREEN_API_INCOMING_WEBHOOK_URL,
 };
 
 const parsed = schema.safeParse(raw);

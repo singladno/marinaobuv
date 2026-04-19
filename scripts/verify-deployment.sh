@@ -91,7 +91,7 @@ check_application_health() {
 check_webhook_endpoint() {
     log_info "Checking WhatsApp webhook endpoint..."
     
-    if curl -f -s https://marina-obuv.ru/api/webhooks/green-api > /dev/null 2>&1; then
+    if curl -f -s https://marina-obuv.ru/api/webhooks/green-api/relay > /dev/null 2>&1; then
         log_success "WhatsApp webhook endpoint is accessible"
         return 0
     else

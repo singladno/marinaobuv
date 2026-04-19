@@ -160,22 +160,23 @@ function ChatRowAvatar({
       };
     }
 
-    void Promise.all([waAvatarIdbGet(chatId), waAvatarIdbGetMissing(chatId)]).then(
-      ([cached, missing]) => {
-        if (cancelled) return;
-        if (cached && cached.size > 0) {
-          const u = URL.createObjectURL(cached);
-          blobUrlRef.current = u;
-          setImgSrc(u);
-          return;
-        }
-        if (missing) {
-          setImgSrc(undefined);
-          return;
-        }
-        setImgSrc(proxyUrl);
+    void Promise.all([
+      waAvatarIdbGet(chatId),
+      waAvatarIdbGetMissing(chatId),
+    ]).then(([cached, missing]) => {
+      if (cancelled) return;
+      if (cached && cached.size > 0) {
+        const u = URL.createObjectURL(cached);
+        blobUrlRef.current = u;
+        setImgSrc(u);
+        return;
       }
-    );
+      if (missing) {
+        setImgSrc(undefined);
+        return;
+      }
+      setImgSrc(proxyUrl);
+    });
 
     return () => {
       cancelled = true;
@@ -480,7 +481,7 @@ export function AdminWhatsAppChatPanel({
       }
       setMessagesError(null);
       try {
-        const params = new URLSearchParams({ chatId, limit: '200' });
+        const params = new URLSearchParams({ chatId, limit: '500' });
         const res = await fetch(
           `/api/admin/whatsapp/inbox/messages?${params}`,
           {
@@ -495,9 +496,14 @@ export function AdminWhatsAppChatPanel({
           ? data.messages
           : [];
         let meta: { readThroughTs?: number } = data;
+        /**
+         * One merge per chat per panel lifetime: pull getChatHistory into DB so the thread
+         * is not "webhooks only" with gaps when journal/sync had partial rows first.
+         * (Previously we only merged when the first DB read returned 0 rows — that skipped
+         * backfill whenever any messages already existed.)
+         */
         if (
           selectedIdRef.current === chatId &&
-          msgs.length === 0 &&
           !mergeAttemptedRef.current.has(chatId)
         ) {
           mergeAttemptedRef.current.add(chatId);

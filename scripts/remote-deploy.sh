@@ -802,7 +802,7 @@ echo "Domain Test (HTTP redirect):"
 timeout 5 curl -f --max-time 3 --connect-timeout 2 http://marina-obuv.ru/api/health 2>&1 || echo "HTTP redirect test failed"
 echo ""
 echo "Webhook Test:"
-timeout 5 curl -f --max-time 3 --connect-timeout 2 https://marina-obuv.ru/api/webhooks/green-api 2>&1 || echo "Webhook endpoint test failed"
+timeout 5 curl -f --max-time 3 --connect-timeout 2 https://marina-obuv.ru/api/webhooks/green-api/relay 2>&1 || echo "Webhook relay endpoint test failed"
 
 echo ""
 progress "✅ Deployment completed successfully!"
