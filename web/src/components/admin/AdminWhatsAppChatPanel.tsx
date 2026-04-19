@@ -794,9 +794,9 @@ export function AdminWhatsAppChatPanel({
   const [highlightedMessageId, setHighlightedMessageId] = useState<
     string | null
   >(null);
-  const highlightClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+  const highlightClearTimeoutRef = useRef<ReturnType<
+    typeof window.setTimeout
+  > | null>(null);
 
   const jumpToQuotedMessage = useCallback((waMessageId: string) => {
     const el = messageBubbleRefs.current.get(waMessageId);
