@@ -2,6 +2,7 @@ import { prisma } from '../db-node';
 import {
   generateArticleNumber,
   createSlug,
+  mapGender,
   mapSeason,
 } from './product-creation-mappers';
 import { AnalysisValidationService } from './analysis-validation-service';
@@ -287,18 +288,12 @@ export class SimpleProductService {
       return;
     }
 
-    logger.debug(
-      { productId, colorResults },
-      '🎨 Processing color results'
-    );
+    logger.debug({ productId, colorResults }, '🎨 Processing color results');
 
     // Extract colors from color results - each result should have one color
     const detectedColors: string[] = [];
 
-    logger.debug(
-      { colorResults },
-      'Debugging color results structure'
-    );
+    logger.debug({ colorResults }, 'Debugging color results structure');
 
     for (const result of colorResults) {
       logger.debug({ result }, 'Processing color result row');
@@ -450,10 +445,7 @@ export class SimpleProductService {
 
     // Process each analysis result
     for (const result of analysisResults) {
-      logger.debug(
-        { analysisResult: result },
-        'Processing analysis result'
-      );
+      logger.debug({ analysisResult: result }, 'Processing analysis result');
 
       // Extract product information from the first result
       if (result.name && !productName) {
@@ -463,7 +455,7 @@ export class SimpleProductService {
         productDescription = result.description;
       }
       if (result.gender && !productGender) {
-        productGender = result.gender;
+        productGender = mapGender(String(result.gender));
       }
       if (result.season && !productSeason) {
         // Normalize season value - handle invalid values like "SPRING/SUMMER"
@@ -505,13 +497,16 @@ export class SimpleProductService {
       '🎨 Extracted data'
     );
 
+    const genderForDb =
+      productGender != null ? mapGender(String(productGender)) : undefined;
+
     // Update product with extracted information
     await prisma.product.update({
       where: { id: product.id },
       data: {
         name: productName,
         description: productDescription,
-        gender: productGender,
+        gender: genderForDb,
         season: productSeason,
         material: productMaterial,
         categoryId: productCategoryId || undefined,
@@ -793,7 +788,10 @@ Return JSON:
         return validCategories[0]?.id || null;
       }
     } catch (error) {
-      logServerError(`❌ Error determining category from name "${productName}":`, error);
+      logServerError(
+        `❌ Error determining category from name "${productName}":`,
+        error
+      );
       // Last resort: return null (will be handled by caller)
       return null;
     }
