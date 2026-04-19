@@ -87,7 +87,7 @@ export function PortalSwitcher() {
           aria-label="Перейти в клиентский портал"
         >
           <svg
-            className="h-6 w-6 drop-shadow"
+            className="h-6 w-6"
             fill="none"
             stroke="currentColor"
             strokeWidth={2.25}
@@ -120,7 +120,7 @@ export function PortalSwitcher() {
           }
         >
           <svg
-            className="h-6 w-6 stroke-white text-white drop-shadow"
+            className="h-6 w-6 stroke-white text-white"
             fill="none"
             stroke="currentColor"
             strokeWidth={2.25}
@@ -220,11 +220,11 @@ export function PortalSwitcher() {
           <button
             type="button"
             onClick={toggleMenu}
-            className="relative z-[28] flex h-full w-full cursor-pointer items-center justify-center rounded-full border-2 border-white/40 bg-gradient-to-r from-[#ea34ea] to-violet-700 text-white shadow-[0_8px_28px_rgba(109,40,217,0.55),inset_0_1px_0_rgba(255,255,255,0.35)] ring-1 ring-violet-900/30 transition-all duration-300 hover:scale-110 hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            className="relative z-[28] flex h-full w-full cursor-pointer items-center justify-center rounded-full border-2 border-transparent text-white shadow-none transition-all duration-300 [background-clip:padding-box,border-box] [background-origin:border-box] [background-image:linear-gradient(to_right,#ea34ea,#6d28d9),linear-gradient(to_bottom_right,rgb(255_255_255/0.42),rgb(255_255_255/0.14))] hover:scale-110 hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             aria-label="Меню портала"
             aria-expanded={isOpen ? 'true' : 'false'}
           >
-            <div className="relative z-10 drop-shadow-md">
+            <div className="relative z-10">
               {isOpen ? (
                 <svg
                   className="h-5 w-5 sm:h-6 sm:w-6"

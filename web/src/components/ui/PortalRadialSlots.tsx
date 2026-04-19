@@ -59,8 +59,7 @@ export function PortalRadialSlots({
             <div
               className={cn(
                 'flex h-[52px] w-[52px] shrink-0 origin-center items-center justify-center rounded-full bg-transparent transition-all duration-200 ease-out',
-                isActive &&
-                  'scale-110 shadow-[0_8px_28px_rgba(109,40,217,0.55)] brightness-110'
+                isActive && 'scale-110 brightness-110'
               )}
               onMouseEnter={() => onOrbitEnter?.(i)}
               onMouseLeave={() => onOrbitLeave?.()}

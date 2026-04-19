@@ -1,18 +1,28 @@
 /**
  * Portal quick-menu orbits — match site header: fuchsia → violet, white icons.
+ * Rim: stacked backgrounds (padding + border clip) instead of border+gradient to avoid circular edge seams.
  */
-/** Hover scale/shadow is driven by `PortalRadialSlots` wrapper so wedge + icon stay in sync */
-const orbitBase =
-  'flex h-[52px] w-[52px] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 transition-all duration-200 ease-out ' +
-  'shadow-[0_4px_20px_rgba(109,40,217,0.45),inset_0_1px_0_rgba(255,255,255,0.35)] ' +
-  'active:scale-95 ' +
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent';
+/** Hover scale is driven by `PortalRadialSlots` wrapper so wedge + icon stay in sync */
+const orbitShell =
+  'flex h-[52px] w-[52px] shrink-0 cursor-pointer items-center justify-center rounded-full ' +
+  'border-2 border-transparent transition-all duration-200 ease-out shadow-none ' +
+  '[background-clip:padding-box,border-box] [background-origin:border-box] ' +
+  'active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-white';
 
-/** Admin / export — same as primary buttons (violet-600 → violet-700); explicit white so stroked gear matches filled icons */
-export const orbitIconAdmin = `${orbitBase} border-white/40 bg-gradient-to-br from-violet-600 to-violet-800 !text-white [&_svg]:!text-white [&_svg]:stroke-white`;
+/** Admin / export — same as primary buttons (violet-600 → violet-800) */
+export const orbitIconAdmin =
+  `${orbitShell} ` +
+  '[background-image:linear-gradient(to_bottom_right,#7c3aed,#5b21b6),linear-gradient(to_bottom_right,rgb(255_255_255/0.44),rgb(255_255_255/0.14))] ' +
+  '!text-white [&_svg]:!text-white [&_svg]:stroke-white';
 
-/** Client portal — sky accent (catalog / people) */
-export const orbitIconClient = `${orbitBase} border-white/40 bg-gradient-to-br from-sky-500 to-blue-700 text-white`;
+/** Client portal — sky accent */
+export const orbitIconClient =
+  `${orbitShell} ` +
+  '[background-image:linear-gradient(to_bottom_right,#0ea5e9,#1d4ed8),linear-gradient(to_bottom_right,rgb(255_255_255/0.44),rgb(255_255_255/0.14))] ' +
+  '!text-white [&_svg]:!text-white [&_svg]:stroke-white';
 
 /** WhatsApp — brand green */
-export const orbitIconWhatsApp = `${orbitBase} border-white/35 bg-gradient-to-br from-emerald-500 to-emerald-800 text-white`;
+export const orbitIconWhatsApp =
+  `${orbitShell} ` +
+  '[background-image:linear-gradient(to_bottom_right,#10b981,#065f46),linear-gradient(to_bottom_right,rgb(255_255_255/0.38),rgb(255_255_255/0.12))] ' +
+  'text-white';

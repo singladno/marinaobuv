@@ -2,7 +2,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
-import { Check, Loader2, Send } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import {
   Fragment,
   useCallback,
@@ -1627,11 +1627,7 @@ export function AdminWhatsAppChatPanel({
                         aria-hidden
                       />
                     ) : (
-                      <Send
-                        className="relative h-[18px] w-[18px] shrink-0 translate-x-px translate-y-px"
-                        strokeWidth={2.25}
-                        aria-hidden
-                      />
+                      <WaSendPlaneIcon className="h-5 w-5 shrink-0" />
                     )}
                   </button>
                 </div>
@@ -1641,6 +1637,20 @@ export function AdminWhatsAppChatPanel({
         </div>
       </div>
     </>
+  );
+}
+
+/** Filled paper plane pointing right (WhatsApp-style); uses `currentColor` from the parent button. */
+function WaSendPlaneIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.99.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405Z" />
+    </svg>
   );
 }
 

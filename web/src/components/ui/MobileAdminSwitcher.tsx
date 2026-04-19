@@ -179,7 +179,7 @@ export function MobileAdminSwitcher() {
         />
       )}
 
-      <div className="pointer-events-none relative z-[120] isolate overflow-visible">
+      <div className="pointer-events-none relative isolate z-[120] overflow-visible">
         <div className="pointer-events-auto relative h-10 w-10 overflow-visible">
           {menuSlots.length > 0 && (
             <PortalRadialWheelBg
@@ -212,7 +212,7 @@ export function MobileAdminSwitcher() {
           <button
             type="button"
             onClick={toggleMenu}
-            className="relative z-[28] flex h-full w-full cursor-pointer items-center justify-center rounded-full border-2 border-white/40 bg-gradient-to-r from-[#ea34ea] to-violet-700 text-white shadow-[0_6px_22px_rgba(109,40,217,0.5),inset_0_1px_0_rgba(255,255,255,0.35)] ring-1 ring-violet-900/25 transition-all duration-300 hover:scale-110 hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="relative z-[28] flex h-full w-full cursor-pointer items-center justify-center rounded-full border-2 border-transparent text-white shadow-none transition-all duration-300 [background-clip:padding-box,border-box] [background-origin:border-box] [background-image:linear-gradient(to_right,#ea34ea,#6d28d9),linear-gradient(to_bottom_right,rgb(255_255_255/0.42),rgb(255_255_255/0.14))] hover:scale-110 hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             aria-label="Меню портала"
             aria-expanded={isOpen ? 'true' : 'false'}
           >

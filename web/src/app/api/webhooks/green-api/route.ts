@@ -25,7 +25,11 @@ export async function POST(request: NextRequest) {
     try {
       if (payload.typeWebhook === 'incomingMessageReceived') {
         await upsertWaAdminFromIncomingWebhook(payload);
-      } else if (payload.typeWebhook === 'outgoingMessageReceived') {
+      } else if (
+        payload.typeWebhook === 'outgoingMessageReceived' ||
+        payload.typeWebhook === 'outgoingAPIMessageReceived'
+      ) {
+        // Phone sends → outgoingMessageReceived; API sends (admin panel) → outgoingAPIMessageReceived
         await upsertWaAdminFromOutgoingWebhook(payload);
       }
     } catch (e) {

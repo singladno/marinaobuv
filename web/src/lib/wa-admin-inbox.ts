@@ -235,7 +235,7 @@ export async function upsertWaAdminFromIncomingWebhook(
 }
 
 /**
- * Green API outgoingMessageReceived — messages sent from phone/API appear here.
+ * Green API: outgoingMessageReceived (phone) and outgoingAPIMessageReceived (sendMessage API).
  */
 export async function upsertWaAdminFromOutgoingWebhook(
   payload: Record<string, unknown>
@@ -454,7 +454,7 @@ export async function markWaAdminChatRead(
 
 /**
  * Исходящее/входящее для админ-чата: в `rawPayload` лежит полный вебхук Green API.
- * Если в БД `isFromMe` = false по умолчанию, но пришёл `outgoingMessageReceived`,
+ * Если в БД `isFromMe` = false по умолчанию, но пришёл исходящий вебхук,
  * пузырь должен быть справа — иначе «ваши» сообщения выглядят как чужие.
  */
 export function inferIsFromMeFromWaWebhookPayload(
@@ -463,7 +463,11 @@ export function inferIsFromMeFromWaWebhookPayload(
 ): boolean {
   if (rawPayload && typeof rawPayload === 'object') {
     const tw = (rawPayload as Record<string, unknown>).typeWebhook;
-    if (tw === 'outgoingMessageReceived') return true;
+    if (
+      tw === 'outgoingMessageReceived' ||
+      tw === 'outgoingAPIMessageReceived'
+    )
+      return true;
     if (tw === 'incomingMessageReceived') return false;
   }
   return Boolean(dbIsFromMe);

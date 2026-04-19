@@ -16,7 +16,8 @@ function isValidChatId(id: string): boolean {
 }
 
 /**
- * Send via Green API. Inbox DB rows come from webhooks only (e.g. outgoingMessageReceived).
+ * Send via Green API. Inbox DB rows come from webhooks only
+ * (outgoingAPIMessageReceived for API sends, outgoingMessageReceived for phone).
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request, 'ADMIN');
