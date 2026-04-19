@@ -278,10 +278,19 @@ pm2 save || print_warning "Failed to save PM2 configuration"
 print_status "🔗 Configuring webhook..."
 cd web
 
-if [ -f ".env" ] && [ -n "$(grep GREEN_API_INSTANCE_ID .env 2>/dev/null)" ]; then
-    run_with_fallback "Webhook configuration" "npx tsx src/scripts/configure-webhook.ts" "echo 'Webhook configuration skipped'"
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+    if grep -qE '^GREEN_API_INSTANCE_ID=' .env 2>/dev/null; then
+        run_with_fallback "Product parser webhook" "npx tsx src/scripts/configure-webhook.ts" "echo 'Skipped'"
+    fi
+    if grep -qE '^GREEN_API_ADMIN_INSTANCE_ID=' .env 2>/dev/null; then
+        run_with_fallback "Admin chat webhook" "npx tsx src/scripts/configure-webhook-admin.ts" "echo 'Skipped'"
+    fi
+    if ! grep -qE '^GREEN_API_INSTANCE_ID=' .env 2>/dev/null && ! grep -qE '^GREEN_API_ADMIN_INSTANCE_ID=' .env 2>/dev/null; then
+        print_warning "No Green API instance IDs in .env, skipping webhook setup"
+    fi
 else
-    print_warning "No Green API credentials found, skipping webhook setup"
+    print_warning "No .env, skipping webhook setup"
 fi
 
 cd ..

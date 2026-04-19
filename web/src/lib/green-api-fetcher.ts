@@ -15,6 +15,13 @@ import type {
   GreenApiSetSettingsParams,
 } from '../types/green-api';
 
+export type GreenApiFetcherCredentials = {
+  instanceId: string;
+  token: string;
+  baseUrl?: string;
+  mediaUrl?: string;
+};
+
 export class GreenApiFetcher {
   private instanceId: string;
   private token: string;
@@ -22,7 +29,22 @@ export class GreenApiFetcher {
   /** SendFileByUpload lives on media host, not api host. */
   private mediaUrl: string;
 
-  constructor() {
+  /**
+   * With `credentials` — that instance (e.g. admin WhatsApp). Without — product parser env (`GREEN_API_*`).
+   */
+  constructor(credentials?: GreenApiFetcherCredentials) {
+    if (credentials) {
+      this.instanceId = credentials.instanceId;
+      this.token = credentials.token;
+      this.baseUrl = (
+        credentials.baseUrl || 'https://api.green-api.com'
+      ).replace(/\/$/, '');
+      this.mediaUrl = (
+        credentials.mediaUrl || 'https://media.green-api.com'
+      ).replace(/\/$/, '');
+      return;
+    }
+
     if (!env.GREEN_API_INSTANCE_ID || !env.GREEN_API_TOKEN) {
       throw new Error(
         'Green API credentials not configured. Please set GREEN_API_INSTANCE_ID and GREEN_API_TOKEN environment variables.'
@@ -31,8 +53,12 @@ export class GreenApiFetcher {
 
     this.instanceId = env.GREEN_API_INSTANCE_ID;
     this.token = env.GREEN_API_TOKEN;
-    this.baseUrl = env.GREEN_API_BASE_URL || 'https://api.green-api.com';
-    this.mediaUrl = env.GREEN_API_MEDIA_URL || 'https://media.green-api.com';
+    this.baseUrl = (
+      env.GREEN_API_BASE_URL || 'https://api.green-api.com'
+    ).replace(/\/$/, '');
+    this.mediaUrl = (
+      env.GREEN_API_MEDIA_URL || 'https://media.green-api.com'
+    ).replace(/\/$/, '');
   }
 
   /**
@@ -795,11 +821,26 @@ export class GreenApiFetcher {
   }
 }
 
-// Export a singleton instance
+// Export a singleton instance (product parser instance only)
 export const greenApiFetcher = new GreenApiFetcher();
 
-/** Use in API routes when Green API may be unset — avoids relying on the singleton. */
-export function tryCreateGreenApiFetcher(): GreenApiFetcher | null {
-  if (!env.GREEN_API_INSTANCE_ID || !env.GREEN_API_TOKEN) return null;
-  return new GreenApiFetcher();
+/** Admin panel WhatsApp — `GREEN_API_ADMIN_*` (+ optional admin base/media URLs). */
+export function tryCreateGreenApiAdminFetcher(): GreenApiFetcher | null {
+  if (!env.GREEN_API_ADMIN_INSTANCE_ID || !env.GREEN_API_ADMIN_TOKEN) {
+    return null;
+  }
+  const baseUrl =
+    env.GREEN_API_ADMIN_BASE_URL ||
+    env.GREEN_API_BASE_URL ||
+    'https://api.green-api.com';
+  const mediaUrl =
+    env.GREEN_API_ADMIN_MEDIA_URL ||
+    env.GREEN_API_MEDIA_URL ||
+    'https://media.green-api.com';
+  return new GreenApiFetcher({
+    instanceId: env.GREEN_API_ADMIN_INSTANCE_ID,
+    token: env.GREEN_API_ADMIN_TOKEN,
+    baseUrl,
+    mediaUrl,
+  });
 }

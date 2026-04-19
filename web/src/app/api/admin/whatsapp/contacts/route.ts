@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { tryCreateGreenApiFetcher } from '@/lib/green-api-fetcher';
+import { tryCreateGreenApiAdminFetcher } from '@/lib/green-api-fetcher';
 import { prisma } from '@/lib/db-node';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { isValidAdminWaChatId } from '@/lib/server/wa-chat-id';
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAuth(request, 'ADMIN');
   if (auth.error) return auth.error;
 
-  const api = tryCreateGreenApiFetcher();
+  const api = tryCreateGreenApiAdminFetcher();
   if (!api) {
     return NextResponse.json(
       { error: 'Green API не настроен на сервере' },
@@ -44,7 +44,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Укажите имя' }, { status: 400 });
   }
   if (!phoneRaw) {
-    return NextResponse.json({ error: 'Укажите номер телефона' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Укажите номер телефона' },
+      { status: 400 }
+    );
   }
 
   const digits = phoneRaw.replace(/\D/g, '');

@@ -33,6 +33,9 @@ const schema = z
     /** Second WhatsApp instance for admin panel chat only (optional). */
     GREEN_API_ADMIN_INSTANCE_ID: z.string().optional(),
     GREEN_API_ADMIN_TOKEN: z.string().optional(),
+    /** API host for admin instance (e.g. https://1103.api.green-api.com). Falls back to GREEN_API_BASE_URL. */
+    GREEN_API_ADMIN_BASE_URL: z.string().url().optional(),
+    GREEN_API_ADMIN_MEDIA_URL: z.string().url().optional(),
     // Admin phone that gets ADMIN role on login
     ADMIN_PHONE: z.string().optional(),
     // Admin email that gets ADMIN role
@@ -218,6 +221,8 @@ const raw = {
   GREEN_API_DASHBOARD_URL: process.env.GREEN_API_DASHBOARD_URL,
   GREEN_API_ADMIN_INSTANCE_ID: process.env.GREEN_API_ADMIN_INSTANCE_ID,
   GREEN_API_ADMIN_TOKEN: process.env.GREEN_API_ADMIN_TOKEN,
+  GREEN_API_ADMIN_BASE_URL: process.env.GREEN_API_ADMIN_BASE_URL,
+  GREEN_API_ADMIN_MEDIA_URL: process.env.GREEN_API_ADMIN_MEDIA_URL,
   ADMIN_PHONE: process.env.ADMIN_PHONE,
   ADMIN_EMAIL: process.env.ADMIN_EMAIL,
 

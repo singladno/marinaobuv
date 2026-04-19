@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db-node';
-import { tryCreateGreenApiFetcher } from '@/lib/green-api-fetcher';
+import { tryCreateGreenApiAdminFetcher } from '@/lib/green-api-fetcher';
 import { isValidAdminWaChatId } from '@/lib/server/wa-chat-id';
 
 export const isValidWaChatId = isValidAdminWaChatId;
@@ -84,7 +84,7 @@ export async function resolveWaAvatarUrl(
     return { ok: false };
   }
 
-  const api = tryCreateGreenApiFetcher();
+  const api = tryCreateGreenApiAdminFetcher();
   if (!api) {
     return { ok: false };
   }
@@ -133,7 +133,7 @@ export async function fetchWaAvatarBytesWithRetry(chatId: string): Promise<{
     return remote;
   }
 
-  const api = tryCreateGreenApiFetcher();
+  const api = tryCreateGreenApiAdminFetcher();
   if (!api) {
     return null;
   }

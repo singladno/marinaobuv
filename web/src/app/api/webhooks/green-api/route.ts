@@ -6,6 +6,7 @@ import {
   upsertWaAdminFromIncomingWebhook,
   upsertWaAdminFromOutgoingWebhook,
 } from '@/lib/wa-admin-inbox';
+import { matchGreenWebhookInstance } from '@/lib/server/green-webhook-instance';
 import { extractNormalizedPhone } from '../../../../lib/utils/whatsapp-phone-extractor';
 import { logger, logServerError } from '@/lib/server/logger';
 
@@ -19,28 +20,35 @@ export async function POST(request: NextRequest) {
     const typeWebhook = payload?.typeWebhook ?? 'unknown';
     const chatId = payload?.senderData?.chatId ?? 'unknown';
     // ASCII line for log grep (server logs)
-    logger.debug(`[WA webhook] type=${typeWebhook} chatId=${chatId}`);
+    const inst = matchGreenWebhookInstance(payload);
+    logger.debug(
+      `[WA webhook] type=${typeWebhook} chatId=${chatId} idInstance=${inst.idInstance ?? 'legacy'} parser=${inst.isProductParser} admin=${inst.isAdminChat}`
+    );
     logger.debug(`🔔 Webhook: ${typeWebhook} from ${chatId}`);
 
-    // Admin inbox: all chats (parallel to product pipeline below).
-    try {
-      if (payload.typeWebhook === 'incomingMessageReceived') {
-        await upsertWaAdminFromIncomingWebhook(payload);
-      } else if (
-        payload.typeWebhook === 'outgoingMessageReceived' ||
-        payload.typeWebhook === 'outgoingAPIMessageReceived'
-      ) {
-        // Phone sends → outgoingMessageReceived; API sends (admin panel) → outgoingAPIMessageReceived
-        await upsertWaAdminFromOutgoingWebhook(payload);
-      } else if (payload.typeWebhook === 'outgoingMessageStatus') {
-        // sent → delivered → read (enable in Green console: outgoing message statuses)
-        await applyWaAdminOutgoingMessageStatus(payload);
+    // Admin inbox: only webhooks from GREEN_API_ADMIN_INSTANCE_ID
+    if (inst.isAdminChat) {
+      try {
+        if (payload.typeWebhook === 'incomingMessageReceived') {
+          await upsertWaAdminFromIncomingWebhook(payload);
+        } else if (
+          payload.typeWebhook === 'outgoingMessageReceived' ||
+          payload.typeWebhook === 'outgoingAPIMessageReceived'
+        ) {
+          await upsertWaAdminFromOutgoingWebhook(payload);
+        } else if (payload.typeWebhook === 'outgoingMessageStatus') {
+          await applyWaAdminOutgoingMessageStatus(payload);
+        }
+      } catch (e) {
+        logServerError('[WA webhook] admin inbox upsert failed:', e);
       }
-    } catch (e) {
-      logServerError('[WA webhook] admin inbox upsert failed:', e);
     }
 
-    if (payload.typeWebhook === 'incomingMessageReceived') {
+    // Product parser DB: only GREEN_API_INSTANCE_ID + allowed WA_CHAT_IDS
+    if (
+      inst.isProductParser &&
+      payload.typeWebhook === 'incomingMessageReceived'
+    ) {
       await handleIncomingMessage(payload);
     }
 

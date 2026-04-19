@@ -557,26 +557,32 @@ else
 fi
 
 # 28. Configure webhook after deployment
+# Use ^GREEN_API_INSTANCE_ID= — plain "grep GREEN_API_INSTANCE_ID" wrongly matches GREEN_API_ADMIN_INSTANCE_ID.
 print_status "Configuring Green API webhook..."
 cd $WEB_DIR
-if [ -f ".env" ] && [ -n "$(grep GREEN_API_INSTANCE_ID .env)" ]; then
-    print_status "Setting up webhook configuration"
+if [ -f ".env" ]; then
     export $(grep -v '^#' .env | xargs)
-    if npx tsx src/scripts/configure-webhook.ts; then
-        print_success "Webhook configured successfully"
-    else
-        print_warning "Webhook configuration failed, but deployment completed"
+    if grep -qE '^GREEN_API_INSTANCE_ID=' .env 2>/dev/null; then
+        print_status "Setting up product parser webhook (GREEN_API_INSTANCE_ID)"
+        if npx tsx src/scripts/configure-webhook.ts; then
+            print_success "Product parser webhook configured successfully"
+        else
+            print_warning "Product parser webhook configuration failed, but deployment completed"
+        fi
     fi
-    if [ -n "$(grep -E '^GREEN_API_ADMIN_INSTANCE_ID=' .env 2>/dev/null | grep -v '^#' || true)" ]; then
-        print_status "Configuring Green API webhook (admin instance)..."
+    if grep -qE '^GREEN_API_ADMIN_INSTANCE_ID=' .env 2>/dev/null; then
+        print_status "Setting up admin chat webhook (GREEN_API_ADMIN_INSTANCE_ID)"
         if npx tsx src/scripts/configure-webhook-admin.ts; then
             print_success "Admin instance webhook configured successfully"
         else
             print_warning "Admin webhook configuration failed, but deployment completed"
         fi
     fi
+    if ! grep -qE '^GREEN_API_INSTANCE_ID=' .env 2>/dev/null && ! grep -qE '^GREEN_API_ADMIN_INSTANCE_ID=' .env 2>/dev/null; then
+        print_warning "No Green API instance IDs found in .env, skipping webhook setup"
+    fi
 else
-    print_warning "No Green API credentials found, skipping webhook setup"
+    print_warning "No .env file, skipping webhook setup"
 fi
 cd $APP_DIR
 

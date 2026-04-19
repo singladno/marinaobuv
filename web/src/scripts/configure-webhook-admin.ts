@@ -25,17 +25,20 @@ async function main() {
     process.exit(1);
   }
 
-  const baseUrl = env.GREEN_API_BASE_URL;
+  const baseUrl = env.GREEN_API_ADMIN_BASE_URL || env.GREEN_API_BASE_URL;
   const settingsPayload = buildGreenApiWebhookSettingsPayload();
   console.log('🔧 Configuring Green API webhook (admin instance)...');
   console.log(`🎯 Webhook URL: ${settingsPayload.webhookUrl}`);
+  console.log(
+    `🌐 API host: ${baseUrl || '(default https://api.green-api.com) — set GREEN_API_ADMIN_BASE_URL if setSettings fails'}`
+  );
   console.log(`🔧 Admin instance ID: ${instanceId}`);
   console.log('📤 Sending payload:', JSON.stringify(settingsPayload, null, 2));
 
   const result = await applyGreenApiWebhookSettings({
     instanceId,
     token,
-    baseUrl,
+    baseUrl: baseUrl || undefined,
   });
 
   console.log('📥 API response:', JSON.stringify(result, null, 2));

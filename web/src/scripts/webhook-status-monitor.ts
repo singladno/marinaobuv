@@ -52,14 +52,17 @@ export class WebhookStatusMonitor {
 
   /**
    * Check one Green API instance (authorized + webhook URL + incoming webhook on).
+   * @param apiBaseUrl — e.g. `https://1105.api.green-api.com` (per-instance host from Green API).
    */
   async checkInstanceStatus(
     instanceId: string,
-    token: string
+    token: string,
+    apiBaseUrl?: string
   ): Promise<WebhookStatus> {
+    const base = (apiBaseUrl || this.baseUrl).replace(/\/$/, '');
     try {
       const stateResponse = await fetch(
-        `${this.baseUrl}/waInstance${instanceId}/getStateInstance/${token}`,
+        `${base}/waInstance${instanceId}/getStateInstance/${token}`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -87,7 +90,7 @@ export class WebhookStatusMonitor {
       }
 
       const settingsResponse = await fetch(
-        `${this.baseUrl}/waInstance${instanceId}/getSettings/${token}`,
+        `${base}/waInstance${instanceId}/getSettings/${token}`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -200,9 +203,16 @@ export class WebhookStatusMonitor {
       );
     }
 
+    const parserApiBase = env.GREEN_API_BASE_URL || 'https://api.green-api.com';
+    const adminApiBase =
+      env.GREEN_API_ADMIN_BASE_URL ||
+      env.GREEN_API_BASE_URL ||
+      'https://api.green-api.com';
+
     const checks: Array<{
       instanceId: string;
       token: string;
+      apiBaseUrl: string;
       role: InstanceRole;
       label: string;
       logLabel: string;
@@ -212,6 +222,7 @@ export class WebhookStatusMonitor {
       checks.push({
         instanceId: env.GREEN_API_INSTANCE_ID,
         token: env.GREEN_API_TOKEN,
+        apiBaseUrl: parserApiBase,
         role: 'product-parser',
         label: 'Product parser',
         logLabel: 'product parser (catalog)',
@@ -222,6 +233,7 @@ export class WebhookStatusMonitor {
       checks.push({
         instanceId: env.GREEN_API_ADMIN_INSTANCE_ID,
         token: env.GREEN_API_ADMIN_TOKEN,
+        apiBaseUrl: adminApiBase,
         role: 'admin-chat',
         label: 'Admin chat',
         logLabel: 'admin chat',
@@ -239,7 +251,11 @@ export class WebhookStatusMonitor {
     for (const c of checks) {
       console.log(`🔍 Checking Green API instance (${c.logLabel})...`);
 
-      const status = await this.checkInstanceStatus(c.instanceId, c.token);
+      const status = await this.checkInstanceStatus(
+        c.instanceId,
+        c.token,
+        c.apiBaseUrl
+      );
 
       await this.saveStatusToDatabase(status, c.label);
 

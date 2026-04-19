@@ -171,19 +171,32 @@ log "Checking nginx /health"
 curl -s -I http://127.0.0.1/health | head -n1 || curl -s -I http://127.0.0.1 | head -n1 || true
 log "Note: Groq proxy runs on separate serverspace server (31.44.2.216)"
 
-# 8) Configure webhook after deployment
+# 8) Configure webhook after deployment (^VAR= avoids matching GREEN_API_ADMIN_INSTANCE_ID)
 log "Configuring Green API webhook..."
 cd web
-if [ -f ".env" ] && [ -n "$(grep GREEN_API_INSTANCE_ID .env)" ]; then
-  log "Setting up webhook configuration"
+if [ -f ".env" ]; then
   export $(grep -v '^#' .env | xargs)
-  if npx tsx src/scripts/configure-webhook.ts; then
-    log "Webhook configured successfully"
-  else
-    log "Webhook configuration failed, but continuing"
+  if grep -qE '^GREEN_API_INSTANCE_ID=' .env 2>/dev/null; then
+    log "Setting up product parser webhook"
+    if npx tsx src/scripts/configure-webhook.ts; then
+      log "Product parser webhook OK"
+    else
+      log "Product parser webhook failed, continuing"
+    fi
+  fi
+  if grep -qE '^GREEN_API_ADMIN_INSTANCE_ID=' .env 2>/dev/null; then
+    log "Setting up admin chat webhook"
+    if npx tsx src/scripts/configure-webhook-admin.ts; then
+      log "Admin webhook OK"
+    else
+      log "Admin webhook failed, continuing"
+    fi
+  fi
+  if ! grep -qE '^GREEN_API_INSTANCE_ID=' .env 2>/dev/null && ! grep -qE '^GREEN_API_ADMIN_INSTANCE_ID=' .env 2>/dev/null; then
+    log "No Green API instance IDs in .env, skipping webhook setup"
   fi
 else
-  log "No Green API credentials found, skipping webhook setup"
+  log "No .env, skipping webhook setup"
 fi
 cd ..
 

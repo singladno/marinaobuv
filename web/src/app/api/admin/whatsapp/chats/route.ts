@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { tryCreateGreenApiFetcher } from '@/lib/green-api-fetcher';
+import { tryCreateGreenApiAdminFetcher } from '@/lib/green-api-fetcher';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { logServerError } from '@/lib/server/logger';
 
@@ -56,7 +56,7 @@ export async function GET(_request: NextRequest) {
   const auth = await requireAuth(_request, 'ADMIN');
   if (auth.error) return auth.error;
 
-  const api = tryCreateGreenApiFetcher();
+  const api = tryCreateGreenApiAdminFetcher();
   if (!api) {
     return NextResponse.json(
       { error: 'Green API не настроен на сервере' },
