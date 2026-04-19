@@ -76,6 +76,7 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-table": "8.21.3",
+    "@tanstack/react-virtual": "^3.13.24",
     "@types/bcryptjs": "^2.4.6",
     "@types/cheerio": "^0.22.35",
     "@types/nodemailer": "^7.0.3",

@@ -363,6 +363,243 @@ export class GreenApiFetcher {
   /**
    * Download file and get download URL
    */
+  /**
+   * List WhatsApp contacts / chats (personal and groups). See GetContacts in Green API docs.
+   */
+  async getContacts(options?: { group?: boolean; count?: number }): Promise<
+    Array<{
+      id: string;
+      name: string;
+      contactName?: string;
+      type: 'user' | 'group';
+    }>
+  > {
+    const params = new URLSearchParams();
+    if (options?.group === true) params.set('group', 'true');
+    if (options?.group === false) params.set('group', 'false');
+    if (options?.count != null) params.set('count', String(options.count));
+
+    const qs = params.toString();
+    const url = `${this.baseUrl}/waInstance${this.instanceId}/getContacts/${this.token}${qs ? `?${qs}` : ''}`;
+
+    logger.debug(`[Green API] Fetching contacts`);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Green API request failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        logError(
+          'Green API getContacts response:',
+          JSON.stringify(data, null, 2)
+        );
+        throw new Error(`Green API error: Unexpected getContacts format`);
+      }
+
+      return data.map((row: any) => ({
+        id: String(row.id),
+        name: row.name != null ? String(row.name) : '',
+        contactName:
+          row.contactName != null ? String(row.contactName) : undefined,
+        type: row.type === 'group' ? 'group' : 'user',
+      }));
+    } catch (error) {
+      logServerError(`[Green API] Error fetching contacts:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Profile picture for a chat/contact (GetAvatar). Rate limit ~10/s per instance.
+   * Retries on HTTP 429 with Retry-After or exponential backoff; other 4xx are not retried.
+   */
+  async getAvatar(chatId: string): Promise<{
+    urlAvatar: string;
+    available: boolean;
+    base64Avatar?: string;
+  }> {
+    const url = `${this.baseUrl}/waInstance${this.instanceId}/getAvatar/${this.token}`;
+
+    logger.debug(`[Green API] getAvatar for ${chatId}`);
+
+    const maxAttempts = 6;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatId }),
+        });
+
+        if (response.status === 429) {
+          const ra = response.headers.get('Retry-After');
+          let waitMs = Math.min(600 * 2 ** (attempt - 1), 10_000);
+          if (ra != null && /^\d+$/.test(ra.trim())) {
+            waitMs = Math.min(parseInt(ra.trim(), 10) * 1000, 60_000);
+          }
+          logger.warn(
+            `[Green API] getAvatar 429 for ${chatId}, retry in ${waitMs}ms (attempt ${attempt}/${maxAttempts})`
+          );
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+
+        if (!response.ok) {
+          const err = new Error(
+            `Green API request failed: ${response.status} ${response.statusText}`
+          );
+          logServerError(`[Green API] Error getAvatar:`, err);
+          throw err;
+        }
+
+        const data = (await response.json()) as Record<string, unknown>;
+        const base64Raw = data.base64Avatar;
+        const base64Avatar =
+          typeof base64Raw === 'string' && base64Raw.trim().length > 0
+            ? base64Raw.trim()
+            : undefined;
+
+        return {
+          urlAvatar: typeof data.urlAvatar === 'string' ? data.urlAvatar : '',
+          available: Boolean(data.available),
+          base64Avatar,
+        };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : '';
+        if (
+          msg.startsWith('Green API request failed:') &&
+          !msg.includes('429')
+        ) {
+          throw error;
+        }
+        if (attempt >= maxAttempts) {
+          logServerError(`[Green API] Error getAvatar:`, error);
+          throw error;
+        }
+        const waitMs = Math.min(400 * 2 ** (attempt - 1), 8000);
+        await new Promise(r => setTimeout(r, waitMs));
+      }
+    }
+
+    throw new Error('Green API getAvatar: exhausted retries');
+  }
+
+  /**
+   * Recent incoming-message journal (see LastIncomingMessages). Used for chat ordering.
+   */
+  async getLastIncomingMessages(
+    minutes?: number
+  ): Promise<Array<{ chatId?: string; timestamp?: number }>> {
+    return this.fetchJournalMessages('lastIncomingMessages', minutes);
+  }
+
+  /**
+   * Recent outgoing-message journal (see LastOutgoingMessages). Used for chat ordering.
+   */
+  async getLastOutgoingMessages(
+    minutes?: number
+  ): Promise<Array<{ chatId?: string; timestamp?: number }>> {
+    return this.fetchJournalMessages('lastOutgoingMessages', minutes);
+  }
+
+  private async fetchJournalMessages(
+    endpoint: 'lastIncomingMessages' | 'lastOutgoingMessages',
+    minutes?: number
+  ): Promise<Array<{ chatId?: string; timestamp?: number }>> {
+    const params = new URLSearchParams();
+    if (minutes != null) params.set('minutes', String(minutes));
+    const qs = params.toString();
+    const url = `${this.baseUrl}/waInstance${this.instanceId}/${endpoint}/${this.token}${qs ? `?${qs}` : ''}`;
+
+    logger.debug(`[Green API] Fetching ${endpoint}`);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Green API request failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        logError(
+          `Green API ${endpoint} response:`,
+          JSON.stringify(data, null, 2)
+        );
+        throw new Error(`Green API error: Unexpected ${endpoint} format`);
+      }
+
+      return data.map((row: Record<string, unknown>) => ({
+        chatId: row.chatId != null ? String(row.chatId) : undefined,
+        timestamp:
+          typeof row.timestamp === 'number' && Number.isFinite(row.timestamp)
+            ? row.timestamp
+            : undefined,
+      }));
+    } catch (error) {
+      logServerError(`[Green API] Error fetching ${endpoint}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a plain text message to a chat (personal or group).
+   */
+  async sendTextMessage(
+    chatId: string,
+    message: string
+  ): Promise<{ idMessage: string }> {
+    const url = `${this.baseUrl}/waInstance${this.instanceId}/sendMessage/${this.token}`;
+
+    logger.debug(`[Green API] sendMessage to ${chatId}`);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, message }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data === 'object' && data && 'message' in data
+            ? String((data as { message?: string }).message)
+            : `Green API request failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+      if (data?.idMessage) {
+        return { idMessage: String(data.idMessage) };
+      }
+
+      logError(
+        'Green API sendMessage response:',
+        JSON.stringify(data, null, 2)
+      );
+      throw new Error(`Green API error: sendMessage unexpected response`);
+    } catch (error) {
+      logServerError(`[Green API] Error sending message:`, error);
+      throw error;
+    }
+  }
+
   async downloadFile(
     messageId: string,
     chatId: string
@@ -455,3 +692,9 @@ export class GreenApiFetcher {
 
 // Export a singleton instance
 export const greenApiFetcher = new GreenApiFetcher();
+
+/** Use in API routes when Green API may be unset — avoids relying on the singleton. */
+export function tryCreateGreenApiFetcher(): GreenApiFetcher | null {
+  if (!env.GREEN_API_INSTANCE_ID || !env.GREEN_API_TOKEN) return null;
+  return new GreenApiFetcher();
+}

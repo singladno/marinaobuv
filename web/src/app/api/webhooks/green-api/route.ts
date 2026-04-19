@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db-node';
 import { getWaChatIds } from '../../../../lib/env';
+import {
+  upsertWaAdminFromIncomingWebhook,
+  upsertWaAdminFromOutgoingWebhook,
+} from '@/lib/wa-admin-inbox';
 import { extractNormalizedPhone } from '../../../../lib/utils/whatsapp-phone-extractor';
 import { logger, logServerError } from '@/lib/server/logger';
 
@@ -15,11 +19,19 @@ export async function POST(request: NextRequest) {
     const chatId = payload?.senderData?.chatId ?? 'unknown';
     // ASCII line for log grep (server logs)
     logger.debug(`[WA webhook] type=${typeWebhook} chatId=${chatId}`);
-    logger.debug(
-      `🔔 Webhook: ${typeWebhook} from ${chatId}`
-    );
+    logger.debug(`🔔 Webhook: ${typeWebhook} from ${chatId}`);
 
-    // Check if this is an incoming message
+    // Admin inbox: all chats (parallel to product pipeline below).
+    try {
+      if (payload.typeWebhook === 'incomingMessageReceived') {
+        await upsertWaAdminFromIncomingWebhook(payload);
+      } else if (payload.typeWebhook === 'outgoingMessageReceived') {
+        await upsertWaAdminFromOutgoingWebhook(payload);
+      }
+    } catch (e) {
+      logServerError('[WA webhook] admin inbox upsert failed:', e);
+    }
+
     if (payload.typeWebhook === 'incomingMessageReceived') {
       await handleIncomingMessage(payload);
     }

@@ -27,6 +27,9 @@ export interface GreenApiMessage {
   groupName?: string;
   groupParticipants?: string[];
   isFromMe?: boolean;
+  /** Present for outgoing messages; see GetChatHistory docs */
+  type?: 'incoming' | 'outgoing' | string;
+  statusMessage?: 'pending' | 'sent' | 'delivered' | 'read' | string;
   isSystemMessage?: boolean;
   systemMessageType?: string;
   systemMessageData?: any;

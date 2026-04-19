@@ -82,7 +82,7 @@ export default function Header({ onSearch }: HeaderProps) {
         <div className="relative flex items-center justify-center py-1.5">
           <div className="relative mx-auto flex w-full max-w-7xl items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8">
             {/* Old Version Link - Only visible on desktop in top bar */}
-            <div className="absolute left-3 hidden items-center md:flex md:left-6 lg:left-8">
+            <div className="absolute left-3 hidden items-center md:left-6 md:flex lg:left-8">
               <OldVersionLink variant="header" />
             </div>
 
@@ -178,7 +178,7 @@ export default function Header({ onSearch }: HeaderProps) {
           {/* Right side - Actions */}
           <div className="flex items-center gap-2 md:gap-4">
             {/* Mobile Admin Switcher - only on mobile/tablet */}
-            {user?.role === 'ADMIN' && (
+            {(user?.role === 'ADMIN' || user?.role === 'EXPORT_MANAGER') && (
               <div className="md:hidden">
                 <MobileAdminSwitcher />
               </div>

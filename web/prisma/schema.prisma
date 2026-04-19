@@ -8,66 +8,66 @@ datasource db {
 }
 
 model Category {
-  id                String           @id @default(cuid())
-  parentId          String?
-  name              String
-  slug              String           @unique
-  path              String           @unique
-  sort              Int              @default(500)
-  isActive          Boolean          @default(true)
-  icon              String?          // Icon name for first-level categories
-  legacySectionId   String?          // ID раздела на старом портале (for leaf categories, used in exports)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  seoCanonical      String?
-  seoDescription    String?
-  seoH1             String?
-  seoIntroHtml      String?
-  seoNoindex        Boolean          @default(false)
-  seoTitle          String?
-  seoUpdatedAt      DateTime?        @default(now())
-  parent            Category?        @relation("CatToParent", fields: [parentId], references: [id])
-  children          Category[]       @relation("CatToParent")
-  products          Product[]
-  draftProducts     WaDraftProduct[]
+  id              String           @id @default(cuid())
+  parentId        String?
+  name            String
+  slug            String           @unique
+  path            String           @unique
+  sort            Int              @default(500)
+  isActive        Boolean          @default(true)
+  icon            String? // Icon name for first-level categories
+  legacySectionId String? // ID раздела на старом портале (for leaf categories, used in exports)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  seoCanonical    String?
+  seoDescription  String?
+  seoH1           String?
+  seoIntroHtml    String?
+  seoNoindex      Boolean          @default(false)
+  seoTitle        String?
+  seoUpdatedAt    DateTime?        @default(now())
+  parent          Category?        @relation("CatToParent", fields: [parentId], references: [id])
+  children        Category[]       @relation("CatToParent")
+  products        Product[]
+  draftProducts   WaDraftProduct[]
 
   @@index([parentId])
 }
 
 model Product {
-  id                    String         @id @default(cuid())
-  slug                  String         @unique
+  id                    String          @id @default(cuid())
+  slug                  String          @unique
   name                  String
   article               String?
   categoryId            String
   pricePair             Decimal
   buyPrice              Decimal?
-  currency              String         @default("RUB")
+  currency              String          @default("RUB")
   material              String?
   gender                Gender?
   season                Season?
   description           String?
   availabilityCheckedAt DateTime?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  isActive              Boolean        @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  isActive              Boolean         @default(true)
   sizes                 Json?
   sourceMessageIds      Json?
   sourceScreenshotUrl   String?
   sourceScreenshotKey   String?
-  analysisBatchId       String?        @unique
-  colorBatchId          String?        @unique
-  batchProcessingStatus String?        @default("pending")
-  activeUpdatedAt       DateTime       @default(now())
+  analysisBatchId       String?         @unique
+  colorBatchId          String?         @unique
+  batchProcessingStatus String?         @default("pending")
+  activeUpdatedAt       DateTime        @default(now())
   gptRequest            String?
   gptResponse           String?
   providerId            String?
-  source                ProductSource  @default(WA)
+  source                ProductSource   @default(WA)
   measurementUnit       MeasurementUnit @default(PAIRS)
   agLabels              Json?
   orderItems            OrderItem[]
-  category              Category       @relation(fields: [categoryId], references: [id])
-  provider              Provider?      @relation(fields: [providerId], references: [id])
+  category              Category        @relation(fields: [categoryId], references: [id])
+  provider              Provider?       @relation(fields: [providerId], references: [id])
   images                ProductImage[]
   videos                ProductVideo[]
   purchaseItems         PurchaseItem[]
@@ -249,29 +249,29 @@ model WhatsAppMessage {
 }
 
 model TelegramMessage {
-  id             String    @id @default(cuid())
-  tgMessageId    BigInt    @unique
-  chatId         String?
-  fromId         BigInt?
-  fromUsername   String?
-  fromFirstName  String?
-  fromLastName   String?
-  type           String?   // 'photo', 'text', 'document', etc.
-  text           String?
-  caption        String?
-  mediaUrl       String?
-  mediaFileId    String?
-  mediaWidth     Int?
-  mediaHeight    Int?
-  mediaMimeType  String?
-  mediaFileSize  Int?
-  providerId     String?
-  processed      Boolean   @default(false)
-  rawPayload     Json
-  date           BigInt?   // Original Telegram message timestamp (Unix timestamp in seconds)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  provider       Provider? @relation(fields: [providerId], references: [id])
+  id            String    @id @default(cuid())
+  tgMessageId   BigInt    @unique
+  chatId        String?
+  fromId        BigInt?
+  fromUsername  String?
+  fromFirstName String?
+  fromLastName  String?
+  type          String? // 'photo', 'text', 'document', etc.
+  text          String?
+  caption       String?
+  mediaUrl      String?
+  mediaFileId   String?
+  mediaWidth    Int?
+  mediaHeight   Int?
+  mediaMimeType String?
+  mediaFileSize Int?
+  providerId    String?
+  processed     Boolean   @default(false)
+  rawPayload    Json
+  date          BigInt? // Original Telegram message timestamp (Unix timestamp in seconds)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  provider      Provider? @relation(fields: [providerId], references: [id])
 
   @@index([createdAt])
   @@index([date])
@@ -310,10 +310,67 @@ model User {
   searchHistory      SearchHistory[]
   sessions           Session[]
   provider           Provider?              @relation(fields: [providerId], references: [id])
+  waAdminReadStates  WaAdminChatReadState[]
 
   @@index([role])
   @@index([providerId])
   @@index([email])
+}
+
+/// Admin WhatsApp inbox: chat index + messages (fed by webhooks + optional Green API merge).
+model WaAdminChat {
+  chatId          String   @id
+  name            String   @default("")
+  contactName     String?
+  chatType        String   @default("user") // user | group
+  lastActivityAt  DateTime @default(now())
+  lastPreview     String?  @db.Text
+  lastWaMessageId String?
+  /// Cached profile image URL from Green API getAvatar (refresh periodically).
+  avatarUrl       String?
+  avatarFetchedAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  messages   WaAdminMessage[]
+  readStates WaAdminChatReadState[]
+
+  @@index([lastActivityAt])
+}
+
+model WaAdminMessage {
+  id            String   @id @default(cuid())
+  waMessageId   String   @unique
+  chatId        String
+  timestamp     BigInt
+  typeMessage   String?
+  textMessage   String?  @db.Text
+  caption       String?  @db.Text
+  senderName    String?
+  senderId      String?
+  isFromMe      Boolean  @default(false)
+  statusMessage String?
+  rawPayload    Json?
+  createdAt     DateTime @default(now())
+
+  chat WaAdminChat @relation(fields: [chatId], references: [chatId], onDelete: Cascade)
+
+  @@index([chatId, timestamp])
+}
+
+model WaAdminChatReadState {
+  userId              String
+  chatId              String
+  /// Max message timestamp (seconds) the user has read through (incoming unread uses this).
+  lastReadMessageTs   BigInt   @default(0)
+  lastReadWaMessageId String?
+  updatedAt           DateTime @updatedAt
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat WaAdminChat @relation(fields: [chatId], references: [chatId], onDelete: Cascade)
+
+  @@id([userId, chatId])
+  @@index([userId])
 }
 
 model Account {
