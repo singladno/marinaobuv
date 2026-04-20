@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname } from 'next/navigation';
 
 import type { CategoryNode } from '@/components/ui/CategorySelector';
 import { deduplicateRequest } from '@/lib/request-deduplication';
@@ -22,9 +21,6 @@ export function CategoriesProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isAdminRoute = pathname?.startsWith('/admin') ?? false;
-
   const [categories, setCategories] = React.useState<CategoryNode[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -54,15 +50,10 @@ export function CategoriesProvider({
   }, []);
 
   React.useEffect(() => {
-    // Shop/catalog need the tree; admin screens do not — skip to speed admin loads.
-    if (isAdminRoute) {
-      setLoading(false);
-      return;
-    }
     if (categories.length === 0) {
       fetchCategories();
     }
-  }, [fetchCategories, categories.length, isAdminRoute]);
+  }, [fetchCategories, categories.length]);
 
   const value = React.useMemo(
     () => ({
