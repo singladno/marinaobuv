@@ -32,7 +32,7 @@ module.exports = {
 
       // Process management
       watch: process.env.NODE_ENV === "development",
-      ignore_watch: ["node_modules", "logs", ".next", "*.log"],
+      ignore_watch: ["node_modules", "logs", ".next", ".next-staging", "*.log"],
       restart_delay: 5000,
       kill_timeout: 10000,
       listen_timeout: 10000,

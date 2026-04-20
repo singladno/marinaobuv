@@ -52,6 +52,8 @@ function computeRemotePatterns() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Deploy builds to a staging dir first so we never delete `.next` while prod is serving.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   serverExternalPackages: ['pino', 'thread-stream'],
   images: {
     remotePatterns: computeRemotePatterns(),

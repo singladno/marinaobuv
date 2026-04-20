@@ -2,9 +2,9 @@ name: Deploy MarinaObuv with PM2
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -12,9 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     timeout-minutes: 60
+    # Do not cancel in-flight deploys: cancelling mid-SSH can leave production in a bad state.
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: false
 
     steps:
       - name: Cancel previous deployments

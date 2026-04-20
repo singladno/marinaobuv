@@ -70,6 +70,7 @@ export function getExtensionFromMime(mimeType: string): string {
     'image/jpg': 'jpg',
     'image/png': 'png',
     'image/webp': 'webp',
+    'image/avif': 'avif',
     'image/gif': 'gif',
     'video/mp4': 'mp4',
     'video/quicktime': 'mov',

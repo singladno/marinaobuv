@@ -353,9 +353,27 @@ function ChatRowAvatar({
   );
 }
 
+/** Green API / extractors use these as previews — not real user captions. */
+const WA_MEDIA_PLACEHOLDER_TEXT: Record<string, string> = {
+  imageMessage: '📷 Фото',
+  videoMessage: '🎬 Видео',
+  stickerMessage: '🎨 Стикер',
+  gifMessage: '🎞 GIF',
+  audioMessage: '🎵 Аудио',
+  pttMessage: '🎤 Голосовое сообщение',
+};
+
 function messagePlainText(m: WaMessage): string | null {
+  const tm = m.typeMessage || '';
   const t = m.textMessage?.trim();
-  if (t) return t;
+  if (t) {
+    const placeholder = WA_MEDIA_PLACEHOLDER_TEXT[tm];
+    if (placeholder && t === placeholder) {
+      /* fall through to caption */
+    } else {
+      return t;
+    }
+  }
   const c = m.caption?.trim();
   if (c) return c;
   return null;
@@ -2051,7 +2069,7 @@ export function AdminWhatsAppChatPanel({
                       <input
                         ref={imageInputRef}
                         type="file"
-                        accept="image/*,.heic,.heif"
+                        accept="image/*,.heic,.heif,.avif"
                         multiple
                         className="sr-only"
                         tabIndex={-1}

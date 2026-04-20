@@ -430,48 +430,51 @@ main() {
         echo "⚠️  No active deployment found - this will cause brief downtime"
     fi
 
-    # Clean previous build to ensure fresh build
-    # This is safe because we're building to a new directory that won't affect running instance
-    echo "🧹 Cleaning previous build artifacts..."
-    cd web
-    rm -rf .next
-    cd ..
+    # Build into `.next-staging` only — NEVER `rm -rf .next` before a successful build.
+    # The live slot keeps serving from `.next` until we promote after health checks.
+    STAGING_DIR=".next-staging"
+    echo "🧹 Cleaning stale staging output only (${STAGING_DIR})..."
+    rm -rf "web/${STAGING_DIR}"
 
-    # Build the application while old instance is still running
-    # The old instance uses its own .next directory in memory, so this won't affect it
+    # Build the application while old instance is still running (it keeps using `.next`).
     # Use pipefail so a failed `next build` is not masked by `tee` (pipeline would otherwise exit 0).
-    echo "🔨 Running production build (old instance continues serving)..."
+    echo "🔨 Running production build into ${STAGING_DIR} (live traffic unchanged)..."
     (
       set -o pipefail
       cd web
+      export NEXT_DIST_DIR="${STAGING_DIR}"
       timeout 1800 npm run build 2>&1 | tee /tmp/build.log
     ) || {
-        echo "❌ Build failed or timed out"
+        echo "❌ Build failed or timed out — leaving existing .next untouched"
         tail -50 /tmp/build.log || true
+        rm -rf "web/${STAGING_DIR}" 2>/dev/null || true
         exit 1
     }
 
     # Verify build was successful
-    if [ ! -f "web/.next/BUILD_ID" ]; then
-        echo "❌ Build failed - BUILD_ID not found"
+    if [ ! -f "web/${STAGING_DIR}/BUILD_ID" ]; then
+        echo "❌ Build failed - BUILD_ID not found in ${STAGING_DIR}"
+        rm -rf "web/${STAGING_DIR}" 2>/dev/null || true
         exit 1
     fi
 
     # next start requires prerender-manifest.json; npm run build runs ensure-prerender-manifest.mjs,
     # but re-run if someone invoked `next build` directly or output was incomplete
-    if [ ! -f "web/.next/prerender-manifest.json" ]; then
+    if [ ! -f "web/${STAGING_DIR}/prerender-manifest.json" ]; then
         echo "⚠️  prerender-manifest.json missing after build — creating minimal manifest..."
-        node web/scripts/ensure-prerender-manifest.mjs || {
+        ( cd web && NEXT_DIST_DIR="${STAGING_DIR}" node scripts/ensure-prerender-manifest.mjs ) || {
             echo "❌ Could not ensure prerender-manifest.json — next start will crash"
+            rm -rf "web/${STAGING_DIR}" 2>/dev/null || true
             exit 1
         }
     fi
-    if [ ! -f "web/.next/prerender-manifest.json" ]; then
+    if [ ! -f "web/${STAGING_DIR}/prerender-manifest.json" ]; then
         echo "❌ prerender-manifest.json still missing — aborting deploy"
+        rm -rf "web/${STAGING_DIR}" 2>/dev/null || true
         exit 1
     fi
 
-    BUILD_ID=$(cat web/.next/BUILD_ID)
+    BUILD_ID=$(cat "web/${STAGING_DIR}/BUILD_ID")
     echo "✅ Build completed successfully (Build ID: $BUILD_ID)"
     if [ "$current_active" != "none" ]; then
         echo "✅ Old $current_active deployment is still running - zero downtime achieved"
@@ -497,8 +500,9 @@ main() {
         fi
     fi
 
-    # Start target deployment
-    echo "🚀 Starting $target_deployment deployment on port $target_port..."
+    # Start target deployment (serve from staging dir until we promote after cutover)
+    echo "🚀 Starting $target_deployment deployment on port $target_port (NEXT_DIST_DIR=${STAGING_DIR})..."
+    export NEXT_DIST_DIR="${STAGING_DIR}"
     pm2 start ecosystem-blue-green.config.js --only "marinaobuv-$target_deployment" --env production --update-env
 
     # Wait a moment for PM2 to start the process
@@ -532,6 +536,33 @@ main() {
     # Stop the old deployment
     if [ "$current_active" != "none" ]; then
         stop_inactive_deployment "$current_active"
+    fi
+
+    # Promote staging build → `.next` so the next deploy can rebuild `.next-staging` safely
+    # and PM2 restarts use the default distDir without env.
+    echo "📦 Promoting ${STAGING_DIR} → .next (atomic)..."
+    pm2 stop "marinaobuv-$target_deployment" 2>/dev/null || true
+    cd web
+    rm -rf .next-trash-deploy
+    if [ ! -d "${STAGING_DIR}" ]; then
+        echo "❌ ${STAGING_DIR} missing — cannot promote"
+        cd ..
+        exit 1
+    fi
+    if [ -d .next ]; then
+        mv .next .next-trash-deploy
+    fi
+    mv "${STAGING_DIR}" .next
+    rm -rf .next-trash-deploy
+    cd ..
+    unset NEXT_DIST_DIR
+    export NEXT_DIST_DIR=
+    pm2 delete "marinaobuv-$target_deployment" 2>/dev/null || true
+    pm2 start ecosystem-blue-green.config.js --only "marinaobuv-$target_deployment" --env production --update-env
+
+    if ! check_deployment_health "$target_deployment" "$target_port"; then
+        echo "❌ Active deployment unhealthy after promote — manual recovery may be needed"
+        exit 1
     fi
 
     # Parser is cron-only — remove legacy PM2 name if present so it is never resurrected

@@ -4,32 +4,54 @@
 # This script focuses on essential updates only, skipping SSL, cron, firewall
 
 set -e
+set -o pipefail
 
 echo "🚀 Starting server fast deployment..."
 
-# Quick health check before deployment
+STAGING_DIR=".next-staging"
+WEB_DIR="/var/www/marinaobuv/web"
+ROOT_DIR="/var/www/marinaobuv"
+
+# Quick health check before deployment (non-fatal)
 echo "🏥 Pre-deployment health check..."
-if ! curl -f -s http://localhost:3000/api/health > /dev/null; then
-    echo "⚠️ Application not responding, but continuing with deployment..."
+if ! curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
+    echo "⚠️ Application not responding on :3000 — continuing (may be first boot)"
 fi
 
-# Stop PM2 processes (minimal downtime)
-echo "⏹️ Stopping PM2 processes..."
-pm2 stop all 2>/dev/null || true
+echo "🔨 Building application into ${STAGING_DIR} (keeps current .next until build succeeds)..."
+cd "$WEB_DIR"
+rm -rf "${STAGING_DIR}"
+export NEXT_DIST_DIR="${STAGING_DIR}"
+if ! npm run build; then
+    echo "❌ Build failed — production .next was not modified"
+    rm -rf "${STAGING_DIR}" 2>/dev/null || true
+    exit 1
+fi
+unset NEXT_DIST_DIR
 
-# Quick build and start (essential only)
-echo "🔨 Building application..."
-cd /var/www/marinaobuv/web
+if [ ! -f "${STAGING_DIR}/BUILD_ID" ]; then
+    echo "❌ No BUILD_ID in staging output"
+    rm -rf "${STAGING_DIR}" 2>/dev/null || true
+    exit 1
+fi
 
-echo "🎭 Ensuring Playwright Chromium browser is installed..."
-npm run playwright:install:ci || echo "⚠️ Playwright install failed or skipped, aggregator parser may be unavailable"
+echo "🔄 Swapping staging build into .next and restarting PM2..."
+cd "$ROOT_DIR"
+pm2 stop marinaobuv 2>/dev/null || true
 
-npm run build
+cd "$WEB_DIR"
+rm -rf .next-trash-fast
+if [ -d .next ]; then
+    mv .next .next-trash-fast
+fi
+mv "${STAGING_DIR}" .next
+rm -rf .next-trash-fast
+cd "$ROOT_DIR"
 
-# Start PM2 processes immediately
 echo "🚀 Starting PM2 processes..."
-cd /var/www/marinaobuv
-pm2 start ecosystem.config.js --env production --update-env
+export NEXT_DIST_DIR=
+pm2 startOrReload ecosystem.config.js --env production --update-env 2>/dev/null || \
+  pm2 start ecosystem.config.js --env production --update-env
 
 # Quick health check
 echo "🏥 Post-deployment health check..."
@@ -37,7 +59,8 @@ sleep 5
 if curl -f -s http://localhost:3000/api/health > /dev/null; then
     echo "✅ Application is healthy after deployment"
 else
-    echo "⚠️ Application health check failed, but deployment completed"
+    echo "❌ Application health check failed after deployment"
+    exit 1
 fi
 
 # Save PM2 state

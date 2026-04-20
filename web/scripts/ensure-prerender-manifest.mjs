@@ -12,7 +12,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.join(__dirname, '..');
-const nextDir = path.join(webRoot, '.next');
+const distDir = process.env.NEXT_DIST_DIR || '.next';
+const nextDir = path.join(webRoot, distDir);
 const manifestPath = path.join(nextDir, 'prerender-manifest.json');
 const buildIdPath = path.join(nextDir, 'BUILD_ID');
 
@@ -22,7 +23,7 @@ if (fs.existsSync(manifestPath)) {
 
 if (!fs.existsSync(buildIdPath)) {
   console.error(
-    'ensure-prerender-manifest: .next/BUILD_ID missing — next build did not complete successfully'
+    `ensure-prerender-manifest: ${distDir}/BUILD_ID missing — next build did not complete successfully`
   );
   process.exit(1);
 }

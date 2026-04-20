@@ -18,6 +18,7 @@ module.exports = {
         PORT: 3000,
         HOSTNAME: "0.0.0.0",
         DEPLOYMENT_COLOR: "blue",
+        NEXT_DIST_DIR: process.env.NEXT_DIST_DIR || ".next",
       },
       // Logging configuration
       log_file: "./logs/marinaobuv-blue.log",
@@ -64,6 +65,7 @@ module.exports = {
         PORT: 3001,
         HOSTNAME: "0.0.0.0",
         DEPLOYMENT_COLOR: "green",
+        NEXT_DIST_DIR: process.env.NEXT_DIST_DIR || ".next",
       },
       // Logging configuration
       log_file: "./logs/marinaobuv-green.log",

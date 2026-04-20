@@ -44,6 +44,28 @@ const MEDIA_PREVIEW_EMOJI: Record<string, string> = {
   gifMessage: '🎞',
 };
 
+/** Same strings as Green `extractGreenInboundDisplayText` for pure media — not real captions. */
+const GREEN_MEDIA_PLACEHOLDER_LINE: Record<string, string> = {
+  imageMessage: '📷 Фото',
+  videoMessage: '🎬 Видео',
+  stickerMessage: '🎨 Стикер',
+  gifMessage: '🎞 GIF',
+  audioMessage: '🎵 Аудио',
+  pttMessage: '🎤 Голосовое сообщение',
+};
+
+function normalizeGreenMediaPlaceholderText(
+  typeMessage: string | undefined,
+  text: string | null
+): string | null {
+  if (text == null || !String(text).trim()) return text;
+  const line = typeMessage
+    ? GREEN_MEDIA_PLACEHOLDER_LINE[typeMessage]
+    : undefined;
+  if (line && String(text).trim() === line) return null;
+  return text;
+}
+
 export type WaAdminUpsertInput = {
   waMessageId: string;
   chatId: string;
@@ -204,6 +226,8 @@ export async function persistWaAdminOutgoingImageFromSendApi(params: {
   chatId: string;
   waMessageId: string;
   caption?: string;
+  /** Set when the file is mirrored to S3 at send time (webhooks may omit downloadUrl). */
+  mediaS3Url?: string | null;
 }): Promise<void> {
   const ts = BigInt(Math.floor(Date.now() / 1000));
   const cap = params.caption?.trim() || null;
@@ -218,6 +242,7 @@ export async function persistWaAdminOutgoingImageFromSendApi(params: {
     senderId: null,
     isFromMe: true,
     statusMessage: 'pending',
+    mediaS3Url: params.mediaS3Url ?? undefined,
     chatMeta: {
       chatType: params.chatId.endsWith('@g.us') ? 'group' : 'user',
     },
@@ -256,7 +281,10 @@ export async function upsertWaAdminFromIncomingWebhook(
 
   const typeMessage = (messageData.typeMessage as string) || 'textMessage';
   const caption = (messageData.caption as string | undefined) || null;
-  const text = safeExtractStoredText(messageData);
+  const text = normalizeGreenMediaPlaceholderText(
+    typeMessage,
+    safeExtractStoredText(messageData)
+  );
 
   const chatName: string | null =
     senderData?.chatName != null
@@ -327,7 +355,10 @@ export async function upsertWaAdminFromOutgoingWebhook(
 
   const typeMessage = (messageData.typeMessage as string) || 'textMessage';
   const caption = (messageData.caption as string | undefined) || null;
-  const text = safeExtractStoredText(messageData);
+  const text = normalizeGreenMediaPlaceholderText(
+    typeMessage,
+    safeExtractStoredText(messageData)
+  );
   const statusMessage =
     (messageData.statusMessage as string | undefined) || null;
 

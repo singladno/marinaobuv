@@ -456,10 +456,14 @@ else
   echo "❌ Blue-Green deployment script not found!"
   echo "Falling back to traditional deployment..."
 
-  # Fallback to traditional deployment
-  pm2 kill 2>/dev/null || true
-  sleep 2
-  pm2 start ecosystem.config.js --env production
+  if [ ! -f "web/.next/BUILD_ID" ]; then
+    echo "❌ No production build at web/.next — run npm run build in web/ before PM2 start"
+    exit 1
+  fi
+
+  # Never pm2 kill: that tears down unrelated processes. Reload or start only.
+  pm2 startOrReload ecosystem.config.js --env production --update-env 2>/dev/null || \
+    pm2 start ecosystem.config.js --env production --update-env
   if [ $? -ne 0 ]; then
     echo "PM2 start failed!"
     pm2 logs marinaobuv --lines 50
