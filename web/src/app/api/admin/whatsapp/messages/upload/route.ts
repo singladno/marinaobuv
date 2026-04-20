@@ -132,7 +132,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const fileForGreen = new Blob([imageBuf], { type: mime });
+  // Uint8Array is a DOM BlobPart; Node Buffer typing is not accepted by lib.dom Blob.
+  const fileForGreen = new Blob([new Uint8Array(imageBuf)], { type: mime });
 
   try {
     const result = await api.sendFileByUpload({
