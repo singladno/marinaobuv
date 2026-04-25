@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { Input } from '@/components/ui/Input';
 import { useNotifications } from '@/components/ui/NotificationProvider';
 import {
   Select,
@@ -46,6 +47,37 @@ const EXPORT_RANGE_LABELS: Record<'all' | '1d' | '3d' | '7d' | '30d', string> =
     '30d': '1 месяц',
   };
 
+/** Must match `MAX_PRODUCT_EXPORT_ITEM_LIMIT` on the server. */
+const MAX_EXPORT_ITEM_LIMIT = 100_000;
+
+function parseItemLimitForExport(
+  raw: string
+): { limit?: number } | { error: string } {
+  const t = raw.trim();
+  if (t === '') {
+    return { limit: undefined };
+  }
+  const n = Number(t);
+  if (!Number.isFinite(n) || !Number.isInteger(n)) {
+    return {
+      error:
+        'Введите целое число; 0 или пусто — без ограничения по количеству товаров.',
+    };
+  }
+  if (n === 0) {
+    return { limit: undefined };
+  }
+  if (n < 0) {
+    return { error: 'Укажите 0 (без лимита) или число от 1 и выше.' };
+  }
+  if (n > MAX_EXPORT_ITEM_LIMIT) {
+    return {
+      error: `Не больше ${MAX_EXPORT_ITEM_LIMIT.toLocaleString('ru-RU')}.`,
+    };
+  }
+  return { limit: n };
+}
+
 interface ExportStatus {
   lastExportDate: string | null;
   nextScheduledExport: string;
@@ -73,6 +105,8 @@ export default function AdminExportsPage() {
   const [exportRange, setExportRange] = useState<
     'all' | '1d' | '3d' | '7d' | '30d'
   >('all');
+  /** "0" or empty = no cap; otherwise 1…MAX_EXPORT_ITEM_LIMIT. */
+  const [itemLimitInput, setItemLimitInput] = useState('0');
   const [updateKey, setUpdateKey] = useState(0); // Force re-render key
   const { addNotification } = useNotifications();
 
@@ -153,6 +187,17 @@ export default function AdminExportsPage() {
       return;
     }
 
+    const parsed = parseItemLimitForExport(itemLimitInput);
+    if ('error' in parsed) {
+      addNotification({
+        type: 'error',
+        title: 'Ошибка',
+        message: parsed.error,
+      });
+      return;
+    }
+    const { limit } = parsed;
+
     setExporting(true);
 
     // Immediately update UI to show export is starting
@@ -180,6 +225,7 @@ export default function AdminExportsPage() {
         body: JSON.stringify({
           onlyNew: exportRange === 'all' && onlyNew,
           range: exportRange,
+          ...(limit !== undefined && { limit }),
         }),
       });
 
@@ -410,98 +456,143 @@ export default function AdminExportsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Header: title + toolbar in one card */}
+      <div className="space-y-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Экспорт товаров
           </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Управление экспортом товаров
+            Управление экспортом товаров (CSV/XML, в том числе для Excel)
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
-            <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-gray-300">
-              Период
-            </span>
-            <Select
-              value={exportRange}
-              onValueChange={v => {
-                setExportRange(v as 'all' | '1d' | '3d' | '7d' | '30d');
-                if (v !== 'all') setOnlyNew(false);
-              }}
-              disabled={
-                exporting || status?.currentExport?.status === 'running'
-              }
-            >
-              <SelectTrigger
-                className="w-full min-w-[13rem] disabled:cursor-not-allowed disabled:opacity-60 sm:w-56"
-                aria-label="Период экспорта"
-              >
-                <SelectValue placeholder="Выберите период">
-                  {EXPORT_RANGE_LABELS[exportRange]}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">За всё время</SelectItem>
-                <SelectItem value="1d">1 день</SelectItem>
-                <SelectItem value="3d">3 дня</SelectItem>
-                <SelectItem value="7d">1 неделя</SelectItem>
-                <SelectItem value="30d">1 месяц</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <label className="flex cursor-pointer items-center gap-2">
-            <Checkbox
-              checked={onlyNew}
-              onCheckedChange={setOnlyNew}
-              disabled={
-                exporting ||
-                status?.currentExport?.status === 'running' ||
-                exportRange !== 'all'
-              }
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              Только новые товары
-            </span>
-          </label>
-          <Button
-            onClick={triggerExport}
-            disabled={exporting || status?.currentExport?.status === 'running'}
-            className="bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {exporting || status?.currentExport?.status === 'running' ? (
-              <>
-                <svg
-                  className="mr-2 h-4 w-4 animate-spin"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
+
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/50">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
+            <div className="grid w-full min-w-0 flex-1 grid-cols-1 gap-4 sm:grid-cols-2 sm:items-end lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span
+                  className="text-xs font-medium text-gray-600 dark:text-gray-400"
+                  id="export-period-label"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
+                  Период
+                </span>
+                <Select
+                  value={exportRange}
+                  onValueChange={v => {
+                    setExportRange(v as 'all' | '1d' | '3d' | '7d' | '30d');
+                    if (v !== 'all') setOnlyNew(false);
+                  }}
+                  disabled={
+                    exporting || status?.currentExport?.status === 'running'
+                  }
+                >
+                  <SelectTrigger
+                    className="h-10 w-full min-w-0 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[12rem]"
+                    aria-labelledby="export-period-label"
+                  >
+                    <SelectValue placeholder="Выберите период">
+                      {EXPORT_RANGE_LABELS[exportRange]}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">За всё время</SelectItem>
+                    <SelectItem value="1d">1 день</SelectItem>
+                    <SelectItem value="3d">3 дня</SelectItem>
+                    <SelectItem value="7d">1 неделя</SelectItem>
+                    <SelectItem value="30d">1 месяц</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span
+                  className="text-xs font-medium text-gray-600 dark:text-gray-400"
+                  id="export-limit-label"
+                >
+                  Макс. товаров
+                </span>
+                <Input
+                  id="export-item-limit"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={MAX_EXPORT_ITEM_LIMIT}
+                  step={1}
+                  value={itemLimitInput}
+                  onChange={e => setItemLimitInput(e.target.value)}
+                  placeholder="0 = без лимита"
+                  title={`0 или пусто — без ограничения; иначе от 1 до ${MAX_EXPORT_ITEM_LIMIT.toLocaleString('ru-RU')}.`}
+                  disabled={
+                    exporting || status?.currentExport?.status === 'running'
+                  }
+                  aria-labelledby="export-limit-label"
+                  className="h-10 w-full min-w-0 max-w-full disabled:cursor-not-allowed disabled:opacity-60 sm:max-w-[10rem] dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  Фильтр
+                </span>
+                <label className="flex h-10 cursor-pointer select-none items-center gap-2 rounded-lg border border-transparent px-0.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                  <Checkbox
+                    checked={onlyNew}
+                    onCheckedChange={setOnlyNew}
+                    disabled={
+                      exporting ||
+                      status?.currentExport?.status === 'running' ||
+                      exportRange !== 'all'
+                    }
                   />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                {status?.currentExport?.progress?.message || 'Экспорт...'}
-              </>
-            ) : (
-              <>
-                <PlayIcon className="mr-2 h-4 w-4" />
-                Запустить экспорт
-              </>
-            )}
-          </Button>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Только новые товары
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="shrink-0 border-t border-gray-100 pt-3 lg:border-t-0 lg:pt-0 dark:border-gray-600">
+              <Button
+                onClick={triggerExport}
+                disabled={
+                  exporting || status?.currentExport?.status === 'running'
+                }
+                className="h-10 w-full min-w-[12rem] bg-blue-600 px-4 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 lg:min-w-[11.5rem]"
+              >
+                {exporting || status?.currentExport?.status === 'running' ? (
+                  <>
+                    <svg
+                      className="mr-2 h-4 w-4 shrink-0 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    {status?.currentExport?.progress?.message || 'Экспорт...'}
+                  </>
+                ) : (
+                  <>
+                    <PlayIcon className="mr-2 h-4 w-4 shrink-0" />
+                    Запустить экспорт
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 

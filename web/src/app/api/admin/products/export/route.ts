@@ -15,6 +15,7 @@ import {
   parseExportDayEnd,
   parseExportDayStart,
   saveLastExportDate,
+  MAX_PRODUCT_EXPORT_ITEM_LIMIT,
   type ExportOptions,
 } from '@/lib/services/product-export-service';
 
@@ -48,8 +49,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
           {
             error: 'Invalid range',
-            message:
-              'Допустимые значения range: all, 1d, 3d, 7d, 30d',
+            message: 'Допустимые значения range: all, 1d, 3d, 7d, 30d',
           },
           { status: 400 }
         );
@@ -98,6 +98,28 @@ export async function GET(request: NextRequest) {
       const lastExportDate = getLastExportDate();
       if (lastExportDate) {
         options.lastExportDate = lastExportDate;
+      }
+    }
+
+    const limitParam = searchParams.get('limit');
+    if (limitParam !== null && limitParam !== '') {
+      const n = parseInt(limitParam, 10);
+      if (n === 0) {
+        // no cap
+      } else if (
+        !Number.isInteger(n) ||
+        n < 1 ||
+        n > MAX_PRODUCT_EXPORT_ITEM_LIMIT
+      ) {
+        return NextResponse.json(
+          {
+            error: 'Invalid limit',
+            message: `Параметр limit: 0 без лимита, иначе от 1 до ${MAX_PRODUCT_EXPORT_ITEM_LIMIT.toLocaleString('ru-RU')}`,
+          },
+          { status: 400 }
+        );
+      } else {
+        options.limit = n;
       }
     }
 

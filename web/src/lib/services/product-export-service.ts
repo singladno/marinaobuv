@@ -14,7 +14,12 @@ export interface ExportOptions {
   outputPath?: string; // Optional file path to save export
   uploadToS3?: boolean; // Upload to S3 after creating file (default: true)
   sharedTimestamp?: string; // Shared timestamp for grouping CSV and XML from same export run
+  /** If set, at most this many products (newest first). */
+  limit?: number;
 }
+
+/** Upper bound for optional export row limit (API should validate too). */
+export const MAX_PRODUCT_EXPORT_ITEM_LIMIT = 100_000;
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -43,51 +48,156 @@ export interface ExportResult {
   exportedAt: Date;
 }
 
-/**
- * Formats sizes from JSON to string representation
- */
-function formatSizes(value: unknown): string {
-  if (value === null || value === undefined) return '';
+type SizeRow = { size: string; count: number };
+
+function compareSizeKey(a: string, b: string): number {
+  return a.localeCompare(b, 'ru', { numeric: true });
+}
+
+function mergeSizeRows(rows: SizeRow[]): SizeRow[] {
+  const map = new Map<string, number>();
+  for (const { size, count } of rows) {
+    if (!size) continue;
+    const c = count > 0 ? Math.floor(count) : 0;
+    if (c <= 0) continue;
+    map.set(size, (map.get(size) ?? 0) + c);
+  }
+  return Array.from(map.entries()).map(([size, count]) => ({ size, count }));
+}
+
+function normalizeSizeRows(value: unknown): SizeRow[] {
+  if (value === null || value === undefined) return [];
   try {
-    // Array of objects like [{size: '36', count: 1}]
     if (Array.isArray(value)) {
-      if (value.length === 0) return '';
+      if (value.length === 0) return [];
       if (
         value.every(
-          item => typeof item === 'object' && item && 'size' in (item as any)
+          item => typeof item === 'object' && item && 'size' in (item as object)
         )
       ) {
-        return (value as Array<{ size: string; count?: number }>)
-          .map(v => `${v.size}${v.count ? `(${v.count})` : ''}`)
-          .join(', ');
+        return mergeSizeRows(
+          (value as Array<{ size: string; count?: number }>).map(r => {
+            const raw = r.count;
+            const c =
+              raw === null || raw === undefined
+                ? 1
+                : Math.max(0, Math.floor(Number(raw)));
+            return { size: String(r.size).trim(), count: c };
+          })
+        );
       }
       if (
         value.every(
           item => typeof item === 'string' || typeof item === 'number'
         )
       ) {
-        return (value as Array<string | number>).map(String).join(', ');
+        return mergeSizeRows(
+          (value as Array<string | number>).map(v => ({
+            size: String(v).trim(),
+            count: 1,
+          }))
+        );
       }
-      return '';
+      return [];
     }
-
-    // Object map like {"36": true, "37": true}
     if (typeof value === 'object') {
-      const entries = Object.entries(value as Record<string, unknown>);
-      const available = entries
-        .filter(([, v]) => v === true || v === 1)
-        .map(([k]) => k);
-      if (available.length) return available.join(', ');
-      return '';
+      const out: SizeRow[] = [];
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        const size = k.trim();
+        if (!size) continue;
+        if (v === true) out.push({ size, count: 1 });
+        else if (v === 1) out.push({ size, count: 1 });
+        else if (typeof v === 'number' && v > 0) {
+          out.push({ size, count: Math.floor(v) });
+        }
+      }
+      return mergeSizeRows(out);
     }
-
     if (typeof value === 'string' || typeof value === 'number') {
-      return String(value);
+      const s = String(value).trim();
+      return s ? mergeSizeRows([{ size: s, count: 1 }]) : [];
     }
-    return '';
   } catch {
-    return '';
+    // fall through
   }
+  return [];
+}
+
+/** "6 пар" / "1 пара" / "2 штуки" — form after a numeral. */
+function quantityUnitWord(
+  n: number,
+  unit: 'PAIRS' | 'PIECES'
+): string {
+  const m = n % 100;
+  if (m >= 11 && m <= 14) {
+    return unit === 'PIECES' ? 'штук' : 'пар';
+  }
+  const d = n % 10;
+  if (d === 1) return unit === 'PIECES' ? 'штука' : 'пара';
+  if (d >= 2 && d <= 4) return unit === 'PIECES' ? 'штуки' : 'пары';
+  return unit === 'PIECES' ? 'штук' : 'пар';
+}
+
+function escapeHtmlText(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Formats sizes for the legacy import portal: summary line + HTML table
+ * (e.g. "36-40 6 пар (38 по 2)" and &lt;table border="1"&gt;...).
+ */
+function formatSizesLegacyPortal(
+  value: unknown,
+  measurementUnit: 'PAIRS' | 'PIECES' = 'PAIRS'
+): string {
+  const rows = normalizeSizeRows(value);
+  if (rows.length === 0) return '';
+
+  const sorted = [...rows].sort((a, b) => compareSizeKey(a.size, b.size));
+  const total = sorted.reduce((s, r) => s + r.count, 0);
+  if (total <= 0) return '';
+
+  const minS = sorted[0]!.size;
+  const maxS = sorted[sorted.length - 1]!.size;
+  const rangePart = minS === maxS ? minS : `${minS}-${maxS}`;
+
+  const moreThanOne = sorted.filter(r => r.count > 1);
+  const paren =
+    moreThanOne.length > 0
+      ? ` (${moreThanOne.map(r => `${r.size} по ${r.count}`).join(', ')})`
+      : '';
+
+  const u = quantityUnitWord(total, measurementUnit);
+  const firstLine = `${rangePart} ${total} ${u}${paren}`;
+
+  const sizeTds = sorted
+    .map(r => `    <td>${escapeHtmlText(r.size)}</td>`)
+    .join('\n');
+  const countTds = sorted
+    .map(r => `    <td>${escapeHtmlText(String(r.count))}</td>`)
+    .join('\n');
+  const table = `<table border="1">
+<tr>
+${sizeTds}
+</tr>
+<tr>
+${countTds}
+</tr>
+</table>
+<br>`;
+
+  return `${firstLine}\n${table}`;
+}
+
+/** Safe CDATA: escape embedded `]]>`. */
+function cdata(s: string): string {
+  if (!s) return '';
+  if (!s.includes(']]>')) return s;
+  return s.split(']]>').join(']]]]><![CDATA[>');
 }
 
 /**
@@ -167,7 +277,10 @@ async function exportToCsv(products: any[], outputPath: string): Promise<void> {
       product.gender || '',
       product.season || '',
       product.description || '',
-      formatSizes(product.sizes),
+      formatSizesLegacyPortal(
+        product.sizes,
+        (product.measurementUnit as 'PAIRS' | 'PIECES') ?? 'PAIRS'
+      ),
       images,
       product.isActive ? 'Да' : 'Нет',
       product.createdAt.toISOString(),
@@ -228,9 +341,15 @@ async function exportToXml(products: any[], outputPath: string): Promise<void> {
     xmlLines.push(
       `    <description><![CDATA[${product.description || ''}]]></description>`
     );
-    xmlLines.push(
-      `    <sizes>${escapeXmlValue(formatSizes(product.sizes))}</sizes>`
+    const sizesText = formatSizesLegacyPortal(
+      product.sizes,
+      (product.measurementUnit as 'PAIRS' | 'PIECES') ?? 'PAIRS'
     );
+    if (sizesText) {
+      xmlLines.push(`    <sizes><![CDATA[${cdata(sizesText)}]]></sizes>`);
+    } else {
+      xmlLines.push('    <sizes></sizes>');
+    }
     xmlLines.push(
       `    <isActive>${product.isActive ? 'true' : 'false'}</isActive>`
     );
@@ -268,6 +387,7 @@ export async function exportProducts(
     sharedTimestamp,
     dateFrom,
     dateTo,
+    limit: limitOption,
   } = options;
 
   // Build query conditions
@@ -310,11 +430,20 @@ export async function exportProducts(
     });
   }
 
+  let take: number | undefined;
+  if (limitOption !== undefined && limitOption !== null) {
+    const n = Math.floor(Number(limitOption));
+    if (Number.isFinite(n) && n > 0) {
+      take = Math.min(n, MAX_PRODUCT_EXPORT_ITEM_LIMIT);
+    }
+  }
+
   // Fetch products with related data.
   // Use select (not include) to exclude gptRequest/gptResponse — they can be huge
   // and cause "Failed to convert rust String into napi string" in Prisma.
   const products = await prisma.product.findMany({
     where,
+    take,
     select: {
       id: true,
       slug: true,
@@ -327,6 +456,7 @@ export async function exportProducts(
       season: true,
       description: true,
       sizes: true,
+      measurementUnit: true,
       isActive: true,
       createdAt: true,
       updatedAt: true,
