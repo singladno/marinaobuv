@@ -10,7 +10,9 @@ import { FlyingAnimationProvider } from '@/contexts/FlyingAnimationContext';
 import { HighlightedProductsProvider } from '@/contexts/HighlightedProductsContext';
 import { NextAuthUserProvider } from '@/contexts/NextAuthUserContext';
 import { AdminChatProvider } from '@/contexts/AdminChatContext';
+import { WhatsAppInboxProvider } from '@/contexts/WhatsAppInboxContext';
 import { ClientChatProvider } from '@/contexts/ClientChatContext';
+import { WhatsAppInboxPanelHost } from '@/components/admin/WhatsAppInboxPanelHost';
 import { PurchaseProvider } from '@/contexts/PurchaseContext';
 
 interface ClientProvidersProps {
@@ -22,23 +24,26 @@ export function ClientProviders({ children }: ClientProvidersProps) {
     <SessionProvider>
       <NotificationProvider>
         <NextAuthUserProvider>
-          <AdminChatProvider>
-            <ClientChatProvider>
-              <CategoriesProvider>
-                <CategoryLookupProvider>
-                  <HighlightedProductsProvider>
-                    <FavoritesProvider>
-                      <FlyingAnimationProvider>
-                        <PurchaseProvider>
-                          <CartProvider>{children}</CartProvider>
-                        </PurchaseProvider>
-                      </FlyingAnimationProvider>
-                    </FavoritesProvider>
-                  </HighlightedProductsProvider>
-                </CategoryLookupProvider>
-              </CategoriesProvider>
-            </ClientChatProvider>
-          </AdminChatProvider>
+          <WhatsAppInboxProvider>
+            <AdminChatProvider>
+              <ClientChatProvider>
+                <CategoriesProvider>
+                  <CategoryLookupProvider>
+                    <HighlightedProductsProvider>
+                      <FavoritesProvider>
+                        <FlyingAnimationProvider>
+                          <PurchaseProvider>
+                            <CartProvider>{children}</CartProvider>
+                          </PurchaseProvider>
+                        </FlyingAnimationProvider>
+                      </FavoritesProvider>
+                    </HighlightedProductsProvider>
+                  </CategoryLookupProvider>
+                </CategoriesProvider>
+              </ClientChatProvider>
+            </AdminChatProvider>
+            <WhatsAppInboxPanelHost />
+          </WhatsAppInboxProvider>
         </NextAuthUserProvider>
       </NotificationProvider>
     </SessionProvider>

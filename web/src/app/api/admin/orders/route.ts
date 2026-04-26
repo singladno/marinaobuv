@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/server/auth';
 import { emailService } from '@/lib/server/email';
 import { logRequestError } from '@/lib/server/request-logging';
 import { logger } from '@/lib/server/logger';
+import { logOrderActivity } from '@/lib/server/order-activity';
 
 export async function GET(req: NextRequest) {
   try {
@@ -168,9 +169,12 @@ export async function POST(req: NextRequest) {
         userId: true,
         orderNumber: true,
         status: true,
+        gruzchikId: true,
+        payment: true,
         user: {
           select: { email: true, name: true },
         },
+        gruzchik: { select: { id: true, name: true } },
       },
     });
 
@@ -216,6 +220,53 @@ export async function POST(req: NextRequest) {
 
     // Update the order
     const updated = await prisma.order.update({ where: { id }, data });
+
+    const actorId = authResult.user.id as string;
+    if (typeof status === 'string' && status !== order.status) {
+      await logOrderActivity({
+        orderId: id,
+        kind: 'order_status_changed',
+        title: `Статус заказа изменён на «${status}»`,
+        details: { previous: order.status },
+        actorType: 'ADMIN',
+        actorUserId: actorId,
+      });
+    }
+    if (gruzchikId !== undefined) {
+      const nextGruzchikId = gruzchikId === '' ? null : gruzchikId;
+      if (nextGruzchikId !== order.gruzchikId) {
+        const newG = nextGruzchikId
+          ? await prisma.user.findUnique({
+              where: { id: nextGruzchikId },
+              select: { name: true },
+            })
+          : null;
+        await logOrderActivity({
+          orderId: id,
+          kind: 'order_gruzchik_changed',
+          title: nextGruzchikId
+            ? `Назначен грузчик: ${newG?.name ?? '—'}`
+            : 'Грузчик снят с заказа',
+          details: { gruzchikId: nextGruzchikId },
+          actorType: 'ADMIN',
+          actorUserId: actorId,
+        });
+      }
+    }
+    if (payment !== undefined && payment !== null) {
+      const newPayment = Number(payment) || 0;
+      const prevPayment = Number(order.payment);
+      if (newPayment !== prevPayment) {
+        await logOrderActivity({
+          orderId: id,
+          kind: 'order_payment_changed',
+          title: `Сумма оплаты изменена: ${newPayment.toLocaleString('ru-RU')} ₽`,
+          details: { previous: prevPayment },
+          actorType: 'ADMIN',
+          actorUserId: actorId,
+        });
+      }
+    }
 
     // If label is provided and order has a user, update the user's label
     if (label !== undefined && order.userId) {

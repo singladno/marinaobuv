@@ -13,6 +13,9 @@
     "reload": "pm2 reload marinaobuv-local",
     "delete": "pm2 delete marinaobuv-local",
     "logs": "pm2 logs marinaobuv-local",
+    "logs:prod": "pm2 logs --lines 150",
+    "logs:prod:green": "pm2 logs marinaobuv-green --lines 150",
+    "logs:prod:blue": "pm2 logs marinaobuv-blue --lines 150",
     "status": "pm2 status",
     "monitor": "pm2 monit",
     "setup": "npm install && cd web && npm install",
@@ -79,6 +82,7 @@
     "server:memory": "ssh -l ubuntu 130.193.56.134 'free -h'",
     "server:space": "ssh -l ubuntu 130.193.56.134 'echo \"=== Disk Usage ===\" && df -h && echo \"=== Memory Usage ===\" && free -h && echo \"=== Project Size ===\" && du -sh /var/www/marinaobuv && echo \"=== Node Modules Size ===\" && du -sh /var/www/marinaobuv/web/node_modules && echo \"=== Backups Size ===\" && du -sh /var/www/marinaobuv/web/backups'",
     "parser:run": "cd web && npx tsx src/scripts/groq-sequential-cron.ts",
+    "supplier-poll:scheduled": "cd web && npm run supplier-poll:scheduled",
     "backfill:parsing-history-wa": "cd web && npx tsx src/scripts/backfill-parsing-history-wa.ts",
     "parser:logs": "cd web && tail -f logs/parsing-cron.log",
     "parser:logs:history": "cd web && tail -n 100 logs/parsing-cron.log",
@@ -107,7 +111,10 @@
     "webhook:monitor:logs:history": "ssh -l ubuntu 130.193.56.134 'echo \"=== Webhook Monitor History (last 100 lines) ===\" && tail -n 100 /var/www/marinaobuv/web/logs/webhook-monitor.log'",
     "playwright:install": "cd web && npm run playwright:install",
     "playwright:install:ci": "cd web && npm run playwright:install:ci",
-    "postinstall": "cd web && npm install && npm run playwright:install"
+    "postinstall": "cd web && npm install && npm run playwright:install",
+    "ngrok": "node scripts/run-ngrok.js http 3000",
+    "ngrok:port": "node scripts/run-ngrok.js http",
+    "ngrok:auth": "node scripts/run-ngrok.js config add-authtoken"
   },
   "keywords": [
     "nextjs",

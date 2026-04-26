@@ -1,9 +1,2 @@
--- AlterTable
-ALTER TABLE "Product" ADD COLUMN "agLabels" JSONB;
-
--- AlterTable
-ALTER TABLE "Provider" ADD COLUMN "link" TEXT;
-ALTER TABLE "Provider" ADD COLUMN "location" TEXT;
-
--- CreateIndex
-CREATE INDEX "Provider_link_idx" ON "Provider"("link");
+-- Columns and Provider_link_idx are in 20200101000000_init; migration kept for history.
+SELECT 1;

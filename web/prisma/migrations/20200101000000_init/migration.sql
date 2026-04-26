@@ -16,6 +16,7 @@ CREATE TABLE "Category" (
     "path" TEXT NOT NULL,
     "sort" INTEGER NOT NULL DEFAULT 500,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "icon" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -38,6 +39,10 @@ CREATE TABLE "Product" (
     "season" "Season",
     "description" TEXT,
     "availabilityCheckedAt" TIMESTAMP(3),
+    "buyPrice" DECIMAL(10,2),
+    "sourceScreenshotUrl" TEXT,
+    "sourceScreenshotKey" TEXT,
+    "agLabels" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -78,6 +83,8 @@ CREATE TABLE "Provider" (
     "name" TEXT NOT NULL,
     "phone" TEXT,
     "place" TEXT,
+    "link" TEXT,
+    "location" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -89,7 +96,7 @@ CREATE TABLE "WaDraftProduct" (
     "id" TEXT NOT NULL,
     "messageId" TEXT NOT NULL,
     "providerId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
+    "name" TEXT,
     "pricePair" INTEGER,
     "currency" TEXT NOT NULL DEFAULT 'RUB',
     "packPairs" INTEGER,
@@ -180,6 +187,34 @@ CREATE TABLE "User" (
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Purchase" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "Purchase_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PurchaseItem" (
+    "id" TEXT NOT NULL,
+    "purchaseId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "color" TEXT,
+    "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "price" DECIMAL(65,30) NOT NULL,
+    "oldPrice" DECIMAL(65,30) NOT NULL,
+    "sortIndex" INTEGER NOT NULL DEFAULT 1,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PurchaseItem_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Category_slug_key" ON "Category"("slug");
 
@@ -224,6 +259,9 @@ CREATE INDEX "Provider_phone_idx" ON "Provider"("phone");
 
 -- CreateIndex
 CREATE INDEX "Provider_place_idx" ON "Provider"("place");
+
+-- CreateIndex
+CREATE INDEX "Provider_link_idx" ON "Provider"("link");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "WaDraftProduct_messageId_key" ON "WaDraftProduct"("messageId");
@@ -282,6 +320,24 @@ CREATE INDEX "User_role_idx" ON "User"("role");
 -- CreateIndex
 CREATE INDEX "User_providerId_idx" ON "User"("providerId");
 
+-- CreateIndex
+CREATE INDEX "Purchase_createdById_idx" ON "Purchase"("createdById");
+
+-- CreateIndex
+CREATE INDEX "Purchase_createdAt_idx" ON "Purchase"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "PurchaseItem_purchaseId_idx" ON "PurchaseItem"("purchaseId");
+
+-- CreateIndex
+CREATE INDEX "PurchaseItem_productId_idx" ON "PurchaseItem"("productId");
+
+-- CreateIndex
+CREATE INDEX "PurchaseItem_sortIndex_idx" ON "PurchaseItem"("sortIndex");
+
+-- CreateIndex
+CREATE INDEX "PurchaseItem_purchaseId_productId_color_idx" ON "PurchaseItem"("purchaseId", "productId", "color");
+
 -- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -311,3 +367,12 @@ ALTER TABLE "WhatsAppMessage" ADD CONSTRAINT "WhatsAppMessage_providerId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Provider"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Purchase" ADD CONSTRAINT "Purchase_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PurchaseItem" ADD CONSTRAINT "PurchaseItem_purchaseId_fkey" FOREIGN KEY ("purchaseId") REFERENCES "Purchase"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PurchaseItem" ADD CONSTRAINT "PurchaseItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

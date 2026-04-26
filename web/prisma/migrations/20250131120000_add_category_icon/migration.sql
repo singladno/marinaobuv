@@ -1,9 +1,2 @@
--- AlterTable
-ALTER TABLE "Category" ADD COLUMN IF NOT EXISTS "icon" TEXT;
-
-
-
-
-
-
-
+-- "icon" is created in 20200101000000_init; migration kept for Prisma history.
+SELECT 1;

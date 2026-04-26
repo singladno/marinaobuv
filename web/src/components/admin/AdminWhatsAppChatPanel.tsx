@@ -547,6 +547,19 @@ function WaMessageBubbleContent({
   );
 }
 
+function mimeFromWaFilePayload(raw: unknown): string | null {
+  const md = getMessageDataFromWebhookRaw(raw) as Record<
+    string,
+    unknown
+  > | null;
+  if (!md) return null;
+  const fd = md.fileMessageData as { mimeType?: string } | undefined;
+  const mt =
+    (typeof md.mimeType === 'string' && md.mimeType) ||
+    (typeof fd?.mimeType === 'string' && fd.mimeType);
+  return typeof mt === 'string' && mt.trim() ? mt.trim() : null;
+}
+
 function WaMessageMedia({
   m,
   bleed = false,
@@ -557,7 +570,16 @@ function WaMessageMedia({
   const url = m.mediaS3Url || m.localPreviewUrl;
   if (!url) return null;
   const tm = m.typeMessage;
-  if (tm === 'imageMessage' || tm === 'stickerMessage' || tm === 'gifMessage') {
+  const fileMime = mimeFromWaFilePayload(m.rawPayload);
+  const imageFromFileUpload =
+    (tm === 'fileMessage' || tm === 'documentMessage') &&
+    fileMime?.startsWith('image/');
+  if (
+    tm === 'imageMessage' ||
+    tm === 'stickerMessage' ||
+    tm === 'gifMessage' ||
+    imageFromFileUpload
+  ) {
     const compact = tm === 'stickerMessage';
     return (
       // eslint-disable-next-line @next/next/no-img-element -- S3 CDN или blob превью
@@ -943,12 +965,15 @@ function OutgoingDeliveryTicks({ status }: { status?: string }) {
 export type AdminWhatsAppChatPanelProps = {
   open: boolean;
   onClose: () => void;
+  /** Highlight these chats in the sidebar (e.g. suppliers for the current order). */
+  highlightChatIds?: string[];
 };
 
 /** WhatsApp admin inbox (Green API send + DB-backed list/messages). */
 export function AdminWhatsAppChatPanel({
   open,
   onClose,
+  highlightChatIds = [],
 }: AdminWhatsAppChatPanelProps) {
   const [chats, setChats] = useState<WaChat[]>([]);
   const [chatFilter, setChatFilter] = useState('');
@@ -970,6 +995,11 @@ export function AdminWhatsAppChatPanel({
   const [sending, setSending] = useState(false);
   const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([]);
   const [readThroughTs, setReadThroughTs] = useState(0);
+
+  const highlightChatIdSet = useMemo(
+    () => new Set(highlightChatIds.filter(Boolean)),
+    [highlightChatIds]
+  );
 
   /** Скролл-контейнер списка чатов: виртуализация + lazy-аватары по viewport. */
   const [chatListScrollEl, setChatListScrollEl] =
@@ -1742,6 +1772,9 @@ export function AdminWhatsAppChatPanel({
                     const c = filteredChats[vRow.index];
                     if (!c) return null;
                     const active = c.id === selectedId;
+                    const orderRelated =
+                      highlightChatIdSet.size > 0 &&
+                      highlightChatIdSet.has(c.id);
                     const totalUnread = c.unreadCount ?? 0;
                     const mediaUnread = c.unreadImageCount ?? 0;
                     const hasUnread = totalUnread > 0;
@@ -1768,9 +1801,11 @@ export function AdminWhatsAppChatPanel({
                             'mb-0.5 flex w-full cursor-pointer items-start gap-2 rounded-lg border-0 px-2 py-2 text-left text-xs outline-none ring-0 transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none',
                             active
                               ? 'bg-gradient-to-r from-violet-100 to-fuchsia-50 text-violet-950 dark:from-violet-900/50 dark:to-fuchsia-950/30 dark:text-violet-100'
-                              : hasUnread
-                                ? 'bg-violet-50/90 font-medium dark:bg-violet-950/40'
-                                : 'hover:bg-violet-50 dark:hover:bg-gray-800'
+                              : orderRelated
+                                ? 'bg-emerald-50/95 font-medium ring-1 ring-emerald-300/75 dark:bg-emerald-950/40 dark:ring-emerald-700/45'
+                                : hasUnread
+                                  ? 'bg-violet-50/90 font-medium dark:bg-violet-950/40'
+                                  : 'hover:bg-violet-50 dark:hover:bg-gray-800'
                           )}
                         >
                           <ChatRowAvatar

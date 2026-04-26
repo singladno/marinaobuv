@@ -1,0 +1,2 @@
+# Migration: SupplierPollChatState for scheduled supplier poll follow-ups
+migration = "add_supplier_poll_chat_state"

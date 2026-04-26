@@ -7,7 +7,11 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createPrismaClient(): PrismaClient {
   const isDev = process.env.NODE_ENV === 'development';
-  const logQueries = isDev && process.env.PRISMA_LOG_QUERIES !== '0';
+  /** Opt-in: set PRISMA_LOG_QUERIES=1 in .env.local to debug SQL (off by default — too noisy). */
+  const logQueries =
+    isDev &&
+    (process.env.PRISMA_LOG_QUERIES === '1' ||
+      process.env.PRISMA_LOG_QUERIES === 'true');
 
   const client = new PrismaClient({
     log: logQueries
@@ -34,6 +38,21 @@ function createPrismaClient(): PrismaClient {
   return client;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function getPrismaClient(): PrismaClient {
+  let client = globalForPrisma.prisma ?? createPrismaClient();
+  // After `prisma generate`, new models appear on the client class — but dev may still
+  // hold a pre-generate instance on globalThis, so `prisma.supplierPollRun` is undefined.
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    typeof (client as unknown as { supplierPollRun?: unknown })
+      .supplierPollRun === 'undefined'
+  ) {
+    client = createPrismaClient();
+    globalForPrisma.prisma = client;
+  } else if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = client;
+  }
+  return client;
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export const prisma = getPrismaClient();

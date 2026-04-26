@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
-import { AdminWhatsAppChatPanel } from '@/components/admin/AdminWhatsAppChatPanel';
+import { useWhatsAppInbox } from '@/contexts/WhatsAppInboxContext';
 import {
   orbitIconAdmin,
   orbitIconClient,
@@ -21,7 +21,7 @@ const ORBIT_RADIUS = 112;
 
 export function PortalSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
-  const [whatsAppOpen, setWhatsAppOpen] = useState(false);
+  const { isOpen: whatsAppOpen, openInbox } = useWhatsAppInbox();
   const [isVisible, setIsVisible] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -45,9 +45,9 @@ export function PortalSwitcher() {
   const closeMenu = useCallback(() => setIsOpen(false), []);
 
   const openWhatsApp = useCallback(() => {
-    setWhatsAppOpen(true);
+    openInbox();
     setIsOpen(false);
-  }, []);
+  }, [openInbox]);
 
   const navigatePrimaryPortal = useCallback(() => {
     closeMenu();
@@ -172,11 +172,6 @@ export function PortalSwitcher() {
 
   return (
     <>
-      <AdminWhatsAppChatPanel
-        open={whatsAppOpen}
-        onClose={() => setWhatsAppOpen(false)}
-      />
-
       {/* Dim layer — stays *under* the orbit UI */}
       {isOpen && !whatsAppOpen && (
         <button

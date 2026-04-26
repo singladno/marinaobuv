@@ -3,6 +3,7 @@ import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { generateItemCode } from '@/lib/itemCodeGenerator';
 import { logRequestError } from '@/lib/server/request-logging';
+import { logOrderActivity } from '@/lib/server/order-activity';
 
 function getBoxPriceFromPair(pricePair: any, sizes: any): number {
   const price = Number(pricePair) || 0;
@@ -147,6 +148,15 @@ export async function POST(
         data: { subtotal, total: subtotal },
       });
 
+      await logOrderActivity({
+        orderId: id,
+        kind: 'order_item_qty_changed',
+        title: `Изменено количество: ${product.name} — ${newQty} шт.`,
+        details: { orderItemId: orderItem.id, color: colorNorm },
+        actorType: 'ADMIN',
+        actorUserId: auth.user.id,
+      });
+
       return NextResponse.json(orderItem, { status: 200 });
     }
 
@@ -202,6 +212,15 @@ export async function POST(
     await prisma.order.update({
       where: { id },
       data: { subtotal: subtotalAfter, total: subtotalAfter },
+    });
+
+    await logOrderActivity({
+      orderId: id,
+      kind: 'order_item_added',
+      title: `Добавлен товар: ${product.name} × ${qty}`,
+      details: { orderItemId: orderItem.id, color: colorNorm },
+      actorType: 'ADMIN',
+      actorUserId: auth.user.id,
     });
 
     return NextResponse.json(orderItem, { status: 201 });

@@ -1,5 +1,2 @@
--- AlterTable
-ALTER TABLE "Product" ADD COLUMN     "buyPrice" DECIMAL(10,2),
-ADD COLUMN     "sourceScreenshotUrl" TEXT,
-ADD COLUMN     "sourceScreenshotKey" TEXT;
-
+-- Columns are in 20200101000000_init; migration kept for Prisma history.
+SELECT 1;

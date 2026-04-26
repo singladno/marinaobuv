@@ -55,8 +55,22 @@ scheduleEvery(POLL_MIN * 60 * 1000, 'batch-poll', () => {
   run('./node_modules/.bin/tsx', [script], 'batch-poll.log');
 });
 
+// Supplier poll scheduled follow-up (0 = off; e.g. 10 to match production cron)
+const SP_MIN = parseInt(
+  process.env.CRON_SUPPLIER_POLL_FOLLOWUP_MIN || '0',
+  10
+);
+if (SP_MIN > 0) {
+  scheduleEvery(SP_MIN * 60 * 1000, 'supplier-poll-scheduled', () => {
+    const script = path.join(ROOT, 'src/scripts/supplier-poll-scheduled-cron.ts');
+    run('./node_modules/.bin/tsx', [script], 'supplier-poll-scheduled.log');
+  });
+}
+
 console.log(
-  `[local-cron] Started. hourly=${HOURLY_MIN}m, poll=${POLL_MIN}m. Logs in ./logs`
+  `[local-cron] Started. hourly=${HOURLY_MIN}m, poll=${POLL_MIN}m${
+    SP_MIN > 0 ? `, supplier-poll=${SP_MIN}m` : ''
+  }. Logs in ./logs`
 );
 
 process.on('SIGINT', () => {

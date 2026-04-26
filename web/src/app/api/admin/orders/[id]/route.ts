@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
+import { getOrderItemReplacementAvailabilityHints } from '@/lib/server/order-item-replacement-availability';
+import { getSupplierPollSnapshot } from '@/lib/server/supplier-poll-snapshot';
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -133,7 +135,23 @@ export async function GET(
       return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
     }
 
-    return NextResponse.json({ order });
+    const [supplierPoll, replacementHints] = await Promise.all([
+      getSupplierPollSnapshot(order.id, order.items),
+      getOrderItemReplacementAvailabilityHints(
+        order.id,
+        order.items.map(it => ({ id: it.id, isAvailable: it.isAvailable }))
+      ),
+    ]);
+
+    const items = order.items.map(it => ({
+      ...it,
+      availabilityReplacementHint: replacementHints[it.id] ?? null,
+    }));
+
+    return NextResponse.json({
+      order: { ...order, items },
+      supplierPoll,
+    });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Неожиданная ошибка';
     return NextResponse.json({ error: message }, { status: 500 });

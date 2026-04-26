@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "SupplierPollWaKind" ADD VALUE 'OUT_FOLLOWUP_STOCK';

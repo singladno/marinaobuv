@@ -1,8 +1,10 @@
+import { after } from 'next/server';
+
 import { generateItemCode } from '@/lib/itemCodeGenerator';
 import { generateOrderNumber } from '@/lib/order-number-generator';
 import { scriptPrisma as prisma } from '@/lib/script-db';
 import { emailService } from '@/lib/server/email';
-import { logger, logServerError } from '@/lib/server/logger';
+import { logServerError } from '@/lib/server/logger';
 
 interface CreateOrderItem {
   slug?: string;
@@ -147,10 +149,10 @@ export async function createOrder(
   // Generate order number
   const orderNumber = await generateOrderNumber();
 
-  // Get user's label to inherit it
+  // User label for the order; email used for confirmation (sent after response returns)
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { label: true },
+    select: { label: true, email: true },
   });
 
   // Create the order
@@ -198,26 +200,19 @@ export async function createOrder(
     },
   });
 
-  // Send order confirmation email if user has email
-  try {
-    const userWithEmail = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true },
-    });
-
-    if (userWithEmail?.email) {
-      await emailService.sendOrderConfirmationEmail(
-        userWithEmail.email,
-        orderNumber,
-        {
+  // Do not await SMTP: it can block 10–30s. `after` runs when the response is sent (works on Vercel).
+  if (user?.email) {
+    const to = user.email;
+    after(async () => {
+      try {
+        await emailService.sendOrderConfirmationEmail(to, orderNumber, {
           order,
           customerInfo,
-        }
-      );
-    }
-  } catch (error) {
-    logServerError('Failed to send order confirmation email:', error);
-    // Don't fail order creation if email fails
+        });
+      } catch (error) {
+        logServerError('Failed to send order confirmation email:', error);
+      }
+    });
   }
 
   return order;

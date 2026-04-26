@@ -9,6 +9,7 @@ import {
 import { matchGreenWebhookInstance } from '@/lib/server/green-webhook-instance';
 import { extractNormalizedPhone } from '../../../../lib/utils/whatsapp-phone-extractor';
 import { logger, logServerError } from '@/lib/server/logger';
+import { processSupplierPollAfterWaMessage } from '@/lib/supplier-poll/process-wa-message';
 
 /**
  * Green API Webhook Handler
@@ -31,6 +32,23 @@ export async function POST(request: NextRequest) {
       try {
         if (payload.typeWebhook === 'incomingMessageReceived') {
           await upsertWaAdminFromIncomingWebhook(payload);
+          const pollWaMessageId =
+            typeof payload.idMessage === 'string' ? payload.idMessage : null;
+          const sd = payload.senderData as { chatId?: string } | undefined;
+          const pollChatId = typeof sd?.chatId === 'string' ? sd.chatId : null;
+          // Only incoming: running GPT on our outgoing (incl. AI sends) re-triggered
+          // processSupplierPollAfterWaMessage in a loop and caused message floods.
+          if (pollChatId && pollWaMessageId) {
+            void processSupplierPollAfterWaMessage({
+              chatId: pollChatId,
+              waMessageId: pollWaMessageId,
+            }).catch(err =>
+              logServerError(
+                '[WA webhook] supplier poll processing failed:',
+                err
+              )
+            );
+          }
         } else if (
           payload.typeWebhook === 'outgoingMessageReceived' ||
           payload.typeWebhook === 'outgoingAPIMessageReceived'

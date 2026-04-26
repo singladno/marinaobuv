@@ -9,6 +9,8 @@ const MEDIA_TYPES_WITH_FILE = new Set([
   'videoMessage',
   'stickerMessage',
   'documentMessage',
+  /** Green API `sendFileByUpload` often reports outgoing files as `fileMessage`, not `imageMessage`. */
+  'fileMessage',
   'audioMessage',
   'pttMessage', // voice
   'gifMessage',

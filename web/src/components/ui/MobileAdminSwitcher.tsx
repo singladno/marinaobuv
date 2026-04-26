@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { AdminWhatsAppChatPanel } from '@/components/admin/AdminWhatsAppChatPanel';
+import { useWhatsAppInbox } from '@/contexts/WhatsAppInboxContext';
 import {
   orbitIconAdmin,
   orbitIconClient,
@@ -25,7 +25,7 @@ const ORBIT_RADIUS_MOBILE = 104;
 
 export function MobileAdminSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
-  const [whatsAppOpen, setWhatsAppOpen] = useState(false);
+  const { isOpen: whatsAppOpen, openInbox } = useWhatsAppInbox();
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUser();
@@ -39,9 +39,9 @@ export function MobileAdminSwitcher() {
   }, [isOpen, resetOrbit]);
   const closeMenu = useCallback(() => setIsOpen(false), []);
   const openWhatsApp = useCallback(() => {
-    setWhatsAppOpen(true);
+    openInbox();
     setIsOpen(false);
-  }, []);
+  }, [openInbox]);
 
   const navigatePrimaryPortal = useCallback(() => {
     closeMenu();
@@ -165,11 +165,6 @@ export function MobileAdminSwitcher() {
 
   return (
     <>
-      <AdminWhatsAppChatPanel
-        open={whatsAppOpen}
-        onClose={() => setWhatsAppOpen(false)}
-      />
-
       {isOpen && !whatsAppOpen && (
         <button
           type="button"
@@ -212,7 +207,7 @@ export function MobileAdminSwitcher() {
           <button
             type="button"
             onClick={toggleMenu}
-            className="relative z-[28] flex h-full w-full cursor-pointer items-center justify-center rounded-full border-2 border-transparent text-white shadow-none transition-all duration-300 [background-clip:padding-box,border-box] [background-origin:border-box] [background-image:linear-gradient(to_right,#ea34ea,#6d28d9),linear-gradient(to_bottom_right,rgb(255_255_255/0.42),rgb(255_255_255/0.14))] hover:scale-110 hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="relative z-[28] flex h-full w-full cursor-pointer items-center justify-center rounded-full border-2 border-transparent text-white shadow-none transition-all duration-300 [background-clip:padding-box,border-box] [background-image:linear-gradient(to_right,#ea34ea,#6d28d9),linear-gradient(to_bottom_right,rgb(255_255_255/0.42),rgb(255_255_255/0.14))] [background-origin:border-box] hover:scale-110 hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             aria-label="Меню портала"
             aria-expanded={isOpen ? 'true' : 'false'}
           >

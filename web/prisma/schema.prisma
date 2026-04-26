@@ -125,11 +125,12 @@ model Provider {
   telegramId       BigInt?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  products         Product[]
-  users            User[]
-  draftProducts    WaDraftProduct[]
-  messages         WhatsAppMessage[]
-  telegramMessages TelegramMessage[]
+  products              Product[]
+  users                 User[]
+  draftProducts         WaDraftProduct[]
+  messages              WhatsAppMessage[]
+  telegramMessages      TelegramMessage[]
+  supplierPollWaMessages SupplierPollWaMessage[]
 
   @@index([name])
   @@index([phone])
@@ -308,9 +309,11 @@ model User {
   purchases          Purchase[]
   reviews            Review[]
   searchHistory      SearchHistory[]
-  sessions           Session[]
-  provider           Provider?              @relation(fields: [providerId], references: [id])
-  waAdminReadStates  WaAdminChatReadState[]
+  sessions                    Session[]
+  provider                    Provider?              @relation(fields: [providerId], references: [id])
+  waAdminReadStates           WaAdminChatReadState[]
+  supplierPollRunsCreated     SupplierPollRun[]      @relation("SupplierPollRunCreator")
+  orderActivitiesAsActor      OrderActivity[]
 
   @@index([role])
   @@index([providerId])
@@ -455,8 +458,10 @@ model Order {
   comment          String?
   gruzchik         User?                  @relation("OrderGruzchik", fields: [gruzchikId], references: [id])
   user             User?                  @relation(fields: [userId], references: [id])
-  items            OrderItem[]
-  transportOptions OrderTransportOption[]
+  items             OrderItem[]
+  transportOptions  OrderTransportOption[]
+  supplierPollRuns  SupplierPollRun[]
+  orderActivities   OrderActivity[]
 
   @@index([userId])
   @@index([status])
@@ -481,9 +486,10 @@ model OrderItem {
   isPurchased  Boolean?
   order        Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product      Product                @relation(fields: [productId], references: [id])
-  feedbacks    OrderItemFeedback[]
-  messages     OrderItemMessage[]
-  replacements OrderItemReplacement[]
+  feedbacks             OrderItemFeedback[]
+  messages              OrderItemMessage[]
+  replacements          OrderItemReplacement[]
+  supplierPollWaMessages SupplierPollWaMessage[]
 
   @@index([orderId])
   @@index([productId])
@@ -653,6 +659,81 @@ model GreenApiWebhookRelayConfig {
   updatedAt    DateTime @updatedAt
 }
 
+/// Admin-initiated WhatsApp supplier stock poll for an order (see supplier-poll flow).
+model SupplierPollRun {
+  id              String                @id @default(cuid())
+  orderId         String
+  mode            SupplierPollMode
+  status          SupplierPollRunStatus @default(IN_PROGRESS)
+  createdByUserId String
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  /// order_item_id: по замене зафиксирован ответ поставщика (PROPOSE / фото-заявка в OrderItemReplacement) в рамках этого прогона
+  replacementSupplierResolvedItemIds Json?
+
+  order       Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdBy   User                    @relation("SupplierPollRunCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  waMessages  SupplierPollWaMessage[]
+  gptTriggers SupplierPollGptTrigger[]
+  chatStates  SupplierPollChatState[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Per WhatsApp chat: supplier activity and scheduled follow-up (remind about remaining items).
+model SupplierPollChatState {
+  id                          String   @id @default(cuid())
+  pollRunId                   String
+  chatId                      String
+  /// Updated when we process an inbound supplier message for this chat (webhook).
+  lastSupplierInboundAt       DateTime?
+  /// Set when scheduled cron sent a follow-up asking about remaining positions (or any scheduled outbound).
+  lastSchedulerFollowupSentAt DateTime?
+  updatedAt                   DateTime @updatedAt
+
+  pollRun SupplierPollRun @relation(fields: [pollRunId], references: [id], onDelete: Cascade)
+
+  @@unique([pollRunId, chatId])
+  @@index([pollRunId])
+  @@index([chatId])
+}
+
+model SupplierPollWaMessage {
+  id               String           @id @default(cuid())
+  waMessageId      String           @unique
+  pollRunId        String
+  providerId       String
+  chatId           String
+  kind             SupplierPollWaKind
+  orderItemId      String?
+  /// JSON array of order item ids (for OUT_QUESTION covering a supplier batch).
+  orderItemIdsJson Json?
+  sequence         Int              @default(0)
+
+  pollRun   SupplierPollRun @relation(fields: [pollRunId], references: [id], onDelete: Cascade)
+  provider  Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  orderItem OrderItem?      @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+
+  @@index([pollRunId, chatId])
+  @@index([chatId])
+  @@index([pollRunId])
+}
+
+/// One GPT processing pass per WaAdmin message id (idempotency for webhooks).
+model SupplierPollGptTrigger {
+  id                 String   @id @default(cuid())
+  pollRunId          String
+  triggerWaMessageId String
+  createdAt          DateTime @default(now())
+
+  pollRun SupplierPollRun @relation(fields: [pollRunId], references: [id], onDelete: Cascade)
+
+  @@unique([pollRunId, triggerWaMessageId])
+  @@index([pollRunId])
+}
+
 model Purchase {
   id          String         @id @default(cuid())
   name        String
@@ -729,4 +810,51 @@ enum ProductSource {
 enum MeasurementUnit {
   PAIRS
   PIECES
+}
+
+/// Audit trail rows for order detail "История действий" (also merged with SupplierPollRun etc. in API).
+model OrderActivity {
+  id          String             @id @default(cuid())
+  orderId     String
+  kind        String
+  title       String
+  details     Json?
+  actorType   OrderActivityActor
+  actorUserId String?
+  createdAt   DateTime           @default(now())
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorUser User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+}
+
+enum OrderActivityActor {
+  USER
+  ADMIN
+  SYSTEM
+  AI_ASSISTANT
+}
+
+enum SupplierPollMode {
+  STOCK_ONLY
+  STOCK_AND_INVOICE
+}
+
+enum SupplierPollRunStatus {
+  /// Outbound messages to providers are still being sent (UI shows progress; safe to leave the page)
+  SENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SupplierPollWaKind {
+  OUT_IMAGE
+  OUT_QUESTION
+  OUT_FOLLOWUP_REPLACEMENT
+  /// Доп. вопрос по наличию: одна позиция — одно исходящее с фото (подпись фикс. в коде), не путать с заменой.
+  OUT_FOLLOWUP_STOCK
+  /// Текст в WhatsApp, сгенерированный исполнителем команд ИИ (опрос поставщиков).
+  OUT_AI_MESSAGE
 }

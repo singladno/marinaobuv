@@ -59,7 +59,7 @@ export default function CartActionButton({
           color ?? null
         );
       }}
-      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-black hover:text-white"
+      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-violet-100/80 bg-violet-50/90 text-violet-700 shadow-sm transition-all duration-200 hover:bg-gradient-to-r hover:from-violet-600 hover:to-violet-700 hover:text-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/35 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-surface)]"
     >
       <svg
         className="h-4 w-4"
