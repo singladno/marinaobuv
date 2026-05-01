@@ -14,9 +14,18 @@ import {
 } from '@/components/ui/Select';
 import {
   ArrowDownTrayIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
   ClockIcon,
   PlayIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
+
+interface OldPortalSyncPayload {
+  displayStatus: 'none' | 'running' | 'success' | 'failed';
+  lastError?: string | null;
+  lastCompletedAt?: string | null;
+}
 
 interface GroupedExport {
   date: string;
@@ -36,6 +45,7 @@ interface GroupedExport {
     localPath?: string;
     productCount?: number;
   };
+  oldPortalSync?: OldPortalSyncPayload;
 }
 
 const EXPORT_RANGE_LABELS: Record<'all' | '1d' | '3d' | '7d' | '30d', string> =
@@ -108,6 +118,11 @@ export default function AdminExportsPage() {
   /** "0" or empty = no cap; otherwise 1…MAX_EXPORT_ITEM_LIMIT. */
   const [itemLimitInput, setItemLimitInput] = useState('0');
   const [updateKey, setUpdateKey] = useState(0); // Force re-render key
+  const [oldPortalImportRunning, setOldPortalImportRunning] = useState(false);
+  const [oldPortalImportCurrent, setOldPortalImportCurrent] = useState<{
+    xmlFilename: string;
+    startedAt: string;
+  } | null>(null);
   const { addNotification } = useNotifications();
 
   // Polling interval for status updates
@@ -121,6 +136,8 @@ export default function AdminExportsPage() {
       if (!response.ok) throw new Error('Failed to fetch exports');
       const data = await response.json();
       setExports(data.exports || []);
+      setOldPortalImportRunning(Boolean(data.oldPortalImportRunning));
+      setOldPortalImportCurrent(data.oldPortalImportCurrent ?? null);
     } catch (error) {
       console.error('Error fetching exports:', error);
       addNotification({
@@ -173,6 +190,64 @@ export default function AdminExportsPage() {
       setUpdateKey(prev => prev + 1);
     } catch (error) {
       console.error('Error fetching status:', error);
+    }
+  };
+
+  const triggerOldPortalSync = async (xmlFilename: string) => {
+    if (oldPortalImportRunning) {
+      addNotification({
+        type: 'warning',
+        title: 'Уже выполняется',
+        message:
+          'Загрузка XML на старый портал уже идёт. Дождитесь завершения.',
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/exports/old-portal-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ xmlFilename }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (response.status === 409) {
+        addNotification({
+          type: 'warning',
+          title: 'Занято',
+          message:
+            payload.message ||
+            'Другой импорт на старый портал уже выполняется.',
+        });
+        await fetchExports();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          payload.message || payload.error || 'Не удалось запустить импорт'
+        );
+      }
+
+      addNotification({
+        type: 'success',
+        title: 'Запущено',
+        message:
+          'Импорт XML на старый портал выполняется. Статус обновится автоматически.',
+      });
+      await fetchExports();
+    } catch (error) {
+      console.error('Old portal sync:', error);
+      addNotification({
+        type: 'error',
+        title: 'Ошибка',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Не удалось запустить импорт на старый портал',
+      });
     }
   };
 
@@ -411,6 +486,15 @@ export default function AdminExportsPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!oldPortalImportRunning) return;
+    const interval = setInterval(() => {
+      void fetchExports();
+    }, 3000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oldPortalImportRunning]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
@@ -683,6 +767,20 @@ export default function AdminExportsPage() {
         </div>
       )}
 
+      {oldPortalImportRunning && oldPortalImportCurrent ? (
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
+          <ArrowPathIcon className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-amber-700 dark:text-amber-400" />
+          <div>
+            <p className="font-medium">
+              Импорт XML на старый портал выполняется (один файл за раз)
+            </p>
+            <p className="mt-1 text-amber-900/90 dark:text-amber-200/90">
+              {oldPortalImportCurrent.xmlFilename}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* Exports List */}
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -725,6 +823,9 @@ export default function AdminExportsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Размер
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    Старый портал
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Действия
                   </th>
@@ -734,6 +835,9 @@ export default function AdminExportsPage() {
                 {exports.map((exp, index) => {
                   const totalSize = (exp.csv?.size || 0) + (exp.xml?.size || 0);
                   const hasBoth = exp.csv && exp.xml;
+                  const sync = exp.oldPortalSync;
+                  const rowImportLocked =
+                    oldPortalImportRunning || sync?.displayStatus === 'running';
 
                   return (
                     <tr
@@ -769,6 +873,72 @@ export default function AdminExportsPage() {
                             ({formatFileSize(exp.csv!.size)} +{' '}
                             {formatFileSize(exp.xml!.size)})
                           </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                        {!exp.xml ? (
+                          <span className="text-gray-400">—</span>
+                        ) : (
+                          <div className="flex min-w-[10rem] flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                            <div
+                              className="flex items-center gap-1.5"
+                              title={
+                                sync?.lastError
+                                  ? sync.lastError
+                                  : sync?.lastCompletedAt
+                                    ? `Завершено: ${new Date(sync.lastCompletedAt).toLocaleString('ru-RU')}`
+                                    : undefined
+                              }
+                            >
+                              {sync?.displayStatus === 'running' && (
+                                <>
+                                  <ArrowPathIcon className="h-5 w-5 shrink-0 animate-spin text-amber-600 dark:text-amber-400" />
+                                  <span className="text-xs text-amber-800 dark:text-amber-200">
+                                    Идёт…
+                                  </span>
+                                </>
+                              )}
+                              {sync?.displayStatus === 'success' && (
+                                <CheckCircleIcon
+                                  className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400"
+                                  title="Загружено на старый портал"
+                                />
+                              )}
+                              {sync?.displayStatus === 'failed' && (
+                                <XCircleIcon
+                                  className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400"
+                                  title={sync?.lastError || 'Ошибка импорта'}
+                                />
+                              )}
+                              {(!sync || sync.displayStatus === 'none') && (
+                                <span
+                                  className="text-xs text-gray-500 dark:text-gray-400"
+                                  title="Этот XML ещё не отправляли на старый портал"
+                                >
+                                  Не отправлялся
+                                </span>
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={rowImportLocked}
+                              title={
+                                rowImportLocked
+                                  ? 'Дождитесь завершения текущего импорта на старый портал'
+                                  : 'Отправить URL этого XML на старый портал (POST mo_ajax.php)'
+                              }
+                              className="whitespace-nowrap"
+                              onClick={() =>
+                                exp.xml &&
+                                triggerOldPortalSync(exp.xml.filename)
+                              }
+                            >
+                              <PlayIcon className="mr-1 h-3.5 w-3.5 shrink-0" />
+                              На портал
+                            </Button>
+                          </div>
                         )}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">

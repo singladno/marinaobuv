@@ -607,11 +607,33 @@ export async function exportProducts(
   return result;
 }
 
+/** Written only by the daily product-export cron — manual exports must not advance this. */
+export const CRON_LAST_EXPORT_FILENAME = '.last-export-cron';
+
 /**
- * Get last export date from file
+ * When incremental cron export runs, the lower bound is `max(lastCronExport, now - N days)`
+ * so a missed cron does not dump weeks of backlog in one file.
+ */
+export const CRON_MAX_INCREMENTAL_LOOKBACK_DAYS = 2;
+
+const LEGACY_LAST_EXPORT_FILENAME = '.last-export';
+
+function cronLastExportFilePath(): string {
+  return path.join(process.cwd(), 'exports', CRON_LAST_EXPORT_FILENAME);
+}
+
+function legacyLastExportFilePath(): string {
+  return path.join(process.cwd(), 'exports', LEGACY_LAST_EXPORT_FILENAME);
+}
+
+/**
+ * Last successful **cron** export time (incremental watermark).
+ * Manual `/api/admin/exports/trigger` and GET `/api/admin/products/export` do not update this file.
  */
 export function getLastExportDate(): Date | null {
-  const lastExportFile = path.join(process.cwd(), 'exports', '.last-export');
+  migrateLegacyLastExportFileIfNeeded();
+
+  const lastExportFile = cronLastExportFilePath();
   if (fs.existsSync(lastExportFile)) {
     const content = fs.readFileSync(lastExportFile, 'utf-8').trim();
     if (content) {
@@ -621,16 +643,29 @@ export function getLastExportDate(): Date | null {
   return null;
 }
 
+function migrateLegacyLastExportFileIfNeeded(): void {
+  const cronPath = cronLastExportFilePath();
+  const legacyPath = legacyLastExportFilePath();
+  if (fs.existsSync(cronPath) || !fs.existsSync(legacyPath)) {
+    return;
+  }
+  try {
+    fs.renameSync(legacyPath, cronPath);
+  } catch {
+    // ignore — cron may recreate later
+  }
+}
+
 /**
- * Save last export date to file
+ * Persist cron incremental watermark. Call **only** from `product-export-cron.ts`.
  */
 export function saveLastExportDate(date: Date): void {
   const exportsDir = path.join(process.cwd(), 'exports');
   if (!fs.existsSync(exportsDir)) {
     fs.mkdirSync(exportsDir, { recursive: true });
   }
-  const lastExportFile = path.join(exportsDir, '.last-export');
-  fs.writeFileSync(lastExportFile, date.toISOString(), 'utf-8');
+  migrateLegacyLastExportFileIfNeeded();
+  fs.writeFileSync(cronLastExportFilePath(), date.toISOString(), 'utf-8');
 }
 
 export interface ExportStatus {

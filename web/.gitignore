@@ -41,6 +41,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Cron export watermark (server-local)
+exports/.last-export-cron
+exports/.last-export
+
 # Local backups
 backups/
 ../backups/

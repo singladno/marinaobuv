@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
@@ -9,13 +11,13 @@ import {
 import { logRequestError } from '@/lib/server/request-logging';
 import {
   exportProducts,
-  saveLastExportDate,
   getLastExportDate,
   saveExportStatus,
   isExportRunning,
   MAX_PRODUCT_EXPORT_ITEM_LIMIT,
   type ExportStatus as ExportStatusType,
 } from '@/lib/services/product-export-service';
+import { queueOldPortalXmlImportBackgroundSafe } from '@/lib/services/old-portal-xml-import-service';
 
 // Helper function to check if user has export access
 function hasExportAccess(role: string): boolean {
@@ -145,8 +147,7 @@ export async function POST(request: NextRequest) {
         limit,
       });
 
-      // Save last export date
-      saveLastExportDate(new Date());
+      // Cron watermark (`saveLastExportDate`) is only updated by product-export-cron — manual runs must not affect incremental cron exports.
 
       // Set status to completed
       const completedStatus: ExportStatusType = {
@@ -159,6 +160,14 @@ export async function POST(request: NextRequest) {
         },
       };
       saveExportStatus(completedStatus);
+
+      if (xmlResult.s3Url) {
+        queueOldPortalXmlImportBackgroundSafe({
+          xmlFilename: path.basename(xmlResult.filePath),
+          s3Url: xmlResult.s3Url,
+          triggeredBy: `export-trigger:${session.user?.id ?? 'session'}`,
+        });
+      }
 
       return NextResponse.json({
         success: true,

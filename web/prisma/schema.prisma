@@ -858,3 +858,24 @@ enum SupplierPollWaKind {
   /// Текст в WhatsApp, сгенерированный исполнителем команд ИИ (опрос поставщиков).
   OUT_AI_MESSAGE
 }
+
+/// Импорт XML выгрузки на legacy-портал (ap.sferait.ru), один активный прогон за раз.
+enum OldPortalXmlImportStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model OldPortalXmlImport {
+  id           String                   @id @default(cuid())
+  xmlFilename  String
+  s3Url        String                   @db.Text
+  status       OldPortalXmlImportStatus
+  errorMessage String?                  @db.Text
+  triggeredBy  String?
+  startedAt    DateTime                 @default(now())
+  completedAt  DateTime?
+
+  @@index([xmlFilename, startedAt(sort: Desc)])
+  @@index([status, startedAt(sort: Desc)])
+}

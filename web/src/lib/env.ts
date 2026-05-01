@@ -196,6 +196,9 @@ const schema = z
     GREEN_API_WEBHOOK_PRIMARY_URL: z.string().url().optional(),
     /// Full URL Green API should call (setSettings / dashboard). Defaults to SITE_URL + /api/webhooks/green-api/relay
     GREEN_API_INCOMING_WEBHOOK_URL: z.string().url().optional(),
+
+    /** When `true`, after XML export POST the XML URL to legacy `mo_ajax.php`. */
+    OLD_PORTAL_XML_IMPORT_ENABLED: z.string().optional(),
   })
   .refine(
     data => isBuildContext || data.YC_IAM_TOKEN || data.YC_API_KEY,
@@ -302,6 +305,8 @@ const raw = {
 
   GREEN_API_WEBHOOK_PRIMARY_URL: process.env.GREEN_API_WEBHOOK_PRIMARY_URL,
   GREEN_API_INCOMING_WEBHOOK_URL: process.env.GREEN_API_INCOMING_WEBHOOK_URL,
+
+  OLD_PORTAL_XML_IMPORT_ENABLED: process.env.OLD_PORTAL_XML_IMPORT_ENABLED,
 };
 
 const parsed = schema.safeParse(raw);
@@ -321,4 +326,9 @@ export function getWaChatIds(): string[] {
   if (env.WA_CHAT_IDS && env.WA_CHAT_IDS.length > 0) return env.WA_CHAT_IDS;
   if (env.TARGET_GROUP_ID) return [env.TARGET_GROUP_ID];
   return [];
+}
+
+/** Legacy Sfera XML upload via HTTP POST to `mo_ajax.php` (see `old-portal-xml-import-service`). */
+export function isOldPortalXmlImportEnabled(): boolean {
+  return env.OLD_PORTAL_XML_IMPORT_ENABLED === 'true';
 }

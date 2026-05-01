@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth';
 import { publicUrl } from '@/lib/s3u';
 import { env } from '@/lib/env';
 import { s3Client } from '@/lib/s3u';
+import { prisma } from '@/lib/server/db';
 import { logRequestError } from '@/lib/server/request-logging';
 import { logDebug, logWarn } from '@/lib/server/logger';
 
@@ -19,6 +20,13 @@ interface ExportFile {
   s3Url?: string;
   localPath?: string;
   productCount?: number;
+}
+
+interface OldPortalSyncPayload {
+  /** What to show for this row’s XML file */
+  displayStatus: 'none' | 'running' | 'success' | 'failed';
+  lastError?: string | null;
+  lastCompletedAt?: string | null;
 }
 
 interface GroupedExport {
@@ -39,6 +47,7 @@ interface GroupedExport {
     localPath?: string;
     productCount?: number;
   };
+  oldPortalSync?: OldPortalSyncPayload;
 }
 
 // Helper function to check if user has export access
@@ -80,7 +89,9 @@ export async function GET(request: NextRequest) {
           continuationToken = response.NextContinuationToken;
         } while (continuationToken);
 
-        logDebug(`📦 Found ${allObjects.length} objects in S3 with prefix 'exports/products-export-'`);
+        logDebug(
+          `📦 Found ${allObjects.length} objects in S3 with prefix 'exports/products-export-'`
+        );
 
         for (const object of allObjects) {
           if (!object.Key) continue;
@@ -93,14 +104,16 @@ export async function GET(request: NextRequest) {
             continue;
           }
 
-            const format = filename.endsWith('.csv') ? 'csv' : 'xml';
-            // Match both old format (YYYY-MM-DD) and new format (YYYY-MM-DD-HH-MM-SS)
-            const dateMatch = filename.match(/products-export-(\d{4}-\d{2}-\d{2})(?:-(\d{2}-\d{2}-\d{2}))?/);
-            const date = dateMatch
-              ? dateMatch[1] // Use date part only for grouping
-              : object.LastModified
-                ? object.LastModified.toISOString().split('T')[0]
-                : new Date().toISOString().split('T')[0];
+          const format = filename.endsWith('.csv') ? 'csv' : 'xml';
+          // Match both old format (YYYY-MM-DD) and new format (YYYY-MM-DD-HH-MM-SS)
+          const dateMatch = filename.match(
+            /products-export-(\d{4}-\d{2}-\d{2})(?:-(\d{2}-\d{2}-\d{2}))?/
+          );
+          const date = dateMatch
+            ? dateMatch[1] // Use date part only for grouping
+            : object.LastModified
+              ? object.LastModified.toISOString().split('T')[0]
+              : new Date().toISOString().split('T')[0];
 
           const s3Key = object.Key;
           const s3Url = publicUrl(s3Key);
@@ -138,7 +151,12 @@ export async function GET(request: NextRequest) {
 
         logDebug(`✅ Processed ${exportsMap.size} export files from S3`);
       } catch (s3Error) {
-        logRequestError(request, '/api/admin/products/export/list', s3Error, '❌ Error listing S3 exports:');
+        logRequestError(
+          request,
+          '/api/admin/products/export/list',
+          s3Error,
+          '❌ Error listing S3 exports:'
+        );
         // Continue with local files if S3 fails
       }
     } else {
@@ -162,7 +180,9 @@ export async function GET(request: NextRequest) {
             const format = file.endsWith('.csv') ? 'csv' : 'xml';
 
             // Extract date from filename (products-export-YYYY-MM-DD or products-export-YYYY-MM-DD-HH-MM-SS)
-            const dateMatch = file.match(/products-export-(\d{4}-\d{2}-\d{2})(?:-(\d{2}-\d{2}-\d{2}))?/);
+            const dateMatch = file.match(
+              /products-export-(\d{4}-\d{2}-\d{2})(?:-(\d{2}-\d{2}-\d{2}))?/
+            );
             const date = dateMatch
               ? dateMatch[1] // Use date part only for grouping
               : stats.mtime.toISOString().split('T')[0];
@@ -174,7 +194,10 @@ export async function GET(request: NextRequest) {
             // Try to get product count from metadata file
             let productCount: number | undefined;
             try {
-              const metadataPath = filePath.replace(/\.(csv|xml)$/, '.meta.json');
+              const metadataPath = filePath.replace(
+                /\.(csv|xml)$/,
+                '.meta.json'
+              );
               if (fs.existsSync(metadataPath)) {
                 const metadata = JSON.parse(
                   fs.readFileSync(metadataPath, 'utf-8')
@@ -258,15 +281,86 @@ export async function GET(request: NextRequest) {
       return b.timestamp.localeCompare(a.timestamp);
     });
 
+    const xmlFilenames = groupedExports
+      .map(g => g.xml?.filename)
+      .filter((x): x is string => !!x);
+
+    const runningImport = await prisma.oldPortalXmlImport.findFirst({
+      where: { status: 'RUNNING' },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    const historyRows =
+      xmlFilenames.length > 0
+        ? await prisma.oldPortalXmlImport.findMany({
+            where: { xmlFilename: { in: xmlFilenames } },
+            orderBy: { startedAt: 'desc' },
+          })
+        : [];
+
+    const latestByXmlFilename = new Map<string, (typeof historyRows)[number]>();
+    for (const row of historyRows) {
+      if (!latestByXmlFilename.has(row.xmlFilename)) {
+        latestByXmlFilename.set(row.xmlFilename, row);
+      }
+    }
+
+    for (const g of groupedExports) {
+      const xmlFn = g.xml?.filename;
+      if (!xmlFn) continue;
+
+      let displayStatus: OldPortalSyncPayload['displayStatus'] = 'none';
+      let lastError: string | null | undefined;
+      let lastCompletedAt: string | null | undefined;
+
+      if (
+        runningImport &&
+        runningImport.xmlFilename === xmlFn &&
+        runningImport.status === 'RUNNING'
+      ) {
+        displayStatus = 'running';
+        const row = latestByXmlFilename.get(xmlFn);
+        lastError = row?.errorMessage;
+        lastCompletedAt = row?.completedAt?.toISOString() ?? null;
+      } else {
+        const row = latestByXmlFilename.get(xmlFn);
+        if (row) {
+          lastError = row.errorMessage;
+          lastCompletedAt = row.completedAt?.toISOString() ?? null;
+          if (row.status === 'SUCCESS') displayStatus = 'success';
+          else if (row.status === 'FAILED') displayStatus = 'failed';
+          else if (row.status === 'RUNNING') displayStatus = 'running';
+        }
+      }
+
+      g.oldPortalSync = {
+        displayStatus,
+        lastError,
+        lastCompletedAt,
+      };
+    }
+
     logDebug(`📊 Returning ${groupedExports.length} grouped export entries`);
 
     return NextResponse.json({
       success: true,
       exports: groupedExports,
       count: groupedExports.length,
+      oldPortalImportRunning: !!runningImport,
+      oldPortalImportCurrent: runningImport
+        ? {
+            xmlFilename: runningImport.xmlFilename,
+            startedAt: runningImport.startedAt.toISOString(),
+          }
+        : null,
     });
   } catch (error) {
-    logRequestError(request, '/api/admin/products/export/list', error, 'Error listing exports:');
+    logRequestError(
+      request,
+      '/api/admin/products/export/list',
+      error,
+      'Error listing exports:'
+    );
     return NextResponse.json(
       {
         error: 'Failed to list exports',

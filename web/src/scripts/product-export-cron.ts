@@ -1,11 +1,15 @@
+import path from 'node:path';
+
 import {
+  CRON_MAX_INCREMENTAL_LOOKBACK_DAYS,
   exportProducts,
   getLastExportDate,
   saveLastExportDate,
 } from '../lib/services/product-export-service';
-import { prisma } from '../lib/server/db';
+import { queueOldPortalXmlImport } from '../lib/services/old-portal-xml-import-service';
 import fs from 'node:fs';
-import path from 'node:path';
+
+import { prisma } from '../lib/server/db';
 
 /**
  * Setup file logging for product export
@@ -95,9 +99,30 @@ async function main() {
     // If no last export date, this is the first run - export all products
     const onlyNew = !!lastExportDate;
 
+    /** Incremental lower bound: never older than CRON_MAX_INCREMENTAL_LOOKBACK_DAYS from now. */
+    let incrementalSince: Date | undefined;
+    if (onlyNew && lastExportDate) {
+      const capStart = new Date(
+        Date.now() - CRON_MAX_INCREMENTAL_LOOKBACK_DAYS * 24 * 60 * 60 * 1000
+      );
+      incrementalSince =
+        lastExportDate.getTime() > capStart.getTime()
+          ? lastExportDate
+          : capStart;
+      if (incrementalSince.getTime() !== lastExportDate.getTime()) {
+        console.log(
+          `⏱️  Cron was stale — capping lookback to last ${CRON_MAX_INCREMENTAL_LOOKBACK_DAYS} days (from ${incrementalSince.toISOString()})`
+        );
+      }
+    }
+
     if (onlyNew) {
-      console.log(`📅 Last export was at: ${lastExportDate.toISOString()}`);
-      console.log('📦 Exporting only new/updated products since last export');
+      console.log(
+        `📅 Last cron export was at: ${lastExportDate!.toISOString()}`
+      );
+      console.log(
+        `📦 Exporting products created/updated since ${incrementalSince!.toISOString()}`
+      );
     } else {
       console.log('📦 First export - exporting all active products');
       console.log(
@@ -120,7 +145,7 @@ async function main() {
     const csvResult = await exportProducts({
       format: 'csv',
       onlyNew,
-      lastExportDate: lastExportDate || undefined,
+      lastExportDate: incrementalSince,
       sharedTimestamp,
     });
 
@@ -137,7 +162,7 @@ async function main() {
     const xmlResult = await exportProducts({
       format: 'xml',
       onlyNew,
-      lastExportDate: lastExportDate || undefined,
+      lastExportDate: incrementalSince,
       sharedTimestamp,
     });
 
@@ -147,6 +172,35 @@ async function main() {
     console.log(`📁 File saved to: ${xmlResult.filePath}`);
     if (xmlResult.s3Url) {
       console.log(`☁️  File uploaded to S3: ${xmlResult.s3Url}`);
+    }
+
+    if (xmlResult.s3Url) {
+      const portalResult = await queueOldPortalXmlImport({
+        xmlFilename: path.basename(xmlResult.filePath),
+        s3Url: xmlResult.s3Url,
+        triggeredBy: 'cron:product-export-daily',
+        mode: 'await',
+      });
+
+      if (!portalResult.ok) {
+        if (portalResult.reason === 'disabled') {
+          console.log(
+            'ℹ️  Old portal XML import skipped (set OLD_PORTAL_XML_IMPORT_ENABLED=true to enable)'
+          );
+        } else if (portalResult.reason === 'busy') {
+          console.warn(
+            '⚠️  Old portal XML import skipped — another import was already running'
+          );
+        }
+      } else if (portalResult.importSucceeded === false) {
+        console.error(
+          '❌ Old portal XML import finished with an error — see logs / админка «Старый портал».'
+        );
+      }
+    } else {
+      console.warn(
+        '⚠️  XML export has no S3 URL — skipping old portal import (check S3 configuration)'
+      );
     }
 
     // Save last export date

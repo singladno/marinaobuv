@@ -14,7 +14,6 @@ import {
   getLastExportDate,
   parseExportDayEnd,
   parseExportDayStart,
-  saveLastExportDate,
   MAX_PRODUCT_EXPORT_ITEM_LIMIT,
   type ExportOptions,
 } from '@/lib/services/product-export-service';
@@ -126,8 +125,7 @@ export async function GET(request: NextRequest) {
     // Perform export
     const result = await exportProducts(options);
 
-    // Save last export date
-    saveLastExportDate(result.exportedAt);
+    // Cron watermark is only updated by product-export-cron — manual GET export must not affect incremental cron exports.
 
     // If download is requested, return file
     if (download) {

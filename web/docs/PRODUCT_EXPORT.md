@@ -13,11 +13,13 @@
 ## Форматы экспорта
 
 ### CSV формат
+
 - Кодировка: UTF-8 с BOM (для корректного отображения в Excel)
 - Разделитель: запятая
 - Поля: ID, Название, Артикул, Категория, Цена, Валюта, Материал, Пол, Сезон, Описание, Размеры, Изображения, Активен, Даты, URL
 
 ### XML формат
+
 - Кодировка: UTF-8
 - Структура: `<products><product>...</product></products>`
 - Содержит все те же поля, что и CSV, в структурированном виде
@@ -30,11 +32,13 @@
 - **EXPORT_MANAGER** — доступ только к функциям экспорта товаров
 
 Пользователи с ролью `EXPORT_MANAGER` могут:
+
 - Экспортировать товары через API
 - Просматривать список доступных экспортов
 - Скачивать файлы экспорта
 
 Пользователи с ролью `EXPORT_MANAGER` **не могут**:
+
 - Управлять товарами
 - Изменять настройки системы
 - Доступ к другим административным функциям
@@ -61,10 +65,12 @@
    - Публичные URL доступны через CDN
 
 **Логи:**
+
 - `web/logs/product-export.log` - содержит информацию о выгрузке и S3 URLs
 
 **Отключение автоматической выгрузки:**
 Добавьте в `.env`:
+
 ```bash
 DISABLE_CRON_PRODUCT_EXPORT=true
 ```
@@ -81,6 +87,7 @@ DISABLE_CRON_PRODUCT_EXPORT=true
 ```
 
 **Коллеги могут:**
+
 1. Получить ссылку из логов или от администратора
 2. Скачать файл напрямую по ссылке
 3. Использовать ссылку в автоматизированных системах
@@ -88,12 +95,14 @@ DISABLE_CRON_PRODUCT_EXPORT=true
 #### Вариант 2: API для получения списка файлов
 
 **Получить список всех доступных экспортов:**
+
 ```bash
 GET /api/admin/products/export/list
 Authorization: Bearer <admin_token>
 ```
 
 **Ответ:**
+
 ```json
 {
   "success": true,
@@ -112,6 +121,7 @@ Authorization: Bearer <admin_token>
 ```
 
 **Скачать конкретный файл:**
+
 ```bash
 GET /api/admin/products/export/download/products-export-2025-01-15.csv
 Authorization: Bearer <admin_token>
@@ -120,6 +130,7 @@ Authorization: Bearer <admin_token>
 #### Вариант 3: Доступ к файлам на сервере
 
 Если у коллег есть доступ к серверу:
+
 ```bash
 # Найти последние экспорты
 ls -lth /var/www/marinaobuv/web/exports/products-export-*.csv
@@ -135,38 +146,47 @@ scp user@server:/var/www/marinaobuv/web/exports/products-export-2025-01-15.csv .
 ### Ручной экспорт через API
 
 #### Экспорт всех товаров (CSV)
+
 ```bash
 GET /api/admin/products/export?format=csv
 ```
 
 #### Экспорт всех товаров (XML)
+
 ```bash
 GET /api/admin/products/export?format=xml
 ```
 
 #### Экспорт только новых товаров (с момента последней выгрузки)
+
 ```bash
 GET /api/admin/products/export?format=csv&onlyNew=true
 ```
 
 #### Получить метаданные без скачивания файла
+
 ```bash
 GET /api/admin/products/export?format=csv&download=false
 ```
 
 **Требования:**
+
 - Авторизация обязательна
 - Роль: `ADMIN` или `EXPORT_MANAGER`
 
 ### Программный экспорт
 
 ```typescript
-import { exportProducts, getLastExportDate, saveLastExportDate } from '@/lib/services/product-export-service';
+import {
+  exportProducts,
+  getLastExportDate,
+  saveLastExportDate,
+} from '@/lib/services/product-export-service';
 
 // Экспорт всех товаров
 const result = await exportProducts({
   format: 'csv',
-  outputPath: '/path/to/export.csv'
+  outputPath: '/path/to/export.csv',
 });
 
 // Экспорт только новых товаров
@@ -174,39 +194,40 @@ const lastExport = getLastExportDate();
 const result = await exportProducts({
   format: 'csv',
   onlyNew: true,
-  lastExportDate: lastExport || undefined
+  lastExportDate: lastExport || undefined,
 });
 
-// Сохранить дату последнего экспорта
-saveLastExportDate(new Date());
+// Только сценарий daily-cron должен вызывать saveLastExportDate — админские выгрузки не трогают watermark.
+// saveLastExportDate(new Date());
 ```
 
 ## Структура экспортируемых данных
 
 ### Поля товара
 
-| Поле | Описание | Пример |
-|------|----------|--------|
-| ID | Уникальный идентификатор товара | `clx123...` |
-| Название | Название товара | `Туфли кожаные` |
-| Артикул | Артикул товара | `ART-12345` |
-| Категория | Путь категории | `/женская-обувь/туфли` |
-| Цена (руб.) | Цена за пару | `2500` |
-| Валюта | Валюта цены | `RUB` |
-| Материал | Материал изготовления | `Кожа` |
-| Пол | Пол | `FEMALE`, `MALE` |
-| Сезон | Сезон | `SPRING`, `SUMMER`, `AUTUMN`, `WINTER` |
-| Описание | Описание товара | `Описание...` |
-| Размеры | Доступные размеры | `36, 37, 38` |
-| Изображения | URL изображений через запятую | `https://...` |
-| Активен | Статус активности | `Да` / `Нет` |
-| Дата создания | ISO дата создания | `2025-01-15T10:30:00.000Z` |
-| Дата обновления | ISO дата обновления | `2025-01-15T10:30:00.000Z` |
-| URL | URL товара на сайте | `https://marina-obuv.ru/products/slug` |
+| Поле            | Описание                        | Пример                                 |
+| --------------- | ------------------------------- | -------------------------------------- |
+| ID              | Уникальный идентификатор товара | `clx123...`                            |
+| Название        | Название товара                 | `Туфли кожаные`                        |
+| Артикул         | Артикул товара                  | `ART-12345`                            |
+| Категория       | Путь категории                  | `/женская-обувь/туфли`                 |
+| Цена (руб.)     | Цена за пару                    | `2500`                                 |
+| Валюта          | Валюта цены                     | `RUB`                                  |
+| Материал        | Материал изготовления           | `Кожа`                                 |
+| Пол             | Пол                             | `FEMALE`, `MALE`                       |
+| Сезон           | Сезон                           | `SPRING`, `SUMMER`, `AUTUMN`, `WINTER` |
+| Описание        | Описание товара                 | `Описание...`                          |
+| Размеры         | Доступные размеры               | `36, 37, 38`                           |
+| Изображения     | URL изображений через запятую   | `https://...`                          |
+| Активен         | Статус активности               | `Да` / `Нет`                           |
+| Дата создания   | ISO дата создания               | `2025-01-15T10:30:00.000Z`             |
+| Дата обновления | ISO дата обновления             | `2025-01-15T10:30:00.000Z`             |
+| URL             | URL товара на сайте             | `https://marina-obuv.ru/products/slug` |
 
 ### Какие товары экспортируются
 
 Экспортируются только активные товары (`isActive: true`), которые:
+
 - Обработаны парсером (`batchProcessingStatus: 'completed'`)
 - ИЛИ созданы вручную (`source: 'MANUAL'`)
 - ИЛИ импортированы из агрегатора (`source: 'AG'`)
@@ -238,12 +259,14 @@ saveLastExportDate(new Date());
 ### Изменение времени выгрузки
 
 Отредактируйте `scripts/cron-jobs.conf`:
+
 ```bash
 # Изменить время (например, на 03:00)
 0 3 * * * cd /var/www/marinaobuv/web && ...
 ```
 
 Затем переустановите cron задачи:
+
 ```bash
 ./scripts/install-crons.sh
 ```
@@ -273,7 +296,9 @@ grep "File uploaded to S3" web/logs/product-export.log | tail -2
 
 ### Проверка последней выгрузки
 
-Файл `.last-export` в директории `web/exports/` содержит дату последней выгрузки.
+Файл `.last-export-cron` в директории `web/exports/` содержит время последней **успешной выгрузки по cron** (инкрементальный watermark). Ручные экспорты из админки этот файл не меняют. При первом запуске после обновления старый `.last-export` переименовывается в `.last-export-cron`.
+
+Если cron долго не работал, каждый запуск берёт не более **`CRON_MAX_INCREMENTAL_LOOKBACK_DAYS` (2)** календарных суток изменений: нижняя граница — `max(последний cron, сейчас − 2 дня)`.
 
 ### Проверка статуса cron задачи
 
@@ -290,12 +315,14 @@ ls -lh web/exports/products-export-*.csv
 ### Получение ссылок на файлы для коллег
 
 **Способ 1: Из логов**
+
 ```bash
 # Получить последние S3 URLs
 grep "File uploaded to S3" web/logs/product-export.log | tail -2
 ```
 
 **Способ 2: Через API**
+
 ```bash
 curl -H "Authorization: Bearer <token>" \
   https://your-domain.com/api/admin/products/export/list
@@ -309,11 +336,13 @@ curl -H "Authorization: Bearer <token>" \
 ### Экспорт не выполняется автоматически
 
 1. Проверьте, что cron задача установлена:
+
    ```bash
    crontab -l | grep product-export
    ```
 
 2. Проверьте логи:
+
    ```bash
    tail -f web/logs/product-export.log
    ```
@@ -323,6 +352,7 @@ curl -H "Authorization: Bearer <token>" \
 ### Файлы не создаются
 
 1. Проверьте права доступа к директории `web/exports/`:
+
    ```bash
    mkdir -p web/exports
    chmod 755 web/exports
