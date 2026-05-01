@@ -65,6 +65,15 @@ function mergeSizeRows(rows: SizeRow[]): SizeRow[] {
   return Array.from(map.entries()).map(([size, count]) => ({ size, count }));
 }
 
+/**
+ * Total units per box from sizes (pairs when measurementUnit is PAIRS, etc.).
+ * Matches pricing logic: sum of `count` across normalized size rows.
+ */
+function qtyInBoxFromSizes(value: unknown): number {
+  const rows = normalizeSizeRows(value);
+  return rows.reduce((sum, r) => sum + r.count, 0);
+}
+
 function normalizeSizeRows(value: unknown): SizeRow[] {
   if (value === null || value === undefined) return [];
   try {
@@ -124,10 +133,7 @@ function normalizeSizeRows(value: unknown): SizeRow[] {
 }
 
 /** "6 пар" / "1 пара" / "2 штуки" — form after a numeral. */
-function quantityUnitWord(
-  n: number,
-  unit: 'PAIRS' | 'PIECES'
-): string {
+function quantityUnitWord(n: number, unit: 'PAIRS' | 'PIECES'): string {
   const m = n % 100;
   if (m >= 11 && m <= 14) {
     return unit === 'PIECES' ? 'штук' : 'пар';
@@ -242,6 +248,7 @@ async function exportToCsv(products: any[], outputPath: string): Promise<void> {
     'Сезон',
     'Описание',
     'Размеры',
+    'Кол-во в коробке',
     'Изображения',
     'Активен',
     'Дата создания',
@@ -281,6 +288,7 @@ async function exportToCsv(products: any[], outputPath: string): Promise<void> {
         product.sizes,
         (product.measurementUnit as 'PAIRS' | 'PIECES') ?? 'PAIRS'
       ),
+      qtyInBoxFromSizes(product.sizes),
       images,
       product.isActive ? 'Да' : 'Нет',
       product.createdAt.toISOString(),
@@ -350,6 +358,9 @@ async function exportToXml(products: any[], outputPath: string): Promise<void> {
     } else {
       xmlLines.push('    <sizes></sizes>');
     }
+    xmlLines.push(
+      `    <qty>${escapeXmlValue(qtyInBoxFromSizes(product.sizes))}</qty>`
+    );
     xmlLines.push(
       `    <isActive>${product.isActive ? 'true' : 'false'}</isActive>`
     );

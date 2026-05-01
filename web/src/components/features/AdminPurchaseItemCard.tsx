@@ -231,11 +231,19 @@ function arePropsEqual(prev: Props, next: Props): boolean {
   }
 
   if (prev.item.id !== next.item.id) return false;
+  if ((prev.item.color ?? null) !== (next.item.color ?? null)) return false;
   if (prev.item.sortIndex !== next.item.sortIndex) return false;
   if (prev.item.name !== next.item.name) return false;
   if (prev.item.description !== next.item.description) return false;
   if (Number(prev.item.price) !== Number(next.item.price)) return false;
   if (Number(prev.item.oldPrice) !== Number(next.item.oldPrice)) return false;
+
+  const pImgs = prev.item.product?.images ?? [];
+  const nImgs = next.item.product?.images ?? [];
+  if (pImgs.length !== nImgs.length) return false;
+  for (let i = 0; i < pImgs.length; i++) {
+    if (pImgs[i]?.id !== nImgs[i]?.id) return false;
+  }
 
   return true;
 }
