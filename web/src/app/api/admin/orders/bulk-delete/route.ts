@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { logRequestError } from '@/lib/server/request-logging';
+import { formatBulkOrdersDeletedMessage } from '@/utils/orderNumberUtils';
 export async function DELETE(req: NextRequest) {
   try {
     const auth = await requireAuth(req, 'ADMIN');
@@ -32,11 +33,16 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({
       success: true,
       deletedCount: result.count,
-      message: `Successfully deleted ${result.count} order${result.count === 1 ? '' : 's'}`,
+      message: formatBulkOrdersDeletedMessage(result.count),
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unexpected error';
-    logRequestError(req, '/api/admin/orders/bulk-delete', message, 'Bulk delete orders error:');
+    logRequestError(
+      req,
+      '/api/admin/orders/bulk-delete',
+      message,
+      'Bulk delete orders error:'
+    );
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

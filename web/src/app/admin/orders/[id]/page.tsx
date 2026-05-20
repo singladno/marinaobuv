@@ -328,6 +328,7 @@ export default function OrderDetailsPage() {
   >([]);
   const [purchasedFilter, setPurchasedFilter] = useState<string>('all'); // 'all' | 'purchased' | 'not-purchased'
   const [availableFilter, setAvailableFilter] = useState<string>('all'); // 'all' | 'available' | 'not-available'
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
 
   // Separate state for checkbox UI (immediate) and functionality (deferred)
   const [showImagesCheckbox, setShowImagesCheckbox] = useState<boolean>(false);
@@ -933,6 +934,56 @@ export default function OrderDetailsPage() {
     }
   };
 
+  const handleDeleteOrder = async () => {
+    if (!order) return;
+
+    const displayNumber = formatOrderNumber(order.orderNumber);
+
+    const confirmed = await confirmationModal.showConfirmation({
+      title: 'Удалить заказ?',
+      message: `Вы уверены, что хотите удалить заказ ${displayNumber}? Это действие нельзя отменить. Все позиции и связанные данные будут удалены.`,
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      confirmationModal.setLoading(true);
+      setIsDeletingOrder(true);
+
+      const response = await fetch('/api/admin/orders/bulk-delete', {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ orderIds: [orderId] }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete order');
+      }
+
+      addNotification({
+        type: 'success',
+        title: 'Заказ удалён',
+        message: `Заказ ${displayNumber} успешно удалён`,
+      });
+
+      router.push('/admin/orders');
+    } catch (error) {
+      console.error('Failed to delete order:', error);
+      confirmationModal.setLoading(false);
+      addNotification({
+        type: 'error',
+        title: 'Ошибка удаления',
+        message: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    } finally {
+      setIsDeletingOrder(false);
+    }
+  };
+
   const handleOrderItemQtySave = async (
     itemId: string,
     newQty: number | null
@@ -1118,6 +1169,20 @@ export default function OrderDetailsPage() {
             </p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDeleteOrder}
+          disabled={isDeletingOrder}
+          className="shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30"
+        >
+          {isDeletingOrder ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="mr-2 h-4 w-4" />
+          )}
+          Удалить заказ
+        </Button>
       </div>
 
       {/* Order Info Cards */}

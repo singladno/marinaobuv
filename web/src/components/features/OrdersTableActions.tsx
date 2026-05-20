@@ -1,6 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { Trash2 } from 'lucide-react';
+
+import { Button } from '@/components/ui/Button';
 import { SearchInput } from '@/components/ui/SearchInput';
 
 interface OrdersTableActionsProps {
@@ -8,6 +11,10 @@ interface OrdersTableActionsProps {
   showBottomBorder?: boolean;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  selectedCount?: number;
+  onBulkDelete?: () => void;
+  onClearSelection?: () => void;
+  isBulkDeleting?: boolean;
 }
 
 export function OrdersTableActions({
@@ -15,6 +22,10 @@ export function OrdersTableActions({
   showBottomBorder = true,
   searchQuery = '',
   onSearchChange,
+  selectedCount = 0,
+  onBulkDelete,
+  onClearSelection,
+  isBulkDeleting = false,
 }: OrdersTableActionsProps) {
   return (
     <div className="space-y-4">
@@ -40,6 +51,33 @@ export function OrdersTableActions({
             </div>
           )}
         </div>
+
+        {selectedCount > 0 && onBulkDelete && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/50 dark:bg-red-950/30">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Выбрано: {selectedCount}
+            </span>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={onBulkDelete}
+              disabled={isBulkDeleting}
+            >
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              Удалить выбранные
+            </Button>
+            {onClearSelection && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onClearSelection}
+                disabled={isBulkDeleting}
+              >
+                Снять выделение
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

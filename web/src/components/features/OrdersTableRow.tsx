@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 
+import { Button } from '@/components/ui/Button';
 import type { AdminOrder } from '@/hooks/useOrders';
 import { calculateOrderProfit, formatProfit } from '@/utils/profitCalculation';
 
@@ -19,6 +21,11 @@ interface OrdersTableRowProps {
   gruzchikById: Map<string, string>;
   gruzchiks?: { id: string; name: string | null; phone: string | null }[];
   onPatch: (id: string, patch: Partial<AdminOrder>) => Promise<void>;
+  onDelete?: (order: AdminOrder) => void;
+  deletingOrderId?: string | null;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+  selectionDisabled?: boolean;
 }
 
 export function OrdersTableRow({
@@ -26,6 +33,11 @@ export function OrdersTableRow({
   gruzchikById,
   gruzchiks,
   onPatch,
+  onDelete,
+  deletingOrderId = null,
+  selected = false,
+  onToggleSelect,
+  selectionDisabled = false,
 }: OrdersTableRowProps) {
   const router = useRouter();
 
@@ -62,7 +74,23 @@ export function OrdersTableRow({
   };
 
   return (
-    <tr className="cursor-pointer hover:bg-gray-50" onClick={handleRowClick}>
+    <tr
+      className="group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60"
+      onClick={handleRowClick}
+    >
+      {onToggleSelect && (
+        <td className="whitespace-nowrap px-4 py-4" onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            data-interactive="true"
+            checked={selected}
+            disabled={selectionDisabled}
+            onChange={() => onToggleSelect(order.id)}
+            aria-label="Выбрать заказ"
+            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700"
+          />
+        </td>
+      )}
       {/* Дата */}
       <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-500">
         {formatDate(order.createdAt)}
@@ -146,6 +174,28 @@ export function OrdersTableRow({
       <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-900">
         {formatProfit(calculateOrderProfit(order))}
       </td>
+      {onDelete && (
+        <td className="sticky right-0 z-20 whitespace-nowrap border-l border-gray-200 bg-white px-4 py-4 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.08)] group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:group-hover:bg-gray-800/60">
+          <Button
+            variant="ghost"
+            size="sm"
+            data-interactive="true"
+            onClick={e => {
+              e.stopPropagation();
+              onDelete(order);
+            }}
+            disabled={deletingOrderId === order.id}
+            className="text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Удалить заказ"
+          >
+            {deletingOrderId === order.id ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </Button>
+        </td>
+      )}
     </tr>
   );
 }

@@ -11,6 +11,9 @@ import { EditableGruzchikSelector } from './EditableGruzchikSelector';
 import { calculateOrderProfit, formatProfit } from '@/utils/profitCalculation';
 import { formatOrderNumber } from '@/utils/orderNumberUtils';
 
+import { Button } from '@/components/ui/Button';
+import { Trash2 } from 'lucide-react';
+
 import { OrdersEmptyState } from './OrdersEmptyState';
 import { OrdersErrorState } from './OrdersErrorState';
 import { OrdersTableRow } from './OrdersTableRow';
@@ -21,7 +24,15 @@ interface OrdersTableContentProps {
   loading?: boolean;
   error?: string | null;
   onPatch: (id: string, patch: Partial<AdminOrder>) => Promise<void>;
+  onDelete?: (order: AdminOrder) => void;
+  deletingOrderId?: string | null;
   isSearchResult?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onSelectAll?: (selectAll: boolean) => void;
+  allSelected?: boolean;
+  someSelected?: boolean;
+  selectionDisabled?: boolean;
 }
 
 export function OrdersTableContent({
@@ -30,8 +41,17 @@ export function OrdersTableContent({
   loading,
   error,
   onPatch,
+  onDelete,
+  deletingOrderId = null,
   isSearchResult = false,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
+  allSelected = false,
+  someSelected = false,
+  selectionDisabled = false,
 }: OrdersTableContentProps) {
+  const showSelection = !!onToggleSelect && !!selectedIds;
   const gruzchikById = React.useMemo(() => {
     const map = new Map<string, string>();
     for (const g of gruzchiks) {
@@ -86,7 +106,7 @@ export function OrdersTableContent({
             return (
               <div
                 key={order.id}
-                onClick={(e) => {
+                onClick={e => {
                   const target = e.target as HTMLElement;
                   if (
                     target.closest('input') ||
@@ -103,10 +123,21 @@ export function OrdersTableContent({
               >
                 <div className="space-y-4">
                   {/* Header: Order number, status, date */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">
+                  <div className="flex items-start justify-between gap-2">
+                    {showSelection && (
+                      <input
+                        type="checkbox"
+                        data-interactive="true"
+                        checked={selectedIds.has(order.id)}
+                        disabled={selectionDisabled}
+                        onChange={() => onToggleSelect(order.id)}
+                        aria-label={`Выбрать заказ ${displayOrderNumber}`}
+                        className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <h4 className="truncate text-base font-bold text-gray-900 dark:text-white">
                           {displayOrderNumber}
                         </h4>
                         <EditableStatusBadge
@@ -120,20 +151,42 @@ export function OrdersTableContent({
                         {formatDate(order.createdAt)}
                       </div>
                     </div>
-                    {(order.unreadMessageCount ?? 0) > 0 && (
-                      <div className="shrink-0">
-                        <UnreadMessageIndicator count={order.unreadMessageCount ?? 0} />
-                      </div>
-                    )}
+                    <div className="flex shrink-0 items-center gap-2">
+                      {(order.unreadMessageCount ?? 0) > 0 && (
+                        <UnreadMessageIndicator
+                          count={order.unreadMessageCount ?? 0}
+                        />
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          data-interactive="true"
+                          onClick={e => {
+                            e.stopPropagation();
+                            onDelete(order);
+                          }}
+                          disabled={deletingOrderId === order.id}
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Удалить заказ"
+                        >
+                          {deletingOrderId === order.id ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Customer info */}
-                  <div className="space-y-1.5 pb-2 border-b border-gray-100 dark:border-gray-700">
+                  <div className="space-y-1.5 border-b border-gray-100 pb-2 dark:border-gray-700">
                     <div className="text-sm font-semibold text-gray-900 dark:text-white">
                       {order.user?.name || 'Без имени'}
                     </div>
                     {order.user?.email && (
-                      <div className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                      <div className="truncate text-xs text-gray-600 dark:text-gray-400">
                         {order.user.email}
                       </div>
                     )}
@@ -153,7 +206,7 @@ export function OrdersTableContent({
                   {/* Financial info */}
                   <div className="grid grid-cols-2 gap-4 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100/50 p-4 dark:from-gray-800/50 dark:to-gray-800/30">
                     <div>
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Сумма
                       </div>
                       <div className="text-base font-bold text-gray-900 dark:text-white">
@@ -161,7 +214,7 @@ export function OrdersTableContent({
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Прибыль
                       </div>
                       <div className="text-base font-bold text-green-600 dark:text-green-400">
@@ -171,14 +224,19 @@ export function OrdersTableContent({
                   </div>
 
                   {/* Transport Company */}
-                  {(order.transportOptions && order.transportOptions.length > 0) || order.transportName ? (
-                    <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                  {(order.transportOptions &&
+                    order.transportOptions.length > 0) ||
+                  order.transportName ? (
+                    <div className="border-t border-gray-100 pt-2 dark:border-gray-700">
+                      <div className="mb-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Транспортная компания
                       </div>
                       <div className="text-sm text-gray-900 dark:text-white">
-                        {order.transportOptions && order.transportOptions.length > 0
-                          ? order.transportOptions.map(opt => opt.transportName).join(', ')
+                        {order.transportOptions &&
+                        order.transportOptions.length > 0
+                          ? order.transportOptions
+                              .map(opt => opt.transportName)
+                              .join(', ')
                           : order.transportName || '—'}
                       </div>
                     </div>
@@ -187,7 +245,7 @@ export function OrdersTableContent({
                   {/* Gruzchik and Payment */}
                   <div className="grid grid-cols-2 gap-4 pt-2">
                     <div>
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                      <div className="mb-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Грузчик
                       </div>
                       <EditableGruzchikSelector
@@ -199,7 +257,7 @@ export function OrdersTableContent({
                       />
                     </div>
                     <div>
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                      <div className="mb-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Оплата
                       </div>
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -216,10 +274,27 @@ export function OrdersTableContent({
 
       {/* Desktop Table View */}
       <div className="hidden md:block">
-        <table className="w-full border-collapse">
+        <table className="w-full min-w-max border-collapse">
           {/* Header */}
           <thead className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-800">
             <tr>
+              {showSelection && (
+                <th className="w-10 border-b border-gray-200 px-4 py-4 text-left dark:border-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={input => {
+                      if (input) {
+                        input.indeterminate = someSelected && !allSelected;
+                      }
+                    }}
+                    disabled={selectionDisabled || orders.length === 0}
+                    onChange={e => onSelectAll?.(e.target.checked)}
+                    aria-label="Выбрать все заказы"
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700"
+                  />
+                </th>
+              )}
               <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
                 Дата
               </th>
@@ -253,6 +328,11 @@ export function OrdersTableContent({
               <th className="whitespace-nowrap border-b border-gray-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:border-gray-700 dark:text-gray-400">
                 Прибыль
               </th>
+              {onDelete && (
+                <th className="sticky right-0 z-40 whitespace-nowrap border-b border-l border-gray-200 bg-gray-50 px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.08)] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                  Действия
+                </th>
+              )}
             </tr>
           </thead>
 
@@ -265,6 +345,11 @@ export function OrdersTableContent({
                 gruzchikById={gruzchikById}
                 gruzchiks={gruzchiks}
                 onPatch={onPatch}
+                onDelete={onDelete}
+                deletingOrderId={deletingOrderId}
+                selected={showSelection ? selectedIds.has(order.id) : false}
+                onToggleSelect={onToggleSelect}
+                selectionDisabled={selectionDisabled}
               />
             ))}
           </tbody>
