@@ -4,6 +4,12 @@ import { prisma } from '@/lib/server/db';
 import { requireAuth } from '@/lib/server/auth-helpers';
 import { normalizeToStandardColor } from '@/lib/constants/colors';
 import { logRequestError } from '@/lib/server/request-logging';
+import {
+  buildSimpleAdminSourceWhere,
+  hasChatSourceFilter,
+  queryProductIdsWithChatSourceFilter,
+} from '@/lib/server/catalog-source-filter';
+import { buildProductSearchWhere } from '@/lib/server/catalog-search';
 
 /**
  * Recursively get all descendant category IDs from a parent category
@@ -75,117 +81,63 @@ export async function GET(request: NextRequest) {
       where.isActive = true;
     }
 
-    // Admin-only: filter by source (one or multiple)
-    if (auth.user?.role === 'ADMIN' && sourceIds.length > 0) {
-      const allowedIds: string[] = [];
-      if (sourceIds.includes('AG')) {
-        const ag = await prisma.product.findMany({
-          where: { source: 'AG' },
-          select: { id: true },
-        });
-        allowedIds.push(...ag.map(p => p.id));
-      }
-      if (sourceIds.includes('MANUAL')) {
-        const manual = await prisma.product.findMany({
-          where: { source: 'MANUAL' },
-          select: { id: true },
-        });
-        allowedIds.push(...manual.map(p => p.id));
-      }
-      // Only expand sourceMessageIds when it's a JSON array; non-array values would make jsonb_array_elements_text throw.
-      // Use LATERAL + explicit alias so JOIN is unambiguous.
-      const waSourceIds = sourceIds.filter(s => s.startsWith('WA:'));
-      for (const sid of waSourceIds) {
-        const chatId = sid.slice(3);
-        const rows = await prisma.$queryRaw<{ id: string }[]>`
-          SELECT DISTINCT p.id FROM "Product" p
-          CROSS JOIN LATERAL jsonb_array_elements_text(
-            CASE WHEN jsonb_typeof(COALESCE(p."sourceMessageIds", '[]'::jsonb)) = 'array'
-                 THEN COALESCE(p."sourceMessageIds", '[]'::jsonb)
-                 ELSE '[]'::jsonb
-            END
-          ) AS msg_id
-          INNER JOIN "WhatsAppMessage" w ON w.id = msg_id
-          WHERE p.source = 'WA' AND w."chatId" = ${chatId}
-        `;
-        allowedIds.push(...rows.map(r => r.id));
-      }
-      const tgSourceIds = sourceIds.filter(s => s.startsWith('TG:'));
-      for (const sid of tgSourceIds) {
-        const chatId = sid.slice(3);
-        const rows = await prisma.$queryRaw<{ id: string }[]>`
-          SELECT DISTINCT p.id FROM "Product" p
-          CROSS JOIN LATERAL jsonb_array_elements_text(
-            CASE WHEN jsonb_typeof(COALESCE(p."sourceMessageIds", '[]'::jsonb)) = 'array'
-                 THEN COALESCE(p."sourceMessageIds", '[]'::jsonb)
-                 ELSE '[]'::jsonb
-            END
-          ) AS msg_id
-          INNER JOIN "TelegramMessage" t ON t.id = msg_id
-          WHERE p.source = 'TG' AND t."chatId" = ${chatId}
-        `;
-        allowedIds.push(...rows.map(r => r.id));
-      }
-      const uniqueIds = [...new Set(allowedIds)];
-      if (uniqueIds.length > 0) {
-        where.id = { in: uniqueIds };
+    // Admin-only: filter by source (AG/MANUAL use source field; WA/TG use EXISTS in SQL)
+    const useChatSourceQuery =
+      auth.user?.role === 'ADMIN' &&
+      sourceIds.length > 0 &&
+      hasChatSourceFilter(sourceIds);
+
+    if (
+      auth.user?.role === 'ADMIN' &&
+      sourceIds.length > 0 &&
+      !useChatSourceQuery
+    ) {
+      const sourceWhere = buildSimpleAdminSourceWhere(sourceIds);
+      if (sourceWhere) {
+        where.AND.push(sourceWhere);
       } else {
         where.id = { in: ['__none__'] };
       }
     }
 
-    // Search functionality - case insensitive for Cyrillic and Latin characters
-    if (search) {
-      const searchLower = search.toLowerCase();
-      where.AND.push({
-        OR: [
-          { name: { contains: searchLower, mode: 'insensitive' } },
-          { article: { contains: searchLower, mode: 'insensitive' } },
-          { slug: { contains: searchLower, mode: 'insensitive' } },
-          { description: { contains: searchLower, mode: 'insensitive' } },
-        ],
-      });
-    }
-
-    // Category filter - include products from subcategories (recursively)
+    let categoryIds: string[] | null = null;
     if (categoryId) {
-      // Check if category exists
       const category = await prisma.category.findUnique({
         where: { id: categoryId },
         select: { id: true },
       });
 
       if (category) {
-        // Get all descendant category IDs recursively (including nested subcategories)
         const allSubcategoryIds = await getAllSubcategoryIds(categoryId);
-
-        // Include products from the category itself and all its subcategories
-        where.categoryId = {
-          in: [categoryId, ...allSubcategoryIds],
-        };
+        categoryIds = [categoryId, ...allSubcategoryIds];
       } else {
-        // Fallback to direct category if not found
-        where.categoryId = categoryId;
+        categoryIds = [categoryId];
       }
     }
 
-    // Price range filter
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      where.pricePair = {};
-      if (minPrice !== undefined) {
-        where.pricePair.gte = minPrice;
-      }
-      if (maxPrice !== undefined) {
-        where.pricePair.lte = maxPrice;
-      }
-    }
+    const normalizedColors = colors
+      .map(color => normalizeToStandardColor(color))
+      .filter((color): color is NonNullable<typeof color> => color !== null);
 
-    // Color filter - find products where the primary image color matches the selected color
-    if (colors.length > 0) {
-      // Normalize colors to standard colors and filter out invalid ones
-      const normalizedColors = colors
-        .map(color => normalizeToStandardColor(color))
-        .filter((color): color is NonNullable<typeof color> => color !== null);
+    if (!useChatSourceQuery) {
+      // Search functionality - case insensitive for Cyrillic and Latin characters
+      if (search) {
+        where.AND.push(buildProductSearchWhere(search));
+      }
+
+      if (categoryIds) {
+        where.categoryId = { in: categoryIds };
+      }
+
+      if (minPrice !== undefined || maxPrice !== undefined) {
+        where.pricePair = {};
+        if (minPrice !== undefined) {
+          where.pricePair.gte = minPrice;
+        }
+        if (maxPrice !== undefined) {
+          where.pricePair.lte = maxPrice;
+        }
+      }
 
       if (normalizedColors.length > 0) {
         where.images = {
@@ -240,58 +192,93 @@ export async function GET(request: NextRequest) {
 
     const isAdmin = auth.user?.role === 'ADMIN';
 
-    // Explicit select: avoid sending large unused columns (sizes, gptRequest, sourceMessageIds, …)
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip,
-        take: pageSize,
-        orderBy,
+    const productSelect = {
+      id: true,
+      slug: true,
+      name: true,
+      pricePair: true,
+      categoryId: true,
+      createdAt: true,
+      updatedAt: true,
+      activeUpdatedAt: true,
+      source: true,
+      isActive: true,
+      sourceScreenshotUrl: true,
+      batchProcessingStatus: true,
+      category: {
         select: {
           id: true,
-          slug: true,
           name: true,
-          pricePair: true,
-          categoryId: true,
-          createdAt: true,
-          updatedAt: true,
-          activeUpdatedAt: true,
-          source: true,
-          isActive: true,
-          sourceScreenshotUrl: true,
-          batchProcessingStatus: true,
-          category: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          images: {
-            ...(isAdmin ? {} : { where: { isActive: true } }),
-            orderBy: [{ isPrimary: 'desc' }, { sort: 'asc' }],
-            select: {
-              url: true,
-              color: true,
-              isPrimary: true,
-              isActive: true,
-            },
-          },
-          videos: {
-            where: {
-              isActive: true,
-            },
-            orderBy: { sort: 'asc' },
-            select: {
-              id: true,
-              url: true,
-              alt: true,
-              sort: true,
-            },
-          },
         },
-      }),
-      prisma.product.count({ where }),
-    ]);
+      },
+      images: {
+        ...(isAdmin ? {} : { where: { isActive: true } }),
+        orderBy: [{ isPrimary: 'desc' } as const, { sort: 'asc' } as const],
+        select: {
+          url: true,
+          color: true,
+          isPrimary: true,
+          isActive: true,
+        },
+      },
+      videos: {
+        where: {
+          isActive: true,
+        },
+        orderBy: { sort: 'asc' as const },
+        select: {
+          id: true,
+          url: true,
+          alt: true,
+          sort: true,
+        },
+      },
+    };
+
+    let products: any[];
+    let total: number;
+
+    if (useChatSourceQuery) {
+      const { ids, total: chatSourceTotal } =
+        await queryProductIdsWithChatSourceFilter({
+          isAdmin,
+          sourceIds,
+          search,
+          categoryIds,
+          minPrice,
+          maxPrice,
+          normalizedColors,
+          sortBy,
+          skip,
+          take: pageSize,
+        });
+
+      total = chatSourceTotal;
+
+      if (ids.length === 0) {
+        products = [];
+      } else {
+        const fetched = await prisma.product.findMany({
+          where: { id: { in: ids } },
+          select: productSelect,
+        });
+        const byId = new Map(fetched.map(p => [p.id, p]));
+        products = ids
+          .map(id => byId.get(id))
+          .filter((p): p is NonNullable<typeof p> => p != null);
+      }
+    } else {
+      [products, total] = await Promise.all([
+        prisma.product.findMany({
+          where,
+          skip,
+          take: pageSize,
+          orderBy,
+          select: productSelect,
+        }),
+        prisma.product.count({ where }),
+      ]);
+    }
 
     // Transform the data to include primaryImageUrl and colorOptions
     const transformedProducts = products.map((product: any) => {

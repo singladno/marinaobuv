@@ -93,15 +93,37 @@ export function useScrollToProduct({
       }
 
       // Check if current path matches target path pattern
-      const currentPathWithSearch = currentUrlObj.pathname + currentUrlObj.search;
+      const currentPathWithSearch =
+        currentUrlObj.pathname + currentUrlObj.search;
       const pathMatches =
         typeof targetPath === 'string'
-          ? currentPathWithSearch === targetPath || currentPathWithSearch.startsWith(`${targetPath}?`) || currentPathWithSearch.startsWith(`${targetPath}/`)
+          ? currentPathWithSearch === targetPath ||
+            currentPathWithSearch.startsWith(`${targetPath}?`) ||
+            currentPathWithSearch.startsWith(`${targetPath}/`)
           : targetPath.test(currentPathWithSearch);
 
       // Only proceed if we're on the target page
       if (!pathMatches) {
         // Not on target page, don't scroll
+        return;
+      }
+
+      // User performed a new search — don't restore referrer URL or scroll back to product
+      const currentSearch = currentUrlObj.searchParams.get('search') ?? '';
+      const referrerSearchParams = new URLSearchParams(
+        referrerSearch.startsWith('?')
+          ? referrerSearch.slice(1)
+          : referrerSearch
+      );
+      const referrerSearchValue = referrerSearchParams.get('search') ?? '';
+      if (currentSearch && currentSearch !== referrerSearchValue) {
+        sessionStorage.removeItem('productNavigation');
+        targetProductIdRef.current = null;
+        scrollCompletedRef.current = true;
+        maxScrollAttemptsRef.current = 0;
+        lastCheckedProductsLengthRef.current = 0;
+        urlRestoredRef.current = false;
+        setIsSearching(false);
         return;
       }
 
@@ -112,7 +134,11 @@ export function useScrollToProduct({
       const referrerPathOnly = referrerPath;
 
       // Check if pathname matches and if we need to restore query params
-      if (currentPathOnly === referrerPathOnly && currentUrlObj.search !== referrerSearch && !urlRestoredRef.current) {
+      if (
+        currentPathOnly === referrerPathOnly &&
+        currentUrlObj.search !== referrerSearch &&
+        !urlRestoredRef.current
+      ) {
         // Path matches but query params don't - restore the referrer URL
         urlRestoredRef.current = true;
         router.replace(referrerPathWithSearch);
@@ -129,7 +155,10 @@ export function useScrollToProduct({
       if (urlRestoredRef.current && currentUrlObj.search === referrerSearch) {
         // URL has been restored successfully, reset the flag and proceed
         urlRestoredRef.current = false;
-      } else if (urlRestoredRef.current && currentUrlObj.search !== referrerSearch) {
+      } else if (
+        urlRestoredRef.current &&
+        currentUrlObj.search !== referrerSearch
+      ) {
         // Still waiting for URL to be restored, return early
         return;
       }
@@ -154,7 +183,9 @@ export function useScrollToProduct({
       if (productElement) {
         // Product is found, scroll to it
         // If the element is inside a FlipCard (absolutely positioned), scroll to the container instead
-        const flipCardContainer = productElement.closest('.flip-card-container');
+        const flipCardContainer = productElement.closest(
+          '.flip-card-container'
+        );
         const elementToScroll = flipCardContainer || productElement;
 
         scrollCompletedRef.current = true;

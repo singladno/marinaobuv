@@ -68,6 +68,7 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
   // De-duplication guards (avoid duplicate fetches under StrictMode or identical requests)
   const inFlightKeyRef = useRef<string | null>(null);
   const lastSuccessKeyRef = useRef<string | null>(null);
+  const fetchGenerationRef = useRef(0);
   const isOptimisticUpdateRef = useRef(false);
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
@@ -95,8 +96,7 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
       const currentFilters = { ...filtersRef.current, ...newFilters };
       const requestKey = makeRequestKey(currentFilters);
 
-      // When user changes source filter, always refetch (don't skip due to dedup)
-      if (newFilters && 'sourceIds' in newFilters) {
+      if (newFilters && ('sourceIds' in newFilters || 'search' in newFilters)) {
         lastSuccessKeyRef.current = null;
       }
 
@@ -109,6 +109,7 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
       }
 
       inFlightKeyRef.current = requestKey;
+      const fetchGeneration = ++fetchGenerationRef.current;
       setLoading(true);
       setError(null);
 
@@ -129,10 +130,7 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         if (currentFilters.colors.length > 0)
           searchParams.set('colors', currentFilters.colors.join(','));
         if (currentFilters.inStock) searchParams.set('inStock', 'true');
-        if (
-          currentFilters.sourceIds &&
-          currentFilters.sourceIds.length > 0
-        ) {
+        if (currentFilters.sourceIds && currentFilters.sourceIds.length > 0) {
           searchParams.set('sourceIds', currentFilters.sourceIds.join(','));
         }
         searchParams.set('page', currentFilters.page.toString());
@@ -146,29 +144,40 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
         }
 
         const data: CatalogResponse = await response.json();
+        if (fetchGeneration !== fetchGenerationRef.current) {
+          return;
+        }
         setProducts(data.products);
         setPagination(data.pagination);
         setFilters(currentFilters);
         lastSuccessKeyRef.current = requestKey;
       } catch (err) {
+        if (fetchGeneration !== fetchGenerationRef.current) {
+          return;
+        }
         setError(err instanceof Error ? err.message : 'Unknown error');
         setProducts([]);
       } finally {
-        setLoading(false);
-        inFlightKeyRef.current = null;
+        if (fetchGeneration === fetchGenerationRef.current) {
+          setLoading(false);
+          inFlightKeyRef.current = null;
+        }
       }
     },
-    [filters]
+    []
   );
 
-  // Update filters when search query changes and fetch products
   useEffect(() => {
-    if (searchQuery !== filters.search) {
-      const newFilters = { ...filters, search: searchQuery, page: 1 };
+    if (searchQuery !== filtersRef.current.search) {
+      const newFilters = {
+        ...filtersRef.current,
+        search: searchQuery,
+        page: 1,
+      };
       setFilters(newFilters);
       fetchProducts(newFilters);
     }
-  }, [searchQuery, filters, fetchProducts]);
+  }, [searchQuery, fetchProducts]);
 
   // Handle search - now handled by SearchContext
   const handleSearch = useCallback(
@@ -187,13 +196,20 @@ export function useCatalogBackend(options?: UseCatalogBackendOptions) {
       // Only reset page to 1 if these filters actually changed, not just if they're present in newFilters
       const resultSetFiltersChanged =
         ('search' in newFilters && newFilters.search !== filters.search) ||
-        ('categoryId' in newFilters && newFilters.categoryId !== filters.categoryId) ||
-        ('minPrice' in newFilters && newFilters.minPrice !== filters.minPrice) ||
-        ('maxPrice' in newFilters && newFilters.maxPrice !== filters.maxPrice) ||
-        ('colors' in newFilters && JSON.stringify(newFilters.colors) !== JSON.stringify(filters.colors)) ||
+        ('categoryId' in newFilters &&
+          newFilters.categoryId !== filters.categoryId) ||
+        ('minPrice' in newFilters &&
+          newFilters.minPrice !== filters.minPrice) ||
+        ('maxPrice' in newFilters &&
+          newFilters.maxPrice !== filters.maxPrice) ||
+        ('colors' in newFilters &&
+          JSON.stringify(newFilters.colors) !==
+            JSON.stringify(filters.colors)) ||
         ('inStock' in newFilters && newFilters.inStock !== filters.inStock) ||
         ('sortBy' in newFilters && newFilters.sortBy !== filters.sortBy) ||
-        ('sourceIds' in newFilters && JSON.stringify(newFilters.sourceIds ?? []) !== JSON.stringify(filters.sourceIds ?? []));
+        ('sourceIds' in newFilters &&
+          JSON.stringify(newFilters.sourceIds ?? []) !==
+            JSON.stringify(filters.sourceIds ?? []));
 
       const nextPage = resultSetFiltersChanged
         ? 1

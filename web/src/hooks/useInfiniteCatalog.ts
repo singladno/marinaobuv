@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useSearch } from '@/contexts/SearchContext';
+import {
+  loadPersistedCatalogFilters,
+  usePersistCatalogFilters,
+} from '@/hooks/usePersistedCatalogFilters';
 
 interface CatalogFilters {
   search: string;
@@ -71,6 +76,8 @@ export function useInfiniteCatalog(
   sharedCategoryData?: CategoryData
 ) {
   const { searchQuery } = useSearch();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [allProducts, setAllProducts] = useState<any[]>([]);
   /** Start true so the grid shows skeletons on the first paint before the mount effect runs. */
   const [loading, setLoading] = useState(true);
@@ -106,6 +113,8 @@ export function useInfiniteCatalog(
   const loadingMoreRef = useRef(false);
   const lastRequestKeyRef = useRef<string | null>(null);
   const inFlightRequestKeyRef = useRef<string | null>(null);
+  /** Ignores stale responses when the user submits a newer search before the previous request finishes. */
+  const fetchGenerationRef = useRef(0);
 
   // Update filters ref whenever filters change
   useEffect(() => {
@@ -153,8 +162,8 @@ export function useInfiniteCatalog(
         append,
       });
 
-      // When user changes source filter, always refetch (don't skip due to dedup)
-      if (newFilters && 'sourceIds' in newFilters) {
+      // When user changes source or search, always refetch (don't skip due to dedup)
+      if (newFilters && ('sourceIds' in newFilters || 'search' in newFilters)) {
         lastRequestKeyRef.current = null;
       }
 
@@ -166,12 +175,14 @@ export function useInfiniteCatalog(
         return;
       }
 
-      // Prevent multiple simultaneous requests
-      if (requestInProgress.current) {
+      const isInitialLoad = !append;
+
+      // Allow a new search to supersede an in-flight catalog request (fixes "one step behind" results)
+      if (!isInitialLoad && requestInProgress.current) {
         return;
       }
 
-      const isInitialLoad = !append;
+      const fetchGeneration = ++fetchGenerationRef.current;
       if (isInitialLoad) {
         requestInProgress.current = true;
         inFlightRequestKeyRef.current = requestKey;
@@ -225,6 +236,10 @@ export function useInfiniteCatalog(
             return response.json();
           })
           .then(data => {
+            if (fetchGeneration !== fetchGenerationRef.current) {
+              return;
+            }
+
             if (append) {
               // Append new products to existing ones
               setAllProducts(prev => [...prev, ...data.products]);
@@ -238,12 +253,18 @@ export function useInfiniteCatalog(
             lastRequestKeyRef.current = requestKey;
           })
           .catch(err => {
+            if (fetchGeneration !== fetchGenerationRef.current) {
+              return;
+            }
             setError(err instanceof Error ? err.message : 'Unknown error');
             if (!append) {
               setAllProducts([]);
             }
           })
           .finally(() => {
+            if (fetchGeneration !== fetchGenerationRef.current) {
+              return;
+            }
             setLoading(false);
             setLoadingMore(false);
             loadingMoreRef.current = false;
@@ -326,11 +347,18 @@ export function useInfiniteCatalog(
     fetchProducts(clearedFilters, false);
   }, [initialCategoryId, fetchProducts]);
 
-  // Handle search query changes
+  // Persist filters on home and catalog pages (restores admin sourceIds, etc.)
+  usePersistCatalogFilters(
+    pathname === '/' || pathname?.startsWith('/catalog') ? pathname : null,
+    filters,
+    { enabled: hasInitialized.current }
+  );
+
+  // Handle search query changes from the header
   useEffect(() => {
-    // Only trigger if search query actually changed and we're initialized
     if (searchQuery !== lastSearchQuery.current && hasInitialized.current) {
       lastSearchQuery.current = searchQuery;
+      lastRequestKeyRef.current = null;
       const newFilters = {
         ...currentFiltersRef.current,
         search: searchQuery,
@@ -339,10 +367,25 @@ export function useInfiniteCatalog(
       setFilters(newFilters);
       fetchProducts(newFilters, false);
     } else if (searchQuery !== lastSearchQuery.current) {
-      // Update the ref even if not initialized yet
       lastSearchQuery.current = searchQuery;
     }
-  }, [searchQuery]);
+  }, [searchQuery, fetchProducts]);
+
+  // Handle ?search= URL changes (back/forward, shared links)
+  useEffect(() => {
+    if (!hasInitialized.current) return;
+    const urlSearch = searchParams.get('search') || '';
+    if (urlSearch === lastSearchQuery.current) return;
+    lastSearchQuery.current = urlSearch;
+    lastRequestKeyRef.current = null;
+    const newFilters = {
+      ...currentFiltersRef.current,
+      search: urlSearch,
+      page: 1,
+    };
+    setFilters(newFilters);
+    fetchProducts(newFilters, false);
+  }, [searchParams, fetchProducts]);
 
   // Handle initial category ID changes
   useEffect(() => {
@@ -369,10 +412,25 @@ export function useInfiniteCatalog(
       return;
     }
 
-    // Only initialize once - use refs to check state without causing re-renders
     if (!hasInitialized.current && !requestInProgress.current) {
       hasInitialized.current = true;
-      fetchProducts();
+      const saved = loadPersistedCatalogFilters(pathname) || {};
+      const urlSearch = searchParams.get('search') || '';
+      const merged: Partial<CatalogFilters> = {
+        search: urlSearch || saved.search || searchQuery || '',
+        sortBy: saved.sortBy || 'newest',
+        minPrice: saved.minPrice,
+        maxPrice: saved.maxPrice,
+        colors: saved.colors ?? [],
+        inStock: saved.inStock ?? false,
+        sourceIds: saved.sourceIds ?? [],
+        page: 1,
+        pageSize: saved.pageSize ?? 20,
+      };
+      if (merged.search) {
+        lastSearchQuery.current = merged.search;
+      }
+      fetchProducts(merged);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount

@@ -7,7 +7,7 @@ import {
   useCallback,
   useEffect,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface SearchHistoryItem {
   id: string;
@@ -31,6 +31,8 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const router = useRouter();
+  const pathname = usePathname();
+  const urlSearchParams = useSearchParams();
 
   // Fetch search history from backend
   const fetchSearchHistory = useCallback(async () => {
@@ -101,16 +103,26 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
         saveToLocalSearchHistory(query.trim());
       }
 
-      // Navigate to catalog with search params using Next.js router
-      const searchParams = new URLSearchParams();
-      if (query) {
-        searchParams.set('search', query);
+      // User-initiated search cancels "return to product" scroll restoration
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('productNavigation');
       }
 
-      // Use Next.js router for client-side navigation
-      const url = searchParams.toString()
-        ? `/catalog?${searchParams.toString()}`
-        : '/catalog';
+      // Stay on the current catalog/home page and update ?search= in the URL
+      const params = new URLSearchParams(urlSearchParams.toString());
+      if (query.trim()) {
+        params.set('search', query.trim());
+      } else {
+        params.delete('search');
+      }
+      params.delete('page');
+
+      const catalogPath =
+        pathname === '/' || pathname.startsWith('/catalog') ? pathname : '/';
+
+      const url = params.toString()
+        ? `${catalogPath}?${params.toString()}`
+        : catalogPath;
 
       router.push(url);
 
@@ -123,7 +135,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
         );
       }
     },
-    [saveToLocalSearchHistory, router]
+    [saveToLocalSearchHistory, router, pathname, urlSearchParams]
   );
 
   // Clear search history
@@ -165,8 +177,13 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadHistory();
-    // Reset search query on page load to prevent prepopulation
-    setSearchQuery('');
+
+    // Sync search input from URL (e.g. shared link or browser back)
+    const urlSearch =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('search') || ''
+        : '';
+    setSearchQuery(urlSearch);
   }, [fetchSearchHistory, loadLocalSearchHistory]);
 
   const value: SearchContextType = {
