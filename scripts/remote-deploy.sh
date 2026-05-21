@@ -47,6 +47,15 @@ fi
 
 progress "🚀 Starting deployment..."
 
+# Skip heavy one-time server bootstrap (apt/certbot/SSL) on routine deploys.
+# Marker lives OUTSIDE the git tree so `git clean -fd` does not remove it.
+DEPLOY_MARKER="/var/www/.marinaobuv-server-initialized"
+if [ -f "$DEPLOY_MARKER" ]; then
+  echo "⚡ Fast deploy mode — skipping one-time server infrastructure setup"
+else
+  echo "🔧 First deploy on this server — will run full infrastructure setup"
+fi
+
 # Log initial environment state for debugging
 echo "📊 Initial environment variable count: $(env | wc -l)"
 echo "📊 Initial environment variable names (first 10):"
@@ -149,9 +158,13 @@ npm ci --loglevel=verbose --progress=true 2>&1 | tee /tmp/npm-install.log || {
 }
 echo "✅ npm ci completed successfully"
 echo ""
-# Install Playwright Chromium browser for aggregator parser (idempotent - Playwright checks if already installed)
+# Install Playwright Chromium for aggregator parser (skip apt deps — avoids apt lock conflicts)
 echo "🎭 Ensuring Playwright Chromium browser is installed..."
-timeout 300 npm run playwright:install:ci 2>&1 | tee /tmp/playwright-install.log || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+if [ -d "$HOME/.cache/ms-playwright" ] || [ -d "/root/.cache/ms-playwright" ]; then
+  echo "✅ Playwright browser cache found, skipping install"
+else
+  timeout 180 npm run playwright:install 2>&1 | tee /tmp/playwright-install.log || echo "⚠️ Playwright install failed, aggregator parser may be unavailable"
+fi
 cd ..
 
 # Note: Proxy runs on separate serverspace server
@@ -174,11 +187,14 @@ if [ ! -f "node_modules/@prisma/client/index.js" ]; then
 fi
 echo "✅ Prisma client generated successfully"
 
-# Verify database connection
+# Verify database connection (lightweight — do not dump full schema via db pull)
 echo "🔍 Verifying database connection..."
-echo "   Running: ./prisma-server.sh npx prisma db pull --print"
-./prisma-server.sh npx prisma db pull --print
-echo "✅ Database connection verified"
+if echo "SELECT 1;" | ./prisma-server.sh npx prisma db execute --stdin >/dev/null 2>&1; then
+  echo "✅ Database connection verified"
+else
+  echo "❌ Database connection failed"
+  exit 1
+fi
 
 # Skip backup (requires tsx); do backups manually or on cron
 echo "ℹ️ Skipping DB backup during deploy"
@@ -238,7 +254,8 @@ cd ..
 progress "⏭️  Skipping build step - blue-green deployment will handle it..."
 echo "ℹ️  Build will be performed by blue-green-deploy.sh with proper cleanup"
 
-# Setup HTTPS and nginx configuration
+# Setup HTTPS and nginx configuration (first deploy only — saves ~5–15 min on routine deploys)
+if [ ! -f "$DEPLOY_MARKER" ]; then
 echo "🔒 Setting up HTTPS and nginx configuration..."
 
 # Install required packages for HTTPS
@@ -423,6 +440,17 @@ else
   ls -la scripts/ || echo "No scripts directory found"
 fi
 
+touch "$DEPLOY_MARKER"
+echo "✅ Server infrastructure setup complete (marker: $DEPLOY_MARKER)"
+else
+  echo "ℹ️ Skipping SSL/nginx/certbot/firewall bootstrap (already initialized)"
+  # Refresh cron jobs from repo on every deploy (fast)
+  if [ -f "scripts/install-crons.sh" ]; then
+    chmod +x scripts/install-crons.sh
+    bash scripts/install-crons.sh || echo "⚠️ Cron refresh failed (non-fatal)"
+  fi
+fi
+
 # Load runtime environment for PM2 safely
 # NOTE: Don't use 'set -a' to export all variables - it causes "Argument list too long"
 # when appleboy/ssh-action tries to print environment variables at the end.
@@ -449,7 +477,7 @@ if [ -f "scripts/blue-green-deploy.sh" ]; then
     echo "✅ Blue-Green deployment completed successfully!"
   else
     echo "❌ Blue-Green deployment failed!"
-    pm2 logs --lines 50
+    pm2 logs --lines 50 --nostream 2>/dev/null || true
     exit 1
   fi
 else
@@ -466,7 +494,7 @@ else
     pm2 start ecosystem.config.js --env production --update-env
   if [ $? -ne 0 ]; then
     echo "PM2 start failed!"
-    pm2 logs marinaobuv --lines 50
+    pm2 logs marinaobuv --lines 50 --nostream 2>/dev/null || true
     exit 1
   fi
 
@@ -484,7 +512,7 @@ else
       echo "Health check failed, attempt $i/5"
       if [ $i -eq 5 ]; then
         echo "Health check failed after 5 attempts"
-        pm2 logs marinaobuv --lines 50
+        pm2 logs marinaobuv --lines 50 --nostream 2>/dev/null || true
         exit 1
       fi
       sleep 5
@@ -696,7 +724,7 @@ if [ -f "scripts/verify-webhook-deployment.sh" ]; then
   chmod +x scripts/verify-webhook-deployment.sh
   echo "✅ Webhook verification script found and made executable"
 
-  if ./scripts/verify-webhook-deployment.sh; then
+  if SKIP_PRISMA_REGEN=1 ./scripts/verify-webhook-deployment.sh; then
     echo "✅ Webhook verification completed successfully"
   else
     echo "❌ CRITICAL: Webhook verification failed!"
@@ -749,7 +777,7 @@ echo "PM2 Status:"
 pm2 status
 echo ""
 echo "Nginx Status:"
-sudo systemctl status nginx --no-pager -l
+sudo systemctl is-active nginx 2>/dev/null || echo "nginx status unknown"
 echo ""
 echo "Port 3000 Status:"
 netstat -tlnp | grep :3000 || echo "Port 3000 not listening"

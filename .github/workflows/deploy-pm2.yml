@@ -2,9 +2,9 @@ name: Deploy MarinaObuv with PM2
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -109,7 +109,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           timeout: 1200s
-          command_timeout: 1800s
+          command_timeout: 3600s
           debug: true
           use_insecure_cipher: false
           cipher: aes128-ctr,aes192-ctr,aes256-ctr

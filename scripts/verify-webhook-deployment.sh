@@ -32,24 +32,24 @@ log_error() {
 test_webhook_endpoint() {
     local max_attempts=10
     local attempt=1
-    
+
     log_info "Testing webhook endpoint..."
-    
+
     while [ $attempt -le $max_attempts ]; do
         log_info "Attempt $attempt/$max_attempts..."
-        
+
         # Prefer testing via Nginx (port-agnostic)
-        if curl -f -s http://localhost/api/webhooks/green-api/relay > /dev/null 2>&1 || \
-           curl -f -s https://marina-obuv.ru/api/webhooks/green-api/relay > /dev/null 2>&1; then
+        if curl -f -s --max-time 10 --connect-timeout 5 http://localhost/api/webhooks/green-api/relay > /dev/null 2>&1 || \
+           curl -f -s --max-time 10 --connect-timeout 5 https://marina-obuv.ru/api/webhooks/green-api/relay > /dev/null 2>&1; then
             log_success "External webhook endpoint is responding"
             return 0
         fi
-        
+
         log_warning "Webhook not responding, waiting 10 seconds..."
         sleep 10
         ((attempt++))
     done
-    
+
     log_error "Webhook endpoint failed to respond after $max_attempts attempts"
     return 1
 }
@@ -57,7 +57,7 @@ test_webhook_endpoint() {
 # Function to check application status
 check_application_status() {
     log_info "Checking application status..."
-    
+
     # Check if PM2 process is running
     if pm2 list | grep -q "marinaobuv.*online"; then
         log_success "PM2 process is running"
@@ -65,11 +65,11 @@ check_application_status() {
         log_error "PM2 process is not running"
         return 1
     fi
-    
+
     # Note: Groq proxy runs on separate serverspace server (31.44.2.216)
     log_info "Note: Groq proxy runs on separate serverspace server"
     log_info "Proxy connectivity will be tested via nginx configuration"
-    
+
     # Check if app port (3000 or 3001) is listening (prefer ss, fallback to netstat)
     if command -v ss >/dev/null 2>&1; then
         if ss -tlnp | grep -Eq ":3000|:3001"; then
@@ -88,7 +88,7 @@ check_application_status() {
     else
         log_warning "Neither ss nor netstat available to verify listening ports; skipping port check"
     fi
-    
+
     return 0
 }
 
@@ -98,14 +98,14 @@ check_application_status() {
 # Function to restart application if needed
 restart_application() {
     log_info "Restarting application to fix webhook..."
-    
+
     # Restart PM2 process
     pm2 restart marinaobuv
-    
+
     # Wait for application to start
     log_info "Waiting for application to start..."
     sleep 15
-    
+
     # Check if it's running
     if pm2 list | grep -q "marinaobuv.*online"; then
         log_success "Application restarted successfully"
@@ -119,7 +119,7 @@ restart_application() {
 # Function to verify webhook route exists
 verify_webhook_route() {
     log_info "Verifying webhook route file exists..."
-    
+
     if [ -f "web/src/app/api/webhooks/green-api/route.ts" ]; then
         log_success "Webhook route file exists"
         return 0
@@ -132,21 +132,21 @@ verify_webhook_route() {
 # Function to check for conflicting routes
 check_conflicting_routes() {
     log_info "Checking for conflicting webhook routes..."
-    
+
     # Check if old conflicting file exists
     if [ -f "web/src/app/api/webhooks/green-api.ts" ]; then
         log_warning "Found conflicting webhook file, removing..."
         rm -f "web/src/app/api/webhooks/green-api.ts"
         log_success "Conflicting file removed"
     fi
-    
+
     return 0
 }
 
 # Function to regenerate Prisma client
 regenerate_prisma_client() {
     log_info "Regenerating Prisma client..."
-    
+
     cd web
     if ./prisma-server.sh npm run prisma:generate; then
         log_success "Prisma client regenerated"
@@ -162,36 +162,40 @@ regenerate_prisma_client() {
 # Main verification function
 main() {
     log_info "🔍 Starting webhook deployment verification..."
-    
+
     # Step 1: Check application status
     if ! check_application_status; then
         log_error "Application is not running properly"
-        
+
         # Note: Groq proxy runs on separate serverspace server (31.44.2.216)
         log_info "Note: Groq proxy runs on separate serverspace server"
         log_info "Application should work without local proxy"
         exit 1
     fi
-    
+
     # Step 2: Verify webhook route exists
     if ! verify_webhook_route; then
         log_error "Webhook route file is missing"
         exit 1
     fi
-    
+
     # Step 3: Check for conflicting routes
     check_conflicting_routes
-    
-    # Step 4: Regenerate Prisma client
-    regenerate_prisma_client
-    
+
+    # Step 4: Regenerate Prisma client (skip during deploy — just generated in remote-deploy.sh)
+    if [ "${SKIP_PRISMA_REGEN:-}" != "1" ]; then
+      regenerate_prisma_client
+    else
+      log_info "Skipping Prisma regenerate (deploy fast path)"
+    fi
+
     # Step 5: Test webhook endpoint
     if test_webhook_endpoint; then
         log_success "🎉 Webhook endpoint is working correctly!"
         return 0
     else
         log_warning "Webhook endpoint not responding, attempting restart..."
-        
+
         # Step 6: Restart application
         if restart_application; then
             # Step 7: Test again after restart
