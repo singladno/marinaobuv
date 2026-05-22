@@ -1,10 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useSearch } from '@/contexts/SearchContext';
 import {
   loadPersistedCatalogFilters,
   usePersistCatalogFilters,
 } from '@/hooks/usePersistedCatalogFilters';
+
+function getUrlSearchParam(name: string): string {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get(name) || '';
+}
 
 interface CatalogFilters {
   search: string;
@@ -76,7 +81,6 @@ export function useInfiniteCatalog(
   sharedCategoryData?: CategoryData
 ) {
   const { searchQuery } = useSearch();
-  const searchParams = useSearchParams();
   const pathname = usePathname();
   const [allProducts, setAllProducts] = useState<any[]>([]);
   /** Start true so the grid shows skeletons on the first paint before the mount effect runs. */
@@ -371,21 +375,27 @@ export function useInfiniteCatalog(
     }
   }, [searchQuery, fetchProducts]);
 
-  // Handle ?search= URL changes (back/forward, shared links)
+  // Handle ?search= URL changes (browser back/forward)
   useEffect(() => {
     if (!hasInitialized.current) return;
-    const urlSearch = searchParams.get('search') || '';
-    if (urlSearch === lastSearchQuery.current) return;
-    lastSearchQuery.current = urlSearch;
-    lastRequestKeyRef.current = null;
-    const newFilters = {
-      ...currentFiltersRef.current,
-      search: urlSearch,
-      page: 1,
+
+    const syncSearchFromUrl = () => {
+      const urlSearch = getUrlSearchParam('search');
+      if (urlSearch === lastSearchQuery.current) return;
+      lastSearchQuery.current = urlSearch;
+      lastRequestKeyRef.current = null;
+      const newFilters = {
+        ...currentFiltersRef.current,
+        search: urlSearch,
+        page: 1,
+      };
+      setFilters(newFilters);
+      fetchProducts(newFilters, false);
     };
-    setFilters(newFilters);
-    fetchProducts(newFilters, false);
-  }, [searchParams, fetchProducts]);
+
+    window.addEventListener('popstate', syncSearchFromUrl);
+    return () => window.removeEventListener('popstate', syncSearchFromUrl);
+  }, [fetchProducts]);
 
   // Handle initial category ID changes
   useEffect(() => {
@@ -415,7 +425,7 @@ export function useInfiniteCatalog(
     if (!hasInitialized.current && !requestInProgress.current) {
       hasInitialized.current = true;
       const saved = loadPersistedCatalogFilters(pathname) || {};
-      const urlSearch = searchParams.get('search') || '';
+      const urlSearch = getUrlSearchParam('search');
       const merged: Partial<CatalogFilters> = {
         search: urlSearch || saved.search || searchQuery || '',
         sortBy: saved.sortBy || 'newest',

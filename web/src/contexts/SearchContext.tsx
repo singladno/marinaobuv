@@ -7,7 +7,12 @@ import {
   useCallback,
   useEffect,
 } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+
+function getUrlSearchParam(name: string): string {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get(name) || '';
+}
 
 interface SearchHistoryItem {
   id: string;
@@ -32,7 +37,6 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const router = useRouter();
   const pathname = usePathname();
-  const urlSearchParams = useSearchParams();
 
   // Fetch search history from backend
   const fetchSearchHistory = useCallback(async () => {
@@ -109,7 +113,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Stay on the current catalog/home page and update ?search= in the URL
-      const params = new URLSearchParams(urlSearchParams.toString());
+      const params = new URLSearchParams(window.location.search);
       if (query.trim()) {
         params.set('search', query.trim());
       } else {
@@ -135,7 +139,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
         );
       }
     },
-    [saveToLocalSearchHistory, router, pathname, urlSearchParams]
+    [saveToLocalSearchHistory, router, pathname]
   );
 
   // Clear search history
@@ -178,12 +182,13 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
 
     loadHistory();
 
-    // Sync search input from URL (e.g. shared link or browser back)
-    const urlSearch =
-      typeof window !== 'undefined'
-        ? new URLSearchParams(window.location.search).get('search') || ''
-        : '';
-    setSearchQuery(urlSearch);
+    setSearchQuery(getUrlSearchParam('search'));
+
+    const onPopState = () => {
+      setSearchQuery(getUrlSearchParam('search'));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
   }, [fetchSearchHistory, loadLocalSearchHistory]);
 
   const value: SearchContextType = {

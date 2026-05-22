@@ -16,7 +16,7 @@ fi
 EXISTING=$(crontab -l 2>/dev/null || true)
 
 # Remove any lines with markers present in the config to avoid duplicates
-MARKERS=$(grep -o '# JOB:[^ ]\+' "$CONF_FILE" | awk '{print $2}' | sed 's/# //g' | sort -u || true)
+MARKERS=$(grep -oE '# JOB:[^[:space:]]+' "$CONF_FILE" | awk '{print $2}' | sed 's/# //g' | sort -u || true)
 FILTERED="$EXISTING"
 if [ -n "$MARKERS" ]; then
   while read -r MARK; do
@@ -46,5 +46,3 @@ printf "%s\n" "$NEW_CRON" | crontab -
 
 echo "Installed cron jobs:"
 crontab -l
-
-
