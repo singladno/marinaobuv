@@ -2,27 +2,90 @@
 
 /**
  * Test script for Telegram parser
- * Run locally to test the parser without cron job
- * Usage: npx tsx scripts/test-telegram-parser.ts
+ *
+ * Usage:
+ *   npx tsx scripts/test-telegram-parser.ts
+ *   npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica
+ *   npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --hours 72
+ *   npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --all
  */
 
 import '../src/scripts/load-env';
 import { scriptPrisma as prisma } from '../src/lib/script-db';
 import { TelegramParser } from '../src/lib/services/telegram-parser';
+import {
+  getTelegramChannelById,
+  getTelegramChannels,
+  normalizeChannelId,
+} from '../src/lib/telegram-channels';
+
+function parseArgs(argv: string[]) {
+  let channel: string | undefined;
+  let hours = 48;
+  let fetchAll = false;
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--channel' && argv[i + 1]) {
+      channel = argv[++i];
+    } else if (arg === '--hours' && argv[i + 1]) {
+      hours = parseInt(argv[++i], 10);
+    } else if (arg === '--all') {
+      fetchAll = true;
+    }
+  }
+
+  return { channel, hours, fetchAll };
+}
 
 async function main() {
   console.log('🧪 Testing Telegram Parser...\n');
 
+  const {
+    channel: channelArg,
+    hours,
+    fetchAll,
+  } = parseArgs(process.argv.slice(2));
+  const parser = new TelegramParser(prisma);
+
   try {
-    const parser = new TelegramParser(prisma);
+    if (channelArg) {
+      const channelId = normalizeChannelId(channelArg);
+      const channel = getTelegramChannelById(channelId);
+      if (!channel) {
+        console.error(
+          `Channel ${channelId} not found in TELEGRAM_CHANNELS / TELEGRAM_CHANNEL_ID`
+        );
+        console.error(
+          'Configured:',
+          getTelegramChannels()
+            .map(c => `${c.id}:${c.profile}`)
+            .join(', ') || '(none)'
+        );
+        process.exit(1);
+      }
 
-    // Parse messages from last 48 hours
-    console.log('📨 Fetching and parsing messages from last 48 hours...\n');
-    const result = await parser.parseChannelMessages(48);
+      console.log(
+        fetchAll
+          ? `📨 Full history for ${channel.id} (${channel.profile})...\n`
+          : `📨 Last ${hours}h for ${channel.id} (${channel.profile})...\n`
+      );
 
-    console.log('\n✅ Test completed successfully!');
-    console.log(`📊 Messages read: ${result.messagesRead}`);
-    console.log(`📊 Products created: ${result.productsCreated}`);
+      const result = await parser.parseChannel(channel, {
+        hoursBack: hours,
+        fetchAll,
+      });
+
+      console.log('\n✅ Test completed successfully!');
+      console.log(`📊 Messages read: ${result.messagesRead}`);
+      console.log(`📊 Products created: ${result.productsCreated}`);
+    } else {
+      console.log(`📨 All configured channels, last ${hours} hours...\n`);
+      const result = await parser.parseChannelMessages(hours);
+      console.log('\n✅ Test completed successfully!');
+      console.log(`📊 Messages read: ${result.messagesRead}`);
+      console.log(`📊 Products created: ${result.productsCreated}`);
+    }
   } catch (error) {
     console.error('\n❌ Test failed:', error);
     if (error instanceof Error) {

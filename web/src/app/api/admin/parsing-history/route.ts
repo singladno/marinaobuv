@@ -36,6 +36,13 @@ export async function GET(request: NextRequest) {
         if (sourceId) where.sourceId = sourceId;
       } else if (parserId === 'tg') {
         where.reason = { contains: 'Telegram' };
+        if (sourceId) {
+          try {
+            where.sourceId = decodeURIComponent(sourceId);
+          } catch {
+            where.sourceId = sourceId;
+          }
+        }
       }
     }
 
@@ -87,7 +94,12 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logRequestError(request, '/api/admin/parsing-history', error, 'Error fetching parsing history:');
+    logRequestError(
+      request,
+      '/api/admin/parsing-history',
+      error,
+      'Error fetching parsing history:'
+    );
     return NextResponse.json(
       { error: 'Failed to fetch parsing history' },
       { status: 500 }

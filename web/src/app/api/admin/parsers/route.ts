@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getWaChatIds } from '@/lib/env';
 import { prisma } from '@/lib/server/db';
 import { logger } from '@/lib/server/logger';
+import { getTelegramChannels } from '@/lib/telegram-channels';
 
 export type ParserType = 'wa' | 'tg';
 
@@ -10,9 +11,9 @@ export interface ParserItem {
   name: string;
   description: string;
   type: ParserType;
-  /** For WA: chat id for per-chat detail. Null for TG or "all WA" legacy. */
+  /** For WA: chat id. For TG: channel id. */
   sourceId: string | null;
-  /** URL path segment for this parser (e.g. "tg", "wa", or "wa/<encodedChatId>") */
+  /** URL path segment for this parser (e.g. "tg", "wa/<encodedChatId>") */
   path: string;
 }
 
@@ -24,23 +25,39 @@ function formatWaChatLabel(chatId: string): string {
 
 /**
  * Returns the list of parsers for the admin parsing page.
- * WA: one entry per chat from WA_CHAT_IDS (or TARGET_GROUP_ID); names from WhatsAppChat when available.
- * TG: single Telegram parser.
+ * WA: one entry per chat from WA_CHAT_IDS.
+ * TG: one entry per channel from TELEGRAM_CHANNELS (or TELEGRAM_CHANNEL_ID).
  */
 export async function GET() {
   try {
     const waChatIds = getWaChatIds();
+    const tgChannels = getTelegramChannels();
     const parsers: ParserItem[] = [];
 
-    // Telegram parser (single)
-    parsers.push({
-      id: 'tg',
-      name: '32-61/63 Telegram',
-      description: 'Парсинг цветов из Telegram канала',
-      type: 'tg',
-      sourceId: null,
-      path: 'tg',
-    });
+    if (tgChannels.length === 0) {
+      parsers.push({
+        id: 'tg',
+        name: 'Telegram (каналы не настроены)',
+        description:
+          'Настройте TELEGRAM_CHANNELS или TELEGRAM_CHANNEL_ID в .env',
+        type: 'tg',
+        sourceId: null,
+        path: 'tg',
+      });
+    } else {
+      tgChannels.forEach((channel, index) => {
+        const profileLabel =
+          channel.profile === 'cosmetics' ? 'косметика' : 'цветы';
+        parsers.push({
+          id: `tg-${index}`,
+          name: channel.name,
+          description: `Парсинг ${profileLabel} из ${channel.id}`,
+          type: 'tg',
+          sourceId: channel.id,
+          path: `tg/${encodeURIComponent(channel.id)}`,
+        });
+      });
+    }
 
     // WhatsApp: one parser per chat; resolve names from WhatsAppChat
     if (waChatIds.length === 0) {
@@ -79,12 +96,9 @@ export async function GET() {
 
     return NextResponse.json({ parsers });
   } catch (error) {
-    logger.error(
-      { err: error, route: '/api/admin/parsers' },
-      'Error fetching parsers list:'
-    );
+    logger.error({ err: error }, 'Failed to list parsers');
     return NextResponse.json(
-      { error: 'Failed to fetch parsers' },
+      { error: 'Failed to list parsers', parsers: [] },
       { status: 500 }
     );
   }

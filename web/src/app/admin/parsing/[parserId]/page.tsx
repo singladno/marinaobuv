@@ -65,7 +65,7 @@ interface ParsingHistoryResponse {
 
 const parserNames: Record<string, string> = {
   wa: 'Аггрегатор Садовода WhatsApp',
-  tg: '32-61/63 Telegram',
+  tg: 'Telegram',
 };
 
 const createParsingHistoryColumns = (): ColumnDef<ParsingHistoryItem>[] => [
@@ -181,12 +181,22 @@ export default function ParserDetailPage() {
   const [pagination, setPagination] = useState<any>(null);
   const [waChatName, setWaChatName] = useState<string | null>(null);
 
-  const parserName = sourceId
-    ? (waChatName !== null ? `WhatsApp — ${waChatName}` : `WhatsApp — ${sourceId.length > 30 ? `${sourceId.slice(0, 27)}…` : sourceId}`)
-    : (parserNames[parserId] || parserId);
+  const parserName =
+    parserId === 'wa' && sourceId
+      ? waChatName !== null
+        ? `WhatsApp — ${waChatName}`
+        : `WhatsApp — ${sourceId.length > 30 ? `${sourceId.slice(0, 27)}…` : sourceId}`
+      : parserId === 'tg' && sourceId
+        ? `Telegram — ${sourceId}`
+        : parserNames[parserId] || parserId;
 
   const historyUrl = (page: number, status: string) => {
-    const params = new URLSearchParams({ page: String(page), limit: '20', status, parserId });
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: '20',
+      status,
+      parserId,
+    });
     if (sourceId) params.set('sourceId', sourceId);
     return `/api/admin/parsing-history?${params.toString()}`;
   };
@@ -239,12 +249,14 @@ export default function ParserDetailPage() {
     let cancelled = false;
     const chatId = decodeURIComponent(sourceId);
     fetch(`/api/admin/wa-chat-name?chatId=${encodeURIComponent(chatId)}`)
-      .then(res => res.ok ? res.json() : null)
+      .then(res => (res.ok ? res.json() : null))
       .then(data => {
         if (!cancelled && data?.name) setWaChatName(data.name);
       })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [parserId, sourceId]);
 
   useEffect(() => {
@@ -300,7 +312,10 @@ export default function ParserDetailPage() {
       {/* Header Section */}
       <div className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-900">
         <div className="mb-4 flex items-center gap-4">
-          <Button variant="outline" onClick={() => router.push('/admin/parsing')}>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/admin/parsing')}
+          >
             ← Назад
           </Button>
           <Text variant="h2">{parserName}</Text>

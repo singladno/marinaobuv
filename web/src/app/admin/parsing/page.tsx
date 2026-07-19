@@ -29,7 +29,8 @@ export default function ParsingPage() {
         const data = await res.json();
         if (!cancelled) setParsers(data.parsers ?? []);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Ошибка загрузки');
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : 'Ошибка загрузки');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -47,7 +48,8 @@ export default function ParsingPage() {
           Парсеры
         </Text>
         <Text className="text-sm text-gray-600 dark:text-gray-400">
-          Выберите парсер для просмотра деталей и статистики. WhatsApp: отдельная страница для каждого чата из WA_CHAT_IDS.
+          Выберите парсер для просмотра деталей и статистики. WhatsApp — чаты из
+          WA_CHAT_IDS; Telegram — каналы из TELEGRAM_CHANNELS.
         </Text>
       </div>
 

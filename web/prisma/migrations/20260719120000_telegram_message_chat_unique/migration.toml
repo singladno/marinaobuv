@@ -1,0 +1,2 @@
+# Multi-channel Telegram messages: unique (chatId, tgMessageId)
+migration = "telegram_message_chat_unique"

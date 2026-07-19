@@ -1,6 +1,6 @@
 /**
  * Telegram Parser Cron Job
- * Runs every 24 hours to parse messages from Telegram channel
+ * Runs every 24 hours to parse messages from all configured Telegram channels
  */
 
 import './load-env';
@@ -8,12 +8,24 @@ import { scriptPrisma as prisma } from '../lib/script-db';
 import { TelegramParser } from '../lib/services/telegram-parser';
 import { ParsingCoordinator } from '../lib/services/parsing-coordinator';
 import { ParsingProgressService } from '../lib/services/parsing-progress-service';
+import { getTelegramChannels } from '../lib/telegram-channels';
 
 async function main() {
   console.log('🚀 Starting Telegram Parser Cron Job...');
 
+  const channels = getTelegramChannels();
+  if (channels.length === 0) {
+    console.error(
+      '❌ No Telegram channels configured. Set TELEGRAM_CHANNELS or TELEGRAM_CHANNEL_ID'
+    );
+    process.exit(1);
+  }
+
+  console.log(
+    `📋 Channels: ${channels.map(c => `${c.id}(${c.profile})`).join(', ')}`
+  );
+
   try {
-    // Check if parsing can proceed
     const canProceed = await ParsingCoordinator.canStartParsing({
       type: 'cron',
       reason: 'Telegram parser cron job',
@@ -24,50 +36,55 @@ async function main() {
       return;
     }
 
-    // Create parsing history record
-    const parsingHistoryId = await ParsingCoordinator.createParsingHistory(
-      'cron',
-      'Telegram parser cron job'
-    );
-    console.log(`📊 Created parsing history record: ${parsingHistoryId}`);
-
-    // Initialize progress service
-    const progressService = new ParsingProgressService();
-    progressService.setParsingHistoryId(parsingHistoryId);
-
-    // Initialize parser
     const parser = new TelegramParser(prisma);
+    let totalMessages = 0;
+    let totalProducts = 0;
 
-    // Parse messages from last 48 hours
-    const result = await parser.parseChannelMessages(48);
+    for (const channel of channels) {
+      console.log(`\n📡 Parsing ${channel.id} (${channel.profile})...`);
 
-    // Update progress
-    await progressService.updateProgress({
-      status: 'completed',
-      messagesRead: result.messagesRead,
-      productsCreated: result.productsCreated,
-    });
+      const parsingHistoryId = await ParsingCoordinator.createParsingHistory(
+        'cron',
+        `Telegram parser cron — ${channel.name}`,
+        channel.id
+      );
+      console.log(`📊 Created parsing history record: ${parsingHistoryId}`);
 
-    console.log('✅ Telegram Parser completed successfully');
-    console.log(`📊 Messages read: ${result.messagesRead}`);
-    console.log(`📊 Products created: ${result.productsCreated}`);
-  } catch (error) {
-    console.error('❌ Error in Telegram Parser:', error);
-
-    // Mark parsing as failed
-    try {
       const progressService = new ParsingProgressService();
-      await progressService.updateProgress({
-        status: 'failed',
-        errorMessage:
-          error instanceof Error ? error.message : 'Unknown error',
-        messagesRead: 0,
-        productsCreated: 0,
-      });
-    } catch (progressError) {
-      console.error('❌ Failed to update parsing progress:', progressError);
+      progressService.setParsingHistoryId(parsingHistoryId);
+
+      try {
+        const result = await parser.parseChannel(channel, { hoursBack: 48 });
+
+        await progressService.updateProgress({
+          status: 'completed',
+          messagesRead: result.messagesRead,
+          productsCreated: result.productsCreated,
+        });
+
+        totalMessages += result.messagesRead;
+        totalProducts += result.productsCreated;
+
+        console.log(
+          `✅ ${channel.id}: ${result.messagesRead} messages, ${result.productsCreated} products`
+        );
+      } catch (error) {
+        console.error(`❌ Error parsing ${channel.id}:`, error);
+        await progressService.updateProgress({
+          status: 'failed',
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
+          messagesRead: 0,
+          productsCreated: 0,
+        });
+      }
     }
 
+    console.log('\n✅ Telegram Parser completed');
+    console.log(`📊 Total messages read: ${totalMessages}`);
+    console.log(`📊 Total products created: ${totalProducts}`);
+  } catch (error) {
+    console.error('❌ Error in Telegram Parser:', error);
     throw error;
   } finally {
     await prisma.$disconnect();

@@ -184,8 +184,19 @@ const schema = z
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_ALERT_CHAT_IDS: z.string().optional(), // e.g. "123456789" or "123456789,987654321"
     TELEGRAM_NOTIFICATIONS_ENABLED: z.string().optional(),
-    // Telegram Parser
+    // Telegram Parser (legacy single channel; used if TELEGRAM_CHANNELS unset)
     TELEGRAM_CHANNEL_ID: z.string().optional(), // Channel username (e.g., @channelname) or ID
+    // Multi-channel: @ch1:flowers,@dilshod_cosmetica:cosmetics or @ch:cosmetics:Label
+    TELEGRAM_CHANNELS: z
+      .string()
+      .optional()
+      .transform(val => {
+        if (!val || typeof val !== 'string') return undefined;
+        return val
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+      }),
     // Telegram User Account (for MTProto - direct channel access)
     TELEGRAM_API_ID: z.string().optional(), // Get from https://my.telegram.org/apps
     TELEGRAM_API_HASH: z.string().optional(), // Get from https://my.telegram.org/apps
@@ -297,6 +308,7 @@ const raw = {
   TELEGRAM_NOTIFICATIONS_ENABLED: process.env.TELEGRAM_NOTIFICATIONS_ENABLED,
   // Telegram Parser
   TELEGRAM_CHANNEL_ID: process.env.TELEGRAM_CHANNEL_ID,
+  TELEGRAM_CHANNELS: process.env.TELEGRAM_CHANNELS,
   // Telegram User Account (for MTProto)
   TELEGRAM_API_ID: process.env.TELEGRAM_API_ID,
   TELEGRAM_API_HASH: process.env.TELEGRAM_API_HASH,

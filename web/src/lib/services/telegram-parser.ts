@@ -9,8 +9,13 @@ import { telegramMTProtoFetcher } from '../telegram-mtproto-fetcher';
 import { createSlug, generateArticleNumber } from './product-creation-mappers';
 import { env } from '../env';
 import { uploadImage, getObjectKey, getPublicUrl } from '../storage';
-import { GroqSequentialProcessor } from './groq-sequential-processor';
 import { logger, logServerError } from '@/lib/server/logger';
+import {
+  getTelegramChannels,
+  normalizeChannelId,
+  type TelegramChannelConfig,
+  type TelegramParserProfile,
+} from '../telegram-channels';
 
 interface TelegramMessageGroup {
   messageIds: string[];
@@ -35,14 +40,40 @@ interface ParsedProductData {
   description: string;
 }
 
+export interface ParseChannelOptions {
+  hoursBack?: number;
+  /** When true, fetch entire channel history (backfill). */
+  fetchAll?: boolean;
+}
+
 export class TelegramParser {
   constructor(private prisma: PrismaClient) {}
 
   /**
-   * Extract location from message text (e.g., "Линия 32-61/63 павильон")
+   * Extract location from message text (profile-aware).
    */
-  private extractLocation(text: string): string | null {
-    // Pattern: "Линия 32-61/63 павильон" or similar
+  private extractLocation(
+    text: string,
+    profile: TelegramParserProfile
+  ): string | null {
+    if (profile === 'cosmetics') {
+      const parts: string[] = [];
+      const sadovod = text.match(/(?:ТК\s*)?САДОВОД|Садовод/i);
+      if (sadovod) parts.push('ТК Садовод');
+      const corpus = text.match(/Корпус\s*([^\n✅]+)/i);
+      if (corpus) parts.push(`Корпус ${corpus[1].trim()}`);
+      const line = text.match(
+        /(\d+\s*Линя[^\n✅]*|Линия\s*[^\n✅]+|линия\s*[^\n✅]+)/i
+      );
+      if (line) parts.push(line[1].trim());
+      const place = text.match(/место\s*([^\n✅]+)/i);
+      if (place && !line?.[0]?.toLowerCase().includes('место')) {
+        parts.push(`место ${place[1].trim()}`);
+      }
+      return parts.length > 0 ? parts.join(', ') : null;
+    }
+
+    // Flowers / default: "Линия 32-61/63 павильон"
     const locationPattern =
       /(?:Линия|линия|Павильон|павильон|Ряд|ряд)\s*([^\n]+)/i;
     const match = text.match(locationPattern);
@@ -53,15 +84,39 @@ export class TelegramParser {
   }
 
   /**
-   * Parse price and amount from message text
-   * Example: "180₽×20шт＝3600Руб."
-   * Returns: unit price (180), box price (3600), and amount (20)
+   * Parse price and amount from message text (profile-aware).
+   * Flowers: "180₽×20шт＝3600Руб."
+   * Cosmetics: "цена :ряд 4 шт 360" → amount=4, boxPrice=360, unit price=90
    */
-  private parsePriceAndAmount(text: string): {
+  private parsePriceAndAmount(
+    text: string,
+    profile: TelegramParserProfile
+  ): {
     price: number | null;
     boxPrice: number | null;
     amount: number | null;
   } {
+    if (profile === 'cosmetics') {
+      // "цена :ряд 4 шт 360" / "Цена:ряд 2 шт 260 рубль"
+      const rowPattern = /ряд\s*(\d+)\s*шт\s*(\d+)/i;
+      const rowMatch = text.match(rowPattern);
+      if (rowMatch) {
+        const amount = parseInt(rowMatch[1], 10);
+        const boxPrice = parseInt(rowMatch[2], 10);
+        const price = amount > 0 ? Math.round(boxPrice / amount) : boxPrice;
+        return { price, boxPrice, amount };
+      }
+      const priceOnly = text.match(/(?:цена|price)\s*[:：]?\s*(\d+)/i);
+      if (priceOnly) {
+        return {
+          price: parseInt(priceOnly[1], 10),
+          boxPrice: null,
+          amount: 1,
+        };
+      }
+      return { price: null, boxPrice: null, amount: null };
+    }
+
     let price: number | null = null;
     let boxPrice: number | null = null;
     let amount: number | null = null;
@@ -392,8 +447,7 @@ export class TelegramParser {
     channelId: string
   ): Promise<Buffer | null> {
     try {
-      // Use TELEGRAM_CHANNEL_ID directly (the channel we're parsing from)
-      const channel = env.TELEGRAM_CHANNEL_ID || channelId;
+      const channel = channelId || env.TELEGRAM_CHANNEL_ID;
       if (!channel) {
         logger.error(
           `❌ No channel ID available for downloading message ${tgMessageId}`
@@ -401,14 +455,16 @@ export class TelegramParser {
         return null;
       }
 
-      // Use the MTProto fetcher's public method
       const buffer = await telegramMTProtoFetcher.downloadMediaByMessageId(
         channel,
         Number(tgMessageId)
       );
       return buffer;
     } catch (error) {
-      logServerError(`❌ Error downloading image for message ${tgMessageId}:`, error);
+      logServerError(
+        `❌ Error downloading image for message ${tgMessageId}:`,
+        error
+      );
       return null;
     }
   }
@@ -518,7 +574,8 @@ export class TelegramParser {
     productId: string,
     messageIds: string[],
     textContent: string,
-    imageUrls: string[]
+    imageUrls: string[],
+    profile: TelegramParserProfile
   ): Promise<void> {
     if (!textContent || imageUrls.length === 0) {
       logger.debug(
@@ -531,10 +588,34 @@ export class TelegramParser {
       const { Groq } = await import('groq-sdk');
       const { getGroqConfig } = await import('../groq-proxy-config');
       const { groqChatCompletion } = await import('./groq-api-wrapper');
-      const {
-        TELEGRAM_FLOWER_ANALYSIS_SYSTEM_PROMPT,
-        TELEGRAM_FLOWER_ANALYSIS_USER_PROMPT,
-      } = await import('../prompts/telegram-flower-analysis-prompts');
+
+      let systemPrompt: string;
+      let userPrompt: string;
+      let defaultName: string;
+
+      if (profile === 'cosmetics') {
+        const {
+          TELEGRAM_COSMETICS_ANALYSIS_SYSTEM_PROMPT,
+          TELEGRAM_COSMETICS_ANALYSIS_USER_PROMPT,
+        } = await import('../prompts/telegram-cosmetics-analysis-prompts');
+        systemPrompt = TELEGRAM_COSMETICS_ANALYSIS_SYSTEM_PROMPT;
+        userPrompt = TELEGRAM_COSMETICS_ANALYSIS_USER_PROMPT(
+          textContent,
+          imageUrls.length
+        );
+        defaultName = 'Косметика';
+      } else {
+        const {
+          TELEGRAM_FLOWER_ANALYSIS_SYSTEM_PROMPT,
+          TELEGRAM_FLOWER_ANALYSIS_USER_PROMPT,
+        } = await import('../prompts/telegram-flower-analysis-prompts');
+        systemPrompt = TELEGRAM_FLOWER_ANALYSIS_SYSTEM_PROMPT;
+        userPrompt = TELEGRAM_FLOWER_ANALYSIS_USER_PROMPT(
+          textContent,
+          imageUrls.length
+        );
+        defaultName = 'Искусственные цветы';
+      }
 
       const groqConfig = await getGroqConfig();
       const groq = new Groq(groqConfig);
@@ -546,14 +627,11 @@ export class TelegramParser {
           messages: [
             {
               role: 'system',
-              content: TELEGRAM_FLOWER_ANALYSIS_SYSTEM_PROMPT,
+              content: systemPrompt,
             },
             {
               role: 'user',
-              content: TELEGRAM_FLOWER_ANALYSIS_USER_PROMPT(
-                textContent,
-                imageUrls.length
-              ),
+              content: userPrompt,
             },
           ],
           response_format: { type: 'json_object' },
@@ -578,7 +656,7 @@ export class TelegramParser {
 
       // Update product with GROQ analysis results
       const updateData: any = {
-        name: analysisResult.name || 'Искусственные цветы',
+        name: analysisResult.name || defaultName,
         description: analysisResult.description || '',
         batchProcessingStatus: 'completed',
         isActive: true, // Activate product after successful GROQ analysis
@@ -619,14 +697,58 @@ export class TelegramParser {
   /**
    * Create product from message group with S3 upload and GROQ analysis
    */
-  private async createProductFromGroup(
-    group: TelegramMessageGroup,
-    parsedData: ParsedProductData,
-    providerId: string
-  ): Promise<string> {
-    const { location, price, boxPrice, amount, description } = parsedData;
+  private async resolveCategory(profile: TelegramParserProfile) {
+    if (profile === 'cosmetics') {
+      // Prefer dedicated beauty category. Do NOT match «Автокосметика» via substring «космет».
+      let category = await this.prisma.category.findFirst({
+        where: {
+          OR: [
+            { slug: 'cosmetics' },
+            { slug: 'kosmetika' },
+            { name: { equals: 'Косметика', mode: 'insensitive' } },
+          ],
+        },
+      });
+      if (!category) {
+        category = await this.prisma.category.findFirst({
+          where: {
+            AND: [
+              {
+                OR: [
+                  { name: { contains: 'космет', mode: 'insensitive' } },
+                  { slug: { contains: 'cosmet', mode: 'insensitive' } },
+                  { slug: { contains: 'kosmet', mode: 'insensitive' } },
+                ],
+              },
+              {
+                NOT: {
+                  OR: [
+                    { name: { contains: 'авто', mode: 'insensitive' } },
+                    { slug: { contains: 'avto', mode: 'insensitive' } },
+                    { slug: { contains: 'auto', mode: 'insensitive' } },
+                    { path: { contains: 'avto', mode: 'insensitive' } },
+                    { path: { contains: 'auto', mode: 'insensitive' } },
+                  ],
+                },
+              },
+            ],
+          },
+        });
+      }
+      if (!category) {
+        category = await this.prisma.category.create({
+          data: {
+            name: 'Косметика',
+            slug: 'cosmetics',
+            path: 'cosmetics',
+            isActive: true,
+            sort: 100,
+          },
+        });
+      }
+      return category;
+    }
 
-    // Get default category
     let defaultCategory = await this.prisma.category.findFirst({
       where: { slug: 'flowers' },
     });
@@ -655,6 +777,18 @@ export class TelegramParser {
       );
     }
 
+    return defaultCategory;
+  }
+
+  private async createProductFromGroup(
+    group: TelegramMessageGroup,
+    parsedData: ParsedProductData,
+    providerId: string,
+    channel: TelegramChannelConfig
+  ): Promise<string> {
+    const { price, description } = parsedData;
+    const defaultCategory = await this.resolveCategory(channel.profile);
+
     // Calculate prices: store original in buyPrice, apply 30% markup to pricePair
     const originalPrice = price || 0;
     const priceWithMarkup = originalPrice * 1.3; // Add 30% markup
@@ -679,9 +813,7 @@ export class TelegramParser {
       },
     });
 
-    // Upload images to S3
-    // Use TELEGRAM_CHANNEL_ID directly (it's the channel we're parsing from)
-    const channelId = env.TELEGRAM_CHANNEL_ID || '';
+    const channelId = channel.id;
 
     logger.debug(
       `📤 Uploading ${group.images.length} images to S3 for product ${product.id}...`
@@ -723,10 +855,14 @@ export class TelegramParser {
         product.id,
         group.messageIds,
         group.text,
-        uploadedImages.map(img => img.url)
+        uploadedImages.map(img => img.url),
+        channel.profile
       );
     } catch (error) {
-      logServerError(`❌ GROQ analysis failed for product ${product.id}:`, error);
+      logServerError(
+        `❌ GROQ analysis failed for product ${product.id}:`,
+        error
+      );
       // Activate product even if GROQ fails (it has images and basic info)
       await this.prisma.product.update({
         where: { id: product.id },
@@ -751,20 +887,25 @@ export class TelegramParser {
   }
 
   /**
-   * Parse messages from Telegram channel
+   * Parse one configured Telegram channel (incremental or full history).
    */
-  async parseChannelMessages(hoursBack: number = 48): Promise<{
+  async parseChannel(
+    channel: TelegramChannelConfig,
+    options: ParseChannelOptions = {}
+  ): Promise<{
     messagesRead: number;
     productsCreated: number;
   }> {
-    logger.debug(`[Telegram Parser] Starting parse (last ${hoursBack} hours)`);
+    const hoursBack = options.hoursBack ?? 48;
+    const fetchAll = options.fetchAll ?? false;
+    const chatId = normalizeChannelId(channel.id);
 
-    if (!env.TELEGRAM_CHANNEL_ID) {
-      throw new Error('TELEGRAM_CHANNEL_ID is not configured');
-    }
+    logger.debug(
+      fetchAll
+        ? `[Telegram Parser] Starting FULL parse for ${chatId} (${channel.profile})`
+        : `[Telegram Parser] Starting parse for ${chatId} (${channel.profile}, last ${hoursBack} hours)`
+    );
 
-    // Fetch messages from Telegram
-    // Use MTProto (user account) if credentials are available, otherwise use Bot API
     let telegramMessages: any[] = [];
 
     if (env.TELEGRAM_API_ID && env.TELEGRAM_API_HASH && env.TELEGRAM_PHONE) {
@@ -773,39 +914,46 @@ export class TelegramParser {
       );
       try {
         await telegramMTProtoFetcher.connect();
-        const mtprotoMessages =
-          await telegramMTProtoFetcher.fetchChannelMessages(
-            env.TELEGRAM_CHANNEL_ID,
-            hoursBack
-          );
-        telegramMessages = mtprotoMessages;
+        telegramMessages = await telegramMTProtoFetcher.fetchChannelMessages(
+          chatId,
+          fetchAll ? { fetchAll: true } : hoursBack
+        );
         await telegramMTProtoFetcher.disconnect();
       } catch (error) {
-        logServerError('[Telegram Parser] MTProto fetch failed, falling back to Bot API:', error);
-        // Fall back to Bot API
+        logServerError(
+          '[Telegram Parser] MTProto fetch failed, falling back to Bot API:',
+          error
+        );
+        if (fetchAll) {
+          throw error;
+        }
         telegramMessages = await telegramFetcher.fetchChannelMessagesByUsername(
-          env.TELEGRAM_CHANNEL_ID,
+          chatId,
           hoursBack
         );
       }
     } else {
+      if (fetchAll) {
+        throw new Error(
+          'Full history backfill requires MTProto credentials (TELEGRAM_API_ID/HASH/PHONE)'
+        );
+      }
       logger.debug('[Telegram Parser] Using Bot API to fetch messages');
       telegramMessages = await telegramFetcher.fetchChannelMessagesByUsername(
-        env.TELEGRAM_CHANNEL_ID,
+        chatId,
         hoursBack
       );
     }
 
     if (telegramMessages.length === 0) {
-      logger.debug('[Telegram Parser] No messages found');
+      logger.debug(`[Telegram Parser] No messages found for ${chatId}`);
       return { messagesRead: 0, productsCreated: 0 };
     }
 
-    // Save messages to database
     const savedMessages: Array<{
       id: string;
       tgMessageId: number | bigint;
-      tgMessageIdBigInt?: bigint; // Store for re-downloading images
+      tgMessageIdBigInt?: bigint;
       fromId: number | null;
       fromUsername: string | null;
       fromFirstName: string | null;
@@ -814,17 +962,45 @@ export class TelegramParser {
       mediaUrl: string | null;
       type: string | null;
       date: number;
+      mediaBuffer?: Buffer;
     }> = [];
 
     for (const msg of telegramMessages) {
-      // Check if message already exists (convert to BigInt for lookup)
-      const existing = await this.prisma.telegramMessage.findUnique({
-        where: { tgMessageId: BigInt(msg.message_id) },
+      const tgMessageId = BigInt(msg.message_id);
+
+      let existing = await this.prisma.telegramMessage.findUnique({
+        where: {
+          chatId_tgMessageId: { chatId, tgMessageId },
+        },
       });
 
+      // Legacy rows may use numeric chat id or 'legacy-tg' — adopt under normalized channel id
+      if (!existing) {
+        const numericChatId = msg.chat?.id != null ? String(msg.chat.id) : null;
+        const legacyChatIds = [
+          'legacy-tg',
+          ...(numericChatId ? [numericChatId] : []),
+        ];
+        const legacy = await this.prisma.telegramMessage.findFirst({
+          where: {
+            tgMessageId,
+            chatId: { in: legacyChatIds },
+          },
+        });
+        if (legacy && legacy.chatId !== chatId) {
+          existing = await this.prisma.telegramMessage.update({
+            where: { id: legacy.id },
+            data: { chatId },
+          });
+        } else if (legacy) {
+          existing = legacy;
+        }
+      }
+
       if (existing) {
-        // Use existing message - use createdAt for date to maintain chronological order
-        // createdAt reflects when the message was received/saved, which should match Telegram order
+        const existingDate = existing.date
+          ? Number(existing.date)
+          : existing.createdAt.getTime() / 1000;
         savedMessages.push({
           id: existing.id,
           tgMessageId: existing.tgMessageId,
@@ -835,12 +1011,12 @@ export class TelegramParser {
           caption: existing.caption,
           mediaUrl: existing.mediaUrl,
           type: existing.type,
-          date: existing.createdAt.getTime() / 1000,
+          date: existingDate,
+          tgMessageIdBigInt: existing.tgMessageId,
         });
         continue;
       }
 
-      // Determine message type first
       let messageType = (msg as any).type;
       if (!messageType) {
         if (msg.photo && msg.photo.length > 0) {
@@ -854,41 +1030,40 @@ export class TelegramParser {
         }
       }
 
-      // Get media URL and buffer if it's a photo
       let mediaUrl: string | null = null;
       let mediaBuffer: Buffer | undefined = undefined;
 
-      // If mediaBuffer is available (from MTProto download), use it
       if (
         (msg as any).mediaBuffer &&
         Buffer.isBuffer((msg as any).mediaBuffer)
       ) {
         mediaBuffer = (msg as any).mediaBuffer;
-        mediaUrl = `telegram_photo_${msg.message_id}`; // Placeholder, will be replaced with S3 URL
+        mediaUrl = `telegram_photo_${msg.message_id}`;
       } else if ((msg as any).mediaUrl) {
-        // If mediaUrl is already set (from MTProto), use it
         mediaUrl = (msg as any).mediaUrl;
       } else if (msg.photo && msg.photo.length > 0) {
-        // Otherwise try to get from Bot API
         const largestPhoto = msg.photo[msg.photo.length - 1];
         mediaUrl = await telegramFetcher.getFileUrl(largestPhoto.file_id);
       } else if (messageType === 'photo') {
-        // If it's a photo type but no mediaUrl, create a placeholder
         mediaUrl = `telegram_photo_${msg.message_id}`;
       }
 
-      // Use the actual Telegram message date, not the database createdAt
       const messageDate =
         (msg as any).date || msg.date || Math.floor(Date.now() / 1000);
 
-      // Save message to database
+      // Prefer channel username as provider identity for channel posts
+      const channelUsername = chatId.replace(/^@/, '');
+      const fromUsername = msg.from?.username || channelUsername || null;
+      const fromFirstName =
+        msg.from?.first_name || channel.name || channelUsername || null;
+
       const saved = await this.prisma.telegramMessage.create({
         data: {
-          tgMessageId: BigInt(msg.message_id),
-          chatId: msg.chat.id.toString(),
+          tgMessageId,
+          chatId,
           fromId: msg.from?.id ? BigInt(msg.from.id) : null,
-          fromUsername: msg.from?.username || null,
-          fromFirstName: msg.from?.first_name || null,
+          fromUsername,
+          fromFirstName,
           fromLastName: msg.from?.last_name || null,
           type: messageType,
           text: msg.text || null,
@@ -915,13 +1090,15 @@ export class TelegramParser {
         mediaUrl: saved.mediaUrl,
         type: saved.type,
         date: messageDate,
-        tgMessageIdBigInt: saved.tgMessageId, // Store for re-downloading images
+        tgMessageIdBigInt: saved.tgMessageId,
+        mediaBuffer,
       });
     }
 
-    logger.debug(`[Telegram Parser] Saved ${savedMessages.length} messages`);
+    logger.debug(
+      `[Telegram Parser] Saved ${savedMessages.length} messages for ${chatId}`
+    );
 
-    // Check which messages are already processed
     const processedIds = await this.prisma.telegramMessage.findMany({
       where: {
         id: { in: savedMessages.map(m => m.id) },
@@ -940,68 +1117,38 @@ export class TelegramParser {
       return { messagesRead: savedMessages.length, productsCreated: 0 };
     }
 
-    // Sort messages by date (chronological order) before grouping
-    // This ensures messages are processed in the correct order
     messagesToProcess.sort((a, b) => a.date - b.date);
 
     logger.debug(
-      `[Telegram Parser] Messages sorted by date. First message date: ${new Date(messagesToProcess[0]?.date * 1000).toISOString()}, Last: ${new Date(messagesToProcess[messagesToProcess.length - 1]?.date * 1000).toISOString()}`
-    );
-
-    // Debug: Log message types
-    logger.debug(
       `[Telegram Parser] Analyzing ${messagesToProcess.length} messages for grouping...`
     );
-    const messageTypes = messagesToProcess.map(msg => ({
-      id: msg.id,
-      hasText: !!(msg.text || msg.caption),
-      hasImage: !!(msg.mediaUrl && msg.type === 'photo'),
-      type: msg.type,
-      author: msg.fromUsername || msg.fromId,
-    }));
-    logger.debug(
-      {
-        withText: messageTypes.filter(m => m.hasText).length,
-        withImage: messageTypes.filter(m => m.hasImage).length,
-        withBoth: messageTypes.filter(m => m.hasText && m.hasImage).length,
-        withNeither: messageTypes.filter(m => !m.hasText && !m.hasImage).length,
-      },
-      '[Telegram Parser] Message breakdown'
-    );
 
-    // Group messages
     const groups = this.groupMessages(messagesToProcess);
     logger.debug(`[Telegram Parser] Created ${groups.length} message groups`);
 
     if (groups.length === 0 && messagesToProcess.length > 0) {
       logger.debug(
-        `[Telegram Parser] ⚠️  No groups created. This usually means:`
+        `[Telegram Parser] ⚠️  No groups created. Usually: missing image+text pair, >60s gap, or different authors`
       );
-      logger.debug(
-        `   - Messages don't have both images AND text from the same author`
-      );
-      logger.debug(`   - Messages are too far apart in time (>60 seconds)`);
-      logger.debug(`   - Messages are from different authors`);
     }
 
-    // Process each group
     let productsCreated = 0;
     for (const group of groups) {
       try {
-        // Extract data from message text
-        const location = this.extractLocation(group.text);
+        const location = this.extractLocation(group.text, channel.profile);
         const { price, boxPrice, amount } = this.parsePriceAndAmount(
-          group.text
+          group.text,
+          channel.profile
         );
 
-        // Get or create provider
+        const providerUsername =
+          group.authorUsername || chatId.replace(/^@/, '');
         const providerId = await this.getOrCreateProvider(
           group.authorId,
-          group.authorUsername,
+          providerUsername,
           location
         );
 
-        // Create product
         await this.createProductFromGroup(
           group,
           {
@@ -1011,7 +1158,8 @@ export class TelegramParser {
             amount,
             description: group.text,
           },
-          providerId
+          providerId,
+          channel
         );
 
         productsCreated++;
@@ -1021,12 +1169,37 @@ export class TelegramParser {
     }
 
     logger.debug(
-      `[Telegram Parser] Completed: ${savedMessages.length} messages read, ${productsCreated} products created`
+      `[Telegram Parser] Completed ${chatId}: ${savedMessages.length} messages read, ${productsCreated} products created`
     );
 
     return {
       messagesRead: savedMessages.length,
       productsCreated,
     };
+  }
+
+  /**
+   * Parse all configured Telegram channels (last N hours each).
+   * Backward-compatible entry used by cron / test scripts.
+   */
+  async parseChannelMessages(hoursBack: number = 48): Promise<{
+    messagesRead: number;
+    productsCreated: number;
+  }> {
+    const channels = getTelegramChannels();
+    if (channels.length === 0) {
+      throw new Error(
+        'No Telegram channels configured. Set TELEGRAM_CHANNELS or TELEGRAM_CHANNEL_ID'
+      );
+    }
+
+    let messagesRead = 0;
+    let productsCreated = 0;
+    for (const channel of channels) {
+      const result = await this.parseChannel(channel, { hoursBack });
+      messagesRead += result.messagesRead;
+      productsCreated += result.productsCreated;
+    }
+    return { messagesRead, productsCreated };
   }
 }

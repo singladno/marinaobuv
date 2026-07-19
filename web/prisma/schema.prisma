@@ -251,8 +251,8 @@ model WhatsAppMessage {
 
 model TelegramMessage {
   id            String    @id @default(cuid())
-  tgMessageId   BigInt    @unique
-  chatId        String?
+  tgMessageId   BigInt
+  chatId        String
   fromId        BigInt?
   fromUsername  String?
   fromFirstName String?
@@ -274,6 +274,7 @@ model TelegramMessage {
   updatedAt     DateTime  @updatedAt
   provider      Provider? @relation(fields: [providerId], references: [id])
 
+  @@unique([chatId, tgMessageId])
   @@index([createdAt])
   @@index([date])
   @@index([fromId])

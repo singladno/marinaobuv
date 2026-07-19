@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
   const parserId = searchParams.get('parserId');
   let sourceId = searchParams.get('sourceId') ?? undefined;
 
-  // Normalize WA sourceId: URL may have %40 (encoded @) from double-encoding; DB stores canonical form with @
-  if (parserId === 'wa' && sourceId) {
+  // Normalize sourceId: URL may have %40 (encoded @); DB stores canonical form with @
+  if ((parserId === 'wa' || parserId === 'tg') && sourceId) {
     try {
       sourceId = decodeURIComponent(sourceId);
     } catch {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Build where clause for parser filtering (and optional sourceId for WA per-chat)
+  // Build where clause for parser filtering (and optional sourceId per channel/chat)
   const parserWhere: any = {};
   if (parserId) {
     if (parserId === 'wa') {
@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       if (sourceId) parserWhere.sourceId = sourceId;
     } else if (parserId === 'tg') {
       parserWhere.reason = { contains: 'Telegram' };
+      if (sourceId) parserWhere.sourceId = sourceId;
     }
   }
   try {

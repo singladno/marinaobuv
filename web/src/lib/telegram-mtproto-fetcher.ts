@@ -82,7 +82,9 @@ export class TelegramMTProtoFetcher {
 
     // If not authorized, we need to authenticate
     if (!(await this.client.checkAuthorization())) {
-      logger.debug('[Telegram MTProto] Not authorized. Starting authentication...');
+      logger.debug(
+        '[Telegram MTProto] Not authorized. Starting authentication...'
+      );
       await this.client.sendCode(
         {
           apiId: this.apiId,
@@ -159,11 +161,12 @@ export class TelegramMTProtoFetcher {
   }
 
   /**
-   * Fetch messages from a channel for the last N hours
+   * Fetch messages from a channel.
+   * @param hoursBackOrOptions - hours window (default 24), or `{ hoursBack, fetchAll }` for full history backfill
    */
   async fetchChannelMessages(
     channelUsername: string,
-    hoursBack: number = 24
+    hoursBackOrOptions: number | { hoursBack?: number; fetchAll?: boolean } = 24
   ): Promise<TelegramMessageData[]> {
     if (!this.client) {
       await this.connect();
@@ -173,22 +176,35 @@ export class TelegramMTProtoFetcher {
       throw new Error('Failed to connect to Telegram');
     }
 
-    const cutoffTime = Math.floor(
-      (Date.now() - hoursBack * 60 * 60 * 1000) / 1000
-    );
+    const options =
+      typeof hoursBackOrOptions === 'number'
+        ? { hoursBack: hoursBackOrOptions, fetchAll: false }
+        : {
+            hoursBack: hoursBackOrOptions.hoursBack ?? 24,
+            fetchAll: hoursBackOrOptions.fetchAll ?? false,
+          };
+
+    const cutoffTime = options.fetchAll
+      ? 0
+      : Math.floor((Date.now() - options.hoursBack * 60 * 60 * 1000) / 1000);
 
     // Normalize channel username (remove @ if present)
     const normalizedUsername = channelUsername.replace('@', '');
 
     logger.debug(
-      `[Telegram MTProto] Fetching messages from channel: @${normalizedUsername} (last ${hoursBack} hours)`
+      options.fetchAll
+        ? `[Telegram MTProto] Fetching ALL messages from channel: @${normalizedUsername}`
+        : `[Telegram MTProto] Fetching messages from channel: @${normalizedUsername} (last ${options.hoursBack} hours)`
     );
 
     try {
       // Resolve the channel entity
       // Check if it's a numeric ID (starts with -100) or username
       let entity;
-      if (normalizedUsername.startsWith('-100') || /^-?\d+$/.test(normalizedUsername)) {
+      if (
+        normalizedUsername.startsWith('-100') ||
+        /^-?\d+$/.test(normalizedUsername)
+      ) {
         // It's a channel ID - find it in dialogs
         const dialogs = await this.client.getDialogs();
         const channelIdStr = normalizedUsername.replace('-100', '');
@@ -208,7 +224,9 @@ export class TelegramMTProtoFetcher {
         if (dialog && dialog.entity) {
           entity = dialog.entity;
         } else {
-          throw new Error(`Channel with ID ${normalizedUsername} not found in your dialogs. Make sure you're subscribed to it.`);
+          throw new Error(
+            `Channel with ID ${normalizedUsername} not found in your dialogs. Make sure you're subscribed to it.`
+          );
         }
       } else {
         // It's a username - try to get entity directly
@@ -220,7 +238,10 @@ export class TelegramMTProtoFetcher {
           const dialog = dialogs.find(d => {
             if (d.isChannel) {
               const username = (d.entity as any).username;
-              return username === normalizedUsername || d.title === normalizedUsername;
+              return (
+                username === normalizedUsername ||
+                d.title === normalizedUsername
+              );
             }
             return false;
           });
@@ -228,13 +249,17 @@ export class TelegramMTProtoFetcher {
           if (dialog && dialog.entity) {
             entity = dialog.entity;
           } else {
-            throw new Error(`Channel @${normalizedUsername} not found. Make sure you're subscribed to it.`);
+            throw new Error(
+              `Channel @${normalizedUsername} not found. Make sure you're subscribed to it.`
+            );
           }
         }
       }
 
       if (!entity) {
-        throw new Error(`Channel ${normalizedUsername} not found. Make sure you're subscribed to it.`);
+        throw new Error(
+          `Channel ${normalizedUsername} not found. Make sure you're subscribed to it.`
+        );
       }
 
       // Cache the entity for future use (to avoid repeated getDialogs calls)
@@ -271,7 +296,7 @@ export class TelegramMTProtoFetcher {
               messageDate = msg.date;
             }
           }
-          if (messageDate < cutoffTime) {
+          if (!options.fetchAll && messageDate < cutoffTime) {
             // We've reached messages older than our cutoff
             return allMessages;
           }
@@ -281,18 +306,20 @@ export class TelegramMTProtoFetcher {
             message_id: msg.id,
             date: messageDate,
             chat: {
-              id: entity.id instanceof Api.PeerChannel
-                ? Number(entity.id.channelId)
-                : (entity instanceof Api.Channel || entity instanceof Api.Chat)
-                  ? Number((entity as any).id)
-                  : 0,
+              id:
+                entity.id instanceof Api.PeerChannel
+                  ? Number(entity.id.channelId)
+                  : entity instanceof Api.Channel || entity instanceof Api.Chat
+                    ? Number((entity as any).id)
+                    : 0,
               username: normalizedUsername,
               type: 'channel',
             },
             text: msg.message || undefined,
-            caption: msg.media instanceof Api.MessageMediaPhoto
-              ? (msg.media as any).caption?.text || undefined
-              : undefined,
+            caption:
+              msg.media instanceof Api.MessageMediaPhoto
+                ? (msg.media as any).caption?.text || undefined
+                : undefined,
           };
 
           // Extract sender info if available
@@ -301,15 +328,20 @@ export class TelegramMTProtoFetcher {
               const sender = await this.client.getEntity(msg.fromId);
               if (sender) {
                 messageData.from = {
-                  id: sender.id instanceof Api.PeerUser
-                    ? Number(sender.id.userId)
-                    : (sender instanceof Api.User)
-                      ? Number((sender as any).id)
-                      : 0,
-                  is_bot: sender instanceof Api.User ? (sender.bot ?? false) : false,
-                  first_name: sender instanceof Api.User ? (sender.firstName ?? '') : '',
-                  last_name: sender instanceof Api.User ? sender.lastName : undefined,
-                  username: sender instanceof Api.User ? sender.username : undefined,
+                  id:
+                    sender.id instanceof Api.PeerUser
+                      ? Number(sender.id.userId)
+                      : sender instanceof Api.User
+                        ? Number((sender as any).id)
+                        : 0,
+                  is_bot:
+                    sender instanceof Api.User ? (sender.bot ?? false) : false,
+                  first_name:
+                    sender instanceof Api.User ? (sender.firstName ?? '') : '',
+                  last_name:
+                    sender instanceof Api.User ? sender.lastName : undefined,
+                  username:
+                    sender instanceof Api.User ? sender.username : undefined,
                 };
               }
             } catch (error) {
@@ -345,7 +377,9 @@ export class TelegramMTProtoFetcher {
                       if (buffer && Buffer.isBuffer(buffer)) {
                         messageData.mediaBuffer = buffer;
                         messageData.mediaUrl = `telegram_photo_${msg.id}`; // Placeholder, will be replaced with S3 URL
-                        logger.debug(`[Telegram MTProto] Downloaded photo for message ${msg.id} (${buffer.length} bytes)`);
+                        logger.debug(
+                          `[Telegram MTProto] Downloaded photo for message ${msg.id} (${buffer.length} bytes)`
+                        );
                       }
                     } catch (error) {
                       // Download failed, but mark as photo anyway
@@ -416,7 +450,10 @@ export class TelegramMTProtoFetcher {
 
       if (!entity) {
         // Entity not in cache, resolve it (but avoid getDialogs if possible)
-        if (normalizedChannelId.startsWith('-100') || /^-?\d+$/.test(normalizedChannelId)) {
+        if (
+          normalizedChannelId.startsWith('-100') ||
+          /^-?\d+$/.test(normalizedChannelId)
+        ) {
           // For numeric IDs, try getEntity first (faster, no flood wait)
           try {
             entity = await this.client.getEntity(normalizedChannelId);
@@ -439,7 +476,9 @@ export class TelegramMTProtoFetcher {
               entity = dialog.entity;
               this.channelEntityCache.set(normalizedChannelId, entity);
             } else {
-              throw new Error(`Channel with ID ${normalizedChannelId} not found in your dialogs. Make sure you're subscribed to it.`);
+              throw new Error(
+                `Channel with ID ${normalizedChannelId} not found in your dialogs. Make sure you're subscribed to it.`
+              );
             }
           }
         } else {
@@ -448,13 +487,17 @@ export class TelegramMTProtoFetcher {
             entity = await this.client.getEntity(normalizedChannelId);
             this.channelEntityCache.set(normalizedChannelId, entity);
           } catch (e) {
-            throw new Error(`Channel @${normalizedChannelId} not found. Make sure you're subscribed to it.`);
+            throw new Error(
+              `Channel @${normalizedChannelId} not found. Make sure you're subscribed to it.`
+            );
           }
         }
       }
 
       if (!entity) {
-        throw new Error(`Channel ${normalizedChannelId} not found. Make sure you're subscribed to it.`);
+        throw new Error(
+          `Channel ${normalizedChannelId} not found. Make sure you're subscribed to it.`
+        );
       }
 
       // Get the message
@@ -482,7 +525,10 @@ export class TelegramMTProtoFetcher {
 
       return null;
     } catch (error) {
-      logServerError(`[Telegram MTProto] Error downloading media for message ${messageId}:`, error);
+      logServerError(
+        `[Telegram MTProto] Error downloading media for message ${messageId}:`,
+        error
+      );
       return null;
     }
   }
