@@ -176,6 +176,17 @@ export async function groqChatCompletion(
     timeoutMs?: number;
   }
 ): Promise<Awaited<ReturnType<Groq['chat']['completions']['create']>>> {
+  // Qwen 3.x thinking breaks Groq json_object validation unless reasoning is off.
+  const requestParams: any = { ...(params as any) };
+  const model = String(requestParams.model || '').toLowerCase();
+  if (
+    model.includes('qwen') &&
+    requestParams.response_format &&
+    requestParams.reasoning_effort === undefined
+  ) {
+    requestParams.reasoning_effort = 'none';
+  }
+
   return executeGroqCall(
     async signal => {
       // Create a timeout promise
@@ -191,7 +202,7 @@ export async function groqChatCompletion(
       });
 
       // Execute Groq API call
-      const groqPromise = groq.chat.completions.create(params as any);
+      const groqPromise = groq.chat.completions.create(requestParams);
 
       // Race between Groq call and timeout
       return Promise.race([groqPromise, timeoutPromise]);
