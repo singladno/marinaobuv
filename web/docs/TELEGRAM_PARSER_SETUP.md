@@ -93,12 +93,15 @@ The parser will automatically fall back to Bot API mode if MTProto credentials a
 
 ## How It Works
 
-1. **Message Fetching**: Cron fetches last 48h per channel; backfill can fetch all history
-2. **Grouping**: Groups images + text/captions into products
-3. **Profile**:
+1. **List metadata**: Pages through the channel (text/ids only — no bulk photo download)
+2. **Grouping**: Builds product posts from image + text pairs (same author, ≤60s gap)
+3. **One post at a time**: for each group → download its media → create product → GROQ → next
+4. **Profile**:
    - `flowers` — price `180₽×20шт＝3600Руб`, flower GROQ prompts, category `flowers`
    - `cosmetics` — price `ряд 4 шт 360`, cosmetics GROQ prompts, category `cosmetics`
-4. **Product Creation**: `source: TG`, unit `PIECES`, 30% markup on unit price
+5. **Product Creation**: `source: TG`, unit `PIECES`, 30% markup on unit price
+
+Media download retries on `TIMEOUT` / flood. Already-processed messages are skipped on re-run.
 
 ## Cron Job
 

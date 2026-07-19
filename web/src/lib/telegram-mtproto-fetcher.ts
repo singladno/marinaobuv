@@ -10,7 +10,7 @@ import { Api } from 'telegram/tl';
 import { env } from './env';
 import { logger, logServerError } from '@/lib/server/logger';
 
-interface TelegramMessageData {
+export interface TelegramMessageData {
   message_id: number;
   date: number;
   type?: string;
@@ -30,7 +30,7 @@ interface TelegramMessageData {
   text?: string;
   caption?: string;
   mediaUrl?: string;
-  mediaBuffer?: Buffer; // Store downloaded image buffer for S3 upload
+  mediaBuffer?: Buffer;
   photo?: Array<{
     file_id: string;
     file_unique_id: string;
@@ -40,13 +40,32 @@ interface TelegramMessageData {
   }>;
 }
 
+export type FetchChannelOptions = {
+  hoursBack?: number;
+  /** When true, walk the entire channel history. */
+  fetchAll?: boolean;
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function messageDateSeconds(msg: Api.Message): number {
+  if (!msg.date) return 0;
+  if (typeof msg.date === 'object' && 'getTime' in msg.date) {
+    return (msg.date as Date).getTime() / 1000;
+  }
+  if (typeof msg.date === 'number') return msg.date;
+  return 0;
+}
+
 export class TelegramMTProtoFetcher {
   private client: TelegramClient | null = null;
   private apiId: number;
   private apiHash: string;
   private phone: string;
   private sessionString: string | null;
-  private channelEntityCache: Map<string, any> = new Map(); // Cache resolved channel entities
+  private channelEntityCache: Map<string, any> = new Map();
 
   constructor() {
     if (!env.TELEGRAM_API_ID || !env.TELEGRAM_API_HASH) {
@@ -65,9 +84,6 @@ export class TelegramMTProtoFetcher {
     this.sessionString = env.TELEGRAM_SESSION_STRING || null;
   }
 
-  /**
-   * Initialize and connect the Telegram client
-   */
   async connect(): Promise<void> {
     if (this.client && this.client.connected) {
       return;
@@ -76,11 +92,12 @@ export class TelegramMTProtoFetcher {
     const stringSession = new StringSession(this.sessionString || '');
     this.client = new TelegramClient(stringSession, this.apiId, this.apiHash, {
       connectionRetries: 5,
+      requestRetries: 5,
+      downloadRetries: 5,
     });
 
     await this.client.connect();
 
-    // If not authorized, we need to authenticate
     if (!(await this.client.checkAuthorization())) {
       logger.debug(
         '[Telegram MTProto] Not authorized. Starting authentication...'
@@ -93,8 +110,6 @@ export class TelegramMTProtoFetcher {
         this.phone
       );
 
-      // In interactive mode, we'd prompt for the code
-      // For non-interactive, we need the code from environment or user input
       const code = process.env.TELEGRAM_AUTH_CODE;
       if (!code) {
         throw new Error(
@@ -106,12 +121,11 @@ export class TelegramMTProtoFetcher {
       await this.client.invoke(
         new Api.auth.SignIn({
           phoneNumber: this.phone,
-          phoneCodeHash: '', // This should come from sendCode response
+          phoneCodeHash: '',
           phoneCode: code,
         })
       );
 
-      // Save session string for future use
       const newSessionString = this.client.session.save() as unknown as string;
       logger.debug(
         `[Telegram MTProto] Session string (save this to TELEGRAM_SESSION_STRING): ${newSessionString}`
@@ -121,9 +135,6 @@ export class TelegramMTProtoFetcher {
     }
   }
 
-  /**
-   * Disconnect the client
-   */
   async disconnect(): Promise<void> {
     if (this.client) {
       await this.client.disconnect();
@@ -131,52 +142,170 @@ export class TelegramMTProtoFetcher {
     }
   }
 
-  /**
-   * Get file download URL for a media message
-   */
-  async getMediaUrl(message: Api.Message): Promise<string | null> {
+  private async resolveChannelEntity(channelUsername: string): Promise<any> {
     if (!this.client) {
       throw new Error('Client not connected');
     }
 
-    if (!message.media) {
-      return null;
-    }
+    const normalizedUsername = channelUsername.replace('@', '');
+    const cached = this.channelEntityCache.get(normalizedUsername);
+    if (cached) return cached;
 
-    try {
-      // Download media to buffer and return as data URL or save to temp file
-      // For now, we'll return the file reference
-      const media = message.media;
-      if (media instanceof Api.MessageMediaPhoto) {
-        // For photos, we can get the file reference
-        return `photo_${message.id}`;
-      } else if (media instanceof Api.MessageMediaDocument) {
-        return `document_${message.id}`;
+    let entity;
+    if (
+      normalizedUsername.startsWith('-100') ||
+      /^-?\d+$/.test(normalizedUsername)
+    ) {
+      const dialogs = await this.client.getDialogs();
+      const channelIdStr = normalizedUsername.replace('-100', '');
+      const dialog = dialogs.find(d => {
+        if (d.isChannel && d.entity) {
+          const entityId = (d.entity as any).id;
+          if (entityId) {
+            return entityId.toString() === channelIdStr;
+          }
+        }
+        return false;
+      });
+
+      if (dialog?.entity) {
+        entity = dialog.entity;
+      } else {
+        throw new Error(
+          `Channel with ID ${normalizedUsername} not found in your dialogs. Make sure you're subscribed to it.`
+        );
       }
-    } catch (error) {
-      logServerError('[Telegram MTProto] Error getting media URL:', error);
+    } else {
+      try {
+        entity = await this.client.getEntity(normalizedUsername);
+      } catch {
+        const dialogs = await this.client.getDialogs();
+        const dialog = dialogs.find(d => {
+          if (d.isChannel) {
+            const username = (d.entity as any).username;
+            return (
+              username === normalizedUsername || d.title === normalizedUsername
+            );
+          }
+          return false;
+        });
+
+        if (dialog?.entity) {
+          entity = dialog.entity;
+        } else {
+          throw new Error(
+            `Channel @${normalizedUsername} not found. Make sure you're subscribed to it.`
+          );
+        }
+      }
     }
 
-    return null;
+    if (!entity) {
+      throw new Error(
+        `Channel ${normalizedUsername} not found. Make sure you're subscribed to it.`
+      );
+    }
+
+    this.channelEntityCache.set(normalizedUsername, entity);
+    return entity;
+  }
+
+  private async mapApiMessage(
+    msg: Api.Message,
+    entity: any,
+    normalizedUsername: string
+  ): Promise<TelegramMessageData> {
+    const messageData: TelegramMessageData = {
+      message_id: msg.id,
+      date: messageDateSeconds(msg),
+      chat: {
+        id:
+          entity.id instanceof Api.PeerChannel
+            ? Number(entity.id.channelId)
+            : entity instanceof Api.Channel || entity instanceof Api.Chat
+              ? Number((entity as any).id)
+              : 0,
+        username: normalizedUsername,
+        type: 'channel',
+      },
+      text: msg.message || undefined,
+      caption:
+        msg.media instanceof Api.MessageMediaPhoto
+          ? (msg.media as any).caption?.text || undefined
+          : undefined,
+    };
+
+    if (msg.fromId && this.client) {
+      try {
+        const sender = await this.client.getEntity(msg.fromId);
+        if (sender) {
+          messageData.from = {
+            id:
+              sender.id instanceof Api.PeerUser
+                ? Number(sender.id.userId)
+                : sender instanceof Api.User
+                  ? Number((sender as any).id)
+                  : 0,
+            is_bot: sender instanceof Api.User ? (sender.bot ?? false) : false,
+            first_name:
+              sender instanceof Api.User ? (sender.firstName ?? '') : '',
+            last_name: sender instanceof Api.User ? sender.lastName : undefined,
+            username: sender instanceof Api.User ? sender.username : undefined,
+          };
+        }
+      } catch {
+        // Ignore sender lookup errors
+      }
+    }
+
+    // Metadata only — media bytes are downloaded later, per product.
+    if (msg.media instanceof Api.MessageMediaPhoto) {
+      messageData.type = 'photo';
+      messageData.mediaUrl = `telegram_photo_${msg.id}`;
+      const photo = msg.media.photo;
+      if (photo instanceof Api.Photo) {
+        const sizes = photo.sizes;
+        if (sizes && sizes.length > 0) {
+          const largestSize = sizes[sizes.length - 1];
+          if (largestSize instanceof Api.PhotoSize) {
+            messageData.photo = [
+              {
+                file_id: `photo_${msg.id}`,
+                file_unique_id: photo.id.toString(),
+                width: largestSize.w,
+                height: largestSize.h,
+                file_size: largestSize.size,
+              },
+            ];
+          }
+        }
+      }
+    } else if (msg.media instanceof Api.MessageMediaDocument) {
+      messageData.type = 'document';
+      messageData.mediaUrl = `telegram_document_${msg.id}`;
+    } else if (!msg.media) {
+      messageData.type = 'text';
+    }
+
+    return messageData;
   }
 
   /**
-   * Fetch messages from a channel.
-   * @param hoursBackOrOptions - hours window (default 24), or `{ hoursBack, fetchAll }` for full history backfill
+   * Yield channel messages page-by-page (metadata only, no media download).
+   * Newest → oldest. Stops when time window ends or history is exhausted.
    */
-  async fetchChannelMessages(
+  async *iterateChannelMessageBatches(
     channelUsername: string,
-    hoursBackOrOptions: number | { hoursBack?: number; fetchAll?: boolean } = 24
-  ): Promise<TelegramMessageData[]> {
+    hoursBackOrOptions: number | FetchChannelOptions = 24
+  ): AsyncGenerator<TelegramMessageData[], void, unknown> {
     if (!this.client) {
       await this.connect();
     }
-
     if (!this.client) {
       throw new Error('Failed to connect to Telegram');
     }
 
-    const options =
+    const options: FetchChannelOptions =
       typeof hoursBackOrOptions === 'number'
         ? { hoursBack: hoursBackOrOptions, fetchAll: false }
         : {
@@ -186,351 +315,143 @@ export class TelegramMTProtoFetcher {
 
     const cutoffTime = options.fetchAll
       ? 0
-      : Math.floor((Date.now() - options.hoursBack * 60 * 60 * 1000) / 1000);
+      : Math.floor(
+          (Date.now() - (options.hoursBack ?? 24) * 60 * 60 * 1000) / 1000
+        );
 
-    // Normalize channel username (remove @ if present)
     const normalizedUsername = channelUsername.replace('@', '');
-
-    logger.debug(
+    console.log(
       options.fetchAll
-        ? `[Telegram MTProto] Fetching ALL messages from channel: @${normalizedUsername}`
-        : `[Telegram MTProto] Fetching messages from channel: @${normalizedUsername} (last ${options.hoursBack} hours)`
+        ? `[Telegram MTProto] Listing ALL messages from @${normalizedUsername} (metadata only)...`
+        : `[Telegram MTProto] Listing messages from @${normalizedUsername} (last ${options.hoursBack}h, metadata only)...`
     );
 
-    try {
-      // Resolve the channel entity
-      // Check if it's a numeric ID (starts with -100) or username
-      let entity;
-      if (
-        normalizedUsername.startsWith('-100') ||
-        /^-?\d+$/.test(normalizedUsername)
-      ) {
-        // It's a channel ID - find it in dialogs
-        const dialogs = await this.client.getDialogs();
-        const channelIdStr = normalizedUsername.replace('-100', '');
+    const entity = await this.resolveChannelEntity(normalizedUsername);
+    let offsetId = 0;
+    const limit = 100;
+    let total = 0;
 
-        // Try to find by ID
-        const dialog = dialogs.find(d => {
-          if (d.isChannel && d.entity) {
-            const entityId = (d.entity as any).id;
-            if (entityId) {
-              // Channel ID format: -100 + channel_id
-              return entityId.toString() === channelIdStr;
-            }
-          }
-          return false;
-        });
+    while (true) {
+      const messages = await this.client.getMessages(entity, {
+        limit,
+        offsetId,
+      });
 
-        if (dialog && dialog.entity) {
-          entity = dialog.entity;
-        } else {
-          throw new Error(
-            `Channel with ID ${normalizedUsername} not found in your dialogs. Make sure you're subscribed to it.`
-          );
+      if (messages.length === 0) break;
+
+      const batch: TelegramMessageData[] = [];
+      let hitCutoff = false;
+
+      for (const msg of messages) {
+        if (!(msg instanceof Api.Message)) continue;
+
+        const date = messageDateSeconds(msg);
+        if (!options.fetchAll && date < cutoffTime) {
+          hitCutoff = true;
+          break;
         }
-      } else {
-        // It's a username - try to get entity directly
-        try {
-          entity = await this.client.getEntity(normalizedUsername);
-        } catch (e) {
-          // If that fails, try to find it in dialogs by name
-          const dialogs = await this.client.getDialogs();
-          const dialog = dialogs.find(d => {
-            if (d.isChannel) {
-              const username = (d.entity as any).username;
-              return (
-                username === normalizedUsername ||
-                d.title === normalizedUsername
-              );
-            }
-            return false;
-          });
 
-          if (dialog && dialog.entity) {
-            entity = dialog.entity;
-          } else {
-            throw new Error(
-              `Channel @${normalizedUsername} not found. Make sure you're subscribed to it.`
-            );
-          }
-        }
+        batch.push(await this.mapApiMessage(msg, entity, normalizedUsername));
+        offsetId = msg.id;
       }
 
-      if (!entity) {
-        throw new Error(
-          `Channel ${normalizedUsername} not found. Make sure you're subscribed to it.`
+      if (batch.length > 0) {
+        total += batch.length;
+        console.log(
+          `[Telegram MTProto] Listed ${total} messages (page ${batch.length})...`
         );
+        yield batch;
       }
 
-      // Cache the entity for future use (to avoid repeated getDialogs calls)
-      this.channelEntityCache.set(normalizedUsername, entity);
-
-      const allMessages: TelegramMessageData[] = [];
-      let offsetId = 0;
-      const limit = 100;
-
-      while (true) {
-        // Fetch messages from the channel
-        const messages = await this.client.getMessages(entity, {
-          limit,
-          offsetId,
-        });
-
-        if (messages.length === 0) {
-          break;
-        }
-
-        // Process messages
-        for (const msg of messages) {
-          if (!(msg instanceof Api.Message)) {
-            continue;
-          }
-
-          // Check if message is within time range
-          // msg.date can be a Date object or a number (timestamp)
-          let messageDate = 0;
-          if (msg.date) {
-            if (typeof msg.date === 'object' && 'getTime' in msg.date) {
-              messageDate = (msg.date as Date).getTime() / 1000;
-            } else if (typeof msg.date === 'number') {
-              messageDate = msg.date;
-            }
-          }
-          if (!options.fetchAll && messageDate < cutoffTime) {
-            // We've reached messages older than our cutoff
-            return allMessages;
-          }
-
-          // Extract message data
-          const messageData: TelegramMessageData = {
-            message_id: msg.id,
-            date: messageDate,
-            chat: {
-              id:
-                entity.id instanceof Api.PeerChannel
-                  ? Number(entity.id.channelId)
-                  : entity instanceof Api.Channel || entity instanceof Api.Chat
-                    ? Number((entity as any).id)
-                    : 0,
-              username: normalizedUsername,
-              type: 'channel',
-            },
-            text: msg.message || undefined,
-            caption:
-              msg.media instanceof Api.MessageMediaPhoto
-                ? (msg.media as any).caption?.text || undefined
-                : undefined,
-          };
-
-          // Extract sender info if available
-          if (msg.fromId) {
-            try {
-              const sender = await this.client.getEntity(msg.fromId);
-              if (sender) {
-                messageData.from = {
-                  id:
-                    sender.id instanceof Api.PeerUser
-                      ? Number(sender.id.userId)
-                      : sender instanceof Api.User
-                        ? Number((sender as any).id)
-                        : 0,
-                  is_bot:
-                    sender instanceof Api.User ? (sender.bot ?? false) : false,
-                  first_name:
-                    sender instanceof Api.User ? (sender.firstName ?? '') : '',
-                  last_name:
-                    sender instanceof Api.User ? sender.lastName : undefined,
-                  username:
-                    sender instanceof Api.User ? sender.username : undefined,
-                };
-              }
-            } catch (error) {
-              // Ignore errors getting sender info
-            }
-          }
-
-          // Handle media
-          if (msg.media) {
-            if (msg.media instanceof Api.MessageMediaPhoto) {
-              messageData.type = 'photo';
-              // Get photo file reference
-              const photo = msg.media.photo;
-              if (photo instanceof Api.Photo) {
-                // Get the largest photo size
-                const sizes = photo.sizes;
-                if (sizes && sizes.length > 0) {
-                  const largestSize = sizes[sizes.length - 1];
-                  if (largestSize instanceof Api.PhotoSize) {
-                    messageData.photo = [
-                      {
-                        file_id: `photo_${msg.id}`,
-                        file_unique_id: photo.id.toString(),
-                        width: largestSize.w,
-                        height: largestSize.h,
-                        file_size: largestSize.size,
-                      },
-                    ];
-
-                    // Download the image immediately for S3 upload
-                    try {
-                      const buffer = await this.client.downloadMedia(msg, {});
-                      if (buffer && Buffer.isBuffer(buffer)) {
-                        messageData.mediaBuffer = buffer;
-                        messageData.mediaUrl = `telegram_photo_${msg.id}`; // Placeholder, will be replaced with S3 URL
-                        logger.debug(
-                          `[Telegram MTProto] Downloaded photo for message ${msg.id} (${buffer.length} bytes)`
-                        );
-                      }
-                    } catch (error) {
-                      // Download failed, but mark as photo anyway
-                      messageData.mediaUrl = `telegram_photo_${msg.id}`;
-                      logger.debug(
-                        { err: error, messageId: msg.id },
-                        '[Telegram MTProto] Photo download failed'
-                      );
-                    }
-                  }
-                }
-              }
-            } else if (msg.media instanceof Api.MessageMediaDocument) {
-              messageData.type = 'document';
-              const doc = msg.media.document;
-              if (doc instanceof Api.Document) {
-                messageData.mediaUrl = `telegram_document_${msg.id}`;
-              }
-            }
-          } else {
-            messageData.type = 'text';
-          }
-
-          allMessages.push(messageData);
-
-          // Update offset for next batch
-          offsetId = msg.id;
-        }
-
-        // If we got fewer messages than requested, we've reached the end
-        if (messages.length < limit) {
-          break;
-        }
-      }
-
-      logger.debug(
-        `[Telegram MTProto] Fetched ${allMessages.length} messages from channel @${normalizedUsername}`
-      );
-
-      return allMessages;
-    } catch (error) {
-      logServerError('[Telegram MTProto] Error fetching messages:', error);
-      throw error;
+      if (hitCutoff || messages.length < limit) break;
     }
+
+    console.log(
+      `[Telegram MTProto] Done listing @${normalizedUsername}: ${total} messages`
+    );
   }
 
   /**
-   * Download media from a message by message ID
+   * Fetch all matching messages (metadata only). Prefer iterate + process for backfill.
+   */
+  async fetchChannelMessages(
+    channelUsername: string,
+    hoursBackOrOptions: number | FetchChannelOptions = 24
+  ): Promise<TelegramMessageData[]> {
+    const all: TelegramMessageData[] = [];
+    for await (const batch of this.iterateChannelMessageBatches(
+      channelUsername,
+      hoursBackOrOptions
+    )) {
+      all.push(...batch);
+    }
+    return all;
+  }
+
+  /**
+   * Download media for one message. Retries on TIMEOUT / transient errors.
    */
   async downloadMediaByMessageId(
     channelId: string,
-    messageId: number
+    messageId: number,
+    maxAttempts: number = 4
   ): Promise<Buffer | null> {
     if (!this.client) {
       await this.connect();
     }
-
     if (!this.client) {
       throw new Error('Failed to connect to Telegram');
     }
 
-    try {
-      // Normalize channel username (remove @ if present)
-      const normalizedChannelId = channelId.replace('@', '');
+    const normalizedChannelId = channelId.replace('@', '');
 
-      // Check cache first to avoid getDialogs() calls
-      let entity = this.channelEntityCache.get(normalizedChannelId);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const entity = await this.resolveChannelEntity(normalizedChannelId);
+        const messages = await this.client.getMessages(entity, {
+          ids: [messageId],
+        });
 
-      if (!entity) {
-        // Entity not in cache, resolve it (but avoid getDialogs if possible)
-        if (
-          normalizedChannelId.startsWith('-100') ||
-          /^-?\d+$/.test(normalizedChannelId)
-        ) {
-          // For numeric IDs, try getEntity first (faster, no flood wait)
-          try {
-            entity = await this.client.getEntity(normalizedChannelId);
-            this.channelEntityCache.set(normalizedChannelId, entity);
-          } catch (e) {
-            // Fallback to getDialogs only if getEntity fails
-            const channelIdStr = normalizedChannelId.replace('-100', '');
-            const dialogs = await this.client.getDialogs();
-            const dialog = dialogs.find(d => {
-              if (d.isChannel && d.entity) {
-                const entityId = (d.entity as any).id;
-                if (entityId) {
-                  return entityId.toString() === channelIdStr;
-                }
-              }
-              return false;
-            });
-
-            if (dialog && dialog.entity) {
-              entity = dialog.entity;
-              this.channelEntityCache.set(normalizedChannelId, entity);
-            } else {
-              throw new Error(
-                `Channel with ID ${normalizedChannelId} not found in your dialogs. Make sure you're subscribed to it.`
-              );
-            }
-          }
-        } else {
-          // It's a username - try to get entity directly (no getDialogs needed)
-          try {
-            entity = await this.client.getEntity(normalizedChannelId);
-            this.channelEntityCache.set(normalizedChannelId, entity);
-          } catch (e) {
-            throw new Error(
-              `Channel @${normalizedChannelId} not found. Make sure you're subscribed to it.`
-            );
-          }
+        if (!messages || messages.length === 0) {
+          logger.debug(`⚠️ Could not find message ${messageId} in channel`);
+          return null;
         }
-      }
 
-      if (!entity) {
-        throw new Error(
-          `Channel ${normalizedChannelId} not found. Make sure you're subscribed to it.`
+        const message = messages[0];
+        if (!message.media) {
+          logger.debug(`⚠️ Message ${messageId} has no media`);
+          return null;
+        }
+
+        const buffer = await this.client.downloadMedia(message, {});
+        if (buffer && Buffer.isBuffer(buffer)) {
+          return buffer;
+        }
+        return null;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        const retryable =
+          /TIMEOUT|FLOOD|CONNECTION|NETWORK|DISCONNECT/i.test(msg) ||
+          msg === 'TIMEOUT';
+
+        if (attempt < maxAttempts && retryable) {
+          const delayMs = 1500 * attempt;
+          console.log(
+            `[Telegram MTProto] Download msg ${messageId} attempt ${attempt}/${maxAttempts} failed (${msg}), retry in ${delayMs}ms...`
+          );
+          await sleep(delayMs);
+          continue;
+        }
+
+        logServerError(
+          `[Telegram MTProto] Error downloading media for message ${messageId}:`,
+          error
         );
-      }
-
-      // Get the message
-      const messages = await this.client.getMessages(entity, {
-        ids: [messageId],
-      });
-
-      if (!messages || messages.length === 0) {
-        logger.debug(`⚠️ Could not find message ${messageId} in channel`);
         return null;
       }
-
-      const message = messages[0];
-      if (!message.media) {
-        logger.debug(`⚠️ Message ${messageId} has no media`);
-        return null;
-      }
-
-      // Download the media
-      const buffer = await this.client.downloadMedia(message, {});
-
-      if (buffer && Buffer.isBuffer(buffer)) {
-        return buffer;
-      }
-
-      return null;
-    } catch (error) {
-      logServerError(
-        `[Telegram MTProto] Error downloading media for message ${messageId}:`,
-        error
-      );
-      return null;
     }
+
+    return null;
   }
 }
 

@@ -447,25 +447,67 @@ export class TelegramParser {
     channelId: string
   ): Promise<Buffer | null> {
     try {
-      const channel = channelId || env.TELEGRAM_CHANNEL_ID;
-      if (!channel) {
+      if (!channelId) {
         logger.error(
           `❌ No channel ID available for downloading message ${tgMessageId}`
         );
         return null;
       }
 
-      const buffer = await telegramMTProtoFetcher.downloadMediaByMessageId(
-        channel,
+      return await telegramMTProtoFetcher.downloadMediaByMessageId(
+        channelId,
         Number(tgMessageId)
       );
-      return buffer;
     } catch (error) {
       logServerError(
         `❌ Error downloading image for message ${tgMessageId}:`,
         error
       );
       return null;
+    }
+  }
+
+  private isTelegramPlaceholderUrl(url: string | null | undefined): boolean {
+    if (!url) return false;
+    return (
+      url.startsWith('telegram_photo_') || url.startsWith('telegram_document_')
+    );
+  }
+
+  /** Download media buffers for one product group right before create. */
+  private async downloadGroupMedia(
+    group: TelegramMessageGroup,
+    chatId: string
+  ): Promise<void> {
+    for (let i = 0; i < group.images.length; i++) {
+      const image = group.images[i];
+      if (image.buffer && Buffer.isBuffer(image.buffer)) continue;
+
+      const tgMessageId = image.tgMessageId;
+      if (!tgMessageId) {
+        console.log(
+          `  ⚠️ Image ${i + 1}/${group.images.length}: no tgMessageId, skip download`
+        );
+        continue;
+      }
+
+      console.log(
+        `  📥 Image ${i + 1}/${group.images.length}: downloading message ${tgMessageId}...`
+      );
+      const buffer = await this.downloadTelegramImageByMessageId(
+        tgMessageId,
+        chatId
+      );
+      if (buffer) {
+        image.buffer = buffer;
+        console.log(
+          `  ✅ Image ${i + 1}/${group.images.length}: ${buffer.length} bytes`
+        );
+      } else {
+        console.log(
+          `  ⚠️ Image ${i + 1}/${group.images.length}: download failed`
+        );
+      }
     }
   }
 
@@ -492,10 +534,8 @@ export class TelegramParser {
         let contentType = 'image/jpeg';
 
         if (image.buffer && Buffer.isBuffer(image.buffer)) {
-          // Use the buffer we downloaded from Telegram
           imageBuffer = image.buffer;
-        } else if (image.url && !image.url.startsWith('telegram_photo_')) {
-          // Download from URL (Bot API case)
+        } else if (image.url && !this.isTelegramPlaceholderUrl(image.url)) {
           const response = await fetch(image.url, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (compatible; MarinaObuvBot/1.0)',
@@ -510,14 +550,10 @@ export class TelegramParser {
           imageBuffer = Buffer.from(await response.arrayBuffer());
           contentType = response.headers.get('content-type') || 'image/jpeg';
         } else if (
-          image.url.startsWith('telegram_photo_') &&
+          this.isTelegramPlaceholderUrl(image.url) &&
           image.tgMessageId &&
           chatId
         ) {
-          // Re-download from Telegram using message ID
-          logger.debug(
-            `📥 Re-downloading image ${i + 1} from Telegram (message ${image.tgMessageId})...`
-          );
           imageBuffer = await this.downloadTelegramImageByMessageId(
             image.tgMessageId,
             chatId
@@ -889,6 +925,155 @@ export class TelegramParser {
   /**
    * Parse one configured Telegram channel (incremental or full history).
    */
+  private async upsertTelegramMessage(
+    msg: any,
+    channel: TelegramChannelConfig,
+    chatId: string
+  ): Promise<{
+    id: string;
+    tgMessageId: number | bigint;
+    tgMessageIdBigInt?: bigint;
+    fromId: number | null;
+    fromUsername: string | null;
+    fromFirstName: string | null;
+    text: string | null;
+    caption: string | null;
+    mediaUrl: string | null;
+    type: string | null;
+    date: number;
+    processed: boolean;
+  }> {
+    const tgMessageId = BigInt(msg.message_id);
+
+    let existing = await this.prisma.telegramMessage.findUnique({
+      where: {
+        chatId_tgMessageId: { chatId, tgMessageId },
+      },
+    });
+
+    if (!existing) {
+      const numericChatId = msg.chat?.id != null ? String(msg.chat.id) : null;
+      const legacyChatIds = [
+        'legacy-tg',
+        ...(numericChatId ? [numericChatId] : []),
+      ];
+      const legacy = await this.prisma.telegramMessage.findFirst({
+        where: {
+          tgMessageId,
+          chatId: { in: legacyChatIds },
+        },
+      });
+      if (legacy && legacy.chatId !== chatId) {
+        existing = await this.prisma.telegramMessage.update({
+          where: { id: legacy.id },
+          data: { chatId },
+        });
+      } else if (legacy) {
+        existing = legacy;
+      }
+    }
+
+    if (existing) {
+      const existingDate = existing.date
+        ? Number(existing.date)
+        : existing.createdAt.getTime() / 1000;
+      return {
+        id: existing.id,
+        tgMessageId: existing.tgMessageId,
+        fromId: existing.fromId ? Number(existing.fromId) : null,
+        fromUsername: existing.fromUsername,
+        fromFirstName: existing.fromFirstName,
+        text: existing.text,
+        caption: existing.caption,
+        mediaUrl: existing.mediaUrl,
+        type: existing.type,
+        date: existingDate,
+        tgMessageIdBigInt: existing.tgMessageId,
+        processed: existing.processed,
+      };
+    }
+
+    let messageType = (msg as any).type;
+    if (!messageType) {
+      if (msg.photo && msg.photo.length > 0) {
+        messageType = 'photo';
+      } else if (msg.document) {
+        messageType = 'document';
+      } else {
+        messageType = 'text';
+      }
+    }
+
+    let mediaUrl: string | null = null;
+    if ((msg as any).mediaUrl) {
+      mediaUrl = (msg as any).mediaUrl;
+    } else if (msg.photo && msg.photo.length > 0) {
+      const largestPhoto = msg.photo[msg.photo.length - 1];
+      // Bot API file_id — only when it looks like a real file_id
+      if (
+        largestPhoto.file_id &&
+        !String(largestPhoto.file_id).startsWith('photo_')
+      ) {
+        mediaUrl = await telegramFetcher.getFileUrl(largestPhoto.file_id);
+      } else {
+        mediaUrl = `telegram_photo_${msg.message_id}`;
+      }
+    } else if (messageType === 'photo') {
+      mediaUrl = `telegram_photo_${msg.message_id}`;
+    } else if (messageType === 'document') {
+      mediaUrl = `telegram_document_${msg.message_id}`;
+    }
+
+    const messageDate =
+      (msg as any).date || msg.date || Math.floor(Date.now() / 1000);
+
+    const channelUsername = chatId.replace(/^@/, '');
+    const fromUsername = msg.from?.username || channelUsername || null;
+    const fromFirstName =
+      msg.from?.first_name || channel.name || channelUsername || null;
+
+    const saved = await this.prisma.telegramMessage.create({
+      data: {
+        tgMessageId,
+        chatId,
+        fromId: msg.from?.id ? BigInt(msg.from.id) : null,
+        fromUsername,
+        fromFirstName,
+        fromLastName: msg.from?.last_name || null,
+        type: messageType,
+        text: msg.text || null,
+        caption: msg.caption || null,
+        mediaUrl: mediaUrl || null,
+        mediaFileId: msg.photo?.[0]?.file_id || msg.document?.file_id || null,
+        mediaWidth: msg.photo?.[0]?.width || null,
+        mediaHeight: msg.photo?.[0]?.height || null,
+        mediaMimeType: msg.document?.mime_type || null,
+        mediaFileSize: msg.document?.file_size || null,
+        rawPayload: msg as any,
+        date: BigInt(Math.floor(messageDate)),
+      },
+    });
+
+    return {
+      id: saved.id,
+      tgMessageId: saved.tgMessageId,
+      fromId: saved.fromId ? Number(saved.fromId) : null,
+      fromUsername: saved.fromUsername,
+      fromFirstName: saved.fromFirstName,
+      text: saved.text,
+      caption: saved.caption,
+      mediaUrl: saved.mediaUrl,
+      type: saved.type,
+      date: messageDate,
+      tgMessageIdBigInt: saved.tgMessageId,
+      processed: saved.processed,
+    };
+  }
+
+  /**
+   * Parse one configured Telegram channel.
+   * Flow: list metadata → group posts → for each post: download media → create product → next.
+   */
   async parseChannel(
     channel: TelegramChannelConfig,
     options: ParseChannelOptions = {}
@@ -899,283 +1084,173 @@ export class TelegramParser {
     const hoursBack = options.hoursBack ?? 48;
     const fetchAll = options.fetchAll ?? false;
     const chatId = normalizeChannelId(channel.id);
+    const useMtproto = !!(
+      env.TELEGRAM_API_ID &&
+      env.TELEGRAM_API_HASH &&
+      env.TELEGRAM_PHONE
+    );
 
-    logger.debug(
+    console.log(
       fetchAll
-        ? `[Telegram Parser] Starting FULL parse for ${chatId} (${channel.profile})`
-        : `[Telegram Parser] Starting parse for ${chatId} (${channel.profile}, last ${hoursBack} hours)`
+        ? `[Telegram Parser] FULL parse ${chatId} (${channel.profile}) — one post at a time`
+        : `[Telegram Parser] Parse ${chatId} (${channel.profile}, last ${hoursBack}h) — one post at a time`
     );
 
-    let telegramMessages: any[] = [];
+    type SavedMsg = Awaited<ReturnType<typeof this.upsertTelegramMessage>>;
+    const savedMessages: SavedMsg[] = [];
+    let mtprotoConnected = false;
 
-    if (env.TELEGRAM_API_ID && env.TELEGRAM_API_HASH && env.TELEGRAM_PHONE) {
-      logger.debug(
-        '[Telegram Parser] Using MTProto (user account) to fetch messages'
-      );
-      try {
-        await telegramMTProtoFetcher.connect();
-        telegramMessages = await telegramMTProtoFetcher.fetchChannelMessages(
-          chatId,
-          fetchAll ? { fetchAll: true } : hoursBack
-        );
-        await telegramMTProtoFetcher.disconnect();
-      } catch (error) {
-        logServerError(
-          '[Telegram Parser] MTProto fetch failed, falling back to Bot API:',
-          error
-        );
+    try {
+      if (useMtproto) {
+        try {
+          await telegramMTProtoFetcher.connect();
+          mtprotoConnected = true;
+
+          for await (const batch of telegramMTProtoFetcher.iterateChannelMessageBatches(
+            chatId,
+            fetchAll ? { fetchAll: true } : hoursBack
+          )) {
+            for (const msg of batch) {
+              const saved = await this.upsertTelegramMessage(
+                msg,
+                channel,
+                chatId
+              );
+              savedMessages.push(saved);
+            }
+          }
+        } catch (error) {
+          logServerError(
+            '[Telegram Parser] MTProto fetch failed, falling back to Bot API:',
+            error
+          );
+          if (fetchAll) throw error;
+
+          const botMessages =
+            await telegramFetcher.fetchChannelMessagesByUsername(
+              chatId,
+              hoursBack
+            );
+          for (const msg of botMessages) {
+            savedMessages.push(
+              await this.upsertTelegramMessage(msg, channel, chatId)
+            );
+          }
+        }
+      } else {
         if (fetchAll) {
-          throw error;
+          throw new Error(
+            'Full history backfill requires MTProto credentials (TELEGRAM_API_ID/HASH/PHONE)'
+          );
         }
-        telegramMessages = await telegramFetcher.fetchChannelMessagesByUsername(
-          chatId,
-          hoursBack
-        );
+        const botMessages =
+          await telegramFetcher.fetchChannelMessagesByUsername(
+            chatId,
+            hoursBack
+          );
+        for (const msg of botMessages) {
+          savedMessages.push(
+            await this.upsertTelegramMessage(msg, channel, chatId)
+          );
+        }
       }
-    } else {
-      if (fetchAll) {
-        throw new Error(
-          'Full history backfill requires MTProto credentials (TELEGRAM_API_ID/HASH/PHONE)'
-        );
+
+      if (savedMessages.length === 0) {
+        console.log(`[Telegram Parser] No messages found for ${chatId}`);
+        return { messagesRead: 0, productsCreated: 0 };
       }
-      logger.debug('[Telegram Parser] Using Bot API to fetch messages');
-      telegramMessages = await telegramFetcher.fetchChannelMessagesByUsername(
-        chatId,
-        hoursBack
+
+      const messagesToProcess = savedMessages.filter(msg => !msg.processed);
+      console.log(
+        `[Telegram Parser] ${savedMessages.length} messages listed, ${messagesToProcess.length} unprocessed`
       );
-    }
 
-    if (telegramMessages.length === 0) {
-      logger.debug(`[Telegram Parser] No messages found for ${chatId}`);
-      return { messagesRead: 0, productsCreated: 0 };
-    }
-
-    const savedMessages: Array<{
-      id: string;
-      tgMessageId: number | bigint;
-      tgMessageIdBigInt?: bigint;
-      fromId: number | null;
-      fromUsername: string | null;
-      fromFirstName: string | null;
-      text: string | null;
-      caption: string | null;
-      mediaUrl: string | null;
-      type: string | null;
-      date: number;
-      mediaBuffer?: Buffer;
-    }> = [];
-
-    for (const msg of telegramMessages) {
-      const tgMessageId = BigInt(msg.message_id);
-
-      let existing = await this.prisma.telegramMessage.findUnique({
-        where: {
-          chatId_tgMessageId: { chatId, tgMessageId },
-        },
-      });
-
-      // Legacy rows may use numeric chat id or 'legacy-tg' — adopt under normalized channel id
-      if (!existing) {
-        const numericChatId = msg.chat?.id != null ? String(msg.chat.id) : null;
-        const legacyChatIds = [
-          'legacy-tg',
-          ...(numericChatId ? [numericChatId] : []),
-        ];
-        const legacy = await this.prisma.telegramMessage.findFirst({
-          where: {
-            tgMessageId,
-            chatId: { in: legacyChatIds },
-          },
-        });
-        if (legacy && legacy.chatId !== chatId) {
-          existing = await this.prisma.telegramMessage.update({
-            where: { id: legacy.id },
-            data: { chatId },
-          });
-        } else if (legacy) {
-          existing = legacy;
-        }
+      if (messagesToProcess.length === 0) {
+        return { messagesRead: savedMessages.length, productsCreated: 0 };
       }
 
-      if (existing) {
-        const existingDate = existing.date
-          ? Number(existing.date)
-          : existing.createdAt.getTime() / 1000;
-        savedMessages.push({
-          id: existing.id,
-          tgMessageId: existing.tgMessageId,
-          fromId: existing.fromId ? Number(existing.fromId) : null,
-          fromUsername: existing.fromUsername,
-          fromFirstName: existing.fromFirstName,
-          text: existing.text,
-          caption: existing.caption,
-          mediaUrl: existing.mediaUrl,
-          type: existing.type,
-          date: existingDate,
-          tgMessageIdBigInt: existing.tgMessageId,
-        });
-        continue;
-      }
-
-      let messageType = (msg as any).type;
-      if (!messageType) {
-        if (msg.photo && msg.photo.length > 0) {
-          messageType = 'photo';
-        } else if (msg.document) {
-          messageType = 'document';
-        } else if (msg.text || msg.caption) {
-          messageType = 'text';
-        } else {
-          messageType = 'text';
-        }
-      }
-
-      let mediaUrl: string | null = null;
-      let mediaBuffer: Buffer | undefined = undefined;
-
-      if (
-        (msg as any).mediaBuffer &&
-        Buffer.isBuffer((msg as any).mediaBuffer)
-      ) {
-        mediaBuffer = (msg as any).mediaBuffer;
-        mediaUrl = `telegram_photo_${msg.message_id}`;
-      } else if ((msg as any).mediaUrl) {
-        mediaUrl = (msg as any).mediaUrl;
-      } else if (msg.photo && msg.photo.length > 0) {
-        const largestPhoto = msg.photo[msg.photo.length - 1];
-        mediaUrl = await telegramFetcher.getFileUrl(largestPhoto.file_id);
-      } else if (messageType === 'photo') {
-        mediaUrl = `telegram_photo_${msg.message_id}`;
-      }
-
-      const messageDate =
-        (msg as any).date || msg.date || Math.floor(Date.now() / 1000);
-
-      // Prefer channel username as provider identity for channel posts
-      const channelUsername = chatId.replace(/^@/, '');
-      const fromUsername = msg.from?.username || channelUsername || null;
-      const fromFirstName =
-        msg.from?.first_name || channel.name || channelUsername || null;
-
-      const saved = await this.prisma.telegramMessage.create({
-        data: {
-          tgMessageId,
-          chatId,
-          fromId: msg.from?.id ? BigInt(msg.from.id) : null,
-          fromUsername,
-          fromFirstName,
-          fromLastName: msg.from?.last_name || null,
-          type: messageType,
-          text: msg.text || null,
-          caption: msg.caption || null,
-          mediaUrl: mediaUrl || null,
-          mediaFileId: msg.photo?.[0]?.file_id || msg.document?.file_id || null,
-          mediaWidth: msg.photo?.[0]?.width || null,
-          mediaHeight: msg.photo?.[0]?.height || null,
-          mediaMimeType: msg.document?.mime_type || null,
-          mediaFileSize: msg.document?.file_size || null,
-          rawPayload: msg as any,
-          date: BigInt(Math.floor(messageDate)),
-        },
-      });
-
-      savedMessages.push({
-        id: saved.id,
-        tgMessageId: saved.tgMessageId,
-        fromId: saved.fromId ? Number(saved.fromId) : null,
-        fromUsername: saved.fromUsername,
-        fromFirstName: saved.fromFirstName,
-        text: saved.text,
-        caption: saved.caption,
-        mediaUrl: saved.mediaUrl,
-        type: saved.type,
-        date: messageDate,
-        tgMessageIdBigInt: saved.tgMessageId,
-        mediaBuffer,
-      });
-    }
-
-    logger.debug(
-      `[Telegram Parser] Saved ${savedMessages.length} messages for ${chatId}`
-    );
-
-    const processedIds = await this.prisma.telegramMessage.findMany({
-      where: {
-        id: { in: savedMessages.map(m => m.id) },
-        processed: true,
-      },
-      select: { id: true },
-    });
-
-    const processedIdSet = new Set(processedIds.map(m => m.id));
-    const messagesToProcess = savedMessages.filter(
-      msg => !processedIdSet.has(msg.id)
-    );
-
-    if (messagesToProcess.length === 0) {
-      logger.debug('[Telegram Parser] No unprocessed messages found');
-      return { messagesRead: savedMessages.length, productsCreated: 0 };
-    }
-
-    messagesToProcess.sort((a, b) => a.date - b.date);
-
-    logger.debug(
-      `[Telegram Parser] Analyzing ${messagesToProcess.length} messages for grouping...`
-    );
-
-    const groups = this.groupMessages(messagesToProcess);
-    logger.debug(`[Telegram Parser] Created ${groups.length} message groups`);
-
-    if (groups.length === 0 && messagesToProcess.length > 0) {
-      logger.debug(
-        `[Telegram Parser] ⚠️  No groups created. Usually: missing image+text pair, >60s gap, or different authors`
+      messagesToProcess.sort((a, b) => a.date - b.date);
+      const groups = this.groupMessages(messagesToProcess);
+      console.log(
+        `[Telegram Parser] ${groups.length} product posts to process sequentially`
       );
-    }
 
-    let productsCreated = 0;
-    for (const group of groups) {
-      try {
-        const location = this.extractLocation(group.text, channel.profile);
-        const { price, boxPrice, amount } = this.parsePriceAndAmount(
-          group.text,
-          channel.profile
+      if (groups.length === 0 && messagesToProcess.length > 0) {
+        console.log(
+          `[Telegram Parser] ⚠️ No groups (need image+text within 60s, same author)`
+        );
+      }
+
+      // Keep MTProto connected while we download media per post
+      if (useMtproto && !mtprotoConnected) {
+        await telegramMTProtoFetcher.connect();
+        mtprotoConnected = true;
+      }
+
+      let productsCreated = 0;
+      for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        const preview = group.text.replace(/\s+/g, ' ').slice(0, 80);
+        console.log(
+          `\n[${i + 1}/${groups.length}] Post (${group.images.length} img): ${preview}...`
         );
 
-        const providerUsername =
-          group.authorUsername || chatId.replace(/^@/, '');
-        const providerId = await this.getOrCreateProvider(
-          group.authorId,
-          providerUsername,
-          location
-        );
+        try {
+          console.log(`  → downloading media...`);
+          await this.downloadGroupMedia(group, chatId);
 
-        await this.createProductFromGroup(
-          group,
-          {
-            location,
-            price,
-            boxPrice,
-            amount,
-            description: group.text,
-          },
-          providerId,
-          channel
-        );
+          const location = this.extractLocation(group.text, channel.profile);
+          const { price, boxPrice, amount } = this.parsePriceAndAmount(
+            group.text,
+            channel.profile
+          );
 
-        productsCreated++;
-      } catch (error) {
-        logServerError(`[Telegram Parser] Error processing group:`, error);
+          const providerUsername =
+            group.authorUsername || chatId.replace(/^@/, '');
+          const providerId = await this.getOrCreateProvider(
+            group.authorId,
+            providerUsername,
+            location
+          );
+
+          console.log(`  → creating product (price=${price ?? 'n/a'})...`);
+          const productId = await this.createProductFromGroup(
+            group,
+            {
+              location,
+              price,
+              boxPrice,
+              amount,
+              description: group.text,
+            },
+            providerId,
+            channel
+          );
+
+          productsCreated++;
+          console.log(`  ✅ [${i + 1}/${groups.length}] product ${productId}`);
+        } catch (error) {
+          console.error(
+            `  ❌ [${i + 1}/${groups.length}] failed:`,
+            error instanceof Error ? error.message : error
+          );
+          logServerError(`[Telegram Parser] Error processing group:`, error);
+        }
+      }
+
+      console.log(
+        `\n[Telegram Parser] Done ${chatId}: ${savedMessages.length} messages, ${productsCreated}/${groups.length} products created`
+      );
+
+      return {
+        messagesRead: savedMessages.length,
+        productsCreated,
+      };
+    } finally {
+      if (mtprotoConnected) {
+        await telegramMTProtoFetcher.disconnect();
       }
     }
-
-    logger.debug(
-      `[Telegram Parser] Completed ${chatId}: ${savedMessages.length} messages read, ${productsCreated} products created`
-    );
-
-    return {
-      messagesRead: savedMessages.length,
-      productsCreated,
-    };
   }
 
   /**
