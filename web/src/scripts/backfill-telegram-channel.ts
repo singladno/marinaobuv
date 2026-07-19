@@ -1,9 +1,9 @@
 /**
- * One-time (or re-runnable) full-history backfill for a Telegram channel.
+ * Re-runnable backfill for a Telegram channel (default: last 6 months).
  *
  * Usage:
  *   npx tsx src/scripts/backfill-telegram-channel.ts --channel @dilshod_cosmetica
- *   npx tsx src/scripts/backfill-telegram-channel.ts --channel @dilshod_cosmetica --profile cosmetics
+ *   npx tsx src/scripts/backfill-telegram-channel.ts --channel @dilshod_cosmetica --months 6
  *
  * Channel must be listed in TELEGRAM_CHANNELS (or pass --profile for ad-hoc).
  * Requires MTProto auth (TELEGRAM_API_ID/HASH/PHONE/SESSION_STRING).
@@ -25,6 +25,7 @@ function parseArgs(argv: string[]) {
   let channel: string | undefined;
   let profile: TelegramParserProfile | undefined;
   let name: string | undefined;
+  let months = 6;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -36,10 +37,12 @@ function parseArgs(argv: string[]) {
       else throw new Error(`Invalid --profile ${p}`);
     } else if (arg === '--name' && argv[i + 1]) {
       name = argv[++i];
+    } else if (arg === '--months' && argv[i + 1]) {
+      months = Math.max(1, parseInt(argv[++i], 10) || 6);
     }
   }
 
-  return { channel, profile, name };
+  return { channel, profile, name, months };
 }
 
 async function main() {
@@ -47,11 +50,12 @@ async function main() {
     channel: channelArg,
     profile,
     name,
+    months,
   } = parseArgs(process.argv.slice(2));
 
   if (!channelArg) {
     console.error(
-      'Usage: npx tsx src/scripts/backfill-telegram-channel.ts --channel @dilshod_cosmetica [--profile cosmetics]'
+      'Usage: npx tsx src/scripts/backfill-telegram-channel.ts --channel @dilshod_cosmetica [--months 6]'
     );
     process.exit(1);
   }
@@ -77,7 +81,7 @@ async function main() {
   }
 
   console.log(
-    `🚀 Backfill Telegram channel ${channel.id} (profile=${channel.profile})...`
+    `🚀 Backfill Telegram channel ${channel.id} (profile=${channel.profile}, last ${months} months)...`
   );
 
   const canProceed = await ParsingCoordinator.canStartParsing({
@@ -103,7 +107,7 @@ async function main() {
   const parser = new TelegramParser(prisma);
 
   try {
-    const result = await parser.parseChannel(channel, { fetchAll: true });
+    const result = await parser.parseChannel(channel, { monthsBack: months });
 
     await progressService.updateProgress({
       status: 'completed',

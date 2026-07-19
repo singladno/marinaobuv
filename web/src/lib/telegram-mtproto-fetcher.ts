@@ -14,6 +14,8 @@ export interface TelegramMessageData {
   message_id: number;
   date: number;
   type?: string;
+  /** Telegram album id — messages with the same groupedId are one post. */
+  groupedId?: string;
   chat: {
     id: number;
     title?: string;
@@ -42,7 +44,9 @@ export interface TelegramMessageData {
 
 export type FetchChannelOptions = {
   hoursBack?: number;
-  /** When true, walk the entire channel history. */
+  /** Fetch last N months (e.g. backfill). Takes precedence over hoursBack. */
+  monthsBack?: number;
+  /** @deprecated Use monthsBack. Treated as monthsBack=6. */
   fetchAll?: boolean;
 };
 
@@ -210,14 +214,19 @@ export class TelegramMTProtoFetcher {
     return entity;
   }
 
-  private async mapApiMessage(
+  private mapApiMessage(
     msg: Api.Message,
     entity: any,
     normalizedUsername: string
-  ): Promise<TelegramMessageData> {
+  ): TelegramMessageData {
+    // Channel posts: author is the channel. Skip getEntity(fromId) — it floods API.
     const messageData: TelegramMessageData = {
       message_id: msg.id,
       date: messageDateSeconds(msg),
+      groupedId:
+        msg.groupedId != null && msg.groupedId !== undefined
+          ? String(msg.groupedId)
+          : undefined,
       chat: {
         id:
           entity.id instanceof Api.PeerChannel
@@ -228,35 +237,22 @@ export class TelegramMTProtoFetcher {
         username: normalizedUsername,
         type: 'channel',
       },
+      from: {
+        id:
+          entity instanceof Api.Channel || entity instanceof Api.Chat
+            ? Number((entity as any).id)
+            : 0,
+        is_bot: false,
+        first_name:
+          (entity as any).title ||
+          (entity as any).username ||
+          normalizedUsername,
+        username: (entity as any).username || normalizedUsername,
+      },
+      // Caption for media posts lives in msg.message
       text: msg.message || undefined,
-      caption:
-        msg.media instanceof Api.MessageMediaPhoto
-          ? (msg.media as any).caption?.text || undefined
-          : undefined,
+      caption: msg.message || undefined,
     };
-
-    if (msg.fromId && this.client) {
-      try {
-        const sender = await this.client.getEntity(msg.fromId);
-        if (sender) {
-          messageData.from = {
-            id:
-              sender.id instanceof Api.PeerUser
-                ? Number(sender.id.userId)
-                : sender instanceof Api.User
-                  ? Number((sender as any).id)
-                  : 0,
-            is_bot: sender instanceof Api.User ? (sender.bot ?? false) : false,
-            first_name:
-              sender instanceof Api.User ? (sender.firstName ?? '') : '',
-            last_name: sender instanceof Api.User ? sender.lastName : undefined,
-            username: sender instanceof Api.User ? sender.username : undefined,
-          };
-        }
-      } catch {
-        // Ignore sender lookup errors
-      }
-    }
 
     // Metadata only — media bytes are downloaded later, per product.
     if (msg.media instanceof Api.MessageMediaPhoto) {
@@ -307,23 +303,27 @@ export class TelegramMTProtoFetcher {
 
     const options: FetchChannelOptions =
       typeof hoursBackOrOptions === 'number'
-        ? { hoursBack: hoursBackOrOptions, fetchAll: false }
-        : {
-            hoursBack: hoursBackOrOptions.hoursBack ?? 24,
-            fetchAll: hoursBackOrOptions.fetchAll ?? false,
-          };
+        ? { hoursBack: hoursBackOrOptions }
+        : { ...hoursBackOrOptions };
 
-    const cutoffTime = options.fetchAll
-      ? 0
-      : Math.floor(
-          (Date.now() - (options.hoursBack ?? 24) * 60 * 60 * 1000) / 1000
-        );
+    // Prefer monthsBack; deprecated fetchAll ⇒ 6 months
+    let cutoffTime: number;
+    let windowLabel: string;
+    if (options.monthsBack != null || options.fetchAll) {
+      const months = options.monthsBack ?? 6;
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - months);
+      cutoffTime = Math.floor(cutoff.getTime() / 1000);
+      windowLabel = `last ${months} months`;
+    } else {
+      const hours = options.hoursBack ?? 24;
+      cutoffTime = Math.floor((Date.now() - hours * 60 * 60 * 1000) / 1000);
+      windowLabel = `last ${hours}h`;
+    }
 
     const normalizedUsername = channelUsername.replace('@', '');
     console.log(
-      options.fetchAll
-        ? `[Telegram MTProto] Listing ALL messages from @${normalizedUsername} (metadata only)...`
-        : `[Telegram MTProto] Listing messages from @${normalizedUsername} (last ${options.hoursBack}h, metadata only)...`
+      `[Telegram MTProto] Listing messages from @${normalizedUsername} (${windowLabel}, metadata only)...`
     );
 
     const entity = await this.resolveChannelEntity(normalizedUsername);
@@ -346,12 +346,12 @@ export class TelegramMTProtoFetcher {
         if (!(msg instanceof Api.Message)) continue;
 
         const date = messageDateSeconds(msg);
-        if (!options.fetchAll && date < cutoffTime) {
+        if (date < cutoffTime) {
           hitCutoff = true;
           break;
         }
 
-        batch.push(await this.mapApiMessage(msg, entity, normalizedUsername));
+        batch.push(this.mapApiMessage(msg, entity, normalizedUsername));
         offsetId = msg.id;
       }
 

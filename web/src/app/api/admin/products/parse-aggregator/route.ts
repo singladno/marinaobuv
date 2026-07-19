@@ -373,7 +373,7 @@ export async function POST(req: NextRequest) {
     const analysisResponse = await groqChatCompletion(
       groq,
       {
-        model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
         messages: [
           {
             role: 'system',
@@ -604,7 +604,7 @@ export async function POST(req: NextRequest) {
         const categoryResponse = await groqChatCompletion(
           categoryGroq,
           {
-            model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct', // Same model as WA parser
+            model: process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b', // Same model as WA parser
             messages: [
               {
                 role: 'system',

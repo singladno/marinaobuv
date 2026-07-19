@@ -83,7 +83,7 @@ const schema = z
 
     // Groq API
     GROQ_API_KEY: z.string().optional(),
-    // Vision/image analysis model (default: meta-llama/llama-4-scout-17b-16e-instruct; must support image input)
+    // Vision/image analysis model (default: qwen/qwen3.6-27b; must support image input)
     GROQ_VISION_MODEL: z.string().optional(),
 
     // Concurrency tuning (optional)

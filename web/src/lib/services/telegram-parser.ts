@@ -42,7 +42,9 @@ interface ParsedProductData {
 
 export interface ParseChannelOptions {
   hoursBack?: number;
-  /** When true, fetch entire channel history (backfill). */
+  /** Backfill window in months (default used by backfill script: 6). */
+  monthsBack?: number;
+  /** @deprecated Use monthsBack. Treated as monthsBack=6. */
   fetchAll?: boolean;
 }
 
@@ -161,6 +163,12 @@ export class TelegramParser {
    * - Images should come first, then text messages
    * - If text appears first, look backwards for images from the same author
    */
+  /**
+   * One Telegram post = one product.
+   * - Album (same groupedId): merge only those media parts
+   * - Single message with media + caption: one product
+   * Never glue neighboring posts by time/author.
+   */
   private groupMessages(
     messages: Array<{
       id: string;
@@ -173,202 +181,77 @@ export class TelegramParser {
       mediaUrl: string | null;
       type: string | null;
       date: number;
-      tgMessageIdBigInt?: bigint; // Store for re-downloading images
+      tgMessageIdBigInt?: bigint;
+      groupedId?: string | null;
     }>
   ): TelegramMessageGroup[] {
+    type Msg = (typeof messages)[0];
+    const sorted = [...messages].sort((a, b) => {
+      if (a.date !== b.date) return a.date - b.date;
+      return Number(a.tgMessageId) - Number(b.tgMessageId);
+    });
+
+    const hasText = (msg: Msg) => !!(msg.text || msg.caption);
+    const hasImage = (msg: Msg) =>
+      (msg.type === 'photo' || msg.type === 'document') && !!msg.mediaUrl;
+
+    const toImage = (msg: Msg) => {
+      const tgMessageId = msg.tgMessageIdBigInt || (msg as any).tgMessageId;
+      return {
+        url: msg.mediaUrl || `telegram_photo_${msg.id}`,
+        fileId: msg.mediaUrl || undefined,
+        buffer: (msg as any).mediaBuffer as Buffer | undefined,
+        tgMessageId: tgMessageId ? BigInt(tgMessageId.toString()) : undefined,
+      };
+    };
+
+    const buildGroup = (parts: Msg[]): TelegramMessageGroup | null => {
+      const images = parts.filter(hasImage).map(toImage);
+      const textParts = parts
+        .map(m => m.text || m.caption || '')
+        .filter(Boolean);
+      // Prefer the longest caption (album caption is usually on one part)
+      const text = textParts.sort((a, b) => b.length - a.length)[0] || '';
+      if (images.length === 0 || !text) return null;
+
+      const head = parts[0];
+      return {
+        messageIds: parts.map(m => m.id),
+        text,
+        images,
+        authorId: head.fromId,
+        authorUsername: head.fromUsername,
+        authorName: head.fromFirstName || head.fromUsername || 'Unknown',
+        timestamp: head.date,
+      };
+    };
+
+    const used = new Set<string>();
     const groups: TelegramMessageGroup[] = [];
-    // Messages should already be sorted by createdAt before being passed here
-    // But we sort again by date to ensure correct order
-    const sortedMessages = [...messages].sort((a, b) => a.date - b.date);
-    const processedMessageIds = new Set<string>();
-    const GROUP_TIMEOUT = 60 * 1000; // 60 seconds
 
-    // Helper functions
-    const hasText = (msg: (typeof sortedMessages)[0]) =>
-      !!(msg.text || msg.caption);
-    const hasImage = (msg: (typeof sortedMessages)[0]) =>
-      (msg.type === 'photo' || msg.type === 'document') &&
-      (!!msg.mediaUrl || (msg as any).photo);
+    // 1) Albums: only messages that share Telegram groupedId
+    const albums = new Map<string, Msg[]>();
+    for (const msg of sorted) {
+      if (!msg.groupedId) continue;
+      const list = albums.get(msg.groupedId) || [];
+      list.push(msg);
+      albums.set(msg.groupedId, list);
+    }
 
-    for (let i = 0; i < sortedMessages.length; i++) {
-      const msg = sortedMessages[i];
+    for (const albumMsgs of albums.values()) {
+      albumMsgs.forEach(m => used.add(m.id));
+      const group = buildGroup(albumMsgs);
+      if (group) groups.push(group);
+    }
 
-      // Skip if already processed
-      if (processedMessageIds.has(msg.id)) {
-        continue;
-      }
-
-      // Skip messages that are neither text nor image
-      if (!hasText(msg) && !hasImage(msg)) {
-        continue;
-      }
-
-      const authorId = msg.fromId;
-      const authorUsername = msg.fromUsername;
-      const authorName = msg.fromFirstName || msg.fromUsername || 'Unknown';
-
-      // Case 1: Text message appears first - look backwards for images
-      if (hasText(msg) && !hasImage(msg)) {
-        const images: Array<{
-          url: string;
-          fileId?: string;
-          buffer?: Buffer;
-          tgMessageId?: bigint;
-        }> = [];
-        const imageMessageIds: string[] = [];
-
-        // Look backwards for images from the same author within the time window
-        for (let j = i - 1; j >= 0; j--) {
-          const prevMsg = sortedMessages[j];
-
-          // Stop if we've gone too far back in time
-          if (msg.date - prevMsg.date > GROUP_TIMEOUT / 1000) {
-            break;
-          }
-
-          // Stop if different author
-          if (prevMsg.fromId !== authorId) {
-            break;
-          }
-
-          // Stop if already processed
-          if (processedMessageIds.has(prevMsg.id)) {
-            break;
-          }
-
-          // If this is an image message, add it to the group (unshift to maintain chronological order)
-          if (hasImage(prevMsg)) {
-            const imageUrl = prevMsg.mediaUrl || `telegram_photo_${prevMsg.id}`;
-            const tgMessageId =
-              prevMsg.tgMessageIdBigInt || (prevMsg as any).tgMessageId;
-            images.unshift({
-              url: imageUrl,
-              fileId: imageUrl,
-              buffer: (prevMsg as any).mediaBuffer,
-              tgMessageId: tgMessageId
-                ? BigInt(tgMessageId.toString())
-                : undefined,
-            });
-            imageMessageIds.unshift(prevMsg.id);
-            processedMessageIds.add(prevMsg.id);
-          }
-        }
-
-        // If we found images, create a group with images first, then text
-        if (images.length > 0) {
-          const textContent = msg.text || msg.caption || '';
-          const group: TelegramMessageGroup = {
-            messageIds: [...imageMessageIds, msg.id],
-            text: textContent,
-            images: images,
-            authorId,
-            authorUsername,
-            authorName,
-            timestamp: msg.date,
-          };
-          groups.push(group);
-          processedMessageIds.add(msg.id);
-        }
-        // If no images found, skip this text message (it will be picked up if images come later)
-        continue;
-      }
-
-      // Case 2: Image message (or message with both image and text) - look forward for text
-      if (hasImage(msg)) {
-        const images: Array<{
-          url: string;
-          fileId?: string;
-          buffer?: Buffer;
-          tgMessageId?: bigint;
-        }> = [];
-        const imageMessageIds: string[] = [];
-        let textContent = '';
-
-        // Collect all consecutive images from the same author
-        let j = i;
-        while (j < sortedMessages.length) {
-          const currentMsg = sortedMessages[j];
-
-          // Stop if different author
-          if (currentMsg.fromId !== authorId) {
-            break;
-          }
-
-          // Stop if we've gone too far forward in time
-          if (currentMsg.date - msg.date > GROUP_TIMEOUT / 1000) {
-            break;
-          }
-
-          // Stop if already processed
-          if (processedMessageIds.has(currentMsg.id)) {
-            break;
-          }
-
-          // If this is an image message, add it
-          if (hasImage(currentMsg)) {
-            const imageUrl =
-              currentMsg.mediaUrl || `telegram_photo_${currentMsg.id}`;
-            const tgMessageId =
-              currentMsg.tgMessageIdBigInt || (currentMsg as any).tgMessageId;
-            images.push({
-              url: imageUrl,
-              fileId: imageUrl,
-              buffer: (currentMsg as any).mediaBuffer,
-              tgMessageId: tgMessageId
-                ? BigInt(tgMessageId.toString())
-                : undefined,
-            });
-            imageMessageIds.push(currentMsg.id);
-            processedMessageIds.add(currentMsg.id);
-
-            // Also collect text if it has caption
-            if (hasText(currentMsg)) {
-              const caption = currentMsg.text || currentMsg.caption || '';
-              if (caption) {
-                if (textContent) {
-                  textContent += '\n\n' + caption;
-                } else {
-                  textContent = caption;
-                }
-              }
-            }
-            j++;
-          } else if (hasText(currentMsg)) {
-            // Found text after images - add it and stop
-            const msgText = currentMsg.text || currentMsg.caption || '';
-            if (msgText) {
-              if (textContent) {
-                textContent += '\n\n' + msgText;
-              } else {
-                textContent = msgText;
-              }
-            }
-            imageMessageIds.push(currentMsg.id);
-            processedMessageIds.add(currentMsg.id);
-            j++;
-            break;
-          } else {
-            // Not an image or text, stop
-            break;
-          }
-        }
-
-        // Only create group if we have both images and text
-        if (images.length > 0 && textContent) {
-          const group: TelegramMessageGroup = {
-            messageIds: imageMessageIds,
-            text: textContent,
-            images: images,
-            authorId,
-            authorUsername,
-            authorName,
-            timestamp: msg.date,
-          };
-          groups.push(group);
-        } else if (images.length > 0) {
-          // Images without text - remove from processed so text can pick them up later
-          imageMessageIds.forEach(id => processedMessageIds.delete(id));
-        }
+    // 2) Standalone posts: media + text in the SAME message only
+    for (const msg of sorted) {
+      if (used.has(msg.id)) continue;
+      if (!hasImage(msg) || !hasText(msg)) continue;
+      const group = buildGroup([msg]);
+      if (group) {
+        groups.push(group);
+        used.add(msg.id);
       }
     }
 
@@ -925,6 +808,16 @@ export class TelegramParser {
   /**
    * Parse one configured Telegram channel (incremental or full history).
    */
+  private extractGroupedId(msgOrPayload: any): string | null {
+    if (!msgOrPayload) return null;
+    const raw =
+      msgOrPayload.groupedId ??
+      msgOrPayload.grouped_id ??
+      (msgOrPayload as any)?.rawPayload?.groupedId;
+    if (raw == null || raw === '') return null;
+    return String(raw);
+  }
+
   private async upsertTelegramMessage(
     msg: any,
     channel: TelegramChannelConfig,
@@ -942,8 +835,10 @@ export class TelegramParser {
     type: string | null;
     date: number;
     processed: boolean;
+    groupedId: string | null;
   }> {
     const tgMessageId = BigInt(msg.message_id);
+    const incomingGroupedId = this.extractGroupedId(msg);
 
     let existing = await this.prisma.telegramMessage.findUnique({
       where: {
@@ -977,6 +872,16 @@ export class TelegramParser {
       const existingDate = existing.date
         ? Number(existing.date)
         : existing.createdAt.getTime() / 1000;
+      const raw = existing.rawPayload as any;
+      // Refresh groupedId in rawPayload if we now know it
+      if (incomingGroupedId && !this.extractGroupedId(raw)) {
+        await this.prisma.telegramMessage.update({
+          where: { id: existing.id },
+          data: {
+            rawPayload: { ...(raw || {}), groupedId: incomingGroupedId },
+          },
+        });
+      }
       return {
         id: existing.id,
         tgMessageId: existing.tgMessageId,
@@ -990,6 +895,7 @@ export class TelegramParser {
         date: existingDate,
         tgMessageIdBigInt: existing.tgMessageId,
         processed: existing.processed,
+        groupedId: incomingGroupedId || this.extractGroupedId(raw) || null,
       };
     }
 
@@ -1067,6 +973,7 @@ export class TelegramParser {
       date: messageDate,
       tgMessageIdBigInt: saved.tgMessageId,
       processed: saved.processed,
+      groupedId: incomingGroupedId,
     };
   }
 
@@ -1082,7 +989,7 @@ export class TelegramParser {
     productsCreated: number;
   }> {
     const hoursBack = options.hoursBack ?? 48;
-    const fetchAll = options.fetchAll ?? false;
+    const monthsBack = options.monthsBack ?? (options.fetchAll ? 6 : undefined);
     const chatId = normalizeChannelId(channel.id);
     const useMtproto = !!(
       env.TELEGRAM_API_ID &&
@@ -1091,9 +998,9 @@ export class TelegramParser {
     );
 
     console.log(
-      fetchAll
-        ? `[Telegram Parser] FULL parse ${chatId} (${channel.profile}) — one post at a time`
-        : `[Telegram Parser] Parse ${chatId} (${channel.profile}, last ${hoursBack}h) — one post at a time`
+      monthsBack != null
+        ? `[Telegram Parser] Parse ${chatId} (${channel.profile}, last ${monthsBack} months) — one post = one product`
+        : `[Telegram Parser] Parse ${chatId} (${channel.profile}, last ${hoursBack}h) — one post = one product`
     );
 
     type SavedMsg = Awaited<ReturnType<typeof this.upsertTelegramMessage>>;
@@ -1108,7 +1015,7 @@ export class TelegramParser {
 
           for await (const batch of telegramMTProtoFetcher.iterateChannelMessageBatches(
             chatId,
-            fetchAll ? { fetchAll: true } : hoursBack
+            monthsBack != null ? { monthsBack } : hoursBack
           )) {
             for (const msg of batch) {
               const saved = await this.upsertTelegramMessage(
@@ -1124,7 +1031,7 @@ export class TelegramParser {
             '[Telegram Parser] MTProto fetch failed, falling back to Bot API:',
             error
           );
-          if (fetchAll) throw error;
+          if (monthsBack != null) throw error;
 
           const botMessages =
             await telegramFetcher.fetchChannelMessagesByUsername(
@@ -1138,9 +1045,9 @@ export class TelegramParser {
           }
         }
       } else {
-        if (fetchAll) {
+        if (monthsBack != null) {
           throw new Error(
-            'Full history backfill requires MTProto credentials (TELEGRAM_API_ID/HASH/PHONE)'
+            'Months-back backfill requires MTProto credentials (TELEGRAM_API_ID/HASH/PHONE)'
           );
         }
         const botMessages =

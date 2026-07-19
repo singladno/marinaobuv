@@ -7,7 +7,7 @@
  *   npx tsx scripts/test-telegram-parser.ts
  *   npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica
  *   npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --hours 72
- *   npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --all
+ *   npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --months 6
  */
 
 import '../src/scripts/load-env';
@@ -22,7 +22,7 @@ import {
 function parseArgs(argv: string[]) {
   let channel: string | undefined;
   let hours = 48;
-  let fetchAll = false;
+  let months: number | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -30,12 +30,14 @@ function parseArgs(argv: string[]) {
       channel = argv[++i];
     } else if (arg === '--hours' && argv[i + 1]) {
       hours = parseInt(argv[++i], 10);
+    } else if (arg === '--months' && argv[i + 1]) {
+      months = Math.max(1, parseInt(argv[++i], 10) || 6);
     } else if (arg === '--all') {
-      fetchAll = true;
+      months = 6;
     }
   }
 
-  return { channel, hours, fetchAll };
+  return { channel, hours, months };
 }
 
 async function main() {
@@ -44,7 +46,7 @@ async function main() {
   const {
     channel: channelArg,
     hours,
-    fetchAll,
+    months,
   } = parseArgs(process.argv.slice(2));
   const parser = new TelegramParser(prisma);
 
@@ -66,14 +68,14 @@ async function main() {
       }
 
       console.log(
-        fetchAll
-          ? `📨 Full history for ${channel.id} (${channel.profile})...\n`
+        months != null
+          ? `📨 Last ${months} months for ${channel.id} (${channel.profile})...\n`
           : `📨 Last ${hours}h for ${channel.id} (${channel.profile})...\n`
       );
 
       const result = await parser.parseChannel(channel, {
         hoursBack: hours,
-        fetchAll,
+        monthsBack: months,
       });
 
       console.log('\n✅ Test completed successfully!');

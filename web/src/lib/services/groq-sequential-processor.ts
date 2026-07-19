@@ -739,7 +739,9 @@ export class GroqSequentialProcessor {
         `  ✅ Sequence validation: ${isValid} (allowed 2 changes for ${reason})`
       );
     } else {
-      logger.debug(`  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`);
+      logger.debug(
+        `  ${isValid ? '✅' : '❌'} Sequence validation: ${isValid}`
+      );
     }
 
     return isValid;
@@ -814,7 +816,10 @@ export class GroqSequentialProcessor {
         packPairs: sizesResult.packPairs || null,
       };
     } catch (error) {
-      logServerError(`❌ Error extracting sizes for product ${productId}:`, error);
+      logServerError(
+        `❌ Error extracting sizes for product ${productId}:`,
+        error
+      );
       // Don't throw - return null to continue without sizes extraction
       return null;
     }
@@ -891,7 +896,10 @@ export class GroqSequentialProcessor {
         return null;
       }
     } catch (error) {
-      logServerError(`❌ Error extracting price for product ${productId}:`, error);
+      logServerError(
+        `❌ Error extracting price for product ${productId}:`,
+        error
+      );
       // Don't throw - return null to continue without price extraction
       return null;
     }
@@ -968,7 +976,10 @@ export class GroqSequentialProcessor {
         return null;
       }
     } catch (error) {
-      logServerError(`❌ Error extracting gender for product ${productId}:`, error);
+      logServerError(
+        `❌ Error extracting gender for product ${productId}:`,
+        error
+      );
       // Don't throw - return null to continue without gender extraction
       return null;
     }
@@ -1399,7 +1410,10 @@ export class GroqSequentialProcessor {
         );
       }
     } catch (error) {
-      logServerError(`❌ Error uploading images for product ${productId}:`, error);
+      logServerError(
+        `❌ Error uploading images for product ${productId}:`,
+        error
+      );
       // Don't throw error - continue processing even if image upload fails
       logger.debug(`⚠️ Continuing processing despite image upload failure`);
     }
@@ -1462,7 +1476,7 @@ export class GroqSequentialProcessor {
           const response = await groqChatCompletion(
             groq,
             {
-              model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
+              model: process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
               messages: [
                 {
                   role: 'system',
@@ -1499,7 +1513,7 @@ export class GroqSequentialProcessor {
           if ('usage' in response && response.usage) {
             getTokenLogger().log(
               'image-analysis',
-              process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
+              process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
               response.usage,
               {
                 productId,
@@ -1574,7 +1588,7 @@ export class GroqSequentialProcessor {
           const categoryResponse = await groqChatCompletion(
             groq,
             {
-              model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
+              model: process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
               messages: [
                 {
                   role: 'system',
@@ -1606,7 +1620,7 @@ export class GroqSequentialProcessor {
           if ('usage' in categoryResponse && categoryResponse.usage) {
             getTokenLogger().log(
               'category-analysis',
-              process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
+              process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
               categoryResponse.usage,
               {
                 productId,
@@ -1740,7 +1754,10 @@ export class GroqSequentialProcessor {
         `✅ Image analysis completed for product ${productId}: ${analysisResults.length} images processed`
       );
     } catch (error) {
-      logServerError(`❌ Error analyzing images for product ${productId}:`, error);
+      logServerError(
+        `❌ Error analyzing images for product ${productId}:`,
+        error
+      );
       throw error;
     }
   }
@@ -1825,7 +1842,10 @@ export class GroqSequentialProcessor {
         // Merged name/description/gender/season from image analysis
       }
     } catch (error) {
-      logServerError(`❌ Error merging name/description/gender/season from image analysis for product ${productId}:`, error);
+      logServerError(
+        `❌ Error merging name/description/gender/season from image analysis for product ${productId}:`,
+        error
+      );
       // Don't throw error - this is not critical
     }
   }

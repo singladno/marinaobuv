@@ -67,8 +67,8 @@ npx tsx scripts/test-telegram-parser.ts
 # One channel
 npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --hours 48
 
-# Full history (same as backfill, but without parsing-history bookkeeping)
-npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --all
+# Last 6 months (same window as backfill, without parsing-history bookkeeping)
+npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --months 6
 ```
 
 ### Step 5: Historical Backfill (cosmetics / any channel)
@@ -89,13 +89,13 @@ If you prefer to use a bot:
 3. Set only `TELEGRAM_BOT_TOKEN` and channel config in `.env`
 
 The parser will automatically fall back to Bot API mode if MTProto credentials are not available.
-**Full history backfill requires MTProto.**
+**Backfill (last N months) requires MTProto.**
 
 ## How It Works
 
-1. **List metadata**: Pages through the channel (text/ids only — no bulk photo download)
-2. **Grouping**: Builds product posts from image + text pairs (same author, ≤60s gap)
-3. **One post at a time**: for each group → download its media → create product → GROQ → next
+1. **List metadata**: Pages through the channel (text/ids only — no bulk photo download). Backfill defaults to **last 6 months**.
+2. **One Telegram post = one product**: album parts share `groupedId`; standalone posts need media + caption in the same message. No time-window merging of different posts.
+3. **One post at a time**: download media → create product → GROQ → next
 4. **Profile**:
    - `flowers` — price `180₽×20шт＝3600Руб`, flower GROQ prompts, category `flowers`
    - `cosmetics` — price `ряд 4 шт 360`, cosmetics GROQ prompts, category `cosmetics`
