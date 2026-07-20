@@ -99,7 +99,7 @@ The parser will automatically fall back to Bot API mode if MTProto credentials a
 4. **Profile**:
    - `flowers` — price `180₽×20шт＝3600Руб`, flower GROQ prompts, category `flowers`
    - `cosmetics` — price `ряд 4 шт 360`, cosmetics GROQ prompts, category `cosmetics`
-5. **Product Creation**: `source: TG`, unit `PIECES`, 30% markup on unit price
+5. **Product Creation**: `source: TG`, unit `PIECES`; flowers +30% markup, cosmetics sell at channel price (no markup)
 
 Media download retries on `TIMEOUT` / flood. Already-processed messages are skipped on re-run.
 

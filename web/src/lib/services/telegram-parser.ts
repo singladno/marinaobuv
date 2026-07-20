@@ -582,12 +582,13 @@ export class TelegramParser {
       };
 
       // Update prices if provided by GROQ
-      // Store original price in buyPrice, apply 30% markup to pricePair
+      // Cosmetics: sell at channel price (no markup). Flowers: +30%.
       if (analysisResult.unitPrice) {
         const originalPrice = analysisResult.unitPrice;
-        const priceWithMarkup = originalPrice * 1.3; // Add 30% markup
-        updateData.buyPrice = originalPrice; // Store original price
-        updateData.pricePair = priceWithMarkup; // Store selling price with markup
+        const sellPrice =
+          profile === 'cosmetics' ? originalPrice : originalPrice * 1.3;
+        updateData.buyPrice = originalPrice;
+        updateData.pricePair = sellPrice;
       }
       // Note: boxPrice is not used for Telegram products, we only use unitPrice
 
@@ -708,9 +709,10 @@ export class TelegramParser {
     const { price, description } = parsedData;
     const defaultCategory = await this.resolveCategory(channel.profile);
 
-    // Calculate prices: store original in buyPrice, apply 30% markup to pricePair
+    // Cosmetics: sell at channel price (no markup). Flowers: +30%.
     const originalPrice = price || 0;
-    const priceWithMarkup = originalPrice * 1.3; // Add 30% markup
+    const sellPrice =
+      channel.profile === 'cosmetics' ? originalPrice : originalPrice * 1.3;
 
     // Create product with temporary name (will be updated by GROQ)
     const product = await this.prisma.product.create({
@@ -720,8 +722,8 @@ export class TelegramParser {
         article: generateArticleNumber(),
         categoryId: defaultCategory.id,
         providerId,
-        pricePair: priceWithMarkup, // Selling price with 30% markup
-        buyPrice: originalPrice, // Store original price from Telegram
+        pricePair: sellPrice,
+        buyPrice: originalPrice,
         currency: 'RUB',
         description: description.substring(0, 2000),
         source: 'TG' as ProductSource,
