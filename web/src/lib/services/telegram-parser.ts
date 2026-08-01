@@ -75,6 +75,15 @@ export class TelegramParser {
       return parts.length > 0 ? parts.join(', ') : null;
     }
 
+    if (profile === 'household') {
+      const parts: string[] = [];
+      const place = text.match(/Место\s*:\s*([^\n]+)/i);
+      if (place) parts.push(place[1].trim());
+      const pav = text.match(/Пав\.?\s*[^\n]+/i);
+      if (pav) parts.push(pav[0].trim());
+      return parts.length > 0 ? parts.join(', ') : null;
+    }
+
     // Flowers / default: "Линия 32-61/63 павильон"
     const locationPattern =
       /(?:Линия|линия|Павильон|павильон|Ряд|ряд)\s*([^\n]+)/i;
@@ -85,10 +94,19 @@ export class TelegramParser {
     return null;
   }
 
+  /** Extract phone from caption, e.g. "Тел: +79057763066". */
+  private extractPhone(text: string): string | null {
+    const match = text.match(/Тел\s*:\s*(\+?\d[\d\s\-()]+)/i);
+    if (!match) return null;
+    const digits = match[1].replace(/[^\d+]/g, '');
+    return digits.length >= 10 ? digits : null;
+  }
+
   /**
    * Parse price and amount from message text (profile-aware).
    * Flowers: "180₽×20шт＝3600Руб."
    * Cosmetics: "цена :ряд 4 шт 360" → amount=4, boxPrice=360, unit price=90
+   * Household: "Цена: 750 ₽" + "5 наборов"
    */
   private parsePriceAndAmount(
     text: string,
@@ -117,6 +135,16 @@ export class TelegramParser {
         };
       }
       return { price: null, boxPrice: null, amount: null };
+    }
+
+    if (profile === 'household') {
+      const priceMatch = text.match(/(?:цена|price)\s*[:：]?\s*(\d+)/i);
+      const amountMatch = text.match(/(\d+)\s*набор/i);
+      return {
+        price: priceMatch ? parseInt(priceMatch[1], 10) : null,
+        boxPrice: null,
+        amount: amountMatch ? parseInt(amountMatch[1], 10) : null,
+      };
     }
 
     let price: number | null = null;
@@ -264,21 +292,52 @@ export class TelegramParser {
   private async getOrCreateProvider(
     telegramId: number | null,
     telegramUsername: string | null,
-    location: string | null
+    location: string | null,
+    phone: string | null = null
   ): Promise<string> {
+    const patchMissing = async (
+      id: string,
+      current: {
+        location: string | null;
+        phone: string | null;
+        telegramId: bigint | null;
+        telegramUsername: string | null;
+      }
+    ) => {
+      const data: {
+        location?: string;
+        phone?: string;
+        telegramId?: number;
+        telegramUsername?: string;
+      } = {};
+      if (location && !current.location) data.location = location;
+      if (phone && !current.phone) data.phone = phone;
+      if (telegramId && !current.telegramId) data.telegramId = telegramId;
+      if (telegramUsername && !current.telegramUsername) {
+        data.telegramUsername = telegramUsername;
+      }
+      if (Object.keys(data).length > 0) {
+        await this.prisma.provider.update({ where: { id }, data });
+      }
+    };
+
+    if (phone) {
+      const byPhone = await this.prisma.provider.findFirst({
+        where: { phone },
+      });
+      if (byPhone) {
+        await patchMissing(byPhone.id, byPhone);
+        return byPhone.id;
+      }
+    }
+
     // Try to find by telegramId first
     if (telegramId) {
       const byTelegramId = await this.prisma.provider.findFirst({
         where: { telegramId: telegramId },
       });
       if (byTelegramId) {
-        // Update location if provided
-        if (location && !byTelegramId.location) {
-          await this.prisma.provider.update({
-            where: { id: byTelegramId.id },
-            data: { location },
-          });
-        }
+        await patchMissing(byTelegramId.id, byTelegramId);
         return byTelegramId.id;
       }
     }
@@ -289,30 +348,18 @@ export class TelegramParser {
         where: { telegramUsername: telegramUsername },
       });
       if (byUsername) {
-        // Update telegramId if missing
-        if (telegramId && !byUsername.telegramId) {
-          await this.prisma.provider.update({
-            where: { id: byUsername.id },
-            data: { telegramId },
-          });
-        }
-        // Update location if provided
-        if (location && !byUsername.location) {
-          await this.prisma.provider.update({
-            where: { id: byUsername.id },
-            data: { location },
-          });
-        }
+        await patchMissing(byUsername.id, byUsername);
         return byUsername.id;
       }
     }
 
     // Create new provider
     const providerName =
-      telegramUsername || `Telegram User ${telegramId || 'Unknown'}`;
+      phone || telegramUsername || `Telegram User ${telegramId || 'Unknown'}`;
     const created = await this.prisma.provider.create({
       data: {
         name: providerName,
+        phone: phone || null,
         telegramId: telegramId || null,
         telegramUsername: telegramUsername || null,
         location: location || null,
@@ -523,6 +570,17 @@ export class TelegramParser {
           imageUrls.length
         );
         defaultName = 'Косметика';
+      } else if (profile === 'household') {
+        const {
+          TELEGRAM_HOUSEHOLD_ANALYSIS_SYSTEM_PROMPT,
+          TELEGRAM_HOUSEHOLD_ANALYSIS_USER_PROMPT,
+        } = await import('../prompts/telegram-household-analysis-prompts');
+        systemPrompt = TELEGRAM_HOUSEHOLD_ANALYSIS_SYSTEM_PROMPT;
+        userPrompt = TELEGRAM_HOUSEHOLD_ANALYSIS_USER_PROMPT(
+          textContent,
+          imageUrls.length
+        );
+        defaultName = 'Хозтовары';
       } else {
         const {
           TELEGRAM_FLOWER_ANALYSIS_SYSTEM_PROMPT,
@@ -663,6 +721,41 @@ export class TelegramParser {
             path: 'cosmetics',
             isActive: true,
             sort: 100,
+          },
+        });
+      }
+      return category;
+    }
+
+    if (profile === 'household') {
+      let category = await this.prisma.category.findFirst({
+        where: {
+          OR: [
+            { slug: 'household' },
+            { slug: 'hoztovary' },
+            { name: { equals: 'Хозтовары', mode: 'insensitive' } },
+          ],
+        },
+      });
+      if (!category) {
+        category = await this.prisma.category.findFirst({
+          where: {
+            OR: [
+              { name: { contains: 'хозтов', mode: 'insensitive' } },
+              { name: { contains: 'кухн', mode: 'insensitive' } },
+              { slug: { contains: 'household', mode: 'insensitive' } },
+            ],
+          },
+        });
+      }
+      if (!category) {
+        category = await this.prisma.category.create({
+          data: {
+            name: 'Хозтовары',
+            slug: 'household',
+            path: 'household',
+            isActive: true,
+            sort: 110,
           },
         });
       }
@@ -1109,6 +1202,7 @@ export class TelegramParser {
           await this.downloadGroupMedia(group, chatId);
 
           const location = this.extractLocation(group.text, channel.profile);
+          const phone = this.extractPhone(group.text);
           const { price, boxPrice, amount } = this.parsePriceAndAmount(
             group.text,
             channel.profile
@@ -1119,7 +1213,8 @@ export class TelegramParser {
           const providerId = await this.getOrCreateProvider(
             group.authorId,
             providerUsername,
-            location
+            location,
+            phone
           );
 
           console.log(`  → creating product (price=${price ?? 'n/a'})...`);

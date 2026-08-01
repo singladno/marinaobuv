@@ -1,11 +1,12 @@
 /**
  * Telegram channel sources for product parsing.
- * Supports multiple channels with per-channel parser profiles (flowers | cosmetics).
+ * Supports multiple channels with per-channel parser profiles
+ * (flowers | cosmetics | household).
  */
 
 import { env } from './env';
 
-export type TelegramParserProfile = 'flowers' | 'cosmetics';
+export type TelegramParserProfile = 'flowers' | 'cosmetics' | 'household';
 
 export interface TelegramChannelConfig {
   /** Channel username (@name) or numeric id (-100...) */
@@ -18,6 +19,7 @@ export interface TelegramChannelConfig {
 const PROFILE_DEFAULT_NAMES: Record<TelegramParserProfile, string> = {
   flowers: 'Telegram — цветы',
   cosmetics: 'Telegram — косметика',
+  household: 'Telegram — хозтовары',
 };
 
 /** Normalize channel id: ensure @ for usernames; keep numeric / -100 ids as-is. */
@@ -30,12 +32,12 @@ export function normalizeChannelId(channelId: string): string {
 }
 
 function isProfile(value: string): value is TelegramParserProfile {
-  return value === 'flowers' || value === 'cosmetics';
+  return value === 'flowers' || value === 'cosmetics' || value === 'household';
 }
 
 /**
  * Parse TELEGRAM_CHANNELS env.
- * Format: @channel1:flowers,@dilshod_cosmetica:cosmetics
+ * Format: @channel1:flowers,@dilshod_cosmetica:cosmetics,-100…:household
  * Optional label: @dilshod_cosmetica:cosmetics:SABBI
  * Falls back to TELEGRAM_CHANNEL_ID with profile "flowers".
  */
@@ -56,14 +58,11 @@ export function getTelegramChannels(): TelegramChannelConfig[] {
       const profileRaw = parts[1].toLowerCase();
       if (!isProfile(profileRaw)) {
         throw new Error(
-          `Invalid Telegram parser profile "${parts[1]}" for ${id}. Use flowers or cosmetics`
+          `Invalid Telegram parser profile "${parts[1]}" for ${id}. Use flowers, cosmetics, or household`
         );
       }
       const name =
-        parts.slice(2).join(':') ||
-        (profileRaw === 'cosmetics'
-          ? 'SABBI Косметика'
-          : PROFILE_DEFAULT_NAMES[profileRaw]);
+        parts.slice(2).join(':') || PROFILE_DEFAULT_NAMES[profileRaw];
       return { id, profile: profileRaw, name };
     });
   }

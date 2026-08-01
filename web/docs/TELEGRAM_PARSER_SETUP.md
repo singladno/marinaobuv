@@ -22,9 +22,9 @@ Add these to your `.env` file:
 
 ```env
 # Multi-channel Telegram parser (recommended)
-# Format: @channel:profile or @channel:profile:Label
-# Profiles: flowers | cosmetics
-TELEGRAM_CHANNELS=@your_flowers_channel:flowers:32-61/63,@dilshod_cosmetica:cosmetics:SABBI
+# Format: @channel:profile or @channel:profile:Label or -100…:profile:Label
+# Profiles: flowers | cosmetics | household
+TELEGRAM_CHANNELS=@your_flowers_channel:flowers:32-61/63,@dilshod_cosmetica:cosmetics:SABBI,-1004211535264:household:Парсинг на сайт
 
 # Legacy single channel (used only if TELEGRAM_CHANNELS is unset; profile=flowers)
 # TELEGRAM_CHANNEL_ID=@your_channel_username
@@ -67,15 +67,19 @@ npx tsx scripts/test-telegram-parser.ts
 # One channel
 npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --hours 48
 
+# Household megagroup (private, numeric id)
+npx tsx scripts/test-telegram-parser.ts --channel -1004211535264 --hours 168
+
 # Last 6 months (same window as backfill, without parsing-history bookkeeping)
 npx tsx scripts/test-telegram-parser.ts --channel @dilshod_cosmetica --months 6
 ```
 
-### Step 5: Historical Backfill (cosmetics / any channel)
+### Step 5: Historical Backfill (any channel)
 
 ```bash
 cd web
 npx tsx src/scripts/backfill-telegram-channel.ts --channel @dilshod_cosmetica
+npx tsx src/scripts/backfill-telegram-channel.ts --channel -1004211535264 --profile household
 ```
 
 Idempotent: already saved `(chatId, tgMessageId)` rows are skipped; `processed=true` messages are not turned into products again.
@@ -97,9 +101,10 @@ The parser will automatically fall back to Bot API mode if MTProto credentials a
 2. **One Telegram post = one product**: album parts share `groupedId`; standalone posts need media + caption in the same message. No time-window merging of different posts.
 3. **One post at a time**: download media → create product → GROQ → next
 4. **Profile**:
-   - `flowers` — price `180₽×20шт＝3600Руб`, flower GROQ prompts, category `flowers`
-   - `cosmetics` — price `ряд 4 шт 360`, cosmetics GROQ prompts, category `cosmetics`
-5. **Product Creation**: `source: TG`, unit `PIECES`; flowers +30% markup, cosmetics sell at channel price (no markup)
+   - `flowers` — price `180₽×20шт＝3600Руб`, flower GROQ prompts, category `flowers`, sell = buy × 1.3
+   - `cosmetics` — price `ряд 4 шт 360`, cosmetics GROQ prompts, category `cosmetics`, sell = channel price (no markup)
+   - `household` — price `Цена: 750 ₽` + `N набор(ов)`, place `Место:` / `Пав. … - лин.…`, phone `Тел:`, household GROQ prompts, category `Хозтовары`, sell = buy × 1.3
+5. **Product Creation**: `source: TG`, unit `PIECES`
 
 Media download retries on `TIMEOUT` / flood. Already-processed messages are skipped on re-run.
 

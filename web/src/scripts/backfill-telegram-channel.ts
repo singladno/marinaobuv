@@ -33,8 +33,13 @@ function parseArgs(argv: string[]) {
       channel = argv[++i];
     } else if (arg === '--profile' && argv[i + 1]) {
       const p = argv[++i].toLowerCase();
-      if (p === 'flowers' || p === 'cosmetics') profile = p;
-      else throw new Error(`Invalid --profile ${p}`);
+      if (p === 'flowers' || p === 'cosmetics' || p === 'household') {
+        profile = p;
+      } else {
+        throw new Error(
+          `Invalid --profile ${p}. Use flowers, cosmetics, or household`
+        );
+      }
     } else if (arg === '--name' && argv[i + 1]) {
       name = argv[++i];
     } else if (arg === '--months' && argv[i + 1]) {
@@ -67,14 +72,20 @@ async function main() {
   if (!channel) {
     if (!profile) {
       console.error(
-        `Channel ${channelId} not in TELEGRAM_CHANNELS. Pass --profile flowers|cosmetics`
+        `Channel ${channelId} not in TELEGRAM_CHANNELS. Pass --profile flowers|cosmetics|household`
       );
       process.exit(1);
     }
+    const defaultName =
+      profile === 'cosmetics'
+        ? 'SABBI Косметика'
+        : profile === 'household'
+          ? 'Парсинг на сайт'
+          : channelId;
     channel = {
       id: channelId,
       profile,
-      name: name || (profile === 'cosmetics' ? 'SABBI Косметика' : channelId),
+      name: name || defaultName,
     };
   } else if (profile) {
     channel = { ...channel, profile, name: name || channel.name };

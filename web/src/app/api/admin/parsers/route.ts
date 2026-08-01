@@ -47,7 +47,11 @@ export async function GET() {
     } else {
       tgChannels.forEach((channel, index) => {
         const profileLabel =
-          channel.profile === 'cosmetics' ? 'косметика' : 'цветы';
+          channel.profile === 'cosmetics'
+            ? 'косметика'
+            : channel.profile === 'household'
+              ? 'хозтовары'
+              : 'цветы';
         parsers.push({
           id: `tg-${index}`,
           name: channel.name,
