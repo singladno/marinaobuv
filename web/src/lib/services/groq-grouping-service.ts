@@ -34,11 +34,11 @@ export class GroqGroupingService {
     if (!process.env.GROQ_API_KEY) {
       throw new Error('GROQ_API_KEY is required');
     }
-    // Prefer grouping-specific override, then generic text model. Default to production Llama 3.1 8B
+    // Prefer grouping-specific override, then generic text model.
     this.textModel =
       process.env.GROQ_GROUPING_MODEL ||
       process.env.GROQ_TEXT_MODEL ||
-      'llama-3.1-8b-instant';
+      'openai/gpt-oss-20b';
   }
 
   private async initializeGroq(): Promise<Groq> {

@@ -20,11 +20,9 @@ export async function POST(req: NextRequest) {
 
     const groq = new Groq(groqConfig as any);
 
-    // Use a better model for quality Russian text generation
-    // llama-3.3-70b-versatile is available and provides better grammar and translation quality
-    // Fallback to llama-3.1-8b-instant if the larger model is not available
+    // Groq retired llama-3.3-70b-versatile on 2026-08-16; gpt-oss-120b is the replacement.
     const meditationModel =
-      process.env.GROQ_MEDITATION_MODEL || 'llama-3.3-70b-versatile';
+      process.env.GROQ_MEDITATION_MODEL || 'openai/gpt-oss-120b';
     logDebug('[meditation] Calling Groq API with model', meditationModel);
 
     let response;
@@ -48,18 +46,18 @@ export async function POST(req: NextRequest) {
         temperature: 0.5, // Slightly lower temperature for better grammar while maintaining variety
       });
     } catch (modelError: any) {
-      // If the model is not available, fallback to llama-3.1-8b-instant
+      // If the model is not available, fallback to openai/gpt-oss-20b
       if (
         modelError?.error?.code === 'model_decommissioned' ||
         modelError?.message?.includes('decommissioned') ||
         modelError?.message?.includes('not found')
       ) {
         logWarn(
-          '[meditation] Model not available, falling back to llama-3.1-8b-instant',
+          '[meditation] Model not available, falling back to openai/gpt-oss-20b',
           meditationModel
         );
         response = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: 'openai/gpt-oss-20b',
           messages: [
             {
               role: 'system',

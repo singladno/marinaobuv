@@ -765,7 +765,7 @@ export class GroqSequentialProcessor {
       const response = await groqChatCompletion(
         groq,
         {
-          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           messages: [
             {
               role: 'system',
@@ -793,7 +793,7 @@ export class GroqSequentialProcessor {
       if ('usage' in response && response.usage) {
         getTokenLogger().log(
           'sizes-extraction',
-          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           response.usage,
           {
             productId,
@@ -839,7 +839,7 @@ export class GroqSequentialProcessor {
       const response = await groqChatCompletion(
         groq,
         {
-          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           messages: [
             {
               role: 'system',
@@ -867,7 +867,7 @@ export class GroqSequentialProcessor {
       if ('usage' in response && response.usage) {
         getTokenLogger().log(
           'price-extraction',
-          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           response.usage,
           {
             productId,
@@ -919,7 +919,7 @@ export class GroqSequentialProcessor {
       const response = await groqChatCompletion(
         groq,
         {
-          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           messages: [
             {
               role: 'system',
@@ -947,7 +947,7 @@ export class GroqSequentialProcessor {
       if ('usage' in response && response.usage) {
         getTokenLogger().log(
           'gender-extraction',
-          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           response.usage,
           {
             productId,
@@ -1065,7 +1065,7 @@ export class GroqSequentialProcessor {
       const response = await groqChatCompletion(
         groq,
         {
-          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           messages: [
             {
               role: 'system',
@@ -1096,7 +1096,7 @@ export class GroqSequentialProcessor {
       if ('usage' in response && response.usage) {
         getTokenLogger().log(
           'text-analysis',
-          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           response.usage,
           {
             productId,
@@ -1158,7 +1158,7 @@ export class GroqSequentialProcessor {
       // Prepare GPT debug data
       const gptRequest = JSON.stringify(
         {
-          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           messages: [
             {
               role: 'system',

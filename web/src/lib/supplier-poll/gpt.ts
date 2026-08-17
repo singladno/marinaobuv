@@ -12,7 +12,7 @@ import {
 export type { PollCommand, SupplierPollGptResult } from './poll-commands';
 
 const DEFAULT_MODEL =
-  process.env.SUPPLIER_POLL_GPT_MODEL?.trim() || 'llama-3.3-70b-versatile';
+  process.env.SUPPLIER_POLL_GPT_MODEL?.trim() || 'openai/gpt-oss-120b';
 
 function safeJsonParse(raw: string): unknown {
   try {

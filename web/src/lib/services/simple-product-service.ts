@@ -721,7 +721,7 @@ Return JSON:
 }`;
 
       const response = await groq.chat.completions.create({
-        model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+        model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
         messages: [
           {
             role: 'system',
@@ -741,7 +741,7 @@ Return JSON:
       if (response.usage) {
         getTokenLogger().log(
           'category-classification',
-          process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           response.usage,
           {
             categoryPromptLength: categoryPrompt.length,

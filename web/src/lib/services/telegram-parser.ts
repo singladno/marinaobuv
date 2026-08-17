@@ -600,7 +600,7 @@ export class TelegramParser {
       const response = await groqChatCompletion(
         groq,
         {
-          model: process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant',
+          model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
           messages: [
             {
               role: 'system',

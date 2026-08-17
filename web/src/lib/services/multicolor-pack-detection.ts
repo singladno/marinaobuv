@@ -40,7 +40,7 @@ export async function detectMulticolorPackWithGroq(
   const trimmed = text.length > 12000 ? text.slice(0, 12000) : text;
 
   try {
-    const model = process.env.GROQ_TEXT_MODEL || 'llama-3.1-8b-instant';
+    const model = process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b';
     const response = await groqChatCompletion(
       groq,
       {

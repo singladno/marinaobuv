@@ -94,13 +94,58 @@ export class TelegramMTProtoFetcher {
     }
 
     const stringSession = new StringSession(this.sessionString || '');
-    this.client = new TelegramClient(stringSession, this.apiId, this.apiHash, {
-      connectionRetries: 5,
-      requestRetries: 5,
-      downloadRetries: 5,
-    });
+    const proxyUrl = process.env.TELEGRAM_PROXY?.trim();
+    // Yandex Cloud blocks Telegram DC TCP/80. Prefer WSS/443; SOCKS via TELEGRAM_PROXY if set.
+    // autoReconnect must be off for cron: otherwise GramJS hangs for hours after ETIMEDOUT.
+    const clientOptions: ConstructorParameters<typeof TelegramClient>[3] = {
+      connectionRetries: 3,
+      requestRetries: 3,
+      downloadRetries: 3,
+      timeout: 20,
+      useWSS: !proxyUrl,
+      autoReconnect: false,
+    };
+    if (proxyUrl) {
+      const parsed = new URL(proxyUrl);
+      const socksType = parsed.protocol.includes('socks4') ? 4 : 5;
+      clientOptions.proxy = {
+        ip: parsed.hostname,
+        port: Number(parsed.port) || 1080,
+        socksType,
+        username: parsed.username
+          ? decodeURIComponent(parsed.username)
+          : undefined,
+        password: parsed.password
+          ? decodeURIComponent(parsed.password)
+          : undefined,
+      };
+      logger.info(
+        `[Telegram MTProto] Using SOCKS${socksType} proxy ${parsed.hostname}:${parsed.port || 1080}`
+      );
+    }
 
-    await this.client.connect();
+    this.client = new TelegramClient(
+      stringSession,
+      this.apiId,
+      this.apiHash,
+      clientOptions
+    );
+
+    const CONNECT_MS = 90_000;
+    await Promise.race([
+      this.client.connect(),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                `Telegram connect timed out after ${CONNECT_MS / 1000}s (WSS 443)`
+              )
+            ),
+          CONNECT_MS
+        )
+      ),
+    ]);
 
     if (!(await this.client.checkAuthorization())) {
       logger.debug(
