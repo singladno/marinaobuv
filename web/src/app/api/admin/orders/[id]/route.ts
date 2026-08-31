@@ -90,7 +90,12 @@ export async function GET(
               orderBy: { createdAt: 'desc' },
             },
             messages: {
-              include: {
+              // Preview only: skip attachments (base64 in JSON can be 100MB+ per order).
+              select: {
+                id: true,
+                text: true,
+                isService: true,
+                createdAt: true,
                 user: {
                   select: {
                     id: true,
@@ -101,7 +106,7 @@ export async function GET(
                 },
               },
               orderBy: { createdAt: 'desc' },
-              take: 5, // Get latest 5 messages for preview
+              take: 5,
             },
           },
         },
@@ -135,12 +140,17 @@ export async function GET(
       return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 });
     }
 
-    const [supplierPoll, replacementHints] = await Promise.all([
+    const [supplierPoll, replacementHints, gruzchiks] = await Promise.all([
       getSupplierPollSnapshot(order.id, order.items),
       getOrderItemReplacementAvailabilityHints(
         order.id,
         order.items.map(it => ({ id: it.id, isAvailable: it.isAvailable }))
       ),
+      prisma.user.findMany({
+        where: { role: 'GRUZCHIK' },
+        select: { id: true, name: true, phone: true },
+        orderBy: { name: 'asc' },
+      }),
     ]);
 
     const items = order.items.map(it => ({
@@ -151,6 +161,7 @@ export async function GET(
     return NextResponse.json({
       order: { ...order, items },
       supplierPoll,
+      gruzchiks,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Неожиданная ошибка';

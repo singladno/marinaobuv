@@ -405,12 +405,8 @@ export default function OrderDetailsPage() {
           supplierPoll: orderData.supplierPoll,
         } as OrderDetails);
 
-        if (includeGruzchiks) {
-          const gruzchiksResponse = await fetch('/api/admin/orders?limit=1');
-          if (gruzchiksResponse.ok) {
-            const gruzchiksData = await gruzchiksResponse.json();
-            setGruzchiks(gruzchiksData.gruzchiks || []);
-          }
+        if (includeGruzchiks && Array.isArray(orderData.gruzchiks)) {
+          setGruzchiks(orderData.gruzchiks);
         }
         void refetchUnreadCountsRef.current();
         setActivityUnreadRefreshKey(k => k + 1);
