@@ -36,6 +36,11 @@ import { ChatButtonWithIndicator } from '@/components/features/admin/ChatButtonW
 import { OrderItemData } from '@/components/features/gruzchik/OrderItemCard';
 import { useAdminOrderUnreadCounts } from '@/hooks/useAdminOrderUnreadCounts';
 import { useOrderActivityUnread } from '@/hooks/useOrderActivityUnread';
+import {
+  chatAttachmentsForMessage,
+  chatImagesForItem,
+  useOrderChatImages,
+} from '@/hooks/useOrderChatImages';
 import { EditableStatusBadge } from '@/components/features/EditableStatusBadge';
 import { EditableGruzchikSelector } from '@/components/features/EditableGruzchikSelector';
 import { FeedbackStatusIconsCompact } from '@/components/features/admin/FeedbackStatusIcons';
@@ -333,6 +338,10 @@ export default function OrderDetailsPage() {
   // Separate state for checkbox UI (immediate) and functionality (deferred)
   const [showImagesCheckbox, setShowImagesCheckbox] = useState<boolean>(false);
   const [showImages, setShowImages] = useState<boolean>(false);
+  const { imagesByItem } = useOrderChatImages(
+    orderId,
+    showImages || replacementModalOpen
+  );
   const [isPending, startTransition] = useTransition();
   const checkboxInputRef = useRef<HTMLInputElement | null>(null);
   const updateScheduledRef = useRef<boolean>(false);
@@ -1905,7 +1914,11 @@ export default function OrderDetailsPage() {
                                     senderName: message.user.name || undefined,
                                     isService: message.isService,
                                     createdAt: message.createdAt,
-                                    attachments: message.attachments,
+                                    attachments: chatAttachmentsForMessage(
+                                      imagesByItem,
+                                      item.id,
+                                      message.id
+                                    ),
                                   }))}
                                   maxLength={100}
                                   showImages={showImages}
@@ -2320,7 +2333,11 @@ export default function OrderDetailsPage() {
                                     senderName: message.user.name || undefined,
                                     isService: message.isService,
                                     createdAt: message.createdAt,
-                                    attachments: message.attachments,
+                                    attachments: chatAttachmentsForMessage(
+                                      imagesByItem,
+                                      item.id,
+                                      message.id
+                                    ),
                                   }))}
                                   maxLength={50}
                                   showImages={showImages}
@@ -2396,23 +2413,17 @@ export default function OrderDetailsPage() {
               rep => rep.status === 'PENDING'
             ) || null
           }
-          availableImages={(() => {
-            const images = selectedItemForReplacement.messages
-              .filter(msg => msg.attachments && msg.attachments.length > 0)
-              .flatMap(msg =>
-                msg
-                  .attachments!.filter(att => att.type.startsWith('image/'))
-                  .map(att => ({
-                    id: `${msg.id}-${att.name}`,
-                    type: att.type,
-                    name: att.name,
-                    url: att.data || att.url,
-                    data: att.data,
-                  }))
-              );
-            console.log('Available images for replacement:', images);
-            return images;
-          })()}
+          availableImages={chatImagesForItem(
+            imagesByItem,
+            selectedItemForReplacement.id
+          )
+            .filter(img => img.type.startsWith('image/'))
+            .map(img => ({
+              id: `${img.messageId}-${img.index}`,
+              type: img.type,
+              name: img.name,
+              url: img.url,
+            }))}
         />
       )}
 
