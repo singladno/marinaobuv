@@ -42,7 +42,8 @@ export function parseAttachments(
       return [];
     }
   }
-  return Array.isArray(raw) ? raw.filter(isRecord) : [];
+  if (!Array.isArray(raw)) return [];
+  return (raw as unknown[]).filter(isRecord);
 }
 
 export function listAttachmentMeta(
@@ -121,7 +122,8 @@ function metaFromSql(raw: unknown): Array<Record<string, unknown>> {
       return [];
     }
   }
-  return Array.isArray(raw) ? raw.filter(isRecord) : [];
+  if (!Array.isArray(raw)) return [];
+  return (raw as unknown[]).filter(isRecord);
 }
 
 export async function listOrderChatImages(
