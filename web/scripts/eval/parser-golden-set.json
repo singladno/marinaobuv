@@ -1,0 +1,514 @@
+{
+  "version": 1,
+  "maxActive": 20,
+  "cases": [
+    {
+      "id": "sizes-36-37-x4",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["sizes", "dual-size"],
+      "notes": "36/37 - 4 пар / 38/39 -4 пар / 40/41 -4 пар. Это правильные размеры и количество",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1788193781533-mthgeof1",
+        "waMessageIds": [
+          "cmthc85tq0016fvehqh8z1plc",
+          "cmthc86540017fveh1vsh070s",
+          "cmthc870e0018fveh0wll36rs",
+          "cmthc87490019fvehmgshb8hy",
+          "cmthc8a3n001cfveh0mi9vky6"
+        ]
+      },
+      "input": {
+        "text": "Супер Акция 🔥🔥\nЗима ❄️❄️❄️\nРазмер 36-37/38-39/40-41/=12 пар \nОпт 250₽ \nУп 12 пар 3 цвет \nМаломерка один размер\nКачества супер 👍\nОчень красивый модель\n\nЗазор 600",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/914c2ee2-5593-4fcc-96f5-1206d737d9b2.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/dcddba19-b043-4d67-a66f-2f1b78461103.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/64bab4da-af4b-45d7-b40a-44b6d8cf3740.jpg"
+        ]
+      },
+      "expected": {
+        "sizes": [
+          {
+            "size": "36/37",
+            "count": 4
+          },
+          {
+            "size": "38/39",
+            "count": 4
+          },
+          {
+            "size": "40/41",
+            "count": 4
+          }
+        ],
+        "packPairs": 12
+      }
+    },
+    {
+      "id": "multicolor-pack-copy",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["multicolor", "description"],
+      "notes": "Можно в описании прописывать: «В упаковке разные цвета»",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1788163774978-mtgyjj7m",
+        "waMessageIds": [
+          "cmtgtp9ge001085dn7ogkmpav",
+          "cmtgtpagb001185dny8e2e7wz",
+          "cmtgtpayw001285dnc45gyo6w",
+          "cmtgtpbeo001385dn7sjphcod",
+          "cmtgtprne001485dn4j1e2rwj",
+          "cmtgtpu2l001585dn5envselo",
+          "cmtgtpvdy001685dnbj9mmfp5"
+        ]
+      },
+      "input": {
+        "text": "🔥новинка детские тапочки 🔥\n🔥супер модель 👍\n🌸оптом: 210 руб\n🌸размер : 24/25.     26/27.      28/29\n                           4.            4.             4\n🌸упаковка: 12 пар ( цвета разные\n\n-500\n\n☘️",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/f12ab443-a55f-4cb1-95f8-39d0750c8378.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/ea50b922-8918-462f-a80c-54a29088b1bb.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/16c36304-b3aa-4f2d-9ae8-8ca539f01d79.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/381059d3-63d8-4735-b100-634eb6eefcbb.jpg"
+        ]
+      },
+      "expected": {
+        "multicolorPack": true,
+        "descriptionIncludes": ["разные цвета"]
+      }
+    },
+    {
+      "id": "season-autumn-no-fur",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["season", "description"],
+      "notes": "Написано: осень, значит осенние ботинки (без меха). В описании: в коробке 2 цвета",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1788122374754-mtg9w6le",
+        "waMessageIds": [
+          "cmtg42cql003y7z9bpivpzc4y",
+          "cmtg42d8900407z9bwpnde7gy",
+          "cmtg42e0m00417z9bb5jmrlt5",
+          "cmtg42e8n00427z9bdzomsyp3",
+          "cmtg42ica00457z9beyhhxb3v"
+        ]
+      },
+      "input": {
+        "text": "Распродажа Осень 2026🔥\nРазмер 26/27/28/29/30/31\n                 2.  2.  2.   2.  2.  2\nЦена 300 ₽\nКоробка 12 пар 2 цвет + замок \nКачество люкс Очень лёгкий\nПодошва пенька ✅\nФото реально 💯✅",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/cca80da9-99eb-475e-ab5e-423eeb5f5f3c.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/16e61308-e6ca-4853-889c-bd0cb5b8a017.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/33d999f3-fcdb-4a03-a9bf-a655a533f0cd.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/121948da-d0fd-451d-b98e-46ca9e986932.jpg"
+        ]
+      },
+      "expected": {
+        "season": "AUTUMN",
+        "multicolorPack": true,
+        "descriptionIncludes": ["разные цвета"]
+      }
+    },
+    {
+      "id": "pack-12-six-sizes-x2",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["sizes", "packPairs", "season"],
+      "notes": "12 пар, 6 размеров, каждые по 2. Распродажа осень, ИИ пишет зимние",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1788122289238-mtg9ucly",
+        "waMessageIds": [
+          "cmtg40mwb003g7z9bm1mv7fcz",
+          "cmtg40n6n003h7z9b5kfwo2dy",
+          "cmtg40nr8003i7z9bj2akl6c2",
+          "cmtg40ocr003j7z9bqzdixv9s",
+          "cmtg40p1x003k7z9bi8va1hxb",
+          "cmtg40qgr003l7z9b88z9n0yy",
+          "cmtg40sz9003m7z9bk4dvq8d4"
+        ]
+      },
+      "input": {
+        "text": "Распродажа  осень 🍂\nРазмер 26/27/28/29/30/31\n                 2.  2.  2.   2.  2.  2\nЦена 300 ₽\nКоробка 12 пар цвет 1\nЛипучка + шнурка на резинка\nКачество люкс Очень лёгкий\nПодошва пенька ✅\nФото реально 💯✅\n\n—-500",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/62d2e000-4e51-43ea-bd37-4bb47a932828.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/50a35ed9-43d1-4c17-8ff9-f4300133c158.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/0a395018-c183-4990-8202-11250e678e6d.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/b67d5209-186c-4530-b514-f705de0cd841.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/d8c6e7d7-2bce-4c06-a806-7a9b67f49471.jpg"
+        ]
+      },
+      "expected": {
+        "sizes": [
+          { "size": "26", "count": 2 },
+          { "size": "27", "count": 2 },
+          { "size": "28", "count": 2 },
+          { "size": "29", "count": 2 },
+          { "size": "30", "count": 2 },
+          { "size": "31", "count": 2 }
+        ],
+        "packPairs": 12,
+        "season": "AUTUMN"
+      }
+    },
+    {
+      "id": "name-autumn-not-winter",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["season", "name"],
+      "notes": "Категорию правильно прописал осень, а в названии пишет зимние",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1788121439155-mtg9c4oj",
+        "waMessageIds": [
+          "cmtg2pgjy0014nifrkwxfjift",
+          "cmtg2ph1a0015nifrl8wf70u5",
+          "cmtg2phl60016nifr4c6usx7s",
+          "cmtg2pi3q0017nifr513vgm1k",
+          "cmtg2pj0j0018nifr9t6sjhbi",
+          "cmtg2pl8j0019nifr5empywx7",
+          "cmtg2q485001anifrdykqabsr"
+        ]
+      },
+      "input": {
+        "text": "❣️☘️      NEW  Collection     ☘️❣️\n❣️☘️ 2026  ОСЕННИЕ БОТИНКИ ☘️❣️\n❣️☘️ ОТ ФИРМА  SPRİNA WAY🩷\n❣️☘️    Размер : 36-37-38-38-39-40        ☘️❣️\n❣️☘️   коробка ： 6 пар    ☘️❣️\n❣️☘️      цена ： 1100 ₽      ☘️❣️\n❣️☘️   РЕАЛЬНОЕ ФОТО   ☘️❣️\n❣️☘️    Размер В Размер   ☘️❣️\n❣️☘️Каждый пар в коробке ☘️❣️\n‼️💣ПОЛНОСТЬЮ НАТУРАЛЬНАЯ 100% 💣‼️\n\nЗАЗОР 600 ₽ \n\nМесто 3/5/06 \nВЫСТАВЛЯЙТЕ ПОЖАЛУЙСТА ‼️ \nВсе в наличии есть",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/47826ed2-d893-4c4b-afe1-7c97aa7e5d21.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/e36257b4-8b92-4fdd-aebc-8c33df11c546.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/a3f28a79-52cd-4791-955c-faa7c0dee8e7.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/477f0a45-9794-4328-9aba-aaa666a21ff2.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/81c103eb-e908-4edb-968c-9df530fce928.jpg"
+        ]
+      },
+      "expected": {
+        "season": "AUTUMN"
+      }
+    },
+    {
+      "id": "range-41-46-x2-mid",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["sizes", "range"],
+      "notes": "Размер- 41/46, 43/44х2 означает 41-1 42-1 43-2 44-2 45-1 46-1",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1788093716508-mtfstxr0",
+        "waMessageIds": [
+          "cmtfomvb9001i64fi5n1ervm1",
+          "cmtfomvsg001j64fiapwnvop4",
+          "cmtfomw6b001k64ficfhp7sfm",
+          "cmtfomwta001l64fi2fted1ar",
+          "cmtfomxe0001m64fiex1rwo23",
+          "cmtfomy0c001n64fiz6cqoq8m",
+          "cmtfomyf2001o64fimllqe0mt",
+          "cmtfon2rp001p64fi1lhu0gf5",
+          "cmtfonw1s001q64fi70auv1qo"
+        ]
+      },
+      "input": {
+        "text": "‼️Распродажа‼️\n💶Цена: 500 ₽₽₽🤫\n🔖Размер-41/46  43/44Х2\n📦Коробка = 8пара\n🔥Качество ~ LUX ⚡️⚡️\n📦Каждый пар без каробка\n⛹🏽‍♂️Товар в наличии ⚡️\n\n➖️➖️➖️➖️➖️➖️➖️➖️➖️\nЗАЗОР -500₽\nТЦ САЛЮТ 2 ЭТ/3 ЛИН.18 пав\nВЫСТАВЛЯЙТЕ  Пожалуйста 🙏\nКоличество МНОГО",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/5ef03b50-a3be-4a09-aa71-566addbaf788.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/57b13b5e-5f40-4088-8953-d8a217c840df.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/c4ea86cd-800d-4221-8240-4a3abdd3c81a.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/080d6593-f25c-4f4e-bcb6-847e2d707db9.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/0c56e68f-972a-4778-8ac5-bb3e8af56ea1.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/eb104467-f443-440e-bb3e-a8e90d216e03.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/0c56e68f-972a-4778-8ac5-bb3e8af56ea1.jpg"
+        ]
+      },
+      "expected": {
+        "sizes": [
+          {
+            "size": "41",
+            "count": 1
+          },
+          {
+            "size": "42",
+            "count": 1
+          },
+          {
+            "size": "43",
+            "count": 2
+          },
+          {
+            "size": "44",
+            "count": 2
+          },
+          {
+            "size": "45",
+            "count": 1
+          },
+          {
+            "size": "46",
+            "count": 1
+          }
+        ],
+        "packPairs": 8
+      }
+    },
+    {
+      "id": "sizes-38-39-x2-pack-8",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["sizes", "packPairs"],
+      "notes": "8 пар, 38 и 39 по 2 пары. ИИ сделала 6 пар",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1788265320564-mtin00ac",
+        "waMessageIds": [
+          "cmtimhaqp000z13w196pesmjk",
+          "cmtimhb29001013w1gx3ggiw4",
+          "cmtimhbi7001113w1o4a5w1qs",
+          "cmtimhbxo001213w1v6vk6wwh",
+          "cmtimhcu8001313w187s7bk0n",
+          "cmtimhuct0000g1n5m1op5kj5"
+        ]
+      },
+      "input": {
+        "text": "‼️‼️РАСПРОДАЖА‼️‼️\n💶Цена опт: 425₽\n🔖Размер- 36-41  38/39-Х2\n📦Коробка = 8пара\n🔥Качество ~ LUX ⚡️⚡️\n📦Каждый пар в каробка оригинал \n⛹🏽‍♂️Товар в наличии ⚡️🚘🪷👠⚽🏀🪷🪷",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/44e565ed-f6da-49b2-b2e4-fd31fb66bd71.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/f55115aa-2682-448e-b44a-e87d9ba2f226.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/58a4f0a1-9551-4d09-ac39-bd18156f470e.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/5f45bf6d-8808-4a99-acd4-536ed30e9d3a.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/c08347ad-6fd6-460c-a0a4-780102a45d39.jpg"
+        ]
+      },
+      "expected": {
+        "sizes": [
+          { "size": "36", "count": 1 },
+          { "size": "37", "count": 1 },
+          { "size": "38", "count": 2 },
+          { "size": "39", "count": 2 },
+          { "size": "40", "count": 1 },
+          { "size": "41", "count": 1 }
+        ],
+        "packPairs": 8
+      }
+    },
+    {
+      "id": "kids-27-31",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["sizes", "kids"],
+      "notes": "Размеры должны быть: 27-1 28-2 29-2 30-2 31-1",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1788294075135-mtj44bgf",
+        "waMessageIds": [
+          "cmtixj0qf000iwyy0sxk2z5hi",
+          "cmtixj16i000jwyy0iymw79xl",
+          "cmtixj1ob000kwyy03k1wukno",
+          "cmtixj24k000lwyy06agm6gv6",
+          "cmtixj2jz000mwyy08gj2zx7b",
+          "cmtixj30x000nwyy09bhzki4b",
+          "cmtixj3gp000owyy0wme4l7ue",
+          "cmtixj3wq000pwyy0klditwhx",
+          "cmtixjan8000swyy0o5d3v6pi"
+        ]
+      },
+      "input": {
+        "text": "‼️Акция Акция ‼️ \n‼️Размер 27/31\n💥Повтор 28/29/30\n🌿Цена 375₽🔥\n❄️Байка Утеплитель✅\n‼️Люкс Качества✅\n🍁   8 пар\n\n⭕️ ЗАЗОР 500₽ ⭕️\nТЦ САЛЮТ 3 /4 /12\nВЫСТАВЛЯЙТЕ\nПОЖАЛУЙСТА КОЛИЧЕСТВО МНОГО✅️",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/ab3be0a6-1d59-467a-b595-d88b491b3784.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/ae099532-0629-4bb3-b34e-5dfee3776573.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/c93d5904-77ab-4c0d-bc11-b0912e940ff0.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/5fc0ed92-5eaa-460e-8482-d7e8c9a412eb.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/3500a0ef-d557-4e8d-83bb-b177caacf6ab.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/c49993d7-6f07-4dba-95a5-320f112efbfa.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/0e2cc91d-f6ae-4145-9363-66ac861e9924.jpg"
+        ]
+      },
+      "expected": {
+        "sizes": [
+          {
+            "size": "27",
+            "count": 1
+          },
+          {
+            "size": "28",
+            "count": 2
+          },
+          {
+            "size": "29",
+            "count": 2
+          },
+          {
+            "size": "30",
+            "count": 2
+          },
+          {
+            "size": "31",
+            "count": 1
+          }
+        ],
+        "packPairs": 8
+      }
+    },
+    {
+      "id": "odd-pack-pairs",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["packPairs"],
+      "notes": "Нечетное кол-во пар (20 мая). В посте коробка 10 пар: 36-41, 37.38.39.40×2",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1779235460007-mpdauraf",
+        "waMessageIds": [
+          "cmpcwsa4n008yd2aeefh8r2zl",
+          "cmpcwsaow008zd2ae0vsdsepq",
+          "cmpcwsb5j0090d2ae2wwse94k",
+          "cmpcwsbrs0091d2aesylwtg01",
+          "cmpcwscd80092d2aejsu5jtet",
+          "cmpcwscub0093d2aef51gicvp",
+          "cmpcwsgho0094d2aewjvot920"
+        ]
+      },
+      "input": {
+        "text": "❣️☘️      NEW  Collection     ☘️❣️\n❣️☘️  2026  🐎 ЛЕТО 🐎   ☘️❣️\n❣️☘️ Люксовое качество  ☘️❣️\n❣️☘️Размер : 36-41/ 37.38.39.40×2☘️❣️\n❣️☘️   коробка ： 10 пар    ☘️❣️\n❣️☘️      цена ：  299₽      ☘️❣️\n❣️☘️   РЕАЛЬНОЕ ФОТО   ☘️❣️\n❣️☘️    Размер В Размер   ☘️❣️❣️☘️☘️❣️\n❣️☘️   “Пенка подошва    ”       ☘️❣️\n‼️💣ПРЕМИУМ  КАЧЕСТВО 💣‼️",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/d6a8c386-d528-4f71-a059-57007cbf5e83.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/120f63fb-6c7a-4c9e-b00d-2118eb082d7d.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/9edbcd53-cb6d-406f-8d31-6d63ef9d63c5.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/096daf4e-9427-4a5c-b386-5be4e5f86ab1.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/1ab574ba-e02b-4994-9aff-4c539adb0a3a.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/6acaad75-ff36-4379-a0dd-929ca03e9c6d.jpg"
+        ]
+      },
+      "expected": {
+        "sizes": [
+          { "size": "36", "count": 1 },
+          { "size": "37", "count": 2 },
+          { "size": "38", "count": 2 },
+          { "size": "39", "count": 2 },
+          { "size": "40", "count": 2 },
+          { "size": "41", "count": 1 }
+        ],
+        "packPairs": 10
+      }
+    },
+    {
+      "id": "price-675-not-75",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["price"],
+      "notes": "Цену не правильную указал: 75 р. Верная цена 675",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "productSlug": "product-1780315275289-mpv5qy3d",
+        "waMessageIds": [
+          "cmpuwnzg9001eyx02le172e6h",
+          "cmpuwo04r001fyx02g6bhwusz",
+          "cmpuwo0qj001gyx02put5e6s2",
+          "cmpuwo1cr001hyx02dz6uouwy",
+          "cmpuwo1wu001iyx02k3aj70cg",
+          "cmpuwo3g4001jyx02jp4hcpqn",
+          "cmpuwo8x4001kyx02diq98y7u",
+          "cmpuwogpn001lyx02q5up5sex"
+        ]
+      },
+      "input": {
+        "text": "‼️‼️РАСПРОДАЖА‼️‼️\n⚡️ПРЕМИУМ КАЧЕСТВО⚡️\n💶Цена опт: 675 ₽₽₽🤫\n🔖Размер- 37-41   38/39/40-Х2\n📦Коробка = 8пара\n🔥Качество ~ LUX ⚡️⚡️\n✨⚡️НАТУРАЛЬНЫЙ LUX⚡️✨\n📦Каждый пар в каробка оригинал \n⛹🏽‍♂️Товар в наличии ⚡️\n\n-600₽\n\nНОВАЯ ЦЕНА ✅✅\nНОВАЯ ЦЕНА ✅✅\nНОВАЯ ЦЕНА ✅✅",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/cafe8297-a9ca-4cb9-a6b7-a7e6d6933af8.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/33b87319-3cb1-4e57-8fcc-0fc34c3e30e8.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/8aedf559-6a80-4cd3-aa63-8b913c4e6e5b.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/287b52ee-a151-4684-b95d-8393cc21c228.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/1ab0b7e7-825d-4dfd-af4a-7656b1fc859a.jpg"
+        ]
+      },
+      "expected": {
+        "price": 675
+      }
+    },
+    {
+      "id": "sizes-36-41-dot-38-39-x2",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["sizes", "range"],
+      "notes": "ИИ решил указать 1 размер. В посте 36-41 / 38.39×2, коробка 8 пар",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "maxMessageId": 117207749027654409,
+        "productSlug": "product-1788424509058-mtl9rywy",
+        "waMessageIds": [
+          "cmtl3ji6w001ow5vabw24n84c",
+          "cmtl3jiga001pw5vafo1f6inv",
+          "cmtl3jisn001qw5va0sxw4ieo",
+          "cmtl3jjdo001rw5vat7nny6zi",
+          "cmtl3jjl6001sw5vai1y23nmy",
+          "cmtl3jju3001tw5vachcs4qip",
+          "cmtl3ju4a001uw5vatlgc7xbz",
+          "cmtl3jw1z001vw5vavknnjc2d"
+        ]
+      },
+      "input": {
+        "text": "‼️‼️ *РАСПРОДАЖА* ‼️❄️‼️\n🫰Качество Люкс ❤️Зима ❄️\n🫰Цена:450₽😮 ❤️❄️\n🫰Размер 36-41/38.39×2❤️❄️\n🫰Каробка 8 пар ❤️❄️\n🫰Идеальная колодка ❤️❄️\n🫰🏻Подошва пенка❤️☃️\n🫰Каждая пара в коробке ❤️❄️\n\n_500",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/3c7d388e-b507-4e4d-8603-758cab8cbc49.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/c6d3a748-e3bc-452e-b232-5a50a46504a5.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/2eff6e78-d800-4ac3-a08e-50847649f412.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/f4bb6f79-a9c4-49f1-b006-80d48a0238df.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/a32edb74-de3a-469b-b700-e1c35907d3ef.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/d9645a57-69f1-44d4-8c57-1b591a00ecfa.jpg"
+        ]
+      },
+      "expected": {
+        "sizes": [
+          { "size": "36", "count": 1 },
+          { "size": "37", "count": 1 },
+          { "size": "38", "count": 2 },
+          { "size": "39", "count": 2 },
+          { "size": "40", "count": 1 },
+          { "size": "41", "count": 1 }
+        ],
+        "packPairs": 8
+      }
+    },
+    {
+      "id": "sizes-colon-36-41-pack-10",
+      "active": true,
+      "pipeline": "wa",
+      "tags": ["sizes", "packPairs"],
+      "notes": "Неправильные размеры. Раз : 36/37:2/38:2/39:2/40:2/41, коробка 10 пар",
+      "source": {
+        "maxChat": "Ошибки на новом сайте",
+        "maxMessageId": 117207734221359691,
+        "productSlug": "product-1788437894328-mtlhqv20",
+        "waMessageIds": [
+          "cmtlbe15s000k1060eh1yghwp",
+          "cmtlbe1hx000l1060d8qdt4z2",
+          "cmtlbe1w1000m10601jlaefvg",
+          "cmtlbe2am000n1060xfmewnhl",
+          "cmtlbe2oq000o1060ugqujzn3",
+          "cmtlbe33p000p106048fqudl0",
+          "cmtlbe3zy000q1060utu50wkd"
+        ]
+      },
+      "input": {
+        "text": "🍃Последние зимние стили.                                                    \n💰Цена 750 руб. 😳🤫                                                                    \n🍃Раз : 36/37:2/38:2/39:2/40:2/41 \n🍃Количество в коробке: 10пар❣\n🐏Натуральный шерсть 🐏🐏\n🔥Модно и удобно.                                                                               \n📐Каждый пар в каробка 📦\n📷Реальные фотографии.                                                             👍Правильный размер.",
+        "imageUrls": [
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/54a67c94-083b-4304-948d-847ad1d62ab6.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/a81dd80c-f6c6-4d07-a59a-a9dce989b4bb.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/12e1e80d-5576-4422-bf7d-dca28521b29d.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/b6553a9f-6c99-4dd6-b432-24e403f321f8.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/a42fedd6-921c-4744-9046-053338037e23.jpg",
+          "https://sw-media-1105.storage.yandexcloud.net/1105334583/638046cc-73ca-4d53-a2cc-922a1c993692.jpg"
+        ]
+      },
+      "expected": {
+        "sizes": [
+          { "size": "36", "count": 1 },
+          { "size": "37", "count": 2 },
+          { "size": "38", "count": 2 },
+          { "size": "39", "count": 2 },
+          { "size": "40", "count": 2 },
+          { "size": "41", "count": 1 }
+        ],
+        "packPairs": 10
+      }
+    }
+  ]
+}

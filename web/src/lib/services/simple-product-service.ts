@@ -17,6 +17,8 @@ import { getGroqConfig } from '../groq-proxy-config';
 import { getTokenLogger } from '../utils/groq-token-logger';
 import Groq from 'groq-sdk';
 import { logger, logServerError } from '@/lib/server/logger';
+import { ensureMulticolorPackDescription } from '@/lib/utils/multicolor-pack-copy';
+import { readWaMulticolorPackFromAgLabels } from '@/lib/services/multicolor-pack-detection';
 
 export interface CreateInactiveProductParams {
   messageIds: string[];
@@ -250,7 +252,10 @@ export class SimpleProductService {
       where: { id: product.id },
       data: {
         name: productName,
-        description: analysisResult.description || '',
+        description: ensureMulticolorPackDescription(
+          analysisResult.description || '',
+          waMulticolorPack
+        ),
         material: analysisResult.material || '',
         pricePair: analysisResult.price || 0,
         gender: analysisResult.gender || null,
@@ -499,13 +504,18 @@ export class SimpleProductService {
 
     const genderForDb =
       productGender != null ? mapGender(String(productGender)) : undefined;
+    const waMulticolorPack = readWaMulticolorPackFromAgLabels(product.agLabels);
+    const descriptionForDb = ensureMulticolorPackDescription(
+      productDescription,
+      waMulticolorPack
+    );
 
     // Update product with extracted information
     await prisma.product.update({
       where: { id: product.id },
       data: {
         name: productName,
-        description: productDescription,
+        description: descriptionForDb,
         gender: genderForDb,
         season: productSeason,
         material: productMaterial,

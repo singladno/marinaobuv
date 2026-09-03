@@ -38,6 +38,8 @@ import {
 } from '../prompts/gender-extraction-prompts';
 import { normalizeToStandardColor } from '../constants/colors';
 import { readWaMulticolorPackFromAgLabels } from './multicolor-pack-detection';
+import { normalizeSizeRows } from '../utils/size-label';
+import { ensureMulticolorPackDescription } from '../utils/multicolor-pack-copy';
 import { sumSizeCounts } from '../utils/pack-pairs-from-text';
 import { logError, logger, logServerError } from '@/lib/server/logger';
 
@@ -812,7 +814,7 @@ export class GroqSequentialProcessor {
       );
 
       return {
-        sizes: sizesResult.sizes || [],
+        sizes: normalizeSizeRows(sizesResult.sizes || []),
         packPairs: sizesResult.packPairs || null,
       };
     } catch (error) {
@@ -1773,7 +1775,13 @@ export class GroqSequentialProcessor {
       // Get current product data
       const product = await this.prisma.product.findUnique({
         where: { id: productId },
-        select: { name: true, description: true, gender: true, season: true },
+        select: {
+          name: true,
+          description: true,
+          gender: true,
+          season: true,
+          agLabels: true,
+        },
       });
 
       if (!product) {
@@ -1819,7 +1827,10 @@ export class GroqSequentialProcessor {
 
       // Merge description if missing
       if (needsDescription && bestResult.description) {
-        updateData.description = bestResult.description;
+        updateData.description = ensureMulticolorPackDescription(
+          bestResult.description,
+          readWaMulticolorPackFromAgLabels(product.agLabels)
+        );
       }
 
       // Merge gender if missing
