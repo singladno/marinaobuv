@@ -395,7 +395,7 @@ export async function POST(req: NextRequest) {
         ],
         response_format: { type: 'json_object' },
         temperature: 0.5,
-        max_tokens: 2000,
+        max_tokens: 700,
       },
       `aggregator-vision-analysis-${Date.now()}`,
       {
@@ -604,7 +604,7 @@ export async function POST(req: NextRequest) {
         const categoryResponse = await groqChatCompletion(
           categoryGroq,
           {
-            model: process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b', // Same model as WA parser
+            model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
             messages: [
               {
                 role: 'system',
@@ -621,7 +621,7 @@ export async function POST(req: NextRequest) {
             ],
             response_format: { type: 'json_object' },
             temperature: 0.5,
-            max_tokens: 2000, // Same as WA parser
+            max_tokens: 300,
           },
           `category-analysis-aggregator-${Date.now()}`,
           {

@@ -43,7 +43,7 @@ const GOLDEN_PATH = path.join(
   'parser-golden-set.json'
 );
 const RETIRED_TEXT_MODELS = new Set(['llama-3.3-70b-versatile']);
-const PROD_TEXT_MODEL = 'openai/gpt-oss-120b';
+const PROD_TEXT_MODEL = 'openai/gpt-oss-20b';
 
 function resolveTextModel(): string {
   const raw = process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b';
@@ -291,7 +291,7 @@ async function runWa(
       TEXT_ANALYSIS_SYSTEM_PROMPT,
       TEXT_ANALYSIS_USER_PROMPT(text, imageCount),
       0.3,
-      2500
+      800
     );
     if ('name' in exp) actual.name = result.name ?? null;
     if ('season' in exp) {
@@ -345,7 +345,7 @@ async function runTg(
     system,
     user,
     0.3,
-    2500
+    800
   );
   const actual: Actual = {};
   if ('name' in c.expected) actual.name = result.name ?? null;

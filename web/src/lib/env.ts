@@ -85,6 +85,8 @@ const schema = z
     GROQ_API_KEY: z.string().optional(),
     // Vision/image analysis model (default: qwen/qwen3.6-27b; must support image input)
     GROQ_VISION_MODEL: z.string().optional(),
+    // Text-only tasks: category, WhatsApp/Telegram text parse (default: openai/gpt-oss-20b)
+    GROQ_TEXT_MODEL: z.string().optional(),
 
     // Concurrency tuning (optional)
     MEDIA_REFRESH_CONCURRENCY: z
@@ -267,6 +269,8 @@ const raw = {
 
   // Groq API
   GROQ_API_KEY: process.env.GROQ_API_KEY,
+  GROQ_VISION_MODEL: process.env.GROQ_VISION_MODEL,
+  GROQ_TEXT_MODEL: process.env.GROQ_TEXT_MODEL,
 
   // Concurrency tuning (optional)
   MEDIA_REFRESH_CONCURRENCY: process.env.MEDIA_REFRESH_CONCURRENCY,

@@ -1083,7 +1083,7 @@ export class GroqSequentialProcessor {
           ],
           response_format: { type: 'json_object' },
           temperature: 0.3, // Balanced temperature for better reasoning while maintaining consistency
-          max_tokens: 2500, // Set to maintain ~4:1 input:output ratio (6074 input → ~1500 output target, with buffer for safety)
+          max_tokens: 800,
         },
         `text-analysis-${productId}`,
         {
@@ -1500,7 +1500,7 @@ export class GroqSequentialProcessor {
               ],
               response_format: { type: 'json_object' },
               temperature: 0.5,
-              max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
+              max_tokens: 700,
             },
             `image-analysis-${productId}-${i}`,
             {
@@ -1590,7 +1590,7 @@ export class GroqSequentialProcessor {
           const categoryResponse = await groqChatCompletion(
             groq,
             {
-              model: process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
+              model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
               messages: [
                 {
                   role: 'system',
@@ -1607,7 +1607,7 @@ export class GroqSequentialProcessor {
               ],
               response_format: { type: 'json_object' },
               temperature: 0.5,
-              max_tokens: 2000, // Force longer outputs to achieve 4:1 input-to-output ratio
+              max_tokens: 300,
             },
             `category-analysis-${productId}`,
             {
@@ -1622,7 +1622,7 @@ export class GroqSequentialProcessor {
           if ('usage' in categoryResponse && categoryResponse.usage) {
             getTokenLogger().log(
               'category-analysis',
-              process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
+              process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
               categoryResponse.usage,
               {
                 productId,

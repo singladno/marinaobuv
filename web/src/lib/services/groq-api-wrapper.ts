@@ -176,15 +176,18 @@ export async function groqChatCompletion(
     timeoutMs?: number;
   }
 ): Promise<Awaited<ReturnType<Groq['chat']['completions']['create']>>> {
-  // Qwen 3.x thinking breaks Groq json_object validation unless reasoning is off.
+  // Thinking models can emit empty JSON when reasoning eats max_tokens.
   const requestParams: any = { ...(params as any) };
   const model = String(requestParams.model || '').toLowerCase();
   if (
-    model.includes('qwen') &&
     requestParams.response_format &&
     requestParams.reasoning_effort === undefined
   ) {
-    requestParams.reasoning_effort = 'none';
+    if (model.includes('qwen')) {
+      requestParams.reasoning_effort = 'none';
+    } else if (model.includes('gpt-oss')) {
+      requestParams.reasoning_effort = 'low';
+    }
   }
 
   return executeGroqCall(
